@@ -1,0 +1,72 @@
+#!/bin/sh
+# Ultimit media keys. Bound in the compositor, e.g.:
+#   ultimit-media volume up|down|mute      mic mute
+#   ultimit-media brightness up|down       play-pause|next|prev
+# Volume/mic via wpctl, brightness via logind SetBrightness (no root), media via the
+# shell's "media" IPC target (MPRIS), falling back to playerctl. Each change flashes the OSD.
+# ULTIMIT_DRY=1 prints the brightness D-Bus call instead of making it.
+SHELL_DIR=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
+PATH="$PATH:$HOME/.local/ultimit-deps/bin"
+SINK=@DEFAULT_AUDIO_SINK@
+SRC=@DEFAULT_AUDIO_SOURCE@
+
+osd() { qs -p "$SHELL_DIR" ipc call osd "$1" >/dev/null 2>&1 || true; }
+usage() {
+	echo "usage: ultimit-media volume up|down|mute | mic mute | brightness up|down | play-pause|next|prev" >&2
+	exit 2
+}
+
+brightness() {
+	bl=$(ls -d /sys/class/backlight/*/ 2>/dev/null | head -n 1)
+	[ -n "$bl" ] || { echo "ultimit-media: no backlight device" >&2; exit 1; }
+	bl=${bl%/}
+	dev=${bl##*/}
+	max=$(cat "$bl/max_brightness")
+	cur=$(cat "$bl/brightness")
+	step=$((max * 5 / 100))
+	[ "$step" -lt 1 ] && step=1
+	min=$((max / 100))
+	[ "$min" -lt 1 ] && min=1
+	case "$1" in
+	up) new=$((cur + step)) ;;
+	down) new=$((cur - step)) ;;
+	*) usage ;;
+	esac
+	[ "$new" -gt "$max" ] && new=$max
+	[ "$new" -lt "$min" ] && new=$min
+	if [ -n "$ULTIMIT_DRY" ]; then
+		echo "busctl call org.freedesktop.login1 /org/freedesktop/login1/session/auto org.freedesktop.login1.Session SetBrightness ssu backlight $dev $new"
+		return
+	fi
+	busctl call org.freedesktop.login1 /org/freedesktop/login1/session/auto \
+		org.freedesktop.login1.Session SetBrightness ssu backlight "$dev" "$new" >/dev/null || exit 1
+	sleep 0.05 # let sysfs reflect the new value before the OSD reads it
+	osd brightness
+}
+
+media() {
+	qs -p "$SHELL_DIR" ipc call media "$1" >/dev/null 2>&1 && return
+	command -v playerctl >/dev/null 2>&1 && playerctl "$2"
+}
+
+case "$1" in
+volume)
+	case "$2" in
+	up) wpctl set-mute "$SINK" 0; wpctl set-volume -l 1.0 "$SINK" 5%+ ;;
+	down) wpctl set-volume "$SINK" 5%- ;;
+	mute) wpctl set-mute "$SINK" toggle ;;
+	*) usage ;;
+	esac
+	osd volume
+	;;
+mic)
+	[ "$2" = mute ] || usage
+	wpctl set-mute "$SRC" toggle
+	osd mic
+	;;
+brightness) brightness "$2" ;;
+play-pause) media playPause play-pause ;;
+next) media next next ;;
+prev) media previous previous ;;
+*) usage ;;
+esac

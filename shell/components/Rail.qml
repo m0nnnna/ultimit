@@ -146,6 +146,14 @@ PanelWindow {
         // Open windows; the list scrolls inside the space between the buttons and the version text.
         WindowList {
             anchors.top: btnCol.bottom; anchors.topMargin: 8
+            anchors.bottom: tray.visible ? tray.top : verItem.top; anchors.bottomMargin: tray.visible ? 8 : 12
+            anchors.left: parent.left; anchors.right: parent.right
+            screenName: win.screen ? win.screen.name : ""
+        }
+
+        // StatusNotifierItem tray, pinned above the version text; hidden when empty.
+        Tray {
+            id: tray
             anchors.bottom: verItem.top; anchors.bottomMargin: 12
             anchors.left: parent.left; anchors.right: parent.right
             screenName: win.screen ? win.screen.name : ""

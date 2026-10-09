@@ -4,3 +4,6 @@ Persist 1.0 Persist.qml
 Boot 1.0 Boot.qml
 singleton Toasts 1.0 Toasts.qml
 singleton WindowUi 1.0 WindowUi.qml
+singleton Notifs 1.0 Notifs.qml
+singleton Osd 1.0 Osd.qml
+singleton TrayUi 1.0 TrayUi.qml

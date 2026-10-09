@@ -41,7 +41,10 @@ ShellRoot {
             Launcher    { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, app launcher (rail emblem)
             ContextMenu { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, desktop right-click menu
             WindowPopups { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, rail window tooltip + menu
+            OsdOverlay  { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, volume/brightness OSD
+            TrayMenu    { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, tray item menu
             ToastOverlay { screen: scope.modelData; screenName: scope.modelData.name }  // overlay, top-right toasts
+            QuickSettings { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, status-block popover
         }
     }
 }
