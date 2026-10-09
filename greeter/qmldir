@@ -1,0 +1,11 @@
+singleton Theme 1.0 Theme.qml
+singleton Config 1.0 Config.qml
+Greeter 1.0 Greeter.qml
+GreeterSurface 1.0 GreeterSurface.qml
+WallpaperArt 1.0 WallpaperArt.qml
+Emblem 1.0 Emblem.qml
+Brackets 1.0 Brackets.qml
+Wordmark 1.0 Wordmark.qml
+ChamferButton 1.0 ChamferButton.qml
+Selector 1.0 Selector.qml
+PowerRow 1.0 PowerRow.qml

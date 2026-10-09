@@ -13,4 +13,10 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 ninja -C "$ROOT/compositor/build" -j4 >/dev/null
 echo "Restarting Ultimit (pid $pid) in ${1:-3}s..."
 sleep "${1:-3}"
-kill -TERM "$pid"
+# Under greetd (with --autologin) restarting greetd logs straight back in;
+# under GDM, ending the session is enough when autologin is on.
+if systemctl is-active -q greetd 2>/dev/null; then
+	systemctl restart greetd
+else
+	kill -TERM "$pid"
+fi
