@@ -23,7 +23,9 @@ greetd)
 cat >/etc/greetd/config.toml <<CONF
 # Written by Ultimit scripts/switch-dm.sh
 [terminal]
-vt = 1
+# Ubuntu's greetd.service owns tty7 (Conflicts=getty@tty7). On tty1 a getty
+# also starts and hangs up the VT, which SIGHUPs the compositor at login.
+vt = 7
 
 [default_session]
 command = "/opt/ultimit/libexec/ultimit-greeter-session"
