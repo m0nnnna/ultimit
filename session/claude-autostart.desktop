@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Claude
+Comment=Reopen Claude after an Ultimit restart (dev loop)
+Exec=claude-desktop
+OnlyShowIn=Ultimit;
