@@ -128,8 +128,9 @@ static void focus_topmost(struct ul_server *server) {
 void view_set_position(struct ul_view *view, int x, int y) {
 	view->x = x;
 	view->y = y;
-	struct wlr_box geo = view_geometry_offset(view);
-	wlr_scene_node_set_position(&view->tree->node, x - geo.x, y - geo.y);
+	/* wlroots' xdg scene helper already shifts the client's surfaces by its
+	 * invisible margins, so the view tree's origin is the visible window. */
+	wlr_scene_node_set_position(&view->tree->node, x, y);
 	if (view->type == UL_VIEW_XWAYLAND) {
 		wlr_xwayland_surface_configure(view->xwayland_surface,
 			x, y, view->width, view->height);

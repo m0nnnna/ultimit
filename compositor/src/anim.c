@@ -60,8 +60,8 @@ static int tick(void *data) {
 
 	struct wlr_box geo = view_geometry_offset(view);
 	int bar = view->ssd ? UL_TITLEBAR_H : 0;
-	int fx = geo.x - UL_BORDER;
-	int fy = geo.y - bar - UL_BORDER;
+	int fx = -UL_BORDER;
+	int fy = -bar - UL_BORDER;
 	int fw = view->width + 2 * UL_BORDER;
 
 	if (elapsed < LINE_MS) {

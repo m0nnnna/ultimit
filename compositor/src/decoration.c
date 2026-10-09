@@ -192,12 +192,12 @@ void decoration_update(struct ul_view *view) {
 	}
 
 	bool focused = view->server->focused_view == view;
-	struct wlr_box geo = view_geometry_offset(view);
 	int bar = view->ssd ? UL_TITLEBAR_H : 0;
 
-	/* Frame box: content plus titlebar plus the 1px border. */
-	int fx = geo.x - UL_BORDER;
-	int fy = geo.y - bar - UL_BORDER;
+	/* Frame box: content plus titlebar plus the 1px border, relative to the
+	 * view tree whose origin is the visible window's top-left. */
+	int fx = -UL_BORDER;
+	int fy = -bar - UL_BORDER;
 	int fw = view->width + 2 * UL_BORDER;
 	int fh = view->height + bar + 2 * UL_BORDER;
 
