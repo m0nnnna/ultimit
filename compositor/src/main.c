@@ -167,6 +167,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	setenv("WAYLAND_DISPLAY", socket, true);
+	ipc_init(&server, socket);
 	setenv("XDG_CURRENT_DESKTOP", "Ultimit", true);
 	setenv("XDG_SESSION_DESKTOP", "ultimit", true);
 	/* Prefer native Wayland in toolkits; games still go through XWayland
@@ -182,6 +183,7 @@ int main(int argc, char *argv[]) {
 	wlr_log(WLR_INFO, "Ultimit running on WAYLAND_DISPLAY=%s", socket);
 	wl_display_run(server.display);
 
+	ipc_finish(&server);
 	wl_display_destroy_clients(server.display);
 	/* wlroots 0.19 asserts that nothing still listens to an object it
 	 * destroys, so detach every server-level listener first. */

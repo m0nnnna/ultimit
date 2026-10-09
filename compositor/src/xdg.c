@@ -135,6 +135,7 @@ static void new_xdg_toplevel(struct wl_listener *listener, void *data) {
 	struct ul_view *view = calloc(1, sizeof(*view));
 	view->server = server;
 	view->type = UL_VIEW_XDG;
+	view->id = ++server->next_view_id;
 	view->xdg_toplevel = toplevel;
 	wl_list_init(&view->link);
 

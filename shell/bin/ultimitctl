@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+"""ultimitctl: talk to the Ultimit compositor's control socket.
+
+  ultimitctl state                 JSON: outputs, windows, layer surfaces
+  ultimitctl windows               one line per window (id, app, flags, frame)
+  ultimitctl focus|close|maximize|fullscreen|minimize ID
+  ultimitctl move ID X Y | resize ID W H
+
+Finds the socket from $ULTIMIT_SOCK, else $XDG_RUNTIME_DIR/ultimit-$WAYLAND_DISPLAY.sock.
+"""
+import json
+import os
+import socket
+import sys
+
+
+def sock_path():
+    if os.environ.get("ULTIMIT_SOCK"):
+        return os.environ["ULTIMIT_SOCK"]
+    runtime = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+    return os.path.join(runtime, "ultimit-%s.sock" % os.environ.get("WAYLAND_DISPLAY", "wayland-0"))
+
+
+def call(line):
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+        s.connect(sock_path())
+        s.sendall((line + "\n").encode())
+        data = b""
+        while not data.endswith(b"\n"):
+            chunk = s.recv(65536)
+            if not chunk:
+                break
+            data += chunk
+    return json.loads(data)
+
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help"):
+        print(__doc__.strip())
+        return 0
+    if argv[0] == "windows":
+        for w in call("state")["windows"]:
+            flags = [k for k in ("focused", "ssd", "minimized", "maximized", "fullscreen") if w[k]]
+            f = w["frame"]
+            print("%-3d %-28s %-22s frame=%d,%d %dx%d" % (
+                w["id"], w["app_id"][:28], ",".join(flags), f["x"], f["y"], f["width"], f["height"]))
+        return 0
+    reply = call(" ".join(argv))
+    print(json.dumps(reply, indent=2 if argv[0] == "state" else None))
+    return 1 if "error" in reply else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

@@ -268,6 +268,7 @@ static void create_view(struct ul_server *server, struct wlr_xwayland_surface *x
 	struct ul_view *view = calloc(1, sizeof(*view));
 	view->server = server;
 	view->type = UL_VIEW_XWAYLAND;
+	view->id = ++server->next_view_id;
 	view->xwayland_surface = xsurface;
 	wl_list_init(&view->link);
 

@@ -120,6 +120,10 @@ struct ul_server {
 	struct wlr_box grab_box;
 	uint32_t resize_edges;
 
+	int ipc_fd;
+	char ipc_path[108];
+	unsigned next_view_id;
+
 	struct ul_view *last_click_view;
 	uint32_t last_click_msec;
 };
@@ -187,6 +191,7 @@ struct ul_view {
 	struct wl_list link;
 	struct ul_server *server;
 	enum ul_view_type type;
+	unsigned id; /* stable handle for ultimitctl */
 	struct wlr_xdg_toplevel *xdg_toplevel;
 	struct wlr_xwayland_surface *xwayland_surface;
 
@@ -238,6 +243,10 @@ struct ul_view {
 	struct wl_listener set_decorations;
 	struct wl_listener override_redirect_map;
 };
+
+/* ipc.c */
+void ipc_init(struct ul_server *server, const char *wayland_socket);
+void ipc_finish(struct ul_server *server);
 
 /* main.c */
 void server_spawn(const char *cmd);
