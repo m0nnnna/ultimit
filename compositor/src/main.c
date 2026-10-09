@@ -53,6 +53,12 @@ static void usage(const char *argv0) {
 		"  -d          debug logging\n", argv0);
 }
 
+static int handle_terminate(int signal, void *data) {
+	/* Logout or kill: shut down cleanly so clients and XWayland exit too. */
+	wl_display_terminate(data);
+	return 0;
+}
+
 int main(int argc, char *argv[]) {
 	const char *startup_cmd = NULL;
 	enum wlr_log_importance log_level = WLR_INFO;
@@ -145,6 +151,10 @@ int main(int argc, char *argv[]) {
 	input_init(&server);
 	xwayland_init(&server);
 
+	struct wl_event_loop *loop = wl_display_get_event_loop(server.display);
+	wl_event_loop_add_signal(loop, SIGTERM, handle_terminate, server.display);
+	wl_event_loop_add_signal(loop, SIGINT, handle_terminate, server.display);
+
 	const char *socket = wl_display_add_socket_auto(server.display);
 	if (!socket) {
 		wlr_backend_destroy(server.backend);
@@ -173,7 +183,24 @@ int main(int argc, char *argv[]) {
 	wl_display_run(server.display);
 
 	wl_display_destroy_clients(server.display);
+	/* wlroots 0.19 asserts that nothing still listens to an object it
+	 * destroys, so detach every server-level listener first. */
+	struct wl_listener *listeners[] = {
+		&server.new_output, &server.new_xdg_toplevel, &server.new_xdg_popup,
+		&server.new_layer_surface, &server.new_decoration, &server.new_kde_decoration,
+		&server.request_activate, &server.cursor_motion, &server.cursor_motion_absolute,
+		&server.cursor_button, &server.cursor_axis, &server.cursor_frame,
+		&server.request_set_shape, &server.new_constraint, &server.constraint_destroy,
+		&server.new_input, &server.request_cursor, &server.request_set_selection,
+		&server.request_set_primary_selection,
+	};
+	for (size_t i = 0; i < sizeof(listeners) / sizeof(listeners[0]); i++) {
+		wl_list_remove(&listeners[i]->link);
+	}
 	if (server.xwayland) {
+		/* wlroots asserts nobody is still listening when XWayland goes away. */
+		wl_list_remove(&server.xwayland_ready.link);
+		wl_list_remove(&server.new_xwayland_surface.link);
 		wlr_xwayland_destroy(server.xwayland);
 	}
 	wlr_scene_node_destroy(&server.scene->tree.node);

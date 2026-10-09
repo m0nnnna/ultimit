@@ -16,6 +16,7 @@
 #include <wlr/types/wlr_pointer_constraints_v1.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_seat.h>
+#include <wlr/types/wlr_server_decoration.h>
 #include <wlr/types/wlr_tearing_control_v1.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_activation_v1.h>
@@ -69,6 +70,11 @@ struct ul_server {
 
 	struct wlr_xdg_decoration_manager_v1 *decoration_manager;
 	struct wl_listener new_decoration;
+	/* KDE's older server-decoration protocol: what GTK3 apps (Firefox,
+	 * many games' launchers) use to hand their titlebar to us. */
+	struct wlr_server_decoration_manager *kde_decoration_manager;
+	struct wl_listener new_kde_decoration;
+	struct wl_list kde_decorations; /* ul_kde_decoration.link */
 
 	struct wlr_foreign_toplevel_manager_v1 *foreign_toplevels;
 	struct wlr_tearing_control_manager_v1 *tearing_control;
@@ -283,6 +289,7 @@ enum ul_titlebar_hit decoration_hit(struct ul_view *view, double lx, double ly);
 
 /* xdg.c */
 void xdg_init(struct ul_server *server);
+bool xdg_kde_wants_ssd(struct ul_server *server, struct wlr_surface *surface);
 
 /* xwayland.c */
 void xwayland_init(struct ul_server *server);

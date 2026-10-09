@@ -19,6 +19,10 @@ static struct ul_view *view_from_xdg_surface(struct wlr_xdg_surface *xdg_surface
 
 static void xdg_map(struct wl_listener *listener, void *data) {
 	struct ul_view *view = wl_container_of(listener, view, map);
+	if (!view->xdg_decoration &&
+			xdg_kde_wants_ssd(view->server, view->xdg_toplevel->base->surface)) {
+		view->ssd = true;
+	}
 	struct wlr_box geo = view->xdg_toplevel->base->geometry;
 	view->width = geo.width;
 	view->height = geo.height;
@@ -298,6 +302,60 @@ static void new_decoration(struct wl_listener *listener, void *data) {
 	}
 }
 
+/* ---- KDE server-decoration ---------------------------------------------- */
+
+struct ul_kde_decoration {
+	struct wl_list link;
+	struct ul_server *server;
+	struct wlr_server_decoration *decoration;
+	struct wl_listener mode;
+	struct wl_listener destroy;
+};
+
+bool xdg_kde_wants_ssd(struct ul_server *server, struct wlr_surface *surface) {
+	struct ul_kde_decoration *d;
+	wl_list_for_each(d, &server->kde_decorations, link) {
+		if (d->decoration->surface == surface) {
+			return d->decoration->mode == WLR_SERVER_DECORATION_MANAGER_MODE_SERVER;
+		}
+	}
+	return false;
+}
+
+static void kde_decoration_apply(struct ul_kde_decoration *d) {
+	struct wlr_xdg_surface *xdg = wlr_xdg_surface_try_from_wlr_surface(d->decoration->surface);
+	struct ul_view *view = view_from_xdg_surface(xdg);
+	if (view && !view->xdg_decoration) {
+		view_set_ssd(view, d->decoration->mode == WLR_SERVER_DECORATION_MANAGER_MODE_SERVER);
+	}
+}
+
+static void kde_decoration_mode(struct wl_listener *listener, void *data) {
+	struct ul_kde_decoration *d = wl_container_of(listener, d, mode);
+	kde_decoration_apply(d);
+}
+
+static void kde_decoration_destroy(struct wl_listener *listener, void *data) {
+	struct ul_kde_decoration *d = wl_container_of(listener, d, destroy);
+	wl_list_remove(&d->link);
+	wl_list_remove(&d->mode.link);
+	wl_list_remove(&d->destroy.link);
+	free(d);
+}
+
+static void new_kde_decoration(struct wl_listener *listener, void *data) {
+	struct ul_server *server = wl_container_of(listener, server, new_kde_decoration);
+	struct ul_kde_decoration *d = calloc(1, sizeof(*d));
+	d->server = server;
+	d->decoration = data;
+	wl_list_insert(&server->kde_decorations, &d->link);
+	d->mode.notify = kde_decoration_mode;
+	wl_signal_add(&d->decoration->events.mode, &d->mode);
+	d->destroy.notify = kde_decoration_destroy;
+	wl_signal_add(&d->decoration->events.destroy, &d->destroy);
+	kde_decoration_apply(d);
+}
+
 /* ---- xdg-activation (apps asking to be raised, e.g. "open in browser") --- */
 
 static void request_activate(struct wl_listener *listener, void *data) {
@@ -320,6 +378,14 @@ void xdg_init(struct ul_server *server) {
 	server->new_decoration.notify = new_decoration;
 	wl_signal_add(&server->decoration_manager->events.new_toplevel_decoration,
 		&server->new_decoration);
+
+	wl_list_init(&server->kde_decorations);
+	server->kde_decoration_manager = wlr_server_decoration_manager_create(server->display);
+	wlr_server_decoration_manager_set_default_mode(server->kde_decoration_manager,
+		WLR_SERVER_DECORATION_MANAGER_MODE_SERVER);
+	server->new_kde_decoration.notify = new_kde_decoration;
+	wl_signal_add(&server->kde_decoration_manager->events.new_decoration,
+		&server->new_kde_decoration);
 
 	server->activation = wlr_xdg_activation_v1_create(server->display);
 	server->request_activate.notify = request_activate;
