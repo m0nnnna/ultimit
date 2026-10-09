@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Ultimit
+Comment=Gaming-first desktop inspired by Altimit OS
+Exec=@SESSION@
+TryExec=@SESSION@
+Type=Application
+DesktopNames=Ultimit
