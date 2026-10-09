@@ -47,9 +47,35 @@ void server_spawn(const char *cmd) {
 	}
 }
 
+/* -x: the startup command is the whole session (the login greeter); when it
+ * exits, so does the compositor, which hands control back to greetd. */
+static pid_t startup_pid = -1;
+
+static int handle_child(int signal, void *data) {
+	/* Only reap our own child: XWayland's process is wlroots' business. */
+	int status;
+	if (startup_pid > 0 && waitpid(startup_pid, &status, WNOHANG) == startup_pid) {
+		startup_pid = -1;
+		wlr_log(WLR_INFO, "Startup command exited; shutting down (-x)");
+		wl_display_terminate(data);
+	}
+	return 0;
+}
+
+static pid_t spawn_tracked(const char *cmd) {
+	pid_t pid = fork();
+	if (pid == 0) {
+		setsid();
+		execl("/bin/sh", "/bin/sh", "-c", cmd, (char *)NULL);
+		_exit(127);
+	}
+	return pid;
+}
+
 static void usage(const char *argv0) {
-	printf("Usage: %s [-s command] [-d]\n"
+	printf("Usage: %s [-s command] [-x] [-d]\n"
 		"  -s command  run a command once the compositor is up (e.g. the shell)\n"
+		"  -x          exit when the startup command exits (login greeter)\n"
 		"  -d          debug logging\n", argv0);
 }
 
@@ -63,10 +89,14 @@ int main(int argc, char *argv[]) {
 	const char *startup_cmd = NULL;
 	enum wlr_log_importance log_level = WLR_INFO;
 	int c;
-	while ((c = getopt(argc, argv, "s:dh")) != -1) {
+	bool exit_with_startup = false;
+	while ((c = getopt(argc, argv, "s:xdh")) != -1) {
 		switch (c) {
 		case 's':
 			startup_cmd = optarg;
+			break;
+		case 'x':
+			exit_with_startup = true;
 			break;
 		case 'd':
 			log_level = WLR_DEBUG;
@@ -179,7 +209,10 @@ int main(int argc, char *argv[]) {
 	setenv("MOZ_ENABLE_WAYLAND", "1", false);
 	setenv("ELECTRON_OZONE_PLATFORM_HINT", "auto", false);
 
-	if (startup_cmd) {
+	if (startup_cmd && exit_with_startup) {
+		wl_event_loop_add_signal(loop, SIGCHLD, handle_child, server.display);
+		startup_pid = spawn_tracked(startup_cmd);
+	} else if (startup_cmd) {
 		server_spawn(startup_cmd);
 	}
 	wlr_log(WLR_INFO, "Ultimit running on WAYLAND_DISPLAY=%s", socket);
