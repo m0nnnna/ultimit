@@ -31,7 +31,7 @@ GNOME stays installed as a safety net until phase 4.
 - [x] Secret service replacement for gnome-keyring (oo7; login PAM unlock comes with the greeter)
 - [x] Display configuration (wlr-output-management) and input settings
       (touchpad tap, natural scroll, keyboard layout, pointer speed)
-- [ ] Ultimit login screen on greetd, replacing GDM
+- [x] Ultimit login screen on greetd, replacing GDM
 
 ## Phase 3: Ultimit apps
 - [ ] Settings (grows out of Accessory): display, sound, network,
