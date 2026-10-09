@@ -136,7 +136,9 @@ static void write_state(struct ul_server *server, struct out *o) {
 			}
 		}
 	}
-	put(o, "],\"focused_layer\":%s}", server->focused_layer ? "true" : "false");
+	put(o, "],\"focused_layer\":%s,\"locked\":%s,\"idle_inhibitors\":%d}",
+		server->focused_layer ? "true" : "false", server->locked ? "true" : "false",
+		server->idle_inhibitors);
 }
 
 /* ---- commands ------------------------------------------------------------ */

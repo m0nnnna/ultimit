@@ -6,7 +6,8 @@
   ultimitctl focus|close|maximize|fullscreen|minimize ID
   ultimitctl move ID X Y | resize ID W H
 
-Finds the socket from $ULTIMIT_SOCK, else $XDG_RUNTIME_DIR/ultimit-$WAYLAND_DISPLAY.sock.
+Finds the socket from $WAYLAND_DISPLAY ($XDG_RUNTIME_DIR/ultimit-$WAYLAND_DISPLAY.sock),
+else $ULTIMIT_SOCK.
 """
 import json
 import os
@@ -15,10 +16,18 @@ import sys
 
 
 def sock_path():
+    # WAYLAND_DISPLAY wins: ULTIMIT_SOCK is inherited by everything started in
+    # a session, so it would point a script aimed at a devbox back at the
+    # session it was launched from.
+    runtime = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+    display = os.environ.get("WAYLAND_DISPLAY")
+    if display:
+        path = os.path.join(runtime, "ultimit-%s.sock" % display)
+        if os.path.exists(path):
+            return path
     if os.environ.get("ULTIMIT_SOCK"):
         return os.environ["ULTIMIT_SOCK"]
-    runtime = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
-    return os.path.join(runtime, "ultimit-%s.sock" % os.environ.get("WAYLAND_DISPLAY", "wayland-0"))
+    return os.path.join(runtime, "ultimit-wayland-0.sock")
 
 
 def call(line):

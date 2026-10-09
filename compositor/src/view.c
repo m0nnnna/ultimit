@@ -61,7 +61,7 @@ static void view_set_activated(struct ul_view *view, bool activated) {
 }
 
 void view_focus(struct ul_view *view) {
-	if (!view || !view->mapped) {
+	if (!view || !view->mapped || view->server->locked) {
 		return;
 	}
 	struct ul_server *server = view->server;
@@ -268,6 +268,7 @@ void view_set_fullscreen(struct ul_view *view, bool fullscreen) {
 		wlr_foreign_toplevel_handle_v1_set_fullscreen(view->foreign, fullscreen);
 	}
 	decoration_update(view);
+	idle_update_inhibit(server);
 done:
 	if (view->type == UL_VIEW_XDG && view->xdg_toplevel->base->initialized) {
 		wlr_xdg_surface_schedule_configure(view->xdg_toplevel->base);
@@ -495,6 +496,7 @@ void view_unmap(struct ul_view *view) {
 	}
 	wl_list_remove(&view->link);
 	wl_list_init(&view->link);
+	idle_update_inhibit(server);
 	if (server->focused_view == view) {
 		server->focused_view = NULL;
 		focus_topmost(server);

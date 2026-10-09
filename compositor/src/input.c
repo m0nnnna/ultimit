@@ -31,6 +31,9 @@ struct ul_keyboard {
 /* ---- focus helpers ------------------------------------------------------- */
 
 void input_focus_layer(struct ul_server *server, struct wlr_layer_surface_v1 *layer_surface) {
+	if (server->locked) {
+		return;
+	}
 	server->focused_layer = layer_surface;
 	if (!layer_surface) {
 		if (server->focused_view) {
@@ -52,7 +55,10 @@ void input_focus_layer(struct ul_server *server, struct wlr_layer_surface_v1 *la
 static struct wlr_surface *surface_at(struct ul_server *server, double lx, double ly,
 		double *sx, double *sy, struct ul_view **view_out, struct wlr_scene_node **node_out) {
 	*view_out = NULL;
-	struct wlr_scene_node *node = wlr_scene_node_at(&server->scene->tree.node, lx, ly, sx, sy);
+	/* While locked, only the lock screen can be hit. */
+	struct wlr_scene_node *root = server->locked ?
+		&server->layers[UL_LAYER_LOCK]->node : &server->scene->tree.node;
+	struct wlr_scene_node *node = wlr_scene_node_at(root, lx, ly, sx, sy);
 	if (node_out) *node_out = node;
 	if (!node) {
 		return NULL;
@@ -243,6 +249,7 @@ static void process_motion(struct ul_server *server, uint32_t time_msec) {
 
 static void handle_motion(struct ul_server *server, struct wlr_input_device *device,
 		uint32_t time_msec, double dx, double dy, double udx, double udy) {
+	idle_activity(server);
 	wlr_relative_pointer_manager_v1_send_relative_motion(server->relative_pointer,
 		server->seat, (uint64_t)time_msec * 1000, dx, dy, udx, udy);
 
@@ -303,6 +310,12 @@ static bool alt_held(struct ul_server *server) {
 static void cursor_button(struct wl_listener *listener, void *data) {
 	struct ul_server *server = wl_container_of(listener, server, cursor_button);
 	struct wlr_pointer_button_event *event = data;
+	idle_activity(server);
+	if (server->locked) {
+		wlr_seat_pointer_notify_button(server->seat, event->time_msec,
+			event->button, event->state);
+		return;
+	}
 
 	if (event->state == WL_POINTER_BUTTON_STATE_RELEASED) {
 		if (server->cursor_mode != UL_CURSOR_PASSTHROUGH) {
@@ -395,6 +408,7 @@ static void cursor_button(struct wl_listener *listener, void *data) {
 static void cursor_axis(struct wl_listener *listener, void *data) {
 	struct ul_server *server = wl_container_of(listener, server, cursor_axis);
 	struct wlr_pointer_axis_event *event = data;
+	idle_activity(server);
 	wlr_seat_pointer_notify_axis(server->seat, event->time_msec, event->orientation,
 		event->delta, event->delta_discrete, event->source, event->relative_direction);
 }
@@ -427,6 +441,29 @@ static bool handle_keybinding(struct ul_server *server, uint32_t mods, xkb_keysy
 			wlr_session_change_vt(server->session, sym - XKB_KEY_XF86Switch_VT_1 + 1);
 		}
 		return true;
+	}
+	/* Media keys work everywhere, including over the lock screen. */
+	static const struct { xkb_keysym_t sym; const char *cmd; } media[] = {
+		{ XKB_KEY_XF86AudioRaiseVolume, "ultimit-media volume up" },
+		{ XKB_KEY_XF86AudioLowerVolume, "ultimit-media volume down" },
+		{ XKB_KEY_XF86AudioMute, "ultimit-media volume mute" },
+		{ XKB_KEY_XF86AudioMicMute, "ultimit-media mic mute" },
+		{ XKB_KEY_XF86MonBrightnessUp, "ultimit-media brightness up" },
+		{ XKB_KEY_XF86MonBrightnessDown, "ultimit-media brightness down" },
+		{ XKB_KEY_XF86AudioPlay, "ultimit-media play-pause" },
+		{ XKB_KEY_XF86AudioPause, "ultimit-media play-pause" },
+		{ XKB_KEY_XF86AudioNext, "ultimit-media next" },
+		{ XKB_KEY_XF86AudioPrev, "ultimit-media prev" },
+	};
+	for (size_t i = 0; i < sizeof(media) / sizeof(media[0]); i++) {
+		if (sym == media[i].sym) {
+			server_spawn(media[i].cmd);
+			return true;
+		}
+	}
+	/* Nothing else may get past the lock screen (not even quitting). */
+	if (server->locked) {
+		return false;
 	}
 	if (ctrl && alt && sym == XKB_KEY_BackSpace) {
 		wl_display_terminate(server->display);
@@ -474,6 +511,7 @@ static void keyboard_key(struct wl_listener *listener, void *data) {
 	struct ul_keyboard *keyboard = wl_container_of(listener, keyboard, key);
 	struct ul_server *server = keyboard->server;
 	struct wlr_keyboard_key_event *event = data;
+	idle_activity(server);
 
 	bool handled = false;
 	if (event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {

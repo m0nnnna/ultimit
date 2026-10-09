@@ -65,6 +65,7 @@ executable(
 		'src/decoration.c',
 		'src/anim.c',
 		'src/ipc.c',
+		'src/lock.c',
 		'src/xdg.c',
 		'src/xwayland.c',
 		'src/layer.c',

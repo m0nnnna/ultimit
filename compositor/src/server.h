@@ -34,6 +34,7 @@ enum ul_layer {
 	UL_LAYER_TOP,
 	UL_LAYER_FULLSCREEN,
 	UL_LAYER_OVERLAY,
+	UL_LAYER_LOCK, /* lock screen; covers everything while locked */
 	UL_LAYER_COUNT,
 };
 
@@ -42,6 +43,10 @@ enum ul_cursor_mode {
 	UL_CURSOR_MOVE,
 	UL_CURSOR_RESIZE,
 };
+
+struct wlr_session_lock_manager_v1;
+struct wlr_session_lock_v1;
+struct wlr_idle_notifier_v1;
 
 struct ul_server {
 	struct wl_display *display;
@@ -121,6 +126,19 @@ struct ul_server {
 	uint32_t resize_edges;
 	bool restore_on_drag; /* grabbed a maximized window; restore once it moves */
 	double press_x, press_y;
+
+	/* Lock and idle (lock.c) */
+	struct wlr_session_lock_manager_v1 *lock_manager;
+	struct wlr_session_lock_v1 *lock;
+	bool locked;
+	struct wlr_scene_rect *lock_cover;
+	struct wl_listener new_lock;
+	struct wl_listener lock_new_surface;
+	struct wl_listener lock_unlock;
+	struct wl_listener lock_destroy;
+	struct wlr_idle_notifier_v1 *idle_notifier;
+	struct wl_listener new_inhibitor;
+	int idle_inhibitors;
 
 	int ipc_fd;
 	char ipc_path[108];
@@ -245,6 +263,13 @@ struct ul_view {
 	struct wl_listener set_decorations;
 	struct wl_listener override_redirect_map;
 };
+
+/* lock.c */
+void lock_init(struct ul_server *server);
+void lock_finish(struct ul_server *server);
+void lock_arrange(struct ul_server *server);
+void idle_activity(struct ul_server *server);
+void idle_update_inhibit(struct ul_server *server);
 
 /* ipc.c */
 void ipc_init(struct ul_server *server, const char *wayland_socket);

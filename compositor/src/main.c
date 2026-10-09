@@ -149,6 +149,7 @@ int main(int argc, char *argv[]) {
 	xdg_init(&server);
 	layer_init(&server);
 	input_init(&server);
+	lock_init(&server);
 	xwayland_init(&server);
 
 	struct wl_event_loop *loop = wl_display_get_event_loop(server.display);
@@ -184,6 +185,7 @@ int main(int argc, char *argv[]) {
 	wl_display_run(server.display);
 
 	ipc_finish(&server);
+	lock_finish(&server);
 	wl_display_destroy_clients(server.display);
 	/* wlroots 0.19 asserts that nothing still listens to an object it
 	 * destroys, so detach every server-level listener first. */

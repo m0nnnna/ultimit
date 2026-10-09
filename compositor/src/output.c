@@ -32,6 +32,7 @@ void server_update_backdrop(struct ul_server *server) {
 	wlr_scene_node_set_position(&server->backdrop->node, box.x, box.y);
 	wlr_scene_rect_set_size(server->backdrop, box.width, box.height);
 	wlr_scene_optimized_blur_set_size(server->blur, box.width, box.height);
+	lock_arrange(server);
 }
 
 void output_arrange(struct ul_output *output) {
