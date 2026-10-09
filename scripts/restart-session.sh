@@ -4,7 +4,9 @@
 # and autostart reopens Claude. Everything open in the session closes.
 set -e
 PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/ultimit-session.pid"
-pid=$(cat "$PIDFILE" 2>/dev/null) || { echo "no Ultimit session running"; exit 1; }
+# Sessions started before the pid file existed: fall back to the oldest
+# compositor process (devboxes are always started later).
+pid=$(cat "$PIDFILE" 2>/dev/null || pgrep -o -x ultimit) || { echo "no Ultimit session running"; exit 1; }
 [ "$(cat /proc/"$pid"/comm 2>/dev/null)" = ultimit ] || { echo "stale pid file"; exit 1; }
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 # Refuse to restart into a broken build.
