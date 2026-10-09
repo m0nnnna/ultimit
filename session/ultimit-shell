@@ -13,8 +13,18 @@ fallback_ready() {
 		git -C "$ROOT" archive HEAD shell | tar -x -C "$FALLBACK" --strip-components=1
 }
 
+# Belong to this session's compositor only: the session script records its
+# pid. Without this, a supervisor from a previous session would outlive it
+# (spawned processes are detached) and attach a second shell to the next
+# session, doubling every panel.
+COMPOSITOR=$(cat "${XDG_RUNTIME_DIR:-/tmp}/ultimit-session.pid" 2>/dev/null)
+alive() {
+	[ -z "$COMPOSITOR" ] && return 0 # not started from a session (dev runs)
+	[ "$(cat /proc/"$COMPOSITOR"/comm 2>/dev/null)" = ultimit ]
+}
+
 fails=0
-while :; do
+while alive; do
 	start=$(date +%s)
 	if [ "$fails" -ge 2 ] && fallback_ready; then
 		echo "ultimit-shell: working copy keeps failing; running last committed shell" >&2
@@ -25,6 +35,7 @@ while :; do
 		until [ -n "$(find "$ROOT/shell" -newer "$FALLBACK/.since" -name '*.qml' -print -quit)" ]; do
 			sleep 3
 			kill -0 "$pid" 2>/dev/null || break
+			alive || break
 		done
 		kill "$pid" 2>/dev/null
 		wait "$pid" 2>/dev/null
