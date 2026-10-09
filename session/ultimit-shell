@@ -1,0 +1,41 @@
+#!/bin/sh
+# Keeps the Ultimit shell running for the whole session.
+#
+# Runs the working copy (shell/, hot-reloads while developing). If it exits,
+# it is restarted; if it keeps dying within seconds of starting (e.g. a
+# half-edited QML file), fall back to the last committed shell so the desktop
+# never ends up black; retry the working copy when a QML file changes.
+ROOT=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
+FALLBACK="${XDG_CACHE_HOME:-$HOME/.cache}/ultimit/shell-committed"
+
+fallback_ready() {
+	rm -rf "$FALLBACK" && mkdir -p "$FALLBACK" &&
+		git -C "$ROOT" archive HEAD shell | tar -x -C "$FALLBACK" --strip-components=1
+}
+
+fails=0
+while :; do
+	start=$(date +%s)
+	if [ "$fails" -ge 2 ] && fallback_ready; then
+		echo "ultimit-shell: working copy keeps failing; running last committed shell" >&2
+		qs -p "$FALLBACK" &
+		pid=$!
+		# Give the working copy another chance once something in it changes.
+		touch "$FALLBACK/.since"
+		until [ -n "$(find "$ROOT/shell" -newer "$FALLBACK/.since" -name '*.qml' -print -quit)" ]; do
+			sleep 3
+			kill -0 "$pid" 2>/dev/null || break
+		done
+		kill "$pid" 2>/dev/null
+		wait "$pid" 2>/dev/null
+		fails=0
+		continue
+	fi
+	qs -p "$ROOT/shell"
+	if [ $(($(date +%s) - start)) -lt 10 ]; then
+		fails=$((fails + 1))
+	else
+		fails=0
+	fi
+	sleep 1
+done
