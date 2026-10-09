@@ -5,6 +5,7 @@
 #                   stops SceneFX's scene overrides from taking effect.
 #   SceneFX 0.4.1   blur, shadows, clipped regions on the wlroots scene graph.
 #   Quickshell      the QML toolkit the Ultimit shell is written in.
+#   oo7             Secret Service daemon (replaces gnome-keyring).
 # Builds use -j4; the dev laptop runs out of RAM with more.
 set -e
 P=${ULTIMIT_DEPS:-$HOME/.local/ultimit-deps}
@@ -32,3 +33,14 @@ cmake -GNinja -S "$SRC/quickshell" -B "$SRC/quickshell/build" -DCMAKE_BUILD_TYPE
 	-DCMAKE_INSTALL_PREFIX="$P" -DCRASH_HANDLER=OFF -DDISTRIBUTOR="Ultimit dev build"
 cmake --build "$SRC/quickshell/build" -j 4
 cmake --install "$SRC/quickshell/build"
+
+# oo7: Secret Service daemon replacing gnome-keyring (needs Rust >= 1.95;
+# Ubuntu 26.04 ships 1.93, so use rustup's stable toolchain if present).
+fetch https://github.com/linux-credentials/oo7 0.7.0.beta oo7
+(
+	cd "$SRC/oo7"
+	PATH="$HOME/.cargo/bin:$PATH" cargo build --release -j 4 -p oo7-daemon -p oo7-pam -p oo7-cli
+)
+install -m755 "$SRC/oo7/target/release/oo7-daemon" "$SRC/oo7/target/release/oo7-cli" "$P/bin/"
+echo "PAM module for login unlock (install as root):"
+echo "  sudo install -m644 $SRC/oo7/target/release/libpam_oo7.so /lib/x86_64-linux-gnu/security/pam_oo7.so"

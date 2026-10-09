@@ -26,9 +26,9 @@ GNOME stays installed as a safety net until phase 4.
 
 ## Phase 2: session
 - [x] Compositor: ext-session-lock-v1, ext-idle-notify-v1, idle-inhibit
-- [ ] Lock screen (PAM), idle dim/lock/suspend, lock on lid close/suspend
-- [ ] Polkit authentication agent
-- [ ] Secret service replacement for gnome-keyring
+- [x] Lock screen (PAM), idle dim/lock/suspend, lock on lid close/suspend
+- [x] Polkit authentication agent
+- [x] Secret service replacement for gnome-keyring (oo7; login PAM unlock comes with the greeter)
 - [x] Display configuration (wlr-output-management) and input settings
       (touchpad tap, natural scroll, keyboard layout, pointer speed)
 - [ ] Ultimit login screen on greetd, replacing GDM
