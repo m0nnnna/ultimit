@@ -174,6 +174,7 @@ static void new_xdg_toplevel(struct wl_listener *listener, void *data) {
 struct ul_popup {
 	struct wlr_xdg_popup *xdg_popup;
 	struct wl_listener commit;
+	struct wl_listener reposition;
 	struct wl_listener destroy;
 };
 
@@ -231,9 +232,17 @@ static void popup_commit(struct wl_listener *listener, void *data) {
 	}
 }
 
+/* GTK4 menus ask to be re-placed right after opening; keep them on screen
+ * then too. */
+static void popup_reposition(struct wl_listener *listener, void *data) {
+	struct ul_popup *popup = wl_container_of(listener, popup, reposition);
+	popup_unconstrain(popup);
+}
+
 static void popup_destroy(struct wl_listener *listener, void *data) {
 	struct ul_popup *popup = wl_container_of(listener, popup, destroy);
 	wl_list_remove(&popup->commit.link);
+	wl_list_remove(&popup->reposition.link);
 	wl_list_remove(&popup->destroy.link);
 	free(popup);
 }
@@ -263,6 +272,8 @@ static void new_xdg_popup(struct wl_listener *listener, void *data) {
 
 	popup->commit.notify = popup_commit;
 	wl_signal_add(&xdg_popup->base->surface->events.commit, &popup->commit);
+	popup->reposition.notify = popup_reposition;
+	wl_signal_add(&xdg_popup->events.reposition, &popup->reposition);
 	popup->destroy.notify = popup_destroy;
 	wl_signal_add(&xdg_popup->events.destroy, &popup->destroy);
 }
