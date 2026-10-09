@@ -13,6 +13,7 @@
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_output_management_v1.h>
 #include <wlr/types/wlr_pointer_constraints_v1.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_seat.h>
@@ -85,6 +86,10 @@ struct ul_server {
 	struct wlr_output_layout *output_layout;
 	struct wl_list outputs; /* ul_output.link */
 	struct wl_listener new_output;
+	struct wlr_output_manager_v1 *output_manager; /* wlr-output-management: wlr-randr, Settings */
+	struct wl_listener output_apply;
+	struct wl_listener output_test;
+	struct wl_listener layout_change;
 
 	struct wlr_xdg_shell *xdg_shell;
 	struct wl_listener new_xdg_toplevel;
@@ -308,6 +313,7 @@ void server_spawn(const char *cmd);
 
 /* output.c */
 void output_init(struct ul_server *server);
+void output_finish(struct ul_server *server);
 struct ul_output *output_at(struct ul_server *server, double lx, double ly);
 struct ul_output *output_for_view(struct ul_view *view);
 void output_arrange(struct ul_output *output);

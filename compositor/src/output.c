@@ -174,9 +174,100 @@ static void new_output(struct wl_listener *listener, void *data) {
 	output_arrange(output);
 }
 
+/* ---- wlr-output-management ---------------------------------------------- */
+
+/* Publish the current layout (modes, positions, scale...) to clients. */
+static void update_output_manager(struct ul_server *server) {
+	struct wlr_output_configuration_v1 *config = wlr_output_configuration_v1_create();
+	struct ul_output *output;
+	wl_list_for_each(output, &server->outputs, link) {
+		struct wlr_output_configuration_head_v1 *head =
+			wlr_output_configuration_head_v1_create(config, output->wlr_output);
+		struct wlr_box box;
+		wlr_output_layout_get_box(server->output_layout, output->wlr_output, &box);
+		head->state.enabled = output->wlr_output->enabled && !wlr_box_empty(&box);
+		head->state.x = box.x;
+		head->state.y = box.y;
+	}
+	wlr_output_manager_v1_set_configuration(server->output_manager, config);
+}
+
+static void apply_output_config(struct ul_server *server,
+		struct wlr_output_configuration_v1 *config, bool test_only) {
+	size_t len = 0;
+	struct wlr_backend_output_state *states =
+		wlr_output_configuration_v1_build_state(config, &len);
+	bool ok = states != NULL;
+	if (ok) {
+		ok = test_only ? wlr_backend_test(server->backend, states, len) :
+			wlr_backend_commit(server->backend, states, len);
+	}
+	if (ok && !test_only) {
+		struct wlr_output_configuration_head_v1 *head;
+		wl_list_for_each(head, &config->heads, link) {
+			struct wlr_output *wlr_output = head->state.output;
+			struct ul_output *output = wlr_output->data;
+			if (!output) continue;
+			if (head->state.enabled) {
+				struct wlr_output_layout_output *lo = wlr_output_layout_add(
+					server->output_layout, wlr_output, head->state.x, head->state.y);
+				wlr_scene_output_layout_add_output(server->scene_layout, lo,
+					output->scene_output);
+			} else {
+				wlr_output_layout_remove(server->output_layout, wlr_output);
+			}
+		}
+		wl_list_for_each(head, &config->heads, link) {
+			struct ul_output *output = head->state.output->data;
+			if (output && head->state.enabled) {
+				output_arrange(output);
+			}
+		}
+	}
+	for (size_t i = 0; i < len; i++) {
+		wlr_output_state_finish(&states[i].base);
+	}
+	free(states);
+	if (ok) {
+		wlr_output_configuration_v1_send_succeeded(config);
+	} else {
+		wlr_output_configuration_v1_send_failed(config);
+	}
+	wlr_output_configuration_v1_destroy(config);
+	update_output_manager(server);
+}
+
+static void output_manager_apply(struct wl_listener *listener, void *data) {
+	struct ul_server *server = wl_container_of(listener, server, output_apply);
+	apply_output_config(server, data, false);
+}
+
+static void output_manager_test(struct wl_listener *listener, void *data) {
+	struct ul_server *server = wl_container_of(listener, server, output_test);
+	apply_output_config(server, data, true);
+}
+
+static void layout_change(struct wl_listener *listener, void *data) {
+	struct ul_server *server = wl_container_of(listener, server, layout_change);
+	update_output_manager(server);
+}
+
+void output_finish(struct ul_server *server) {
+	wl_list_remove(&server->output_apply.link);
+	wl_list_remove(&server->output_test.link);
+	wl_list_remove(&server->layout_change.link);
+}
+
 void output_init(struct ul_server *server) {
 	wl_list_init(&server->outputs);
 	server->output_layout = wlr_output_layout_create(server->display);
+	server->output_manager = wlr_output_manager_v1_create(server->display);
+	server->output_apply.notify = output_manager_apply;
+	wl_signal_add(&server->output_manager->events.apply, &server->output_apply);
+	server->output_test.notify = output_manager_test;
+	wl_signal_add(&server->output_manager->events.test, &server->output_test);
+	server->layout_change.notify = layout_change;
+	wl_signal_add(&server->output_layout->events.change, &server->layout_change);
 	server->new_output.notify = new_output;
 	wl_signal_add(&server->backend->events.new_output, &server->new_output);
 }

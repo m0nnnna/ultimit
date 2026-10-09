@@ -187,6 +187,7 @@ int main(int argc, char *argv[]) {
 
 	ipc_finish(&server);
 	lock_finish(&server);
+	output_finish(&server);
 	wl_display_destroy_clients(server.display);
 	/* wlroots 0.19 asserts that nothing still listens to an object it
 	 * destroys, so detach every server-level listener first. */

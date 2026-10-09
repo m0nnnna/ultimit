@@ -174,6 +174,7 @@ static void new_xdg_toplevel(struct wl_listener *listener, void *data) {
 
 struct ul_popup {
 	struct wlr_xdg_popup *xdg_popup;
+	bool attached;
 	struct wl_listener commit;
 	struct wl_listener reposition;
 	struct wl_listener destroy;
@@ -184,10 +185,13 @@ struct ul_popup {
 static void popup_unconstrain(struct ul_popup *popup) {
 	struct wlr_xdg_popup *xdg_popup = popup->xdg_popup;
 	struct wlr_surface *parent = xdg_popup->parent;
-	struct wlr_xdg_surface *parent_xdg;
-	while ((parent_xdg = wlr_xdg_surface_try_from_wlr_surface(parent)) &&
+	struct wlr_xdg_surface *parent_xdg = NULL;
+	while (parent && (parent_xdg = wlr_xdg_surface_try_from_wlr_surface(parent)) &&
 			parent_xdg->role == WLR_XDG_SURFACE_ROLE_POPUP) {
 		parent = parent_xdg->popup->parent;
+	}
+	if (!parent) {
+		return;
 	}
 
 	struct ul_view *view = view_from_xdg_surface(parent_xdg);
@@ -225,9 +229,42 @@ static void popup_unconstrain(struct ul_popup *popup) {
 	}
 }
 
+/* Put the popup into the scene under its parent. Layer-shell popups are
+ * created without a parent (zwlr_layer_surface_v1.get_popup assigns it
+ * later), so this can only happen once the parent is known. Returns false
+ * if there is nothing we manage to anchor it to. */
+static bool popup_attach(struct ul_popup *popup) {
+	struct wlr_xdg_popup *xdg_popup = popup->xdg_popup;
+	if (popup->attached) {
+		return true;
+	}
+	if (!xdg_popup->parent) {
+		return false;
+	}
+	struct wlr_scene_tree *parent_tree = NULL;
+	struct wlr_xdg_surface *parent = wlr_xdg_surface_try_from_wlr_surface(xdg_popup->parent);
+	if (parent) {
+		parent_tree = parent->data;
+	} else {
+		struct wlr_layer_surface_v1 *layer =
+			wlr_layer_surface_v1_try_from_wlr_surface(xdg_popup->parent);
+		if (layer) {
+			parent_tree = layer_popup_parent(layer, NULL, NULL, NULL);
+		}
+	}
+	if (!parent_tree) {
+		/* A parent we don't manage (e.g. a lock surface). */
+		return false;
+	}
+	xdg_popup->base->data = wlr_scene_xdg_surface_create(parent_tree, xdg_popup->base);
+	popup->attached = true;
+	return true;
+}
+
 static void popup_commit(struct wl_listener *listener, void *data) {
 	struct ul_popup *popup = wl_container_of(listener, popup, commit);
 	if (popup->xdg_popup->base->initial_commit) {
+		popup_attach(popup);
 		popup_unconstrain(popup);
 		wlr_xdg_surface_schedule_configure(popup->xdg_popup->base);
 	}
@@ -251,25 +288,10 @@ static void popup_destroy(struct wl_listener *listener, void *data) {
 static void new_xdg_popup(struct wl_listener *listener, void *data) {
 	struct wlr_xdg_popup *xdg_popup = data;
 
-	struct wlr_scene_tree *parent_tree = NULL;
-	struct wlr_xdg_surface *parent = wlr_xdg_surface_try_from_wlr_surface(xdg_popup->parent);
-	if (parent) {
-		parent_tree = parent->data;
-	} else {
-		struct wlr_layer_surface_v1 *layer =
-			wlr_layer_surface_v1_try_from_wlr_surface(xdg_popup->parent);
-		if (layer) {
-			parent_tree = layer_popup_parent(layer, NULL, NULL, NULL);
-		}
-	}
-	if (!parent_tree) {
-		/* Parent we don't manage (e.g. a lock surface); nothing to anchor to. */
-		return;
-	}
-
 	struct ul_popup *popup = calloc(1, sizeof(*popup));
 	popup->xdg_popup = xdg_popup;
-	xdg_popup->base->data = wlr_scene_xdg_surface_create(parent_tree, xdg_popup->base);
+	/* Parent may not be set yet (layer-shell popups); see popup_attach. */
+	popup_attach(popup);
 
 	popup->commit.notify = popup_commit;
 	wl_signal_add(&xdg_popup->base->surface->events.commit, &popup->commit);

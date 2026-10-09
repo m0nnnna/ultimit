@@ -39,6 +39,7 @@ protocols = [
 	wp_dir / 'unstable/pointer-constraints/pointer-constraints-unstable-v1.xml',
 	wp_dir / 'unstable/tablet/tablet-unstable-v2.xml',
 	'protocols/wlr-layer-shell-unstable-v1.xml',
+	'protocols/wlr-output-management-unstable-v1.xml',
 ]
 
 protocol_headers = []
