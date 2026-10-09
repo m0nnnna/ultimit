@@ -1,0 +1,5 @@
+#!/bin/sh
+# Lock the screen (Super+L in the compositor). The lock screen lives in the
+# shell; this just asks it to lock.
+SHELL_DIR=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
+exec qs -p "$SHELL_DIR" ipc call lock lock
