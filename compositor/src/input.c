@@ -12,6 +12,8 @@
 #include <wlr/types/wlr_keyboard.h>
 #include <wlr/types/wlr_pointer.h>
 #include <wlr/types/wlr_primary_selection.h>
+#include <wlr/types/wlr_virtual_keyboard_v1.h>
+#include <wlr/types/wlr_virtual_pointer_v1.h>
 #include <wlr/util/region.h>
 #include <xkbcommon/xkbcommon.h>
 #include "server.h"
@@ -481,20 +483,24 @@ static void keyboard_destroy(struct wl_listener *listener, void *data) {
 	free(keyboard);
 }
 
-static void new_keyboard(struct ul_server *server, struct wlr_input_device *device) {
+static void new_keyboard(struct ul_server *server, struct wlr_input_device *device,
+		bool virtual) {
 	struct wlr_keyboard *wlr_keyboard = wlr_keyboard_from_input_device(device);
 	struct ul_keyboard *keyboard = calloc(1, sizeof(*keyboard));
 	keyboard->server = server;
 	keyboard->wlr_keyboard = wlr_keyboard;
 
-	/* Layout comes from XKB_DEFAULT_LAYOUT etc. in the environment. */
-	struct xkb_context *context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
-	struct xkb_keymap *keymap = xkb_keymap_new_from_names(context, NULL,
-		XKB_KEYMAP_COMPILE_NO_FLAGS);
-	wlr_keyboard_set_keymap(wlr_keyboard, keymap);
-	xkb_keymap_unref(keymap);
-	xkb_context_unref(context);
-	wlr_keyboard_set_repeat_info(wlr_keyboard, 25, 600);
+	/* Layout comes from XKB_DEFAULT_LAYOUT etc. in the environment. Virtual
+	 * keyboards (wtype, remote input) upload their own keymap. */
+	if (!virtual) {
+		struct xkb_context *context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+		struct xkb_keymap *keymap = xkb_keymap_new_from_names(context, NULL,
+			XKB_KEYMAP_COMPILE_NO_FLAGS);
+		wlr_keyboard_set_keymap(wlr_keyboard, keymap);
+		xkb_keymap_unref(keymap);
+		xkb_context_unref(context);
+		wlr_keyboard_set_repeat_info(wlr_keyboard, 25, 600);
+	}
 
 	keyboard->modifiers.notify = keyboard_modifiers;
 	wl_signal_add(&wlr_keyboard->events.modifiers, &keyboard->modifiers);
@@ -507,12 +513,11 @@ static void new_keyboard(struct ul_server *server, struct wlr_input_device *devi
 	wl_list_insert(&server->keyboards, &keyboard->link);
 }
 
-static void new_input(struct wl_listener *listener, void *data) {
-	struct ul_server *server = wl_container_of(listener, server, new_input);
-	struct wlr_input_device *device = data;
+static void add_input_device(struct ul_server *server, struct wlr_input_device *device,
+		bool virtual) {
 	switch (device->type) {
 	case WLR_INPUT_DEVICE_KEYBOARD:
-		new_keyboard(server, device);
+		new_keyboard(server, device, virtual);
 		break;
 	case WLR_INPUT_DEVICE_POINTER:
 		wlr_cursor_attach_input_device(server->cursor, device);
@@ -525,6 +530,30 @@ static void new_input(struct wl_listener *listener, void *data) {
 		caps |= WL_SEAT_CAPABILITY_KEYBOARD;
 	}
 	wlr_seat_set_capabilities(server->seat, caps);
+}
+
+static void new_input(struct wl_listener *listener, void *data) {
+	struct ul_server *server = wl_container_of(listener, server, new_input);
+	add_input_device(server, data, false);
+}
+
+/* Virtual input (wtype, wlrctl): lets scripted tests and remote tools drive
+ * the desktop. Standard on wlroots compositors; to be limited to trusted
+ * clients before Ultimit ships to other people. */
+static void new_virtual_keyboard(struct wl_listener *listener, void *data) {
+	struct ul_server *server = wl_container_of(listener, server, new_virtual_keyboard);
+	struct wlr_virtual_keyboard_v1 *keyboard = data;
+	add_input_device(server, &keyboard->keyboard.base, true);
+}
+
+static void new_virtual_pointer(struct wl_listener *listener, void *data) {
+	struct ul_server *server = wl_container_of(listener, server, new_virtual_pointer);
+	struct wlr_virtual_pointer_v1_new_pointer_event *event = data;
+	struct wlr_input_device *device = &event->new_pointer->pointer.base;
+	add_input_device(server, device, true);
+	if (event->suggested_output) {
+		wlr_cursor_map_input_to_output(server->cursor, device, event->suggested_output);
+	}
 }
 
 /* ---- seat requests ------------------------------------------------------- */
@@ -584,6 +613,15 @@ void input_init(struct ul_server *server) {
 	wl_list_init(&server->keyboards);
 	server->new_input.notify = new_input;
 	wl_signal_add(&server->backend->events.new_input, &server->new_input);
+
+	struct wlr_virtual_keyboard_manager_v1 *vkbd =
+		wlr_virtual_keyboard_manager_v1_create(server->display);
+	server->new_virtual_keyboard.notify = new_virtual_keyboard;
+	wl_signal_add(&vkbd->events.new_virtual_keyboard, &server->new_virtual_keyboard);
+	struct wlr_virtual_pointer_manager_v1 *vptr =
+		wlr_virtual_pointer_manager_v1_create(server->display);
+	server->new_virtual_pointer.notify = new_virtual_pointer;
+	wl_signal_add(&vptr->events.new_virtual_pointer, &server->new_virtual_pointer);
 	server->seat = wlr_seat_create(server->display, "seat0");
 	server->request_cursor.notify = request_cursor;
 	wl_signal_add(&server->seat->events.request_set_cursor, &server->request_cursor);

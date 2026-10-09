@@ -191,7 +191,8 @@ int main(int argc, char *argv[]) {
 		&server.request_activate, &server.cursor_motion, &server.cursor_motion_absolute,
 		&server.cursor_button, &server.cursor_axis, &server.cursor_frame,
 		&server.request_set_shape, &server.new_constraint, &server.constraint_destroy,
-		&server.new_input, &server.request_cursor, &server.request_set_selection,
+		&server.new_input, &server.new_virtual_keyboard, &server.new_virtual_pointer,
+		&server.request_cursor, &server.request_set_selection,
 		&server.request_set_primary_selection,
 	};
 	for (size_t i = 0; i < sizeof(listeners) / sizeof(listeners[0]); i++) {
