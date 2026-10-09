@@ -15,6 +15,8 @@ static struct ul_view *view_from_xdg_surface(struct wlr_xdg_surface *xdg_surface
 	return view_from_node(&content->node);
 }
 
+static void apply_decoration_mode(struct ul_view *view);
+
 /* ---- toplevels ----------------------------------------------------------- */
 
 static void xdg_map(struct wl_listener *listener, void *data) {
@@ -26,6 +28,8 @@ static void xdg_map(struct wl_listener *listener, void *data) {
 	struct wlr_box geo = view->xdg_toplevel->base->geometry;
 	view->width = geo.width;
 	view->height = geo.height;
+	view->geo_x = geo.x;
+	view->geo_y = geo.y;
 	view_map(view);
 }
 
@@ -42,8 +46,7 @@ static void xdg_commit(struct wl_listener *listener, void *data) {
 		/* Ask for server-side decorations when the client supports the
 		 * protocol; let it pick its own size. */
 		if (view->xdg_decoration) {
-			wlr_xdg_toplevel_decoration_v1_set_mode(view->xdg_decoration,
-				WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
+			apply_decoration_mode(view);
 		}
 		wlr_xdg_toplevel_set_wm_capabilities(toplevel,
 			WLR_XDG_TOPLEVEL_WM_CAPABILITIES_MAXIMIZE |
@@ -266,14 +269,27 @@ static void new_xdg_popup(struct wl_listener *listener, void *data) {
 
 /* ---- xdg-decoration ------------------------------------------------------ */
 
+/* We draw the Ultimit titlebar unless the client explicitly asks to draw its
+ * own (Chromium's tab strip, for example). Overriding that request just gets
+ * two titlebars. */
+static enum wlr_xdg_toplevel_decoration_v1_mode decoration_mode_for(
+		struct wlr_xdg_toplevel_decoration_v1 *decoration) {
+	return decoration->requested_mode == WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE ?
+		WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE :
+		WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE;
+}
+
+static void apply_decoration_mode(struct ul_view *view) {
+	enum wlr_xdg_toplevel_decoration_v1_mode mode = decoration_mode_for(view->xdg_decoration);
+	if (view->xdg_toplevel->base->initialized) {
+		wlr_xdg_toplevel_decoration_v1_set_mode(view->xdg_decoration, mode);
+	}
+	view_set_ssd(view, mode == WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
+}
+
 static void decoration_request_mode(struct wl_listener *listener, void *data) {
 	struct ul_view *view = wl_container_of(listener, view, decoration_request_mode);
-	/* We always draw the Ultimit titlebar when the client lets us. */
-	if (view->xdg_toplevel->base->initialized) {
-		wlr_xdg_toplevel_decoration_v1_set_mode(view->xdg_decoration,
-			WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
-	}
-	view_set_ssd(view, true);
+	apply_decoration_mode(view);
 }
 
 static void decoration_destroy(struct wl_listener *listener, void *data) {
@@ -295,11 +311,7 @@ static void new_decoration(struct wl_listener *listener, void *data) {
 	wl_signal_add(&decoration->events.request_mode, &view->decoration_request_mode);
 	view->decoration_destroy.notify = decoration_destroy;
 	wl_signal_add(&decoration->events.destroy, &view->decoration_destroy);
-	view_set_ssd(view, true);
-	if (decoration->toplevel->base->initialized) {
-		wlr_xdg_toplevel_decoration_v1_set_mode(decoration,
-			WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
-	}
+	apply_decoration_mode(view);
 }
 
 /* ---- KDE server-decoration ---------------------------------------------- */

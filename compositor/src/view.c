@@ -153,8 +153,15 @@ void view_request_size(struct ul_view *view, int width, int height) {
 /* Called when the client commits a new size. */
 void view_update_size(struct ul_view *view, int width, int height) {
 	if (width == view->width && height == view->height) {
-		/* Geometry offset may still have moved. */
+		/* Clients with invisible shadow margins (Chromium, GTK) can move
+		 * their geometry offset without resizing; the chrome must follow. */
+		struct wlr_box geo = view_geometry_offset(view);
 		view_set_position(view, view->x, view->y);
+		if (geo.x != view->geo_x || geo.y != view->geo_y) {
+			view->geo_x = geo.x;
+			view->geo_y = geo.y;
+			decoration_update(view);
+		}
 		return;
 	}
 	struct ul_server *server = view->server;
@@ -169,6 +176,9 @@ void view_update_size(struct ul_view *view, int width, int height) {
 	}
 	view->width = width;
 	view->height = height;
+	struct wlr_box geo = view_geometry_offset(view);
+	view->geo_x = geo.x;
+	view->geo_y = geo.y;
 	view_set_position(view, view->x, view->y);
 	decoration_update(view);
 }
@@ -474,5 +484,6 @@ void view_destroy(struct ul_view *view) {
 	}
 	wl_list_remove(&view->link);
 	wlr_scene_node_destroy(&view->tree->node);
+	free(view->deco.drawn_title);
 	free(view);
 }

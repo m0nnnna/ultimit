@@ -162,6 +162,10 @@ struct ul_decoration {
 	struct wlr_scene_rect *line; /* open animation */
 	int button_x[3]; /* left edge of minimize, maximize, close, in titlebar coords */
 	int button_w[3];
+	/* What the titlebar buffer was last drawn with, to skip redundant redraws. */
+	int drawn_width;
+	bool drawn_focused;
+	char *drawn_title;
 };
 
 enum ul_view_type {
@@ -195,6 +199,7 @@ struct ul_view {
 	bool minimized;
 	int x, y;          /* layout position of the content's top-left */
 	int width, height; /* content size */
+	int geo_x, geo_y;  /* last seen xdg geometry offset (invisible margins) */
 	struct wlr_box saved; /* content box before maximize/fullscreen */
 
 	struct wl_event_source *anim_timer;

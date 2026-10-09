@@ -8,6 +8,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 #include <cairo.h>
 #include <drm_fourcc.h>
 #include <pango/pangocairo.h>
@@ -235,7 +236,15 @@ void decoration_update(struct ul_view *view) {
 	wlr_scene_node_set_enabled(&deco->titlebar->node, view->ssd);
 	if (view->ssd) {
 		wlr_scene_node_set_position(&deco->titlebar->node, fx, fy);
-		render_titlebar(view);
+		const char *title = view_title(view);
+		if (deco->drawn_width != fw || deco->drawn_focused != focused ||
+				!deco->drawn_title || strcmp(deco->drawn_title, title) != 0) {
+			render_titlebar(view);
+			deco->drawn_width = fw;
+			deco->drawn_focused = focused;
+			free(deco->drawn_title);
+			deco->drawn_title = strdup(title);
+		}
 	}
 }
 
