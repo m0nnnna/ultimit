@@ -1,0 +1,51 @@
+# Roadmap: a GNOME-free Ultimit
+
+The proof that Ultimit is a complete desktop: purge GNOME from this Ubuntu
+26.04 install and everything still works.
+
+**Removed at the end:** gnome-shell, mutter, GDM, gnome-session,
+gnome-settings-daemon, gnome-control-center, every GNOME app (Files, Text
+Editor, Calculator, Ptyxis/GNOME Terminal, Papers, Loupe, Disks, Logs,
+Clocks, Characters, ...), gnome-keyring, gvfs, GNOME Online Accounts,
+evolution-data-server, Yaru GNOME Shell theme.
+
+**Kept as libraries:** GTK, GLib, dconf (Firefox and most Linux apps and game
+launchers need them).
+
+GNOME stays installed as a safety net until phase 4.
+
+## Phase 1: system controls in the shell
+- [ ] Notification server (popups in the Altimit toast style, history,
+      do-not-disturb)
+- [ ] On-screen display for volume and brightness; media/volume/brightness
+      keys bound in the compositor
+- [ ] Real status row (network, battery, volume, Bluetooth)
+- [ ] Quick settings panel: Wi-Fi, Bluetooth, output/input volume,
+      brightness, battery, now playing (MPRIS), power menu
+- [ ] System tray (StatusNotifierItem: Steam, Discord, ...)
+
+## Phase 2: session
+- [ ] Compositor: ext-session-lock-v1, ext-idle-notify-v1, idle-inhibit
+- [ ] Lock screen (PAM), idle dim/lock/suspend, lock on lid close/suspend
+- [ ] Polkit authentication agent
+- [ ] Secret service replacement for gnome-keyring
+- [ ] Display configuration (wlr-output-management) and input settings
+      (touchpad tap, natural scroll, keyboard layout, pointer speed)
+- [ ] Ultimit login screen on greetd, replacing GDM
+
+## Phase 3: Ultimit apps
+- [ ] Settings (grows out of Accessory): display, sound, network,
+      Bluetooth, power, input, appearance, users, about
+- [ ] DATA: file manager (trash, removable drives, network shares via
+      udisks/mount; no gvfs)
+- [ ] Text editor
+- [ ] Calculator
+- [ ] Terminal: foot, themed
+- [ ] Non-GNOME picks for PDF and images (to be replaced later)
+
+## Phase 4: the proof
+- [ ] Purge the packages above, reboot, log in through the Ultimit greeter
+- [ ] `scripts/test.sh` green; manual checklist (Wi-Fi, sound, Bluetooth,
+      suspend/resume, lock, screenshots, USB drive, printing, file picker
+      in Firefox)
+- [ ] Then: gaming (Steam, Proton, NVIDIA offload, VRR, direct scanout)
