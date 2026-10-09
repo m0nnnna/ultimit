@@ -256,20 +256,14 @@ Singleton {
         }
     }
 
-    // ---------------- lock screen IPC probe ----------------
-    property bool lockAvailable: false
-    function probeLock() { lockProbe.running = false; lockProbe.running = true; }
-    function lock() { exec(["sh", "-c", "exec " + qsBin + " -p '" + Quickshell.shellDir + "' ipc call lock lock"]); }
-    readonly property string qsBin: "\"$(command -v qs || echo $HOME/.local/ultimit-deps/bin/qs)\""
-    Process {
-        id: lockProbe
-        command: ["sh", "-c", qsBin + " -p '" + Quickshell.shellDir + "' ipc show 2>/dev/null | grep -q '^target lock$'"]
-        onExited: code => root.lockAvailable = (code === 0)
-    }
+    // ---------------- lock screen ----------------
+    // LockScreen.qml (in shell.qml) owns the session lock; this just asks it to lock.
+    readonly property bool lockAvailable: true
+    function lock() { Config.lock(); }
 
     // ---------------- refresh while the panel is open ----------------
     onQsOpenChanged: {
-        if (qsOpen) { _netKey = ""; refreshNets(); refreshBrightness(); refreshProfiles(); probeLock(); }
+        if (qsOpen) { _netKey = ""; refreshNets(); refreshBrightness(); refreshProfiles(); }
     }
     Timer {
         interval: 2000; repeat: true; running: root.qsOpen

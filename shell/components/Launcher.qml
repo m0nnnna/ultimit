@@ -252,7 +252,7 @@ PanelWindow {
             Rectangle { x: 0; y: -8; width: parent.width; height: 1; color: Theme.line }
             Row {
                 spacing: 8
-                PowerButton { id: lockB; text: "Lock"; enabled: false }   // placeholder: no screen locker yet
+                PowerButton { id: lockB; text: "Lock"; onActivated: { Config.closeLauncher(); Config.lock(); } }
                 PowerButton {
                     id: outB; text: "Log out"; confirm: true
                     onActivated: win.power("loginctl terminate-session \"$XDG_SESSION_ID\"")

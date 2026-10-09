@@ -34,6 +34,29 @@ Singleton {
     property int bootRequest: 0
     function playBoot() { bootRequest++; }
 
+    // ---- idle / lock (see LockScreen.qml) ----
+    // Seconds of inactivity before each step; 0 disables the step. Inhibitors (fullscreen
+    // windows, video players) hold idle off through ext-idle-notify. Env overrides
+    // (ULTIMIT_DIM_AFTER, ULTIMIT_LOCK_AFTER, ULTIMIT_SUSPEND_AFTER, ULTIMIT_SUSPEND_ON_AC=1)
+    // apply to that run only; used by the headless tests.
+    function envNum(name, def) { const v = parseFloat(Quickshell.env(name)); return isNaN(v) ? def : v; }
+    property real dimAfter: envNum("ULTIMIT_DIM_AFTER", 300)
+    property real lockAfter: envNum("ULTIMIT_LOCK_AFTER", 360)
+    property real suspendAfter: envNum("ULTIMIT_SUSPEND_AFTER", 900)
+    // Suspend on idle even when plugged in (default: only on battery).
+    property bool suspendOnAC: Quickshell.env("ULTIMIT_SUSPEND_ON_AC") === "1"
+    // Lock when the machine suspends / the lid closes (logind PrepareForSleep) and on `loginctl lock-session`.
+    property bool lockOnSleep: true
+    // PAM service used by the lock screen. "ultimit-lock" is used when /etc/pam.d/ultimit-lock exists
+    // (see docs/design or the install notes), else the stock "login" service.
+    property string pamService: "ultimit-lock"
+    property string pamFallback: "login"
+    // Lock-screen wallpaper animation (off: painted once; saves power while locked).
+    property bool lockAnimated: false
+    // Bumped to ask LockScreen.qml to lock (IPC `lock lock`, quick settings, launcher, Super+L).
+    property int lockRequest: 0
+    function lock() { lockRequest++; }
+
     // Layout metrics (px)
     readonly property int railWidth: 84
     readonly property int tickerHeight: 26

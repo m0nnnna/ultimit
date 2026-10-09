@@ -13,6 +13,7 @@ ShellRoot {
     Persist { id: persist }                              // ~/.config/ultimit/shell.json
     Boot { settingsReady: persist.ready }                // boot overlay (startup + on demand)
     Accessory {}                                         // Accessory settings window
+    LockScreen {}                                        // session lock, idle dim/lock/suspend, lock on sleep
     Polkit {}                                            // polkit authentication agent + dialog
     GamesWindow {}   // Ultimit Games app (toggle: qs ipc call games toggle)
 

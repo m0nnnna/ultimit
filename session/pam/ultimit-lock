@@ -1,0 +1,4 @@
+# /etc/pam.d/ultimit-lock - used by the Ultimit lock screen (Config.pamService).
+# Plain password check against the normal system auth stack: no login delay, no nologin check.
+auth     include  common-auth
+account  include  common-account

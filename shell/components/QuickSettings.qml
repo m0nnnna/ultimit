@@ -549,17 +549,6 @@ PanelWindow {
                             onArmedChanged: if (armed) { outB.disarm(); rebB.disarm(); }
                         }
                     }
-                    // tooltip for the disabled lock button
-                    Rectangle {
-                        visible: lockHover.hovered && !SysState.lockAvailable
-                        x: 0; y: -30; width: tipText.implicitWidth + 16; height: 22
-                        color: Theme.panel; border.width: 1; border.color: Theme.lineStrong
-                        Text {
-                            id: tipText; anchors.centerIn: parent
-                            text: "Lock screen coming soon"; color: Theme.fg
-                            font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.2
-                        }
-                    }
                 }
             }
         }
