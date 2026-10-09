@@ -442,10 +442,12 @@ void view_map(struct ul_view *view) {
 	wl_list_insert(&server->views, &view->link);
 	decoration_update(view);
 	view_focus(view);
+	anim_open(view);
 }
 
 void view_unmap(struct ul_view *view) {
 	struct ul_server *server = view->server;
+	anim_cancel(view);
 	view->mapped = false;
 	wlr_scene_node_set_enabled(&view->tree->node, false);
 	finish_foreign(view);

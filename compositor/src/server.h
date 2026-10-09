@@ -153,6 +153,7 @@ struct ul_decoration {
 	struct wlr_scene_rect *border;
 	struct wlr_scene_rect *brackets[4];
 	struct wlr_scene_buffer *titlebar;
+	struct wlr_scene_rect *line; /* open animation */
 	int button_x[3]; /* left edge of minimize, maximize, close, in titlebar coords */
 	int button_w[3];
 };
@@ -189,6 +190,9 @@ struct ul_view {
 	int x, y;          /* layout position of the content's top-left */
 	int width, height; /* content size */
 	struct wlr_box saved; /* content box before maximize/fullscreen */
+
+	struct wl_event_source *anim_timer;
+	uint32_t anim_start;
 
 	struct wlr_xdg_toplevel_decoration_v1 *xdg_decoration;
 	struct wl_listener decoration_request_mode;
@@ -266,6 +270,11 @@ void view_update_title(struct ul_view *view);
 void view_set_ssd(struct ul_view *view, bool ssd);
 void view_init_foreign(struct ul_view *view);
 bool view_wants_tearing(struct ul_view *view);
+
+/* anim.c */
+void anim_open(struct ul_view *view);
+void anim_cancel(struct ul_view *view);
+bool anim_running(struct ul_view *view);
 
 /* decoration.c */
 void decoration_create(struct ul_view *view);

@@ -1,7 +1,7 @@
 #!/bin/sh
 # Build and run Ultimit in a window on the current desktop.
-#   scripts/run-nested.sh                 just the compositor
-#   scripts/run-nested.sh -s "ptyxis"     with a startup command
+#   scripts/run-nested.sh                 compositor + Ultimit shell
+#   scripts/run-nested.sh -s "ptyxis"     with a different startup command
 set -e
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 DEPS=${ULTIMIT_DEPS:-$HOME/.local/ultimit-deps}
@@ -14,4 +14,7 @@ BUILD="$ROOT/compositor/build"
 # -j4: the dev laptop has little RAM to spare.
 ninja -C "$BUILD" -j4
 
+if [ $# -eq 0 ]; then
+	set -- -s "qs -p '$ROOT/shell'"
+fi
 exec "$BUILD/ultimit" "$@"

@@ -173,6 +173,8 @@ void decoration_create(struct ul_view *view) {
 	for (int i = 0; i < 4; i++) {
 		deco->brackets[i] = wlr_scene_rect_create(deco->tree, 0, 0, color_accent);
 	}
+	deco->line = wlr_scene_rect_create(deco->tree, 0, 0, color_accent);
+	wlr_scene_node_set_enabled(&deco->line->node, false);
 }
 
 /* Positions everything relative to the view's root tree, whose origin is the

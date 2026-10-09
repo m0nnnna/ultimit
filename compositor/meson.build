@@ -63,6 +63,7 @@ executable(
 		'src/input.c',
 		'src/view.c',
 		'src/decoration.c',
+		'src/anim.c',
 		'src/xdg.c',
 		'src/xwayland.c',
 		'src/layer.c',
