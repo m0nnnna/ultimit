@@ -306,14 +306,11 @@ void view_begin_interactive(struct ul_view *view, enum ul_cursor_mode mode, uint
 	if (view->fullscreen) {
 		return;
 	}
-	if (mode == UL_CURSOR_MOVE && view->maximized) {
-		/* Dragging a maximized window restores it under the pointer, keeping
-		 * the same relative grab point. */
-		double rel = (server->cursor->x - view->x) / (double)(view->width ? view->width : 1);
-		view_set_maximized(view, false);
-		int x = server->cursor->x - rel * view->saved.width;
-		view_set_position(view, x, view->y);
-	}
+	/* A maximized window only restores once it's actually dragged (see
+	 * process_move); restoring on press broke clicks and double-clicks. */
+	server->restore_on_drag = mode == UL_CURSOR_MOVE && view->maximized;
+	server->press_x = server->cursor->x;
+	server->press_y = server->cursor->y;
 	server->grabbed_view = view;
 	server->cursor_mode = mode;
 	if (mode == UL_CURSOR_MOVE) {

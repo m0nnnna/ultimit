@@ -186,6 +186,20 @@ void input_update_pointer_focus(struct ul_server *server, uint32_t time_msec) {
 
 static void process_move(struct ul_server *server) {
 	struct ul_view *view = server->grabbed_view;
+	if (server->restore_on_drag) {
+		double dx = server->cursor->x - server->press_x;
+		double dy = server->cursor->y - server->press_y;
+		if (dx * dx + dy * dy < 8 * 8) {
+			return; /* still a click, not a drag */
+		}
+		/* Restore under the pointer, keeping the same relative grab point. */
+		server->restore_on_drag = false;
+		double rel = (server->press_x - view->x) / (double)(view->width ? view->width : 1);
+		int grab_y = server->press_y - view->y;
+		view_set_maximized(view, false);
+		server->grab_x = rel * view->saved.width;
+		server->grab_y = grab_y;
+	}
 	view_set_position(view, server->cursor->x - server->grab_x,
 		server->cursor->y - server->grab_y);
 }
@@ -278,6 +292,7 @@ static void end_interactive(struct ul_server *server) {
 	}
 	server->cursor_mode = UL_CURSOR_PASSTHROUGH;
 	server->grabbed_view = NULL;
+	server->restore_on_drag = false;
 }
 
 static bool alt_held(struct ul_server *server) {

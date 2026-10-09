@@ -6,3 +6,4 @@ subprojects/*/
 *.o
 *.so
 compile_commands.json
+test-results/

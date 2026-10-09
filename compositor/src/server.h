@@ -119,6 +119,8 @@ struct ul_server {
 	double grab_x, grab_y;
 	struct wlr_box grab_box;
 	uint32_t resize_edges;
+	bool restore_on_drag; /* grabbed a maximized window; restore once it moves */
+	double press_x, press_y;
 
 	int ipc_fd;
 	char ipc_path[108];
