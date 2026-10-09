@@ -7,11 +7,13 @@ import Quickshell.Io
 import "components"
 import "apps/accessory"
 import "apps/games"
+import "apps/polkit"
 
 ShellRoot {
     Persist { id: persist }                              // ~/.config/ultimit/shell.json
     Boot { settingsReady: persist.ready }                // boot overlay (startup + on demand)
     Accessory {}                                         // Accessory settings window
+    Polkit {}                                            // polkit authentication agent + dialog
     GamesWindow {}   // Ultimit Games app (toggle: qs ipc call games toggle)
 
     IpcHandler {
