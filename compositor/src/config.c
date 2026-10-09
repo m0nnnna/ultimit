@@ -7,7 +7,7 @@
  *   tap = true                    layout = us
  *   natural_scroll = false        variant =
  *   accel_speed = 0.0             options =
- *   disable_while_typing = true   repeat_rate = 25
+ *   disable_while_typing = false  repeat_rate = 25
  *   left_handed = false           repeat_delay = 600
  *
  * Missing file or keys fall back to these defaults.
@@ -28,7 +28,9 @@ static void set_defaults(struct ul_config *c) {
 		.tap = true,
 		.natural_scroll = false,
 		.accel_speed = 0.0,
-		.disable_while_typing = true,
+		/* Off by default: on this ELAN touchpad it blocked every tap and
+		 * click, as if a key were always held. */
+		.disable_while_typing = false,
 		.left_handed = false,
 		.repeat_rate = 25,
 		.repeat_delay = 600,
