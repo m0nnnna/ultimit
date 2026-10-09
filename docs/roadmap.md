@@ -15,21 +15,21 @@ launchers need them).
 GNOME stays installed as a safety net until phase 4.
 
 ## Phase 1: system controls in the shell
-- [ ] Notification server (popups in the Altimit toast style, history,
+- [x] Notification server (popups in the Altimit toast style, history,
       do-not-disturb)
-- [ ] On-screen display for volume and brightness; media/volume/brightness
+- [x] On-screen display for volume and brightness; media/volume/brightness
       keys bound in the compositor
-- [ ] Real status row (network, battery, volume, Bluetooth)
-- [ ] Quick settings panel: Wi-Fi, Bluetooth, output/input volume,
+- [x] Real status row (network, battery, volume, Bluetooth)
+- [x] Quick settings panel: Wi-Fi, Bluetooth, output/input volume,
       brightness, battery, now playing (MPRIS), power menu
-- [ ] System tray (StatusNotifierItem: Steam, Discord, ...)
+- [x] System tray (StatusNotifierItem: Steam, Discord, ...)
 
 ## Phase 2: session
-- [ ] Compositor: ext-session-lock-v1, ext-idle-notify-v1, idle-inhibit
+- [x] Compositor: ext-session-lock-v1, ext-idle-notify-v1, idle-inhibit
 - [ ] Lock screen (PAM), idle dim/lock/suspend, lock on lid close/suspend
 - [ ] Polkit authentication agent
 - [ ] Secret service replacement for gnome-keyring
-- [ ] Display configuration (wlr-output-management) and input settings
+- [x] Display configuration (wlr-output-management) and input settings
       (touchpad tap, natural scroll, keyboard layout, pointer speed)
 - [ ] Ultimit login screen on greetd, replacing GDM
 
