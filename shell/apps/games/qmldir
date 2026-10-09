@@ -1,0 +1,7 @@
+singleton Games 1.0 Games.qml
+GamesWindow 1.0 GamesWindow.qml
+GradArt 1.0 GradArt.qml
+GChip 1.0 GChip.qml
+GToggle 1.0 GToggle.qml
+GButton 1.0 GButton.qml
+CopyText 1.0 CopyText.qml

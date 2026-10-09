@@ -8,6 +8,12 @@ Item {
     property color color: "white"
     property real strokeWidth: 1.6
     property real size: 40
+    // Stroke-draw progress 0..1 (boot overlay). Negative = fully drawn, solid strokes.
+    property real draw: -1
+    readonly property bool drawing: draw >= 0 && draw < 1
+    // Visible dash length in path units (strokeWidth-relative for Qt's dashPattern).
+    readonly property real dashOn: Math.max(0.001, draw * 300 / strokeWidth)
+    readonly property real dashOff: 600 / strokeWidth
 
     implicitWidth: size
     implicitHeight: size
@@ -38,18 +44,24 @@ Item {
         width: 48; height: 48
         scale: root.size / 48
         transformOrigin: Item.TopLeft
-        preferredRendererType: Shape.CurveRenderer
+        preferredRendererType: root.drawing ? Shape.GeometryRenderer : Shape.CurveRenderer
 
         ShapePath {
             fillColor: "transparent"; strokeColor: root.color; strokeWidth: root.strokeWidth
+            strokeStyle: root.drawing ? ShapePath.DashLine : ShapePath.SolidLine
+            dashPattern: [root.dashOn, root.dashOff]
             PathSvg { path: root.hexPath(20, 0) }
         }
         ShapePath {
             fillColor: "transparent"; strokeColor: root.color; strokeWidth: root.strokeWidth
+            strokeStyle: root.drawing ? ShapePath.DashLine : ShapePath.SolidLine
+            dashPattern: [root.dashOn, root.dashOff]
             PathSvg { path: root.bladePath() }
         }
         ShapePath {
             fillColor: "transparent"; strokeColor: root.color; strokeWidth: root.strokeWidth
+            strokeStyle: root.drawing ? ShapePath.DashLine : ShapePath.SolidLine
+            dashPattern: [root.dashOn, root.dashOff]
             PathSvg { path: root.hexPath(8.5, .35) }
         }
     }

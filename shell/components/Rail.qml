@@ -5,6 +5,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import ".."
+import "../apps/games"
 
 PanelWindow {
     id: win
@@ -15,12 +16,21 @@ PanelWindow {
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.namespace: "ultimit-rail"
+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand   // Tab / Enter on rail buttons
 
     // Returns the first open toplevel whose appId is in `ids`, or null.
     // Depends on toplevels.values so bindings re-evaluate as windows come and go.
-    function findToplevel(ids) {
+    // Accessory and Games are our own FloatingWindows (app_id org.quickshell),
+    // matched by title. GAMES also lights up for running launchers like Steam.
+    function findToplevel(ids, app) {
         const list = ToplevelManager.toplevels.values;
         for (let i = 0; i < list.length; i++) {
+            const own = list[i].appId === "org.quickshell";
+            if (app && app.id === "accessory") {
+                if (own && list[i].title === Config.accessoryTitle) return list[i];
+                continue;
+            }
+            if (app && app.id === "games" && own && list[i].title === "Games") return list[i];
             const id = (list[i].appId || "").toLowerCase();
             if (ids.indexOf(id) >= 0) return list[i];
         }
@@ -40,6 +50,7 @@ PanelWindow {
             property var c: Connections {
                 target: watcher.modelData
                 function onAppIdChanged() { win.tick++; }
+                function onTitleChanged() { win.tick++; }
             }
         }
     }
@@ -47,7 +58,26 @@ PanelWindow {
     function launch(cmd) { Quickshell.execDetached(["sh", "-c", cmd]); }
 
     function activate(app) {
-        const tl = findToplevel(app.appIds);
+        if (app.id === "accessory") {
+            // Own window: open it, or raise it if already mapped.
+            const w = findToplevel(app.appIds, app);
+            if (w) { w.minimized = false; w.activate(); }
+            else Config.accessoryOpen = true;
+            return;
+        }
+        if (app.id === "games") {
+            // Ultimit's own library window; Steam is launched from inside it.
+            if (Games.open) {
+                for (const t of ToplevelManager.toplevels.values) {
+                    if (t.appId === "org.quickshell" && t.title === "Games") {
+                        t.minimized = false; t.activate(); return;
+                    }
+                }
+            }
+            Games.show();
+            return;
+        }
+        const tl = findToplevel(app.appIds, app);
         if (tl) {
             tl.minimized = false;
             tl.activate();
@@ -57,6 +87,7 @@ PanelWindow {
     }
 
     Rectangle {
+        id: railBg
         anchors.fill: parent
         color: Theme.rail
         // right border
@@ -68,10 +99,35 @@ PanelWindow {
             anchors.horizontalCenter: parent.horizontalCenter
             spacing: 4
 
-            Emblem {
+            Item {   // emblem button: replays the boot sequence (mockup #embBtn)
+                id: embBtn
                 anchors.horizontalCenter: parent.horizontalCenter
-                size: 40
-                color: Theme.fg
+                width: 40; height: 40
+                activeFocusOnTab: true
+                Keys.onPressed: event => {
+                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+                        Config.playBoot(); event.accepted = true;
+                    }
+                }
+                Emblem {
+                    anchors.fill: parent
+                    size: 40
+                    color: Theme.fg
+                    scale: embMouse.pressed ? 0.92 : (embMouse.containsMouse ? 1.06 : 1)
+                    Behavior on scale { NumberAnimation { duration: Config.dur(150); easing.type: Easing.OutCubic } }
+                }
+                Rectangle {
+                    anchors.fill: parent; anchors.margins: -2
+                    color: "transparent"; border.width: 1; border.color: Theme.accent
+                    visible: embBtn.activeFocus && !embMouse.pressed
+                }
+                MouseArea {
+                    id: embMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: Config.playBoot()
+                }
             }
             Item { width: 1; height: 10 }   // emblem margin-bottom 14 = 4 spacing + 10
 
@@ -81,7 +137,7 @@ PanelWindow {
                     required property var modelData
                     appId: modelData.id
                     label: modelData.label
-                    on: { win.tick; return win.findToplevel(modelData.appIds) !== null; }
+                    on: { win.tick; return win.findToplevel(modelData.appIds, modelData) !== null; }
                     onClicked: win.activate(modelData)
                 }
             }

@@ -4,8 +4,15 @@
 import QtQuick
 import Quickshell
 import "components"
+import "apps/accessory"
+import "apps/games"
 
 ShellRoot {
+    Persist { id: persist }                              // ~/.config/ultimit/shell.json
+    Boot { settingsReady: persist.ready }                // boot overlay (startup + on demand)
+    Accessory {}                                         // Accessory settings window
+    GamesWindow {}   // Ultimit Games app (toggle: qs ipc call games toggle)
+
     Variants {
         model: Quickshell.screens
 

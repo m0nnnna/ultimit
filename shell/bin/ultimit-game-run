@@ -1,0 +1,49 @@
+#!/bin/sh
+# ultimit-game-run - per-game launch wrapper for Ultimit.
+# Set as a Steam launch option:   ultimit-game-run %command%
+# Reads $SteamAppId, looks up ~/.config/ultimit/games.json (written by the Games
+# window) and execs the command with that game's GPU / GameMode / MangoHud /
+# Gamescope settings. Missing tools are skipped with a message, never an error.
+
+[ "$#" -gt 0 ] || { echo "usage: ultimit-game-run %command%" >&2; exit 2; }
+
+PATH="$PATH:/usr/games:/usr/local/games"
+CONF="${XDG_CONFIG_HOME:-$HOME/.config}/ultimit/games.json"
+
+# Emits GPU=.. GM=.. HUD=.. SCOPE=.. (only whitelisted values). Defaults match the
+# Games window: NVIDIA when an NVIDIA driver is loaded, GameMode on, rest off.
+eval "$(python3 - "$CONF" "${SteamAppId:-}" <<'PY'
+import json, os, sys
+conf, appid = sys.argv[1], sys.argv[2]
+try:
+    with open(conf) as f:
+        g = json.load(f).get("games", {}).get(appid, {})
+except Exception:
+    g = {}
+gpu = g.get("gpu", "nvidia" if os.path.exists("/proc/driver/nvidia") else "auto")
+if gpu not in ("auto", "nvidia", "integrated"):
+    gpu = "auto"
+b = lambda k, d: 1 if g.get(k, d) is True else 0
+print("GPU=%s GM=%d HUD=%d SCOPE=%d" % (gpu, b("gamemode", True), b("overlay", False), b("gamescope", False)))
+PY
+)" || { GPU=auto; GM=0; HUD=0; SCOPE=0; }
+
+have() { command -v "$1" >/dev/null 2>&1; }
+
+if [ "$GPU" = nvidia ]; then
+    export __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia \
+           __VK_LAYER_NV_optimus=NVIDIA_only DXVK_FILTER_DEVICE_NAME=NVIDIA
+fi
+
+# Wrappers are prepended innermost first: gamescope -f -- mangohud gamemoderun <cmd>
+if [ "$GM" = 1 ]; then
+    if have gamemoderun; then set -- gamemoderun "$@"; else echo "ultimit-game-run: gamemoderun not installed, skipping GameMode" >&2; fi
+fi
+if [ "$HUD" = 1 ]; then
+    if have mangohud; then set -- mangohud "$@"; else echo "ultimit-game-run: mangohud not installed, skipping overlay" >&2; fi
+fi
+if [ "$SCOPE" = 1 ]; then
+    if have gamescope; then set -- gamescope -f -- "$@"; else echo "ultimit-game-run: gamescope not installed, skipping Gamescope" >&2; fi
+fi
+
+exec "$@"

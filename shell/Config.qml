@@ -17,6 +17,21 @@ Singleton {
     // Number of main shards in the wing (mockup slider: 16..60).
     property int shardDensity: 34
 
+    // Play the boot sequence overlay once at shell startup.
+    property bool bootOnStart: Quickshell.env("ULTIMIT_BOOT") !== "0"
+
+    // UI animation duration scale: 0 when motion is off (reduced motion), else 1.
+    readonly property real motionScale: motion ? 1 : 0
+    function dur(ms) { return Math.round(ms * motionScale); }
+
+    // ---- shared UI state / requests (see apps/accessory, Boot.qml, Rail.qml) ----
+    // Accessory window visibility; the window writes back here when closed via its frame.
+    property bool accessoryOpen: false
+    readonly property string accessoryTitle: "Accessory"
+    // Bumped to ask Boot.qml to (re)play the boot overlay.
+    property int bootRequest: 0
+    function playBoot() { bootRequest++; }
+
     // Layout metrics (px)
     readonly property int railWidth: 84
     readonly property int tickerHeight: 26
