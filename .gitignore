@@ -1,0 +1,8 @@
+build/
+build-*/
+.cache/
+subprojects/*/
+!subprojects/*.wrap
+*.o
+*.so
+compile_commands.json
