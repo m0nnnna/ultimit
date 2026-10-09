@@ -442,6 +442,16 @@ static bool handle_keybinding(struct ul_server *server, uint32_t mods, xkb_keysy
 		if (view) view_set_minimized(view, true);
 		return true;
 	}
+	/* Screenshots (shell/bin/ultimit-screenshot): region picker, full screen. */
+	bool shift = mods & WLR_MODIFIER_SHIFT;
+	if (logo && shift && (sym == XKB_KEY_s || sym == XKB_KEY_S)) {
+		server_spawn("ultimit-screenshot area");
+		return true;
+	}
+	if (sym == XKB_KEY_Print) {
+		server_spawn("ultimit-screenshot full");
+		return true;
+	}
 	return false;
 }
 

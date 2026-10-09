@@ -435,13 +435,40 @@ void view_map(struct ul_view *view) {
 	view_init_foreign(view);
 
 	/* Center new windows on the output under the pointer, inside the area
-	 * the shell's panels leave free. */
+	 * the shell's panels leave free. Windows that would land exactly on top
+	 * of another one step down-right so nothing hides behind a twin. */
 	struct ul_output *output = output_at(server, server->cursor->x, server->cursor->y);
 	if (output) {
 		struct wlr_box area = output->usable_area;
 		int bar = view->ssd ? UL_TITLEBAR_H : 0;
+		int max_w = area.width - 2 * UL_BORDER;
+		int max_h = area.height - bar - 2 * UL_BORDER;
+		if (view->width > max_w || view->height > max_h) {
+			/* Too big for the free area (e.g. sized for a bigger screen). */
+			view->width = view->width > max_w ? max_w : view->width;
+			view->height = view->height > max_h ? max_h : view->height;
+			view_request_size(view, view->width, view->height);
+		}
 		int x = area.x + (area.width - view->width) / 2;
 		int y = area.y + bar + (area.height - bar - view->height) / 2;
+		for (int tries = 0; tries < 12; tries++) {
+			bool taken = false;
+			struct ul_view *other;
+			wl_list_for_each(other, &server->views, link) {
+				if (other != view && other->mapped && !other->minimized &&
+						abs(other->x - x) < 24 && abs(other->y - y) < 24) {
+					taken = true;
+					break;
+				}
+			}
+			if (!taken) break;
+			x += 36;
+			y += 36;
+			if (x + view->width > area.x + area.width || y + view->height > area.y + area.height) {
+				x = area.x + 24 * (tries + 1);
+				y = area.y + bar + 24 * (tries + 1);
+			}
+		}
 		if (x < area.x) x = area.x;
 		if (y < area.y + bar) y = area.y + bar;
 		view_set_position(view, x, y);
