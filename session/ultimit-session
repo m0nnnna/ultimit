@@ -9,6 +9,11 @@ export XDG_SESSION_DESKTOP=ultimit
 export XDG_SESSION_TYPE=wayland
 export PATH="$DEPS/bin:$ROOT/shell/bin:$PATH"
 
+# Ultimit GTK theme for apps that draw their own titlebars (GNOME apps).
+# Only set here, so the regular Ubuntu session is unaffected.
+"$ROOT/shell/theme/install-gtk-theme.sh" >/dev/null 2>&1 || true
+. "$ROOT/shell/theme/session-env.sh"
+
 # Keep a log of the last session for debugging; the previous one is kept too.
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/ultimit"
 mkdir -p "$LOG_DIR"
@@ -17,6 +22,6 @@ mkdir -p "$LOG_DIR"
 # Once the compositor is up: hand the display variables to systemd/D-Bus so
 # apps they launch (portals, notifications, file pickers) find this session,
 # then start the shell.
-STARTUP="dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE; qs -p '$ROOT/shell'"
+STARTUP="dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE GTK_THEME ADW_DEBUG_COLOR_SCHEME; qs -p '$ROOT/shell'"
 
 exec "$ROOT/compositor/build/ultimit" -s "$STARTUP" >"$LOG_DIR/session.log" 2>&1

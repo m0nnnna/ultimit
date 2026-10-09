@@ -9,6 +9,7 @@ Item {
     property string appId: "games"
     property string label: "GAMES"
     property bool on: false
+    property bool missing: false   // no candidate app installed
     signal clicked()
 
     width: 72
@@ -67,6 +68,7 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
         spacing: 6
+        opacity: root.missing ? 0.45 : 1
         scale: root.pressed ? 0.94 : 1
         Behavior on scale { NumberAnimation { duration: Config.dur(120); easing.type: Easing.OutCubic } }
         Icon {
@@ -82,6 +84,13 @@ Item {
             font.weight: Font.DemiBold
             font.pixelSize: 9
             font.letterSpacing: 1.62   // .18em
+        }
+        Text {   // tiny "not installed" state
+            visible: root.missing
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "NOT INSTALLED"
+            color: Theme.dim
+            font.family: Theme.mono; font.pixelSize: 6; font.letterSpacing: 0.6
         }
     }
     MouseArea {

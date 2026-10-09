@@ -1,0 +1,183 @@
+/* ==========================================================================
+ * Ultimit GTK3 theme - skin "Mine"  (see gtk-4.0/gtk.css for the GTK4 twin)
+ * Built on GTK3's built-in Adwaita dark theme (always present in libgtk-3's
+ * gresource), then overridden. Skins: edit the @define-color block only.
+ * ========================================================================== */
+@import url("resource:///org/gtk/libgtk/theme/Adwaita/gtk-contained-dark.css");
+
+/* ---------------------------- SKIN TOKENS (Mine) --------------------------- */
+@define-color u_bg      #0a0c0f;
+@define-color u_bg_deep #050607;
+@define-color u_panel   #0d0f12;
+@define-color u_panel2  rgba(255,255,255,.05);
+@define-color u_fg      #eef1f4;
+@define-color u_dim     #8d949e;
+@define-color u_line    rgba(235,240,245,.16);
+@define-color u_line2   rgba(235,240,245,.48);
+@define-color u_accent  #d4ebff;
+@define-color u_on_acc  #07090b;
+@define-color u_sel     rgba(212,235,255,.20);
+@define-color u_ok      #8fe3b0;
+@define-color u_warn    #ffd98f;
+@define-color u_bad     #ff8a8a;
+
+/* GTK3 Adwaita named colours */
+@define-color theme_bg_color #0a0c0f;
+@define-color theme_fg_color #eef1f4;
+@define-color theme_base_color #050607;
+@define-color theme_text_color #eef1f4;
+@define-color theme_selected_bg_color #d4ebff;
+@define-color theme_selected_fg_color #07090b;
+@define-color theme_unfocused_bg_color #0a0c0f;
+@define-color theme_unfocused_fg_color #8d949e;
+@define-color theme_unfocused_base_color #050607;
+@define-color theme_unfocused_text_color #eef1f4;
+@define-color theme_unfocused_selected_bg_color #d4ebff;
+@define-color theme_unfocused_selected_fg_color #07090b;
+@define-color insensitive_bg_color #0d0f12;
+@define-color insensitive_fg_color #8d949e;
+@define-color insensitive_base_color #050607;
+@define-color borders rgba(235,240,245,.16);
+@define-color unfocused_borders rgba(235,240,245,.12);
+@define-color warning_color #ffd98f;
+@define-color error_color #ff8a8a;
+@define-color success_color #8fe3b0;
+@define-color content_view_bg #050607;
+@define-color link_color #d4ebff;
+@define-color link_visited_color #d4ebff;
+@define-color tooltip_bg_color #0d0f12;
+@define-color tooltip_fg_color #eef1f4;
+@define-color tooltip_border_color rgba(235,240,245,.48);
+@define-color menu_bg_color #0d0f12;
+@define-color menu_fg_color #eef1f4;
+
+* { -GtkScrolledWindow-scrollbar-spacing: 0; outline-color: @u_accent; }
+
+/* window */
+decoration, window decoration, window.csd decoration, window.background.csd, window.csd, .csd { border-radius: 0; }
+window, window.background, dialog, .background { background-color: @u_bg; color: @u_fg; }
+label { color: inherit; }
+decoration { box-shadow: 0 0 0 1px @u_line2, 0 12px 32px rgba(0,0,0,.45); border: none; margin: 8px; }
+decoration:backdrop { box-shadow: 0 0 0 1px @u_line, 0 8px 24px rgba(0,0,0,.3); }
+.maximized decoration, .fullscreen decoration, .tiled decoration { box-shadow: none; margin: 0; }
+window, dialog { font-family: "Chakra Petch", "Segoe UI", system-ui, sans-serif; }
+
+/* headerbar */
+headerbar, .titlebar, headerbar.titlebar {
+  background-color: @u_panel;
+  background-image: linear-gradient(to right, @u_accent, @u_accent), linear-gradient(to bottom, @u_accent, @u_accent);
+  background-size: 14px 2px, 2px 14px;
+  background-position: left top, left top;
+  background-repeat: no-repeat;
+  color: @u_fg;
+  border: none;
+  border-bottom: 1px solid @u_line;
+  border-radius: 0;
+  box-shadow: none;
+  min-height: 42px;
+  padding: 0 6px;
+}
+headerbar:backdrop, .titlebar:backdrop { background-color: @u_bg; color: @u_dim; }
+headerbar .title, .titlebar .title, .title {
+  font-family: "Michroma", "Eurostile", "Arial Black", sans-serif;
+  font-size: 13px; font-weight: normal; letter-spacing: 0.05em; color: @u_fg;
+}
+headerbar .subtitle, .titlebar .subtitle, .subtitle {
+  font-family: "Share Tech Mono", monospace; font-size: 10px; font-weight: normal;
+  letter-spacing: 0.16em; color: @u_dim;
+}
+/* window controls: small flat square buttons, close hover = danger */
+headerbar button.titlebutton, .titlebar button.titlebutton {
+  min-width: 22px; min-height: 22px; padding: 2px; margin: 0 2px;
+  border-radius: 0; border: 1px solid transparent; background: none; background-image: none;
+  box-shadow: none; color: @u_dim; text-shadow: none; -gtk-icon-shadow: none;
+}
+headerbar button.titlebutton:hover { color: @u_fg; border-color: @u_line2; background-color: @u_panel2; }
+headerbar button.titlebutton.close:hover { background-color: @u_bad; border-color: @u_bad; color: @u_on_acc; }
+
+/* buttons */
+button, .linked > button, .linked:not(.vertical) > button, .linked.vertical > button, combobox button, spinbutton button {
+  border-radius: 0;
+  background-color: transparent; background-image: none;
+  border: 1px solid @u_line2; box-shadow: none; text-shadow: none; -gtk-icon-shadow: none;
+  color: @u_fg; min-height: 24px; padding: 3px 12px; font-weight: 600;
+}
+button:hover { background-color: @u_panel2; background-image: none; }
+button:active, button:checked { background-color: @u_sel; background-image: none; border-color: @u_accent; color: @u_fg; }
+button:disabled { color: @u_dim; border-color: @u_line; }
+button:focus { outline: 1px solid @u_accent; outline-offset: 2px; }
+button.flat { border-color: transparent; background-color: transparent; }
+button.flat:hover { border-color: @u_line; background-color: @u_panel2; }
+button.suggested-action { background-color: @u_accent; background-image: none; border-color: @u_accent; color: @u_on_acc; }
+button.suggested-action:hover { background-color: shade(@u_accent, 1.08); }
+button.destructive-action { background-color: transparent; background-image: none; border-color: @u_bad; color: @u_bad; }
+button.destructive-action:hover { background-color: @u_bad; color: @u_on_acc; }
+.linked > button:not(:first-child) { margin-left: -1px; }
+
+/* entries */
+entry, spinbutton, textview, .view {
+  border-radius: 0;
+}
+entry, spinbutton {
+  background-color: @u_panel2; background-image: none; border: 1px solid @u_line; box-shadow: none;
+  color: @u_fg; min-height: 26px; caret-color: @u_accent;
+}
+entry:focus, spinbutton:focus { border-color: @u_accent; box-shadow: inset 0 0 0 1px @u_accent; }
+selection, *:selected { background-color: @u_sel; color: @u_fg; }
+textview, textview text, .view { background-color: @u_bg_deep; color: @u_fg; }
+spinbutton button { border-width: 0; border-left: 1px solid @u_line; }
+
+/* lists / sidebars */
+row, list row, .sidebar row, treeview.view, iconview {
+  border-radius: 0;
+}
+list, list row { background-color: transparent; }
+row:hover, list row:hover, treeview.view:hover { background-color: @u_panel2; }
+row:selected, list row:selected, .sidebar row:selected, treeview.view:selected, iconview:selected,
+row:selected:hover, list row:selected:hover {
+  background-color: @u_sel; color: @u_fg; box-shadow: inset 2px 0 0 @u_accent;
+}
+iconview:selected { box-shadow: inset 0 0 0 1px @u_accent; }
+.sidebar, placessidebar, stacksidebar { background-color: #080a0c; border-color: @u_line; }
+separator { background-color: @u_line; min-width: 1px; min-height: 1px; }
+frame > border, .frame { border-color: @u_line; border-radius: 0; }
+.toolbar, .inline-toolbar, actionbar, searchbar { background-color: @u_panel; border-color: @u_line; border-radius: 0; }
+
+/* popovers / menus / tooltips */
+popover, popover.background, .popover { background-color: @u_panel; border: 1px solid @u_line2; border-radius: 0; box-shadow: 0 8px 24px rgba(0,0,0,.5); color: @u_fg; }
+menu, .menu, .context-menu, menu menuitem, menubar { background-color: @u_panel; color: @u_fg; border-radius: 0; }
+menu { border: 1px solid @u_line2; padding: 2px 0; }
+menuitem:hover, modelbutton:hover, menu menuitem:hover { background-color: @u_panel2; box-shadow: inset 2px 0 0 @u_accent; }
+modelbutton { border-radius: 0; }
+tooltip, tooltip.background { background-color: @u_panel; border: 1px solid @u_line2; border-radius: 0; color: @u_fg; }
+tooltip * { color: @u_fg; }
+.osd { border-radius: 0; background-color: @u_panel; border: 1px solid @u_line2; }
+
+/* switch / check / radio / scale / progress */
+switch { border-radius: 0; background-color: @u_panel2; background-clip: border-box; background-image: none; border: 1px solid @u_line2; box-shadow: none; color: @u_dim; text-shadow: none; }
+switch:checked { background-color: @u_sel; border-color: @u_accent; color: @u_fg; }
+switch { min-width: 40px; min-height: 20px; }
+switch slider { min-width: 18px; min-height: 18px; border-radius: 0; background-color: @u_dim; background-image: none; border: none; box-shadow: none; }
+switch:checked slider { background-color: @u_accent; }
+check, radio { border-radius: 0; background-color: transparent; background-image: none; border: 1px solid @u_line2; box-shadow: none; color: @u_on_acc; -gtk-icon-shadow: none; }
+check:checked, check:indeterminate, radio:checked, radio:indeterminate { background-color: @u_accent; border-color: @u_accent; color: @u_on_acc; }
+scale trough, progressbar trough, levelbar trough { border-radius: 0; background-color: @u_panel2; border: 1px solid @u_line; box-shadow: none; }
+scale highlight, progressbar progress, levelbar block.filled { border-radius: 0; background-color: @u_accent; background-image: none; border: none; }
+scale slider { border-radius: 0; background-color: @u_accent; background-image: none; border: none; box-shadow: none; }
+
+/* scrollbars: thin */
+scrollbar, scrollbar trough { background: none; border: none; border-radius: 0; }
+scrollbar slider { border-radius: 0; background-color: @u_line2; min-width: 4px; min-height: 4px; border: none; }
+scrollbar.overlay-indicator:not(.hovering) slider { min-width: 2px; min-height: 2px; }
+scrollbar slider:hover, scrollbar slider:active { background-color: @u_accent; }
+
+/* notebook / tabs */
+notebook > header { background-color: @u_panel; border-color: @u_line; border-radius: 0; }
+notebook > header > tabs > tab { border-radius: 0; background: none; color: @u_dim; border-color: transparent; }
+notebook > header > tabs > tab:checked { color: @u_fg; background-color: @u_sel; box-shadow: inset 0 -2px @u_accent; }
+notebook > header > tabs > tab:hover { background-color: @u_panel2; }
+
+/* status colours */
+.success { color: @u_ok; } .warning { color: @u_warn; } .error { color: @u_bad; }
+link, *:link, *:visited { color: @u_accent; }
+infobar, infobar.info { border-radius: 0; }

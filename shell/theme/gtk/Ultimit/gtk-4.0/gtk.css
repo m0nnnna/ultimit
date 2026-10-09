@@ -1,0 +1,506 @@
+/* ==========================================================================
+ * Ultimit GTK4 / libadwaita theme - skin "Mine"
+ * Source of truth: docs/design/mockup.html
+ *
+ * HOW IT LOADS: libadwaita skips its own stylesheet whenever GTK_THEME is set,
+ * so this theme re-imports libadwaita's built-in stylesheet from its gresource
+ * (Ubuntu build, Yaru-patched) and then overrides it. Same-priority rules
+ * later in the file win.
+ *
+ * SKINS: edit only the "SKIN TOKENS" block (both the :root vars and the
+ * @define-color lines, which must match) to make Amber/Silver/Verdant.
+ * ========================================================================== */
+
+@import url("resource:///org/gnome/Adwaita/styles/main-dark-yaru-default.css");
+
+/* ---------------------------- SKIN TOKENS (Mine) --------------------------- */
+@define-color u_bg      #0a0c0f;               /* window background           */
+@define-color u_bg_deep #050607;               /* views / inputs / sidebar    */
+@define-color u_panel   #0d0f12;               /* headerbar / popover panel   */
+@define-color u_panel2  rgba(255,255,255,.05); /* hover                       */
+@define-color u_fg      #eef1f4;
+@define-color u_dim     #8d949e;
+@define-color u_line    rgba(235,240,245,.16);
+@define-color u_line2   rgba(235,240,245,.48); /* --line-strong               */
+@define-color u_accent  #d4ebff;
+@define-color u_on_acc  #07090b;
+@define-color u_sel     rgba(212,235,255,.20); /* accent @ 20% (selected row) */
+@define-color u_ok      #8fe3b0;
+@define-color u_warn    #ffd98f;
+@define-color u_bad     #ff8a8a;
+
+/* libadwaita named colours (GTK4 reads both forms) */
+@define-color window_bg_color @u_bg;
+@define-color window_fg_color @u_fg;
+@define-color view_bg_color @u_bg_deep;
+@define-color view_fg_color @u_fg;
+@define-color headerbar_bg_color @u_panel;
+@define-color headerbar_fg_color @u_fg;
+@define-color headerbar_border_color @u_line;
+@define-color headerbar_backdrop_color @u_bg;
+@define-color headerbar_shade_color rgba(0,0,0,.35);
+@define-color headerbar_darker_shade_color rgba(0,0,0,.6);
+@define-color sidebar_bg_color #080a0c;
+@define-color sidebar_fg_color @u_fg;
+@define-color sidebar_backdrop_color #080a0c;
+@define-color sidebar_shade_color rgba(0,0,0,.3);
+@define-color sidebar_border_color @u_line;
+@define-color secondary_sidebar_bg_color #080a0c;
+@define-color secondary_sidebar_fg_color @u_fg;
+@define-color secondary_sidebar_backdrop_color #080a0c;
+@define-color secondary_sidebar_shade_color rgba(0,0,0,.3);
+@define-color secondary_sidebar_border_color @u_line;
+@define-color card_bg_color @u_panel2;
+@define-color card_fg_color @u_fg;
+@define-color card_shade_color rgba(0,0,0,.3);
+@define-color dialog_bg_color @u_bg;
+@define-color dialog_fg_color @u_fg;
+@define-color popover_bg_color @u_panel;
+@define-color popover_fg_color @u_fg;
+@define-color popover_shade_color rgba(0,0,0,.3);
+@define-color thumbnail_bg_color #14171b;
+@define-color thumbnail_fg_color @u_fg;
+@define-color shade_color rgba(0,0,0,.4);
+@define-color scrollbar_outline_color transparent;
+@define-color accent_bg_color @u_accent;
+@define-color accent_fg_color @u_on_acc;
+@define-color accent_color @u_accent;
+@define-color destructive_bg_color @u_bad;
+@define-color destructive_fg_color @u_on_acc;
+@define-color destructive_color @u_bad;
+@define-color success_bg_color @u_ok;
+@define-color success_fg_color @u_on_acc;
+@define-color success_color @u_ok;
+@define-color warning_bg_color @u_warn;
+@define-color warning_fg_color @u_on_acc;
+@define-color warning_color @u_warn;
+@define-color error_bg_color @u_bad;
+@define-color error_fg_color @u_on_acc;
+@define-color error_color @u_bad;
+
+:root {
+  --window-bg-color: #0a0c0f;
+  --window-fg-color: #eef1f4;
+  --view-bg-color: #050607;
+  --view-fg-color: #eef1f4;
+  --headerbar-bg-color: #0d0f12;
+  --headerbar-fg-color: #eef1f4;
+  --headerbar-border-color: rgba(235,240,245,.16);
+  --headerbar-backdrop-color: #0a0c0f;
+  --headerbar-shade-color: rgba(0,0,0,.35);
+  --headerbar-darker-shade-color: rgba(0,0,0,.6);
+  --sidebar-bg-color: #080a0c;
+  --sidebar-fg-color: #eef1f4;
+  --sidebar-backdrop-color: #080a0c;
+  --sidebar-border-color: rgba(235,240,245,.16);
+  --secondary-sidebar-bg-color: #080a0c;
+  --secondary-sidebar-fg-color: #eef1f4;
+  --secondary-sidebar-backdrop-color: #080a0c;
+  --secondary-sidebar-border-color: rgba(235,240,245,.16);
+  --card-bg-color: rgba(255,255,255,.05);
+  --card-fg-color: #eef1f4;
+  --dialog-bg-color: #0a0c0f;
+  --dialog-fg-color: #eef1f4;
+  --popover-bg-color: #0d0f12;
+  --popover-fg-color: #eef1f4;
+  --thumbnail-bg-color: #14171b;
+  --thumbnail-fg-color: #eef1f4;
+  --shade-color: rgba(0,0,0,.4);
+  --scrollbar-outline-color: transparent;
+  --accent-bg-color: #d4ebff;
+  --accent-fg-color: #07090b;
+  --accent-color: #d4ebff;
+  --yaru-accent-bg-color: #d4ebff;
+  --yaru-accent-color: #d4ebff;
+  --destructive-bg-color: #ff8a8a;
+  --destructive-fg-color: #07090b;
+  --destructive-color: #ff8a8a;
+  --success-bg-color: #8fe3b0;
+  --success-fg-color: #07090b;
+  --success-color: #8fe3b0;
+  --warning-bg-color: #ffd98f;
+  --warning-fg-color: #07090b;
+  --warning-color: #ffd98f;
+  --error-bg-color: #ff8a8a;
+  --error-fg-color: #07090b;
+  --error-color: #ff8a8a;
+}
+
+/* ------------------------------- typography ------------------------------- */
+window, popover, tooltip {
+  font-family: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+}
+
+/* ---------------------------------- window -------------------------------- */
+window.background, window.dialog, window.csd {
+  border-radius: 0;
+}
+window.csd {
+  box-shadow: 0 0 0 1px @u_line2, 0 12px 32px rgba(0,0,0,.45);
+}
+window.csd:backdrop { box-shadow: 0 0 0 1px @u_line, 0 8px 24px rgba(0,0,0,.3); }
+window.maximized, window.fullscreen, window.tiled, window.tiled-left, window.tiled-right,
+window.tiled-top, window.tiled-bottom { box-shadow: none; }
+window decoration, window.csd decoration { border-radius: 0; }
+window.background > contents, window.csd > contents { border-radius: 0; }
+
+/* -------------------------------- headerbar ------------------------------- */
+headerbar {
+  background-color: @u_panel;
+  color: @u_fg;
+  border: none;
+  border-radius: 0;
+  box-shadow: inset 0 -1px @u_line;
+  min-height: 42px;
+  padding: 0 6px;
+}
+/* mockup's accent corner bracket (top-left) */
+window headerbar, window.csd headerbar, headerbar.titlebar {
+  background-image: linear-gradient(to right, @u_accent, @u_accent), linear-gradient(to bottom, @u_accent, @u_accent);
+  background-size: 14px 2px, 2px 14px;
+  background-position: left top, left top;
+  background-repeat: no-repeat;
+}
+headerbar:backdrop {
+  background-color: @u_bg;
+  color: @u_dim;
+  box-shadow: inset 0 -1px @u_line;
+}
+headerbar windowhandle, headerbar > windowhandle > box { border-radius: 0; }
+
+/* Title: Michroma ~13px, letter-spaced; subtitle: Share Tech Mono, uppercase, dim */
+headerbar .title, windowtitle .title, headerbar windowtitle > box > .title,
+.title {
+  font-family: "Michroma", "Eurostile", "Arial Black", sans-serif;
+  font-size: 13px;
+  font-weight: normal;
+  letter-spacing: 0.05em;
+  color: @u_fg;
+}
+headerbar .subtitle, windowtitle .subtitle {
+  font-family: "Share Tech Mono", ui-monospace, "DejaVu Sans Mono", monospace;
+  font-size: 10px;
+  font-weight: normal;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: @u_dim;
+}
+headerbar:backdrop .title { color: @u_dim; }
+
+/* Window controls: small square mono-looking buttons, no circles */
+windowcontrols { margin: 0 2px; }
+windowcontrols > button,
+windowcontrols > button.titlebutton,
+headerbar windowcontrols > button {
+  min-width: 22px;
+  min-height: 22px;
+  padding: 2px;
+  margin: 0 2px;
+  border-radius: 0;
+  border: 1px solid transparent;
+  background: none;
+  background-image: none;
+  box-shadow: none;
+  color: @u_dim;
+}
+windowcontrols > button:hover { color: @u_fg; border-color: @u_line2; background: @u_panel2; }
+windowcontrols > button:active { background: @u_sel; }
+windowcontrols > button.close:hover {
+  background-color: @u_bad;
+  border-color: @u_bad;
+  color: @u_on_acc;
+}
+windowcontrols > button > image, windowcontrols > button > box { border-radius: 0; background: none; }
+
+/* --------------------------------- buttons -------------------------------- */
+button, button.pill, button.circular, button.opaque, button.card,
+splitbutton > button, splitbutton > menubutton > button,
+menubutton > button, dropdown > button, combobox button, spinbutton > button,
+.linked > button, .linked > menubutton > button {
+  border-radius: 0;
+}
+button, menubutton > button, dropdown > button, splitbutton > button {
+  background-color: transparent;
+  background-image: none;
+  border: 1px solid @u_line2;
+  box-shadow: none;
+  color: @u_fg;
+  min-height: 24px;
+  padding: 3px 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  outline-color: @u_accent;
+}
+button:hover, menubutton > button:hover, dropdown > button:hover { background-color: @u_panel2; }
+button:active, button:checked, menubutton > button:checked {
+  background-color: @u_sel;
+  border-color: @u_accent;
+  color: @u_fg;
+}
+button:disabled { color: @u_dim; border-color: @u_line; opacity: .6; }
+button:focus-visible { outline: 1px solid @u_accent; outline-offset: 2px; }
+
+button.flat, button.image-button.flat, headerbar button.flat, toolbarview button.flat {
+  border-color: transparent;
+  background-color: transparent;
+}
+button.flat:hover { background-color: @u_panel2; border-color: @u_line; }
+button.flat:checked, button.flat:active { background-color: @u_sel; border-color: transparent; }
+
+button.suggested-action, button.suggested-action.pill {
+  background-color: @u_accent;
+  border-color: @u_accent;
+  color: @u_on_acc;
+}
+button.suggested-action:hover { background-color: @u_accent; filter: brightness(1.08); }
+button.suggested-action:disabled { background-color: @u_line; border-color: @u_line; color: @u_dim; }
+button.destructive-action {
+  background-color: transparent;
+  border-color: @u_bad;
+  color: @u_bad;
+}
+button.destructive-action:hover { background-color: @u_bad; color: @u_on_acc; }
+
+.linked > button:not(:first-child) { margin-left: -1px; }
+
+/* ------------------------------ entries / text ----------------------------- */
+entry, spinbutton, searchbar > revealer > box, .searchbar entry,
+passwordentry, text, textview, entry.search, searchentry {
+  border-radius: 0;
+}
+entry, spinbutton, passwordentry, searchentry {
+  background-color: @u_panel2;
+  background-image: none;
+  border: 1px solid @u_line;
+  box-shadow: none;
+  color: @u_fg;
+  min-height: 26px;
+  caret-color: @u_accent;
+}
+entry:focus-within, spinbutton:focus-within, passwordentry:focus-within, searchentry:focus-within {
+  border-color: @u_accent;
+  outline: 1px solid @u_accent;
+  outline-offset: -1px;
+}
+entry selection, text selection, textview text selection, label selection {
+  background-color: @u_sel; color: @u_fg;
+}
+textview, textview text { background-color: @u_bg_deep; color: @u_fg; }
+spinbutton > button { border-width: 0; border-left: 1px solid @u_line; }
+dropdown popover listview > row { border-radius: 0; }
+
+/* --------------------------- lists / sidebars / views ---------------------- */
+list, listview, columnview, gridview, .boxed-list, .card, row, row.card, .navigation-sidebar > row {
+  border-radius: 0;
+}
+list, listview { background-color: transparent; color: @u_fg; }
+row, listview > row, columnview > listview > row, .navigation-sidebar > row, list.navigation-sidebar > row {
+  background-color: transparent;
+  background-image: none;
+  box-shadow: none;
+  border-radius: 0;
+  margin: 0;
+}
+row:hover, listview > row:hover, columnview > listview > row:hover,
+.navigation-sidebar > row:hover, gridview > child:hover, .navigation-sidebar > row:hover:not(:selected) {
+  background-color: @u_panel2;
+}
+row:selected, listview > row:selected, columnview > listview > row:selected,
+.navigation-sidebar > row:selected, .navigation-sidebar > row:selected:hover,
+list.navigation-sidebar > row:selected, row.activatable:selected, row.activatable:selected:hover {
+  background-color: @u_sel;
+  color: @u_fg;
+  box-shadow: inset 2px 0 0 @u_accent;       /* mockup's .row.sel bar */
+}
+row:selected image, row:selected label { color: @u_fg; }
+gridview > child, gridview > child > box { border-radius: 0; }
+gridview > child:selected, flowbox > flowboxchild:selected, iconview:selected {
+  background-color: @u_sel;
+  box-shadow: inset 0 0 0 1px @u_accent;
+}
+.boxed-list, list.boxed-list, .card {
+  border: 1px solid @u_line;
+  background-color: @u_panel2;
+  box-shadow: none;
+}
+.boxed-list > row { border-bottom: 1px solid @u_line; }
+.boxed-list > row:last-child { border-bottom: none; }
+row.expander row.header { border-radius: 0; }
+columnview > header > button, columnview > listview > header { border-radius: 0; background: none; }
+.view, textview, iconview, columnview, treeview.view { background-color: @u_bg_deep; color: @u_fg; }
+treeview.view:selected, .view:selected { background-color: @u_sel; color: @u_fg; }
+treeview.view:hover { background-color: @u_panel2; }
+
+/* Section labels like the mockup's .lbl */
+.heading, .caption-heading {
+  font-family: "Share Tech Mono", ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: @u_dim;
+  font-weight: normal;
+}
+.dim-label, .dim, label.dim { color: @u_dim; }
+
+/* sidebars / panes */
+.sidebar-pane, .navigation-sidebar, .sidebar, splitview > sidebar, navigation-split-view > .sidebar-pane {
+  background-color: #080a0c;
+  border-radius: 0;
+}
+separator, .sidebar-pane separator { background-color: @u_line; min-width: 1px; min-height: 1px; }
+toolbarview > .top-bar, toolbarview > .bottom-bar, actionbar > revealer > box, searchbar > revealer > box {
+  background-color: @u_panel;
+  box-shadow: inset 0 -1px @u_line;
+  border-radius: 0;
+}
+toolbarview > .bottom-bar, actionbar > revealer > box { box-shadow: inset 0 1px @u_line; }
+
+/* ---------------------------- popovers & menus ---------------------------- */
+popover, popover.background { background: none; box-shadow: none; }
+popover > contents, popover.background > contents, popover.menu > contents {
+  background-color: @u_panel;
+  background-image: none;
+  color: @u_fg;
+  border: 1px solid @u_line2;
+  border-radius: 0;
+  box-shadow: 0 8px 24px rgba(0,0,0,.5);
+}
+popover > arrow { background-color: @u_panel; border: 1px solid @u_line2; border-radius: 0; }
+popover modelbutton, popover.menu modelbutton {
+  border-radius: 0;
+  min-height: 28px;
+}
+popover modelbutton:hover, popover.menu modelbutton:hover, popover.menu modelbutton:focus {
+  background-color: @u_panel2;
+  box-shadow: inset 2px 0 0 @u_accent;
+}
+popover button.flat, popover .menu button { border-radius: 0; }
+tooltip, tooltip.background {
+  background-color: @u_panel;
+  border: 1px solid @u_line2;
+  border-radius: 0;
+  color: @u_fg;
+  box-shadow: none;
+}
+.osd, toast, .toolbar.osd { border-radius: 0; background-color: @u_panel; color: @u_fg; border: 1px solid @u_line2; }
+toast { border-left: 3px solid @u_accent; }
+
+/* ------------------------------- dialogs ---------------------------------- */
+dialog-host > dialog.floating sheet, dialog.floating > sheet, dialog > sheet, sheet {
+  border-radius: 0;
+  border: 1px solid @u_line2;
+  background-color: @u_bg;
+}
+window.dialog.message, window.messagedialog, window.messagedialog.csd, messagedialog { border-radius: 0; }
+dialog.bottom-sheet > sheet { border-radius: 0; }
+infobar, banner, banner > revealer > widget { border-radius: 0; }
+
+/* ------------------- switches / checks / radios / scales ------------------ */
+switch {
+  border-radius: 0;
+  background-color: @u_panel2;
+  background-image: none;
+  border: 1px solid @u_line2;
+  box-shadow: none;
+  min-width: 36px;
+  min-height: 18px;
+  outline-color: @u_accent;
+}
+switch:checked { background-color: @u_sel; border-color: @u_accent; }
+switch slider {
+  border-radius: 0;
+  background-color: @u_dim;
+  background-image: none;
+  border: none;
+  box-shadow: none;
+  min-width: 12px;
+  min-height: 12px;
+  margin: 2px;
+}
+switch:checked slider { background-color: @u_accent; }
+switch:disabled { opacity: .5; }
+
+check, radio, checkbutton check, checkbutton radio, .view check, .view radio {
+  border-radius: 0;
+  background-color: transparent;
+  background-image: none;
+  border: 1px solid @u_line2;
+  box-shadow: none;
+  color: @u_on_acc;
+  min-width: 16px;
+  min-height: 16px;
+  -gtk-icon-shadow: none;
+}
+check:checked, check:indeterminate, radio:checked, radio:indeterminate {
+  background-color: @u_accent;
+  border-color: @u_accent;
+  color: @u_on_acc;
+}
+check:hover, radio:hover { border-color: @u_accent; }
+checkbutton:focus-visible check, checkbutton:focus-visible radio { outline: 1px solid @u_accent; outline-offset: 2px; }
+
+scale trough, progressbar trough, levelbar trough, scale fill, progressbar progress, levelbar block {
+  border-radius: 0;
+}
+scale trough, scale > trough, progressbar trough, levelbar trough {
+  background-color: @u_panel2;
+  border: 1px solid @u_line;
+  box-shadow: none;
+  min-height: 6px;
+}
+scale highlight, scale fill, progressbar progress, levelbar block.filled {
+  background-color: @u_accent;
+  background-image: none;
+  border-radius: 0;
+}
+levelbar block.empty { background-color: transparent; }
+levelbar block.low { background-color: @u_warn; }
+levelbar block.full { background-color: @u_ok; }
+scale slider, scale > trough > slider, scale.horizontal > trough > slider, scale.vertical > trough > slider {
+  border-radius: 0;
+  background-color: @u_accent;
+  background-image: none;
+  border: none;
+  box-shadow: none;
+}
+scale slider:hover, scale > trough > slider:hover { background-color: @u_fg; }
+progressbar > text { color: @u_fg; font-family: "Share Tech Mono", monospace; }
+
+/* ------------------------------- scrollbars ------------------------------- */
+scrollbar, scrollbar trough { background: none; border-radius: 0; border: none; }
+scrollbar slider {
+  border-radius: 0;
+  background-color: @u_line2;
+  min-width: 4px;
+  min-height: 4px;
+  border: none;
+}
+scrollbar.overlay-indicator:not(.hovering) slider { min-width: 2px; min-height: 2px; }
+scrollbar slider:hover, scrollbar slider:active { background-color: @u_accent; }
+scrollbar.overlay-indicator:not(.hovering) { background: none; }
+undershoot, overshoot { background: none; }
+
+/* ---------------------------- tabs / notebooks ---------------------------- */
+tabbar, tabbar > revealer > box, notebook > header { background-color: @u_panel; border-radius: 0; box-shadow: inset 0 -1px @u_line; }
+tabbar tab, notebook > header > tabs > tab {
+  border-radius: 0; background: none; color: @u_dim; border: none; box-shadow: none;
+}
+tabbar tab:hover, notebook > header > tabs > tab:hover { background-color: @u_panel2; color: @u_fg; }
+tabbar tab:selected, notebook > header > tabs > tab:checked {
+  background-color: @u_sel; color: @u_fg; box-shadow: inset 0 -2px @u_accent;
+}
+viewswitcher button, viewswitcher button.toggle { border-radius: 0; }
+viewswitcher button:checked { box-shadow: inset 0 -2px @u_accent; background-color: @u_sel; }
+toggle-group, toggle-group > toggle, .toggle-group { border-radius: 0; }
+
+/* -------------------- status colours / misc ------------------------------- */
+.success, label.success { color: @u_ok; }
+.warning, label.warning { color: @u_warn; }
+.error, label.error { color: @u_bad; }
+.accent { color: @u_accent; }
+link, link:hover, .link, button.link, label link { color: @u_accent; }
+avatar { border-radius: 9999px; } /* keep avatars round; everything else is square */
+calendar, calendar > header, calendar > grid > label.day-number { border-radius: 0; }
+calendar > grid > label.day-number:selected { background-color: @u_accent; color: @u_on_acc; }
+progressbar.osd > trough { border: none; }
+*:focus-visible { outline-color: @u_accent; }

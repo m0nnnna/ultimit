@@ -204,6 +204,12 @@ PanelWindow {
         }
     }
 
+    MouseArea {   // right-click on the empty desktop opens the context menu
+        anchors.fill: parent
+        acceptedButtons: Qt.RightButton
+        onClicked: mouse => Config.openMenu(win.screen ? win.screen.name : "", mouse.x, mouse.y)
+    }
+
     Wordmark {
         anchors.right: parent.right
         anchors.rightMargin: 30

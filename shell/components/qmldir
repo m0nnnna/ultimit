@@ -6,3 +6,8 @@ Icon 1.0 Icon.qml
 Emblem 1.0 Emblem.qml
 StatusBlock 1.0 StatusBlock.qml
 Ticker 1.0 Ticker.qml
+Brackets 1.0 Brackets.qml
+PowerButton 1.0 PowerButton.qml
+Launcher 1.0 Launcher.qml
+ContextMenu 1.0 ContextMenu.qml
+ToastOverlay 1.0 ToastOverlay.qml

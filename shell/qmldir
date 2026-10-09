@@ -2,3 +2,4 @@ singleton Theme 1.0 Theme.qml
 singleton Config 1.0 Config.qml
 Persist 1.0 Persist.qml
 Boot 1.0 Boot.qml
+singleton Toasts 1.0 Toasts.qml

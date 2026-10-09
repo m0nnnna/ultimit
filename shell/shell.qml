@@ -3,6 +3,7 @@
 // One set of panels is created per screen.
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import "components"
 import "apps/accessory"
 import "apps/games"
@@ -12,6 +13,13 @@ ShellRoot {
     Boot { settingsReady: persist.ready }                // boot overlay (startup + on demand)
     Accessory {}                                         // Accessory settings window
     GamesWindow {}   // Ultimit Games app (toggle: qs ipc call games toggle)
+
+    IpcHandler {
+        target: "launcher"
+        function toggle(): void { Config.toggleLauncher(""); }
+        function open(): void { Config.openLauncher(""); }
+        function close(): void { Config.closeLauncher(); }
+    }
 
     Variants {
         model: Quickshell.screens
@@ -24,6 +32,9 @@ ShellRoot {
             StatusBlock { screen: scope.modelData }   // bottom layer, top-right
             Rail        { screen: scope.modelData }   // top layer, left, exclusive zone
             Ticker      { screen: scope.modelData }   // top layer, bottom, exclusive zone
+            Launcher    { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, app launcher (rail emblem)
+            ContextMenu { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, desktop right-click menu
+            ToastOverlay { screen: scope.modelData; screenName: scope.modelData.name }  // overlay, top-right toasts
         }
     }
 }

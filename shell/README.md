@@ -24,5 +24,9 @@ Environment: `ULTIMIT_SKIN=mine|amber|silver|verdant`, `ULTIMIT_MOTION=0` (stati
 - `components/StatusBlock.qml` - clock, date, system row (placeholders), bottom layer.
 - `components/Ticker.qml` - bottom news ticker (exclusive zone 26, left margin = rail width).
 - `Persist.qml` - loads/saves `~/.config/ultimit/shell.json` (skin, motion, shardDensity, bootOnStart) via FileView/JsonAdapter and syncs it with Theme/Config. Env vars (`ULTIMIT_SKIN`, `ULTIMIT_MOTION`, `ULTIMIT_BOOT=0`) override the file for that run without being saved.
-- `Boot.qml` - boot sequence overlay (overlay layer, per screen); plays at startup unless `Config.bootOnStart` is false, and on `Config.playBoot()` (Accessory button, rail emblem, `qs ipc call boot play`).
+- `Boot.qml` - boot sequence overlay (overlay layer, per screen); plays at startup unless `Config.bootOnStart` is false, and on `Config.playBoot()` (Accessory button, desktop menu, `qs ipc call boot play`).
 - `apps/accessory/` - Accessory window (FloatingWindow toplevel titled "Accessory"): skin cards, wallpaper toggle/slider, boot button. IPC: `qs ipc call accessory toggle|open|close`.
+- `Toasts.qml` - singleton toast queue (`Toasts.show(title, msg, command?)`); `components/ToastOverlay.qml` renders it top-right.
+- `components/Launcher.qml` - app launcher (rail emblem; `qs ipc call launcher toggle|open|close`): DesktopEntries search, power row with two-step confirm.
+- `components/ContextMenu.qml` - desktop right-click menu (opened by Wallpaper).
+- `Config.apps[].tryCmds` - ordered candidate commands, probed once at startup; unavailable apps dim in the rail and toast an install hint.

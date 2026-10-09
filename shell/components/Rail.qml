@@ -55,8 +55,6 @@ PanelWindow {
         }
     }
 
-    function launch(cmd) { Quickshell.execDetached(["sh", "-c", cmd]); }
-
     function activate(app) {
         if (app.id === "accessory") {
             // Own window: open it, or raise it if already mapped.
@@ -82,7 +80,7 @@ PanelWindow {
             tl.minimized = false;
             tl.activate();
         } else {
-            launch(app.command);
+            Config.launchApp(app);
         }
     }
 
@@ -99,14 +97,14 @@ PanelWindow {
             anchors.horizontalCenter: parent.horizontalCenter
             spacing: 4
 
-            Item {   // emblem button: replays the boot sequence (mockup #embBtn)
+            Item {   // emblem button: opens the app launcher
                 id: embBtn
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: 40; height: 40
                 activeFocusOnTab: true
                 Keys.onPressed: event => {
                     if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
-                        Config.playBoot(); event.accepted = true;
+                        Config.toggleLauncher(win.screen ? win.screen.name : ""); event.accepted = true;
                     }
                 }
                 Emblem {
@@ -126,7 +124,7 @@ PanelWindow {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: Config.playBoot()
+                    onClicked: Config.toggleLauncher(win.screen ? win.screen.name : "")
                 }
             }
             Item { width: 1; height: 10 }   // emblem margin-bottom 14 = 4 spacing + 10
@@ -137,6 +135,7 @@ PanelWindow {
                     required property var modelData
                     appId: modelData.id
                     label: modelData.label
+                    missing: !Config.available(modelData)
                     on: { win.tick; return win.findToplevel(modelData.appIds, modelData) !== null; }
                     onClicked: win.activate(modelData)
                 }
