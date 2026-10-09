@@ -107,6 +107,7 @@ int main(int argc, char *argv[]) {
 	wlr_primary_selection_v1_device_manager_create(server.display);
 	wlr_data_control_manager_v1_create(server.display);
 
+	config_load(&server);
 	output_init(&server);
 
 	server.scene = wlr_scene_create();

@@ -20,6 +20,7 @@ wayland_protocols = dependency('wayland-protocols')
 wlroots = dependency('wlroots-0.19', version: ['>=0.19.0', '<0.20.0'])
 scenefx = dependency('scenefx-0.4')
 xkbcommon = dependency('xkbcommon')
+libinput = dependency('libinput')
 xcb = dependency('xcb')
 libdrm = dependency('libdrm').partial_dependency(compile_args: true, includes: true)
 cairo = dependency('cairo')
@@ -66,6 +67,7 @@ executable(
 		'src/anim.c',
 		'src/ipc.c',
 		'src/lock.c',
+		'src/config.c',
 		'src/xdg.c',
 		'src/xwayland.c',
 		'src/layer.c',
@@ -73,7 +75,7 @@ executable(
 	],
 	dependencies: [
 		# scenefx must precede wlroots: it overrides the wlr_scene_* symbols.
-		scenefx, wayland_server, wlroots, xkbcommon, xcb, libdrm, cairo, pangocairo,
+		scenefx, wayland_server, wlroots, xkbcommon, xcb, libdrm, cairo, pangocairo, libinput,
 	],
 	build_rpath: deps_libdir,
 	install_rpath: deps_libdir,

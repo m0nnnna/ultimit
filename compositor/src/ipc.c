@@ -8,6 +8,7 @@
  *   move ID X Y            place a window's content top-left
  *   resize ID W H          ask a window for a new content size
  *   maximize ID | fullscreen ID | minimize ID    toggle
+ *   reload                 re-read ~/.config/ultimit/compositor.ini
  *
  * Only the user running the compositor can connect (0700 runtime dir).
  */
@@ -162,6 +163,11 @@ static void run_command(struct ul_server *server, char *line, struct out *o) {
 	}
 	if (strcmp(cmd, "state") == 0) {
 		write_state(server, o);
+		return;
+	}
+	if (strcmp(cmd, "reload") == 0) {
+		config_reload(server);
+		put(o, "{\"ok\":true}");
 		return;
 	}
 	struct ul_view *view = n >= 2 ? find_view(server, id) : NULL;

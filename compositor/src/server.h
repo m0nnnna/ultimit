@@ -44,6 +44,26 @@ enum ul_cursor_mode {
 	UL_CURSOR_RESIZE,
 };
 
+/* Settings from ~/.config/ultimit/compositor.ini (config.c). */
+struct ul_config {
+	bool tap;
+	bool natural_scroll;
+	bool disable_while_typing;
+	bool left_handed;
+	double accel_speed; /* -1..1 */
+	char layout[64];
+	char variant[64];
+	char options[128];
+	int repeat_rate;
+	int repeat_delay;
+};
+
+struct ul_pointer {
+	struct wl_list link;
+	struct wlr_input_device *device;
+	struct wl_listener destroy;
+};
+
 struct wlr_session_lock_manager_v1;
 struct wlr_session_lock_v1;
 struct wlr_idle_notifier_v1;
@@ -118,6 +138,8 @@ struct ul_server {
 	struct wl_listener request_set_selection;
 	struct wl_listener request_set_primary_selection;
 	struct wl_list keyboards;
+	struct wl_list pointers; /* ul_pointer.link */
+	struct ul_config config;
 
 	enum ul_cursor_mode cursor_mode;
 	struct ul_view *grabbed_view;
@@ -264,6 +286,12 @@ struct ul_view {
 	struct wl_listener override_redirect_map;
 };
 
+/* config.c */
+void config_load(struct ul_server *server);
+void config_reload(struct ul_server *server);
+void config_apply_pointer(struct ul_server *server, struct wlr_input_device *device);
+void config_apply_keyboard(struct ul_server *server, struct wlr_keyboard *keyboard);
+
 /* lock.c */
 void lock_init(struct ul_server *server);
 void lock_finish(struct ul_server *server);
@@ -294,6 +322,7 @@ struct wlr_scene_tree *layer_popup_parent(struct wlr_layer_surface_v1 *layer_sur
 /* input.c */
 void input_init(struct ul_server *server);
 void input_update_pointer_focus(struct ul_server *server, uint32_t time_msec);
+void input_reapply_keyboards(struct ul_server *server);
 void input_focus_layer(struct ul_server *server, struct wlr_layer_surface_v1 *layer_surface);
 
 /* view.c */

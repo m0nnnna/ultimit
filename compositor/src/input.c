@@ -23,6 +23,7 @@ struct ul_keyboard {
 	struct wl_list link;
 	struct ul_server *server;
 	struct wlr_keyboard *wlr_keyboard;
+	bool virtual; /* wtype etc.: keeps the keymap it uploads */
 	struct wl_listener modifiers;
 	struct wl_listener key;
 	struct wl_listener destroy;
@@ -555,14 +556,9 @@ static void new_keyboard(struct ul_server *server, struct wlr_input_device *devi
 
 	/* Layout comes from XKB_DEFAULT_LAYOUT etc. in the environment. Virtual
 	 * keyboards (wtype, remote input) upload their own keymap. */
+	keyboard->virtual = virtual;
 	if (!virtual) {
-		struct xkb_context *context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
-		struct xkb_keymap *keymap = xkb_keymap_new_from_names(context, NULL,
-			XKB_KEYMAP_COMPILE_NO_FLAGS);
-		wlr_keyboard_set_keymap(wlr_keyboard, keymap);
-		xkb_keymap_unref(keymap);
-		xkb_context_unref(context);
-		wlr_keyboard_set_repeat_info(wlr_keyboard, 25, 600);
+		config_apply_keyboard(server, wlr_keyboard);
 	}
 
 	keyboard->modifiers.notify = keyboard_modifiers;
@@ -576,15 +572,38 @@ static void new_keyboard(struct ul_server *server, struct wlr_input_device *devi
 	wl_list_insert(&server->keyboards, &keyboard->link);
 }
 
+static void pointer_destroy(struct wl_listener *listener, void *data) {
+	struct ul_pointer *p = wl_container_of(listener, p, destroy);
+	wl_list_remove(&p->link);
+	wl_list_remove(&p->destroy.link);
+	free(p);
+}
+
+void input_reapply_keyboards(struct ul_server *server) {
+	struct ul_keyboard *keyboard;
+	wl_list_for_each(keyboard, &server->keyboards, link) {
+		if (!keyboard->virtual) {
+			config_apply_keyboard(server, keyboard->wlr_keyboard);
+		}
+	}
+}
+
 static void add_input_device(struct ul_server *server, struct wlr_input_device *device,
 		bool virtual) {
 	switch (device->type) {
 	case WLR_INPUT_DEVICE_KEYBOARD:
 		new_keyboard(server, device, virtual);
 		break;
-	case WLR_INPUT_DEVICE_POINTER:
+	case WLR_INPUT_DEVICE_POINTER: {
+		struct ul_pointer *p = calloc(1, sizeof(*p));
+		p->device = device;
+		p->destroy.notify = pointer_destroy;
+		wl_signal_add(&device->events.destroy, &p->destroy);
+		wl_list_insert(&server->pointers, &p->link);
+		config_apply_pointer(server, device);
 		wlr_cursor_attach_input_device(server->cursor, device);
 		break;
+	}
 	default:
 		break;
 	}
@@ -674,6 +693,7 @@ void input_init(struct ul_server *server) {
 	wl_list_init(&server->constraint_destroy.link);
 
 	wl_list_init(&server->keyboards);
+	wl_list_init(&server->pointers);
 	server->new_input.notify = new_input;
 	wl_signal_add(&server->backend->events.new_input, &server->new_input);
 
