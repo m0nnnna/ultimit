@@ -25,4 +25,4 @@ full)
 esac
 
 wl-copy --type image/png <"$file"
-qs -p "$SHELL_DIR" ipc call toasts show "Screenshot" "Copied to clipboard · saved to ${file#$HOME/}" >/dev/null 2>&1 || true
+qs -p "$SHELL_DIR" ipc call toasts notify "Screenshot" "Copied to clipboard · saved to ${file#$HOME/}" >/dev/null 2>&1 || true

@@ -21,6 +21,12 @@ ShellRoot {
         function close(): void { Config.closeLauncher(); }
     }
 
+    IpcHandler {
+        target: "toasts"
+        function show(title: string, message: string): void { Toasts.show(title, message); }
+        function notify(title: string, message: string): void { Toasts.show(title, message); }
+    }
+
     Variants {
         model: Quickshell.screens
 
@@ -34,6 +40,7 @@ ShellRoot {
             Ticker      { screen: scope.modelData }   // top layer, bottom, exclusive zone
             Launcher    { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, app launcher (rail emblem)
             ContextMenu { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, desktop right-click menu
+            WindowPopups { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, rail window tooltip + menu
             ToastOverlay { screen: scope.modelData; screenName: scope.modelData.name }  // overlay, top-right toasts
         }
     }

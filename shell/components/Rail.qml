@@ -92,6 +92,7 @@ PanelWindow {
         Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Theme.line }
 
         Column {
+            id: btnCol
             anchors.top: parent.top
             anchors.topMargin: 14
             anchors.horizontalCenter: parent.horizontalCenter
@@ -142,8 +143,17 @@ PanelWindow {
             }
         }
 
+        // Open windows; the list scrolls inside the space between the buttons and the version text.
+        WindowList {
+            anchors.top: btnCol.bottom; anchors.topMargin: 8
+            anchors.bottom: verItem.top; anchors.bottomMargin: 12
+            anchors.left: parent.left; anchors.right: parent.right
+            screenName: win.screen ? win.screen.name : ""
+        }
+
         // Vertical version string, reads bottom-to-top like the mockup.
         Item {
+            id: verItem
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 14
             anchors.horizontalCenter: parent.horizontalCenter

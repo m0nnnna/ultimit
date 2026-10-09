@@ -28,5 +28,6 @@ Environment: `ULTIMIT_SKIN=mine|amber|silver|verdant`, `ULTIMIT_MOTION=0` (stati
 - `apps/accessory/` - Accessory window (FloatingWindow toplevel titled "Accessory"): skin cards, wallpaper toggle/slider, boot button. IPC: `qs ipc call accessory toggle|open|close`.
 - `Toasts.qml` - singleton toast queue (`Toasts.show(title, msg, command?)`); `components/ToastOverlay.qml` renders it top-right.
 - `components/Launcher.qml` - app launcher (rail emblem; `qs ipc call launcher toggle|open|close`): DesktopEntries search, power row with two-step confirm.
+- `components/WindowList.qml`, `WindowPopups.qml`, `WindowUi.qml` - rail "WINDOWS" list of every toplevel (click minimize/activate, middle close, right menu, hover tooltip). IPC: `qs ipc call toasts notify "Title" "Msg"` (`show` is shadowed by the `qs ipc show` subcommand, so use `notify`).
 - `components/ContextMenu.qml` - desktop right-click menu (opened by Wallpaper).
 - `Config.apps[].tryCmds` - ordered candidate commands, probed once at startup; unavailable apps dim in the rail and toast an install hint.

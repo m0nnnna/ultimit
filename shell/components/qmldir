@@ -11,3 +11,5 @@ PowerButton 1.0 PowerButton.qml
 Launcher 1.0 Launcher.qml
 ContextMenu 1.0 ContextMenu.qml
 ToastOverlay 1.0 ToastOverlay.qml
+WindowList 1.0 WindowList.qml
+WindowPopups 1.0 WindowPopups.qml
