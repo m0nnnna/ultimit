@@ -163,7 +163,7 @@ FocusScope {
                         Image {
                             x: 10; anchors.verticalCenter: parent.verticalCenter; width: 22; height: 22
                             sourceSize: Qt.size(44, 44)
-                            source: Quickshell.iconPath(modelData.icon, "application-x-executable")
+                            source: Icons.pathOr(modelData.icon, "application-x-executable")
                         }
                         Text {
                             x: 44; anchors.verticalCenter: parent.verticalCenter

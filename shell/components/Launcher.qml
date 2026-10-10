@@ -180,7 +180,7 @@ PanelWindow {
                     Rectangle { x: 0; width: 2; height: parent.height; color: Theme.accent; visible: row.cur }
                     Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line; opacity: .5 }
 
-                    readonly property string iconSrc: modelData.icon ? Quickshell.iconPath(modelData.icon, true) : ""
+                    readonly property string iconSrc: modelData.icon ? Icons.path(modelData.icon) : ""
                     Item {
                         id: ico
                         x: 12; anchors.verticalCenter: parent.verticalCenter

@@ -54,7 +54,7 @@ Singleton {
         if (!name) return "";
         if (name.startsWith("/")) return "file://" + name;
         if (name.startsWith("file:") || name.startsWith("image:")) return name;
-        return Quickshell.iconPath(name, true) || "";
+        return Icons.path(name);
     }
     function entryFrom(n, prev) {
         const acts = [];

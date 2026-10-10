@@ -738,7 +738,7 @@ Singleton {
     function scanPhones() { if (!mtpScan.running) mtpScan.running = true; }
     function phoneIcon() {
         for (const n of ["phone", "smartphone", "multimedia-player", "drive-removable-media"]) {
-            const p = Quickshell.iconPath(n, true);
+            const p = Icons.path(n);
             if (p !== "") return p;
         }
         return "";
@@ -860,7 +860,7 @@ Singleton {
         "unknown": ["text-x-generic"]
     })
     function iconName(e) {
-        const key = e.d ? "inode/directory" : e.t + (e.x ? "!x" : "");
+        const key = Theme.skin + "|" + (e.d ? "inode/directory" : e.t + (e.x ? "!x" : ""));
         let r = iconCache[key];
         if (r !== undefined) return r;
         const tries = [];
@@ -871,8 +871,12 @@ Singleton {
         for (const t of (mimeFallbacks[e.d ? e.t : major] || [])) tries.push(t);
         tries.push("text-x-generic");
         r = "";
-        for (const t of tries) { if (Quickshell.iconPath(t, true) !== "") { r = Quickshell.iconPath(t, true); break; } }
-        iconCache[key] = r;
+        const tbl = Icons.table;   // dependency: re-evaluate once the skin's names.json has loaded
+        // Ultimit's own art first for the whole candidate list (so audio/mpeg gets the Ultimit audio
+        // icon rather than a fallback theme's audio-mpeg), then the startup icon theme.
+        for (const t of tries) { const q = Icons.own(t); if (q !== "") { r = q; break; } }
+        if (r === "") for (const t of tries) { const q = Icons.path(t); if (q !== "") { r = q; break; } }
+        if (tbl && Object.keys(tbl).length > 0) iconCache[key] = r;
         return r;
     }
     readonly property var imageExts: ({ png: 1, jpg: 1, jpeg: 1, gif: 1, webp: 1, bmp: 1, svg: 1, ico: 1, tif: 1, tiff: 1, avif: 1 })
@@ -887,8 +891,8 @@ Singleton {
                     downloads: "folder-download", music: "folder-music", pictures: "folder-pictures", videos: "folder-videos",
                     trash: "user-trash", root: "drive-harddisk", drive: "drive-removable-media" };
         const n = m[id] || "folder";
-        const p = Quickshell.iconPath(n, true);
-        return p !== "" ? p : Quickshell.iconPath("folder", true);
+        const p = Icons.path(n);
+        return p !== "" ? p : Icons.path("folder");
     }
 
     // ---------------------------------------------------------------- status text

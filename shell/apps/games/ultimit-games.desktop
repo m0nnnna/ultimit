@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Games
+GenericName=Game Library
+Comment=Ultimit games library
+Exec=ultimit-games
+Icon=ultimit-games
+Terminal=false
+Categories=Game;

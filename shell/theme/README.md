@@ -62,3 +62,8 @@ GTK4 and GTK3 probe windows were rendered offscreen and inspected; no
   stylesheet; harmless.
 - Apps started by D-Bus/systemd activation do not inherit the session shell env;
   export `GTK_THEME` and `ADW_DEBUG_COLOR_SCHEME` via `dbus-update-activation-environment`.
+
+## Icon theme
+`theme/icons/` builds the four `Ultimit-<Skin>` freedesktop icon themes (see `theme/icons/README.md`);
+`session-env.sh` selects `QS_ICON_THEME=Ultimit-<skin>` when installed, and the shell follows skin
+switches live through `Icons.qml`.

@@ -157,6 +157,7 @@ PanelWindow {
             anchors.bottom: tray.visible ? tray.top : bottomEdge.top; anchors.bottomMargin: tray.visible ? 8 : 12
             anchors.left: parent.left; anchors.right: parent.right
             screenName: win.screen ? win.screen.name : ""
+            panel: win
         }
 
         // StatusNotifierItem tray, pinned above the version text; hidden when empty.

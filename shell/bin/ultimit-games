@@ -1,0 +1,3 @@
+#!/bin/sh
+# ultimit-games - open the Ultimit Games library.
+exec qs -p "${ULTIMIT_SHELL_DIR:-$(dirname "$(dirname "$(readlink -f "$0")")")}" ipc call games open

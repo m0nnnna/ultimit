@@ -2,6 +2,7 @@
 // (wlr-foreign-toplevel via ToplevelManager). Left click toggles minimize/activate,
 // middle click closes, right click opens the window menu (WindowPopups), hover shows a tooltip.
 import QtQuick
+import QtQuick.Shapes
 import Quickshell
 import Quickshell.Wayland
 import ".."
@@ -9,6 +10,9 @@ import ".."
 Item {
     id: root
     property string screenName: ""
+    // The rail window: entries report their place in it so the compositor's
+    // minimize/restore animation flies to and from them.
+    property var panel: null
     visible: list.count > 0
 
     Rectangle { id: divider; x: 12; width: parent.width - 24; height: 1; color: Theme.line }
@@ -52,11 +56,33 @@ Item {
             required property var modelData
             width: list.width; height: 44
 
+            function pushRect() {
+                if (!root.panel || !modelData) return;
+                const p = ent.mapToItem(null, 0, 0);
+                modelData.setRectangle(root.panel, Qt.rect(Math.round(p.x), Math.round(p.y), ent.width, ent.height));
+            }
+            Timer { id: rectTimer; interval: 250; onTriggered: ent.pushRect() }   // after add/displace transitions
+            Component.onCompleted: rectTimer.restart()
+            onYChanged: rectTimer.restart()
+            Connections { target: list; function onContentYChanged() { rectTimer.restart(); } }
+
             property string appId: modelData.appId || ""
             property string title: modelData.title || ""
             readonly property var de: appId !== "" ? DesktopEntries.heuristicLookup(appId) : null
-            readonly property string iconName: de && de.icon ? de.icon : appId
-            readonly property string iconSrc: iconName !== "" ? Quickshell.iconPath(iconName, true) : ""
+            // Ultimit's own windows all report appId "org.quickshell"; tell them apart by title.
+            readonly property string ownIcon: {
+                if (appId !== "org.quickshell") return "";
+                const t = title;
+                if (t === "DATA") return "ultimit-data";
+                if (t === "CALC") return "ultimit-calc";
+                if (t === Config.accessoryTitle) return "ultimit-settings";
+                if (t === "Games") return "ultimit-games";
+                if (t.endsWith("\u2014 MEMO")) return "ultimit-memo";   // "<name> - MEMO" (em dash)
+                return "";
+            }
+            readonly property string iconName: ownIcon !== "" ? ownIcon : (de && de.icon ? de.icon : appId)
+            // Skin-aware (Icons.qml): follows the current skin live, falls back to the startup icon theme.
+            readonly property string iconSrc: iconName !== "" ? Icons.path(iconName) : ""
             readonly property bool active: modelData.activated
             readonly property bool mini: modelData.minimized
 
@@ -91,30 +117,47 @@ Item {
             Item {
                 id: ico
                 anchors.centerIn: parent
-                width: 26; height: 26
+                width: 36; height: 36
                 opacity: ent.mini ? 0.35 : 1
                 scale: mouse.pressed ? 0.92 : 1
                 Behavior on opacity { NumberAnimation { duration: Config.dur(150) } }
                 Behavior on scale { NumberAnimation { duration: Config.dur(120); easing.type: Easing.OutCubic } }
+
+                // Altimit frame: thin chamfered outline (top-right / bottom-left cut), accent when active.
+                Shape {
+                    anchors.fill: parent
+                    preferredRendererType: Shape.CurveRenderer
+                    ShapePath {
+                        strokeWidth: 1
+                        strokeColor: ent.active ? Theme.accent : Theme.line
+                        fillColor: ent.active ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.10) : "transparent"
+                        joinStyle: ShapePath.MiterJoin
+                        Behavior on strokeColor { ColorAnimation { duration: Config.dur(150) } }
+                        startX: 0.5; startY: 0.5
+                        PathLine { x: 29.5; y: 0.5 }
+                        PathLine { x: 35.5; y: 6.5 }
+                        PathLine { x: 35.5; y: 35.5 }
+                        PathLine { x: 6.5; y: 35.5 }
+                        PathLine { x: 0.5; y: 29.5 }
+                        PathLine { x: 0.5; y: 0.5 }
+                    }
+                }
                 Image {
                     id: img
-                    anchors.fill: parent
-                    visible: ent.iconSrc !== "" && status === Image.Ready
+                    anchors.centerIn: parent
+                    width: 26; height: 26
+                    visible: ent.iconSrc !== "" && status !== Image.Error
                     source: ent.iconSrc
                     sourceSize: Qt.size(52, 52)
                     fillMode: Image.PreserveAspectFit
                     asynchronous: true
                 }
-                Rectangle {
-                    anchors.fill: parent
-                    visible: !img.visible
-                    color: "transparent"; border.width: 1
-                    border.color: ent.active ? Theme.accent : Theme.lineStrong
-                    Text {
-                        anchors.centerIn: parent
-                        text: ((ent.de && ent.de.name) || ent.title || ent.appId || "?").charAt(0).toUpperCase()
-                        color: Theme.fg; font.family: Theme.display; font.pixelSize: 12
-                    }
+                Text {   // letter fallback, only when no icon resolves
+                    anchors.centerIn: parent
+                    visible: ent.iconSrc === "" || img.status === Image.Error
+                    text: ((ent.de && ent.de.name) || ent.title || ent.appId || "?").charAt(0).toUpperCase()
+                    color: ent.active ? Theme.accent : Theme.fg
+                    font.family: Theme.display; font.pixelSize: 12
                 }
             }
             Rectangle {   // minimized marker

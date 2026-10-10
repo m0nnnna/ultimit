@@ -4,6 +4,6 @@ Name=CALC
 GenericName=Calculator
 Comment=Ultimit calculator
 Exec=ultimit-calc
-Icon=accessories-calculator
+Icon=ultimit-calc
 Terminal=false
 Categories=Utility;Calculator;

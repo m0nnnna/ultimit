@@ -22,6 +22,8 @@ export XDG_DATA_DIRS
 # Ultimit GTK theme for apps that draw their own titlebars (GNOME apps).
 # Only set here, so the regular Ubuntu session is unaffected.
 "$ROOT/shell/theme/install-gtk-theme.sh" >/dev/null 2>&1 || true
+# Ultimit icon themes (one per skin), rebuilt each login so they follow the repo.
+"$ROOT/shell/theme/icons/install-icons.sh" >/dev/null 2>&1 || true
 . "$ROOT/shell/theme/session-env.sh"
 
 # Tell xdg-desktop-portal which backends serve an Ultimit desktop. Without

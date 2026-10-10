@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Settings
+GenericName=System Settings
+Comment=Ultimit settings
+Exec=ultimit-settings
+Icon=ultimit-settings
+Terminal=false
+Categories=Settings;System;
