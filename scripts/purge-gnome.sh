@@ -57,7 +57,8 @@ if [ "${1:-}" != "--yes" ]; then
 	exit 0
 fi
 
-sudo apt-mark manual $(cat "$out/keep.txt") >/dev/null
+# Empty on a re-run: an earlier run already marked them.
+[ -s "$out/keep.txt" ] && sudo apt-mark manual $(cat "$out/keep.txt") >/dev/null
 # Check the result before touching anything: nothing outside purge +
 # leftovers may go. (Fewer is fine: some leftovers are still needed by a
 # kept package and stay.)
