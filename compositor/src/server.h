@@ -130,6 +130,7 @@ struct ul_server {
 	struct wl_listener new_xwayland_surface;
 
 	struct wl_list views; /* ul_view.link, most recently focused first */
+	struct wl_list ghosts; /* ul_ghost.link: close/minimize animations (anim.c) */
 	struct ul_view *focused_view;
 	struct wlr_layer_surface_v1 *focused_layer;
 
@@ -248,6 +249,8 @@ enum ul_titlebar_hit {
 	UL_HIT_CLOSE,
 };
 
+struct ul_ghost;
+
 struct ul_view {
 	struct wl_list link;
 	struct ul_server *server;
@@ -272,6 +275,11 @@ struct ul_view {
 
 	struct wl_event_source *anim_timer;
 	uint32_t anim_start;
+	struct ul_ghost *ghost;    /* restore animation in flight */
+	struct ul_ghost *closing;  /* snapshot taken when the client dropped its buffer */
+	struct wl_listener client_commit;
+	bool has_rail_rect;        /* the shell told us where our rail entry is */
+	struct wlr_box rail_rect;  /* layout coords */
 
 	struct wlr_xdg_toplevel_decoration_v1 *xdg_decoration;
 	struct wl_listener decoration_request_mode;
@@ -283,6 +291,7 @@ struct ul_view {
 	struct wl_listener foreign_minimize;
 	struct wl_listener foreign_maximize;
 	struct wl_listener foreign_fullscreen;
+	struct wl_listener foreign_set_rectangle;
 
 	struct wl_listener map;
 	struct wl_listener unmap;
@@ -374,6 +383,12 @@ bool view_wants_tearing(struct ul_view *view);
 void anim_open(struct ul_view *view);
 void anim_cancel(struct ul_view *view);
 bool anim_running(struct ul_view *view);
+void anim_close(struct ul_view *view);
+struct wlr_buffer *decoration_titlebar_buffer(struct ul_view *view);
+void anim_track_commits(struct ul_view *view, bool track);
+void anim_minimize(struct ul_view *view, bool minimize);
+void anim_view_destroyed(struct ul_view *view);
+void anim_finish_all(struct ul_server *server);
 
 /* decoration.c */
 void decoration_create(struct ul_view *view);

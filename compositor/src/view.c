@@ -280,7 +280,14 @@ void view_set_minimized(struct ul_view *view, bool minimized) {
 		return;
 	}
 	view->minimized = minimized;
-	wlr_scene_node_set_enabled(&view->tree->node, !minimized);
+	if (minimized) {
+		wlr_scene_node_set_enabled(&view->tree->node, false);
+		if (view->mapped) anim_minimize(view, true);
+	} else if (view->mapped) {
+		anim_minimize(view, false); /* shows the tree when it lands */
+	} else {
+		wlr_scene_node_set_enabled(&view->tree->node, true);
+	}
 	if (view->type == UL_VIEW_XWAYLAND) {
 		wlr_xwayland_surface_set_minimized(view->xwayland_surface, minimized);
 	}
@@ -383,6 +390,33 @@ static void foreign_minimize(struct wl_listener *listener, void *data) {
 	}
 }
 
+/* The shell's rail tells us where this window's WINDOWS entry is, for the
+ * minimize/restore animation. The rectangle is relative to the rail's
+ * layer surface. */
+static void foreign_set_rectangle(struct wl_listener *listener, void *data) {
+	struct ul_view *view = wl_container_of(listener, view, foreign_set_rectangle);
+	struct wlr_foreign_toplevel_handle_v1_set_rectangle_event *event = data;
+	view->has_rail_rect = false;
+	if (!event->surface || event->width <= 0 || event->height <= 0) {
+		return;
+	}
+	struct ul_output *output;
+	wl_list_for_each(output, &view->server->outputs, link) {
+		for (int i = 0; i < 4; i++) {
+			struct ul_layer_surface *l;
+			wl_list_for_each(l, &output->layer_surfaces[i], link) {
+				if (l->layer_surface->surface != event->surface) continue;
+				int lx, ly;
+				if (!wlr_scene_node_coords(&l->scene->tree->node, &lx, &ly)) return;
+				view->rail_rect = (struct wlr_box){ lx + event->x, ly + event->y,
+					event->width, event->height };
+				view->has_rail_rect = true;
+				return;
+			}
+		}
+	}
+}
+
 static void foreign_maximize(struct wl_listener *listener, void *data) {
 	struct ul_view *view = wl_container_of(listener, view, foreign_maximize);
 	struct wlr_foreign_toplevel_handle_v1_maximized_event *event = data;
@@ -407,6 +441,8 @@ void view_init_foreign(struct ul_view *view) {
 	wl_signal_add(&view->foreign->events.request_maximize, &view->foreign_maximize);
 	view->foreign_fullscreen.notify = foreign_fullscreen;
 	wl_signal_add(&view->foreign->events.request_fullscreen, &view->foreign_fullscreen);
+	view->foreign_set_rectangle.notify = foreign_set_rectangle;
+	wl_signal_add(&view->foreign->events.set_rectangle, &view->foreign_set_rectangle);
 	view_update_title(view);
 }
 
@@ -419,6 +455,7 @@ static void finish_foreign(struct ul_view *view) {
 	wl_list_remove(&view->foreign_minimize.link);
 	wl_list_remove(&view->foreign_maximize.link);
 	wl_list_remove(&view->foreign_fullscreen.link);
+	wl_list_remove(&view->foreign_set_rectangle.link);
 	wlr_foreign_toplevel_handle_v1_destroy(view->foreign);
 	view->foreign = NULL;
 }
@@ -479,11 +516,14 @@ void view_map(struct ul_view *view) {
 	decoration_update(view);
 	view_focus(view);
 	anim_open(view);
+	anim_track_commits(view, true);
 }
 
 void view_unmap(struct ul_view *view) {
 	struct ul_server *server = view->server;
 	anim_cancel(view);
+	anim_close(view);
+	anim_track_commits(view, false);
 	view->mapped = false;
 	wlr_scene_node_set_enabled(&view->tree->node, false);
 	finish_foreign(view);
@@ -504,6 +544,7 @@ void view_unmap(struct ul_view *view) {
 }
 
 void view_destroy(struct ul_view *view) {
+	anim_view_destroyed(view);
 	finish_foreign(view);
 	if (view->xdg_decoration) {
 		wl_list_remove(&view->decoration_request_mode.link);

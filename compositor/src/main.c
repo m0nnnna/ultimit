@@ -111,6 +111,7 @@ int main(int argc, char *argv[]) {
 
 	struct ul_server server = {0};
 	wl_list_init(&server.views);
+	wl_list_init(&server.ghosts);
 	server.display = wl_display_create();
 	server.backend = wlr_backend_autocreate(wl_display_get_event_loop(server.display),
 		&server.session);
@@ -218,6 +219,7 @@ int main(int argc, char *argv[]) {
 	wlr_log(WLR_INFO, "Ultimit running on WAYLAND_DISPLAY=%s", socket);
 	wl_display_run(server.display);
 
+	anim_finish_all(&server);
 	ipc_finish(&server);
 	lock_finish(&server);
 	output_finish(&server);

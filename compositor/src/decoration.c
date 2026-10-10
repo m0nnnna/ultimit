@@ -77,12 +77,13 @@ static void draw_text(cairo_t *cr, PangoLayout *layout, double x, int bar_h) {
 	pango_cairo_show_layout(cr, layout);
 }
 
-static void render_titlebar(struct ul_view *view) {
+/* Draw the titlebar into a new buffer (the caller drops it). */
+struct wlr_buffer *decoration_titlebar_buffer(struct ul_view *view) {
 	struct ul_decoration *deco = &view->deco;
 	int width = view->width + 2 * UL_BORDER;
 	int height = UL_TITLEBAR_H;
 	if (width <= 0) {
-		return;
+		return NULL;
 	}
 	bool focused = view->server->focused_view == view;
 
@@ -154,8 +155,15 @@ static void render_titlebar(struct ul_view *view) {
 	struct cairo_buffer *buffer = calloc(1, sizeof(*buffer));
 	buffer->surface = surface;
 	wlr_buffer_init(&buffer->base, &cairo_buffer_impl, width, height);
-	wlr_scene_buffer_set_buffer(deco->titlebar, &buffer->base);
-	wlr_buffer_drop(&buffer->base);
+	return &buffer->base;
+}
+
+static void render_titlebar(struct ul_view *view) {
+	struct wlr_buffer *buffer = decoration_titlebar_buffer(view);
+	if (buffer) {
+		wlr_scene_buffer_set_buffer(view->deco.titlebar, buffer);
+		wlr_buffer_drop(buffer);
+	}
 }
 
 /* ---- scene nodes --------------------------------------------------------- */

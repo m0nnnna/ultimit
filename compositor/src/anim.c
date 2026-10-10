@@ -5,9 +5,11 @@
  * fullscreen (games) and when ULTIMIT_ANIMATIONS=0.
  */
 
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <scenefx/types/fx/clipped_region.h>
 #include "server.h"
 #include "theme.h"
 
@@ -110,4 +112,384 @@ void anim_cancel(struct ul_view *view) {
 
 bool anim_running(struct ul_view *view) {
 	return view->anim_timer != NULL;
+}
+
+/* ---- ghosts: close, minimize and restore ---------------------------------
+ *
+ * A ghost is a static copy of a window's scene (its rects and the client's
+ * last buffers, which stay locked while the copy holds them), so a window
+ * can keep animating after the client has unmapped it or while the real
+ * tree is hidden.
+ *
+ *   close     the open animation backwards: the content wipes up, the
+ *             frame goes, the accent line shrinks back to the center
+ *   minimize  the window shrinks into its WINDOWS entry on the rail (the
+ *             rectangle the shell gives through foreign-toplevel) and fades
+ *   restore   the same, backwards; the real window shows when it lands
+ */
+
+#define CLOSE_WIPE_MS 180
+#define CLOSE_LINE_MS 120
+#define MINIMIZE_MS 220
+
+enum ghost_kind { GHOST_CLOSE, GHOST_MINIMIZE, GHOST_RESTORE };
+
+struct ghost_elem {
+	struct wlr_scene_node *node;
+	struct wlr_box box;     /* relative to the view's content origin */
+	bool content;           /* client surface (wiped on close) */
+	float color[4];         /* rects */
+	struct clipped_region clip; /* rects: cut-out (e.g. the frame's inside) */
+	float opacity;          /* buffers */
+	struct wlr_fbox src;    /* buffers: source box, never empty */
+};
+
+struct ul_ghost {
+	struct wl_list link; /* ul_server.ghosts */
+	struct ul_server *server;
+	struct ul_view *view; /* restore only: shown when done; NULL if gone */
+	enum ghost_kind kind;
+	struct wlr_scene_tree *tree;
+	struct ghost_elem *elems;
+	size_t n, cap;
+	struct wlr_scene_rect *line;
+	struct wlr_box frame;  /* frame box relative to content origin */
+	struct wlr_box target; /* layout coords: rail entry (minimize/restore) */
+	int origin_x, origin_y; /* layout position of the content origin */
+	int content_y, content_h;
+	struct wl_event_source *timer;
+	uint32_t start;
+};
+
+static bool animations_enabled(void) {
+	const char *env = getenv("ULTIMIT_ANIMATIONS");
+	return !(env && strcmp(env, "0") == 0);
+}
+
+static bool no_input(struct wlr_scene_buffer *buffer, double *sx, double *sy) {
+	return false;
+}
+
+static struct ghost_elem *ghost_add(struct ul_ghost *g) {
+	if (g->n == g->cap) {
+		g->cap = g->cap ? g->cap * 2 : 16;
+		g->elems = realloc(g->elems, g->cap * sizeof(*g->elems));
+	}
+	struct ghost_elem *e = &g->elems[g->n++];
+	memset(e, 0, sizeof(*e));
+	return e;
+}
+
+/* Copy the enabled nodes under `tree` (offset ox, oy from the content
+ * origin) into the ghost. */
+static void ghost_copy(struct ul_ghost *g, struct ul_view *view, struct wlr_scene_tree *tree,
+		int ox, int oy, bool content, struct wlr_scene_tree *content_tree) {
+	struct wlr_scene_node *node;
+	wl_list_for_each(node, &tree->children, link) {
+		if (!node->enabled) continue;
+		int x = ox + node->x, y = oy + node->y;
+		if (node->type == WLR_SCENE_NODE_TREE) {
+			struct wlr_scene_tree *sub = wlr_scene_tree_from_node(node);
+			ghost_copy(g, view, sub, x, y, content || sub == content_tree, content_tree);
+		} else if (node->type == WLR_SCENE_NODE_RECT) {
+			struct wlr_scene_rect *r = wlr_scene_rect_from_node(node);
+			if (r->width <= 0 || r->height <= 0) continue;
+			struct wlr_scene_rect *copy = wlr_scene_rect_create(g->tree, r->width, r->height, r->color);
+			wlr_scene_rect_set_backdrop_blur(copy, r->backdrop_blur);
+			wlr_scene_rect_set_backdrop_blur_optimized(copy, r->backdrop_blur_optimized);
+			copy->accepts_input = false;
+			wlr_scene_rect_set_clipped_region(copy, r->clipped_region);
+			struct ghost_elem *e = ghost_add(g);
+			e->node = &copy->node;
+			e->clip = r->clipped_region;
+			e->box = (struct wlr_box){ x, y, r->width, r->height };
+			e->content = content;
+			memcpy(e->color, r->color, sizeof(e->color));
+		} else if (node->type == WLR_SCENE_NODE_BUFFER) {
+			struct wlr_scene_buffer *b = wlr_scene_buffer_from_node(node);
+			/* wlroots lets go of a buffer once it's uploaded; our own
+			 * titlebar can simply be drawn again. */
+			struct wlr_buffer *buf = b->buffer, *fresh = NULL;
+			if (!buf && b == view->deco.titlebar) {
+				buf = fresh = decoration_titlebar_buffer(view);
+			}
+			if (!buf) continue;
+			struct wlr_scene_buffer *copy = wlr_scene_buffer_create(g->tree, buf);
+			if (fresh) wlr_buffer_drop(fresh);
+			if (!copy) continue;
+			wlr_scene_buffer_set_backdrop_blur(copy, b->backdrop_blur);
+			wlr_scene_buffer_set_backdrop_blur_optimized(copy, b->backdrop_blur_optimized);
+			int w = b->dst_width > 0 ? b->dst_width : buf->width;
+			int h = b->dst_height > 0 ? b->dst_height : buf->height;
+			struct wlr_fbox src = b->src_box;
+			if (wlr_fbox_empty(&src)) {
+				src = (struct wlr_fbox){ 0, 0, buf->width, buf->height };
+			}
+			wlr_scene_buffer_set_transform(copy, b->transform);
+			wlr_scene_buffer_set_corner_radius(copy, b->corner_radius, b->corners);
+			wlr_scene_buffer_set_opacity(copy, b->opacity);
+			copy->point_accepts_input = no_input;
+			struct ghost_elem *e = ghost_add(g);
+			e->node = &copy->node;
+			e->box = (struct wlr_box){ x, y, w, h };
+			e->content = content;
+			e->opacity = b->opacity;
+			e->src = src;
+		}
+		/* Shadows and blur markers aren't copied. */
+	}
+}
+
+static void ghost_destroy(struct ul_ghost *g) {
+	if (g->timer) {
+		wl_event_source_remove(g->timer);
+	}
+	if (g->view) {
+		if (g->view->ghost == g) g->view->ghost = NULL;
+		if (g->view->closing == g) g->view->closing = NULL;
+	}
+	wl_list_remove(&g->link);
+	wlr_scene_node_destroy(&g->tree->node);
+	free(g->elems);
+	free(g);
+}
+
+/* Place every element scaled by s around the frame's top-left, with the
+ * frame's top-left at layout (fx, fy), faded to alpha a, and content cut
+ * off below layout-relative y `cut` (content coords; INT_MAX = no cut). */
+static void ghost_layout(struct ul_ghost *g, double fx, double fy, double s,
+		double a, int cut, bool chrome) {
+	for (size_t i = 0; i < g->n; i++) {
+		struct ghost_elem *e = &g->elems[i];
+		if (!e->content && !chrome) {
+			wlr_scene_node_set_enabled(e->node, false);
+			continue;
+		}
+		int w = e->box.width, h = e->box.height;
+		double src_h = e->src.height;
+		if (e->content && e->box.y + h > cut) {
+			int vis = cut - e->box.y;
+			if (vis <= 0) {
+				wlr_scene_node_set_enabled(e->node, false);
+				continue;
+			}
+			src_h = e->src.height * vis / h;
+			h = vis;
+		}
+		wlr_scene_node_set_enabled(e->node, true);
+		int x = (int)(fx + (e->box.x - g->frame.x) * s);
+		int y = (int)(fy + (e->box.y - g->frame.y) * s);
+		int sw = (int)(w * s), sh = (int)(h * s);
+		if (sw < 1) sw = 1;
+		if (sh < 1) sh = 1;
+		wlr_scene_node_set_position(e->node, x, y);
+		if (e->node->type == WLR_SCENE_NODE_RECT) {
+			struct wlr_scene_rect *r = wlr_scene_rect_from_node(e->node);
+			wlr_scene_rect_set_size(r, sw, sh);
+			if (!wlr_box_empty(&e->clip.area)) {
+				struct clipped_region c = e->clip;
+				c.area = (struct wlr_box){ (int)(c.area.x * s), (int)(c.area.y * s),
+					(int)(c.area.width * s), (int)(c.area.height * s) };
+				wlr_scene_rect_set_clipped_region(r, c);
+			}
+			float c[4] = { e->color[0] * a, e->color[1] * a, e->color[2] * a, e->color[3] * a };
+			wlr_scene_rect_set_color(r, c); /* premultiplied */
+		} else {
+			struct wlr_scene_buffer *b = wlr_scene_buffer_from_node(e->node);
+			struct wlr_fbox src = e->src;
+			src.height = src_h;
+			wlr_scene_buffer_set_source_box(b, &src);
+			wlr_scene_buffer_set_dest_size(b, sw, sh);
+			wlr_scene_buffer_set_opacity(b, e->opacity * a);
+		}
+	}
+}
+
+static int ghost_tick(void *data) {
+	struct ul_ghost *g = data;
+	uint32_t elapsed = now_ms() - g->start;
+	double fx0 = g->origin_x + g->frame.x, fy0 = g->origin_y + g->frame.y;
+
+	if (g->kind == GHOST_CLOSE) {
+		int fw = g->frame.width;
+		if (elapsed < CLOSE_WIPE_MS) {
+			double p = ease(elapsed / (double)CLOSE_WIPE_MS);
+			int cut = g->content_y + (int)(g->content_h * (1 - p));
+			ghost_layout(g, fx0, fy0, 1, 1, cut, true);
+		} else if (elapsed < CLOSE_WIPE_MS + CLOSE_LINE_MS) {
+			double p = ease((elapsed - CLOSE_WIPE_MS) / (double)CLOSE_LINE_MS);
+			ghost_layout(g, fx0, fy0, 1, 1, INT_MIN / 2, false);
+			int w = (int)(fw * (1 - p));
+			if (w < 2) w = 2;
+			wlr_scene_rect_set_size(g->line, w, UL_BRACKET_W);
+			wlr_scene_node_set_position(&g->line->node, (int)fx0 + (fw - w) / 2, (int)fy0);
+			wlr_scene_node_set_enabled(&g->line->node, true);
+		} else {
+			ghost_destroy(g);
+			return 0;
+		}
+	} else {
+		if (elapsed >= MINIMIZE_MS) {
+			struct ul_view *view = g->view;
+			ghost_destroy(g);
+			if (view && !view->minimized) {
+				wlr_scene_node_set_enabled(&view->tree->node, true);
+			}
+			return 0;
+		}
+		double t = elapsed / (double)MINIMIZE_MS;
+		double p = g->kind == GHOST_MINIMIZE ? ease(t) : 1 - ease(t);
+		/* Uniform scale that fits the frame into the target. */
+		double sx = g->target.width / (double)g->frame.width;
+		double sy = g->target.height / (double)g->frame.height;
+		double se = sx < sy ? sx : sy;
+		double s = 1 + (se - 1) * p;
+		double tx = g->target.x + (g->target.width - g->frame.width * se) / 2;
+		double ty = g->target.y + (g->target.height - g->frame.height * se) / 2;
+		double a = 1 - p * p;
+		ghost_layout(g, fx0 + (tx - fx0) * p, fy0 + (ty - fy0) * p, s, a, INT_MAX, true);
+	}
+	wl_event_source_timer_update(g->timer, TICK_MS);
+	return 0;
+}
+
+static struct ul_ghost *ghost_create(struct ul_view *view, enum ghost_kind kind) {
+	struct ul_server *server = view->server;
+	struct ul_ghost *g = calloc(1, sizeof(*g));
+	g->server = server;
+	g->kind = kind;
+	g->tree = wlr_scene_tree_create(server->layers[UL_LAYER_VIEWS]);
+	ghost_copy(g, view, view->tree, 0, 0, false, view->content);
+	int bar = view->ssd ? UL_TITLEBAR_H : 0;
+	g->frame = (struct wlr_box){ -UL_BORDER, -bar - UL_BORDER,
+		view->width + 2 * UL_BORDER, view->height + bar + 2 * UL_BORDER };
+	struct wlr_box geo = view_geometry_offset(view);
+	/* The visible content starts at the content node's offset plus the
+	 * geometry offset, in view-tree coordinates (as elem boxes are). */
+	g->content_y = view->content->node.y + geo.y;
+	g->content_h = view->height;
+	g->origin_x = view->x;
+	g->origin_y = view->y;
+	static const float accent[4] = UL_COLOR_ACCENT;
+	g->line = wlr_scene_rect_create(g->tree, 2, UL_BRACKET_W, accent);
+	g->line->accepts_input = false;
+	wlr_scene_node_set_enabled(&g->line->node, false);
+	wl_list_insert(&server->ghosts, &g->link);
+	g->start = now_ms();
+	g->timer = wl_event_loop_add_timer(wl_display_get_event_loop(server->display), ghost_tick, g);
+	return g;
+}
+
+static bool can_close_anim(struct ul_view *view) {
+	return animations_enabled() && !view->fullscreen && !view->minimized &&
+		view->tree->node.enabled && view->content && !view->ghost;
+}
+
+/* By the time a surface unmaps, its buffer is already gone. So when a
+ * mapped window commits "no buffer" (which unmaps it), snapshot it first;
+ * the snapshot plays on unmap, or is dropped if the window lives on. */
+static void handle_client_commit(struct wl_listener *listener, void *data) {
+	struct ul_view *view = wl_container_of(listener, view, client_commit);
+	struct wlr_surface *surface = view_surface(view);
+	if (!surface || !(surface->pending.committed & WLR_SURFACE_STATE_BUFFER)) {
+		return;
+	}
+	if (surface->pending.buffer == NULL) {
+		if (!view->closing && view->mapped && can_close_anim(view)) {
+			struct ul_ghost *g = ghost_create(view, GHOST_CLOSE);
+			wlr_scene_node_set_enabled(&g->tree->node, false);
+			g->view = view;
+			view->closing = g;
+		}
+	} else if (view->closing) {
+		ghost_destroy(view->closing);
+	}
+}
+
+void anim_track_commits(struct ul_view *view, bool track) {
+	struct wlr_surface *surface = view_surface(view);
+	if (track && surface && !view->client_commit.link.next) {
+		view->client_commit.notify = handle_client_commit;
+		wl_signal_add(&surface->events.client_commit, &view->client_commit);
+	} else if (!track && view->client_commit.link.next) {
+		wl_list_remove(&view->client_commit.link);
+		view->client_commit.link.next = NULL;
+	}
+}
+
+/* Called on unmap, before the view's scene is hidden. */
+void anim_close(struct ul_view *view) {
+	if (view->ghost) {
+		ghost_destroy(view->ghost); /* a restore still in flight */
+	}
+	struct ul_ghost *g = view->closing;
+	if (g) {
+		view->closing = NULL;
+		g->view = NULL;
+		g->start = now_ms();
+		wlr_scene_node_set_enabled(&g->tree->node, true);
+	} else if (can_close_anim(view)) {
+		g = ghost_create(view, GHOST_CLOSE);
+	} else {
+		return;
+	}
+	/* Stay where the window was in the stack. */
+	wlr_scene_node_place_above(&g->tree->node, &view->tree->node);
+	ghost_tick(g);
+}
+
+static bool target_box(struct ul_view *view, struct wlr_box *out) {
+	if (view->has_rail_rect) {
+		*out = view->rail_rect;
+		return true;
+	}
+	/* No rail entry known: sink toward the bottom of the screen. */
+	struct ul_output *output = output_at(view->server,
+		view->x + view->width / 2.0, view->y + view->height / 2.0);
+	if (!output) return false;
+	*out = (struct wlr_box){ view->x + view->width / 2 - 40,
+		output->full_area.y + output->full_area.height - 60, 80, 50 };
+	return true;
+}
+
+/* Minimize (true) after the real tree was hidden, or restore (false)
+ * with the real tree still hidden: the ghost shows it when it lands. */
+void anim_minimize(struct ul_view *view, bool minimize) {
+	if (view->ghost) {
+		ghost_destroy(view->ghost);
+	}
+	struct wlr_box target;
+	if (!animations_enabled() || view->fullscreen || !view->content ||
+			!target_box(view, &target)) {
+		if (!minimize) {
+			wlr_scene_node_set_enabled(&view->tree->node, true);
+		}
+		return;
+	}
+	struct ul_ghost *g = ghost_create(view, minimize ? GHOST_MINIMIZE : GHOST_RESTORE);
+	g->target = target;
+	if (!minimize) {
+		g->view = view;
+		view->ghost = g;
+	}
+	wlr_scene_node_place_above(&g->tree->node, &view->tree->node);
+	ghost_tick(g);
+}
+
+void anim_view_destroyed(struct ul_view *view) {
+	anim_track_commits(view, false);
+	if (view->closing) {
+		ghost_destroy(view->closing);
+	}
+	if (view->ghost) {
+		view->ghost->view = NULL;
+		view->ghost = NULL;
+	}
+}
+
+void anim_finish_all(struct ul_server *server) {
+	struct ul_ghost *g, *tmp;
+	wl_list_for_each_safe(g, tmp, &server->ghosts, link) {
+		ghost_destroy(g);
+	}
 }
