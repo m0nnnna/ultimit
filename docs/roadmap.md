@@ -48,7 +48,7 @@ GNOME stays installed as a safety net until phase 4.
 - [x] Icon theme for the shell without a Qt platform theme (QS_ICON_THEME)
 - [x] Bluetooth pairing agent (PIN/passkey/confirm prompts)
 - [x] NetworkManager secret agent (Wi-Fi password, 802.1X, VPN prompts)
-- [ ] Printer setup UI: system-config-printer (GTK, not GNOME)
+- [x] Printer setup UI: system-config-printer (GTK, not GNOME)
 - [ ] Secret portal for Flatpak apps: oo7-portal (only if Flatpak is ever used)
 
 ## Phase 4: the proof
@@ -65,9 +65,10 @@ yaru-theme-gnome-shell. Follow with `apt autoremove` (review its list).
 - [x] Purge the packages above, reboot, log in through the Ultimit greeter
       (2026-10-10: 135 packages removed by scripts/purge-gnome.sh; greetd's
       display-manager alias had to be re-enabled by hand, now automatic)
-- [ ] `scripts/test.sh` green; manual checklist (Wi-Fi, sound, Bluetooth,
-      suspend/resume, lock, screenshots, USB drive, printing, file picker
-      in Firefox)
+- [x] `scripts/test.sh` green; manual checklist (2026-10-10): Wi-Fi, sound,
+      Bluetooth pairing (phone, via ultimit-agents), suspend/resume, lock,
+      screenshots, USB phone over MTP (DATA + go-mtpfs), portal file picker.
+      Printing untested (no printer; CUPS + system-config-printer installed)
 - [ ] Then: gaming (Steam, Proton, NVIDIA offload, VRR, direct scanout)
 - [x] Bug: X11 windows that commit their only frame before Xwayland's
       surface pairing never mapped (~1 in 25 launches under load). Fixed in
