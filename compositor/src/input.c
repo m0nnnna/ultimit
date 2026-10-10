@@ -682,6 +682,30 @@ static void request_set_primary_selection(struct wl_listener *listener, void *da
 	wlr_seat_set_primary_selection(server->seat, event->source, event->serial);
 }
 
+/* Swap the cursor theme at runtime (skin change). Apps started later get
+ * it through the environment; running clients mostly ask us to draw via
+ * cursor-shape, so they follow at once. */
+bool input_set_cursor_theme(struct ul_server *server, const char *name, int size) {
+	if (size <= 0) {
+		const char *env = getenv("XCURSOR_SIZE");
+		size = env ? atoi(env) : 24;
+	}
+	struct wlr_xcursor_manager *mgr = wlr_xcursor_manager_create(name, size);
+	if (!mgr || !wlr_xcursor_manager_load(mgr, 1)) {
+		wlr_xcursor_manager_destroy(mgr);
+		return false;
+	}
+	struct wlr_xcursor_manager *old = server->cursor_mgr;
+	server->cursor_mgr = mgr;
+	wlr_cursor_set_xcursor(server->cursor, mgr, "default");
+	wlr_xcursor_manager_destroy(old);
+	setenv("XCURSOR_THEME", name, true);
+	char buf[16];
+	snprintf(buf, sizeof(buf), "%d", size);
+	setenv("XCURSOR_SIZE", buf, true);
+	return true;
+}
+
 void input_init(struct ul_server *server) {
 	server->cursor = wlr_cursor_create();
 	wlr_cursor_attach_output_layout(server->cursor, server->output_layout);

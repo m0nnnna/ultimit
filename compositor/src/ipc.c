@@ -165,6 +165,18 @@ static void run_command(struct ul_server *server, char *line, struct out *o) {
 		write_state(server, o);
 		return;
 	}
+	if (strcmp(cmd, "cursor-theme") == 0) {
+		/* cursor-theme NAME [SIZE]: the shell sends this on a skin change. */
+		char name[128] = {0};
+		int size = 0;
+		if (sscanf(line, "%*s %127s %d", name, &size) < 1) {
+			put(o, "{\"error\":\"usage: cursor-theme NAME [SIZE]\"}");
+			return;
+		}
+		put(o, input_set_cursor_theme(server, name, size) ?
+			"{\"ok\":true}" : "{\"error\":\"cannot load cursor theme\"}");
+		return;
+	}
 	if (strcmp(cmd, "reload") == 0) {
 		config_reload(server);
 		put(o, "{\"ok\":true}");

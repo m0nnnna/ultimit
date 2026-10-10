@@ -318,6 +318,7 @@ struct ul_view {
 };
 
 /* config.c */
+bool input_set_cursor_theme(struct ul_server *server, const char *name, int size);
 void config_load(struct ul_server *server);
 void config_reload(struct ul_server *server);
 void config_apply_pointer(struct ul_server *server, struct wlr_input_device *device);
