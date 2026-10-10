@@ -64,7 +64,7 @@ mkdir -p "$LOG_DIR"
 # apps they launch (portals, notifications, file pickers) find this session,
 # stop any portal that started too early without them (it restarts on
 # demand with the right environment), then start the shell.
-STARTUP="dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_DATA_DIRS GTK_THEME ADW_DEBUG_COLOR_SCHEME QS_ICON_THEME SSH_AUTH_SOCK; systemctl --user stop xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr 2>/dev/null; ('$ROOT/session/ultimit-secrets' &); ('$ROOT/shell/bin/ultimit-agents' &); '$ROOT/session/ultimit-autostart'; '$ROOT/session/ultimit-shell'"
+STARTUP="dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_DATA_DIRS GTK_THEME ADW_DEBUG_COLOR_SCHEME QS_ICON_THEME SSH_AUTH_SOCK; systemctl --user stop xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr 2>/dev/null; mountpoint -q "\${XDG_RUNTIME_DIR}/doc" || systemctl --user restart xdg-document-portal 2>/dev/null; ('$ROOT/session/ultimit-secrets' &); ('$ROOT/shell/bin/ultimit-agents' &); '$ROOT/session/ultimit-autostart'; '$ROOT/session/ultimit-shell'"
 
 # Lets scripts/restart-session.sh find this session's compositor (exec keeps the pid).
 echo $$ >"${XDG_RUNTIME_DIR:-/tmp}/ultimit-session.pid"

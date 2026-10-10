@@ -11,6 +11,7 @@
 #include <string.h>
 #include <cairo.h>
 #include <drm_fourcc.h>
+#include <wlr/render/wlr_texture.h>
 #include <pango/pangocairo.h>
 #include <scenefx/types/fx/clipped_region.h>
 #include <scenefx/types/fx/corner_location.h>
@@ -75,6 +76,35 @@ static void draw_text(cairo_t *cr, PangoLayout *layout, double x, int bar_h) {
 	pango_layout_get_pixel_size(layout, &w, &h);
 	cairo_move_to(cr, x, (bar_h - h) / 2.0);
 	pango_cairo_show_layout(cr, layout);
+}
+
+/* Copy a texture into a new CPU buffer (the caller drops it): for window
+ * snapshots whose client buffer the scene has already let go of. */
+struct wlr_buffer *buffer_from_texture(struct wlr_texture *texture) {
+	if (!texture || texture->width <= 0 || texture->height <= 0) {
+		return NULL;
+	}
+	cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
+		texture->width, texture->height);
+	if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS) {
+		cairo_surface_destroy(surface);
+		return NULL;
+	}
+	cairo_surface_flush(surface);
+	bool ok = wlr_texture_read_pixels(texture, &(struct wlr_texture_read_pixels_options){
+		.data = cairo_image_surface_get_data(surface),
+		.format = DRM_FORMAT_ARGB8888,
+		.stride = cairo_image_surface_get_stride(surface),
+	});
+	if (!ok) {
+		cairo_surface_destroy(surface);
+		return NULL;
+	}
+	cairo_surface_mark_dirty(surface);
+	struct cairo_buffer *buffer = calloc(1, sizeof(*buffer));
+	buffer->surface = surface;
+	wlr_buffer_init(&buffer->base, &cairo_buffer_impl, texture->width, texture->height);
+	return &buffer->base;
 }
 
 /* Draw the titlebar into a new buffer (the caller drops it). */

@@ -30,7 +30,9 @@ start)
 		# Don't inherit the parent's display or the devbox would nest
 		# into whatever ran this script when headless.
 		[ -n "$backend" ] && unset WAYLAND_DISPLAY DISPLAY
-		WLR_BACKENDS=${backend:-$WLR_BACKENDS} exec "$ROOT/compositor/build/ultimit" \
+		# An empty WLR_BACKENDS means "no backends": only set it for headless.
+		if [ -n "$backend" ]; then export WLR_BACKENDS=$backend; fi
+		exec "$ROOT/compositor/build/ultimit" \
 			-s "qs -p '$ROOT/shell'"
 	) >"$STATE/log" 2>&1 &
 	echo $! >"$STATE/pid"

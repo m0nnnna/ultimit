@@ -215,6 +215,12 @@ static void ghost_copy(struct ul_ghost *g, struct ul_view *view, struct wlr_scen
 			if (!buf && b == view->deco.titlebar) {
 				buf = fresh = decoration_titlebar_buffer(view);
 			}
+			/* Explicit-sync clients (Chromium on the GPU): the scene keeps
+			 * only the texture once it's uploaded; read it back. The texture
+			 * is in wlroots' private section (we pin our own wlroots/SceneFX). */
+			if (!buf && b->WLR_PRIVATE.texture) {
+				buf = fresh = buffer_from_texture(b->WLR_PRIVATE.texture);
+			}
 			if (!buf) continue;
 			struct wlr_scene_buffer *copy = wlr_scene_buffer_create(g->tree, buf);
 			if (fresh) wlr_buffer_drop(fresh);
