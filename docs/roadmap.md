@@ -36,11 +36,11 @@ GNOME stays installed as a safety net until phase 4.
 ## Phase 3: Ultimit apps
 - [x] Settings (grows out of Accessory): display, sound, network,
       Bluetooth, power, input, appearance, users, about
-- [ ] DATA: file manager (trash, removable drives, network shares via
+- [x] DATA: file manager (trash, removable drives, network shares via
       udisks/mount; no gvfs)
 - [ ] Text editor
 - [ ] Calculator
-- [ ] Terminal: foot, themed
+- [x] Terminal: foot, themed
 - [ ] Non-GNOME picks for PDF and images (to be replaced later)
 
 ## Phase 4: the proof

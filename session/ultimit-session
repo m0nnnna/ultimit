@@ -30,6 +30,15 @@ for f in foot/foot.ini zathura/zathurarc imv/config; do
 	fi
 done
 
+# Ultimit's own apps (DATA, ...) as desktop entries, so xdg-open and other
+# apps' "open folder" find them. Exec gets this checkout's absolute path.
+mkdir -p "$HOME/.local/share/applications"
+for d in "$ROOT"/shell/apps/*/ultimit-*.desktop; do
+	[ -e "$d" ] || continue
+	sed "s|^Exec=ultimit-|Exec=$ROOT/shell/bin/ultimit-|" "$d" \
+		>"$HOME/.local/share/applications/$(basename "$d")"
+done
+
 # Keep a log of the last session for debugging; the previous one is kept too.
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/ultimit"
 mkdir -p "$LOG_DIR"

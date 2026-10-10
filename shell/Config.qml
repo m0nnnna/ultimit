@@ -116,15 +116,7 @@ Singleton {
           ],
           hint: { what: "No music app installed", install: "sudo apt install rhythmbox" },
           appIds: ["rhythmbox", "org.gnome.rhythmbox3", "spotify", "lollypop", "io.bassi.amberol", "org.gnome.music"] },
-        { id: "data",      label: "DATA",
-          tryCmds: [
-              { bin: "nautilus", cmd: "nautilus" },
-              { bin: "nemo",     cmd: "nemo" },
-              { bin: "thunar",   cmd: "thunar" },
-              { bin: "dolphin",  cmd: "dolphin" }
-          ],
-          hint: { what: "No file manager installed", install: "sudo apt install nautilus" },
-          appIds: ["nautilus", "org.gnome.nautilus", "org.gnome.files", "nemo", "thunar", "org.kde.dolphin"] },
+        { id: "data",      label: "DATA", own: true, appIds: [] },   // apps/data
         { id: "accessory", label: "ACCESSORY", own: true,
           appIds: ["gnome-control-center", "org.gnome.settings"] }
     ]

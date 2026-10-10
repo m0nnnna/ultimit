@@ -7,6 +7,7 @@ import Quickshell.Io
 import "components"
 import "apps/settings"
 import "apps/games"
+import "apps/data"
 import "apps/polkit"
 
 ShellRoot {
@@ -15,6 +16,7 @@ ShellRoot {
     SettingsWindow {}                                    // Settings window (replaces Accessory; rail ACCESSORY button)
     LockScreen {}                                        // session lock, idle dim/lock/suspend, lock on sleep
     Polkit {}                                            // polkit authentication agent + dialog
+    DataWindow {}    // DATA file manager (ultimit-data, qs ipc call data open <path>)
     GamesWindow {}   // Ultimit Games app (toggle: qs ipc call games toggle)
 
     IpcHandler {

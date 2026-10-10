@@ -7,6 +7,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import ".."
+import "../apps/data"
 
 PanelWindow {
     id: win
@@ -60,7 +61,7 @@ PanelWindow {
         case "skin": subOpen = true; subCur = Math.max(0, skinList.findIndex(s => s.id === Theme.skin)); return;
         case "motion": Config.motion = !Config.motion; break;
         case "term": close(); Config.openTerminal(); return;
-        case "files": close(); Config.launchApp(Config.appById("data")); return;
+        case "files": close(); Data.show(""); return;
         case "launch": Config.openLauncher(win.screenName); return;
         case "acc": close(); Config.accessoryOpen = true; return;
         case "boot": close(); Config.playBoot(); return;

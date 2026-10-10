@@ -1,0 +1,5 @@
+singleton Data 1.0 Data.qml
+DataWindow 1.0 DataWindow.qml
+DMenu 1.0 DMenu.qml
+DDialog 1.0 DDialog.qml
+EntryMouse 1.0 EntryMouse.qml

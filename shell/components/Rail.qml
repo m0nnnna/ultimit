@@ -6,6 +6,7 @@ import Quickshell
 import Quickshell.Wayland
 import ".."
 import "../apps/games"
+import "../apps/data"
 
 PanelWindow {
     id: win
@@ -30,6 +31,7 @@ PanelWindow {
                 if (own && list[i].title === Config.accessoryTitle) return list[i];
                 continue;
             }
+            if (app && app.id === "data" && own && list[i].title === "DATA") return list[i];
             if (app && app.id === "games" && own && list[i].title === "Games") return list[i];
             const id = (list[i].appId || "").toLowerCase();
             if (ids.indexOf(id) >= 0) return list[i];
@@ -61,6 +63,12 @@ PanelWindow {
             const w = findToplevel(app.appIds, app);
             if (w) { w.minimized = false; w.activate(); }
             else Config.accessoryOpen = true;
+            return;
+        }
+        if (app.id === "data") {
+            const w = findToplevel(app.appIds, app);
+            if (w) { w.minimized = false; w.activate(); }
+            else Data.show("");
             return;
         }
         if (app.id === "games") {

@@ -15,3 +15,10 @@ export ADW_DEBUG_COLOR_SCHEME=prefer-dark
 # Note for the session script: apps started via D-Bus/systemd activation (e.g.
 # nautilus launched by a portal) do not inherit this shell env; add
 # GTK_THEME and ADW_DEBUG_COLOR_SCHEME to the dbus-update-activation-environment call.
+
+# Icon theme for the Quickshell shell (DATA, launcher, window list). Without a
+# Qt platform theme, Qt only searches "hicolor"; follow the GTK setting.
+if [ -z "$QS_ICON_THEME" ]; then
+	QS_ICON_THEME=$(gsettings get org.gnome.desktop.interface icon-theme 2>/dev/null | tr -d "'")
+	export QS_ICON_THEME="${QS_ICON_THEME:-Yaru-dark}"
+fi

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=DATA
+GenericName=File Manager
+Comment=Ultimit file manager
+Exec=ultimit-data %f
+Icon=system-file-manager
+Terminal=false
+Categories=System;FileManager;
+MimeType=inode/directory;

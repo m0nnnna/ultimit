@@ -1,0 +1,6 @@
+#!/bin/sh
+# ultimit-data [path] - open DATA (the Ultimit file manager) at path (default: home).
+p="${1:-$HOME}"
+case "$p" in file://*) p=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.unquote(sys.argv[1]))' "${p#file://}");; esac
+[ -e "$p" ] && p="$(realpath -- "$p")"
+exec qs -p "${ULTIMIT_SHELL_DIR:-$(dirname "$(dirname "$(readlink -f "$0")")")}" ipc call data open "$p"
