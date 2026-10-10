@@ -38,7 +38,7 @@ GNOME stays installed as a safety net until phase 4.
       Bluetooth, power, input, appearance, users, about
 - [x] DATA: file manager (trash, removable drives, network shares via
       udisks/mount; no gvfs)
-- [ ] Text editor
+- [x] Text editor (MEMO, own process, draft recovery)
 - [x] Calculator (CALC)
 - [x] Terminal: foot, themed
 - [ ] Non-GNOME picks for PDF and images (to be replaced later)

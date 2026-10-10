@@ -1,0 +1,6 @@
+singleton Memo 1.0 Memo.qml
+MemoApp 1.0 MemoApp.qml
+MemoWindow 1.0 MemoWindow.qml
+MemoDialog 1.0 MemoDialog.qml
+MemoPrompt 1.0 MemoPrompt.qml
+MemoToggle 1.0 MemoToggle.qml
