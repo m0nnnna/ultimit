@@ -34,7 +34,7 @@ GNOME stays installed as a safety net until phase 4.
 - [x] Ultimit login screen on greetd, replacing GDM
 
 ## Phase 3: Ultimit apps
-- [ ] Settings (grows out of Accessory): display, sound, network,
+- [x] Settings (grows out of Accessory): display, sound, network,
       Bluetooth, power, input, appearance, users, about
 - [ ] DATA: file manager (trash, removable drives, network shares via
       udisks/mount; no gvfs)

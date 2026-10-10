@@ -1,0 +1,19 @@
+singleton SetSys 1.0 SetSys.qml
+SettingsWindow 1.0 SettingsWindow.qml
+Cmd 1.0 Cmd.qml
+Page 1.0 Page.qml
+InfoRow 1.0 InfoRow.qml
+Chips 1.0 Chips.qml
+Dropdown 1.0 Dropdown.qml
+ItemRow 1.0 ItemRow.qml
+TextEntry 1.0 TextEntry.qml
+AppearancePage 1.0 AppearancePage.qml
+DisplayPage 1.0 DisplayPage.qml
+SoundPage 1.0 SoundPage.qml
+NetworkPage 1.0 NetworkPage.qml
+BluetoothPage 1.0 BluetoothPage.qml
+PowerPage 1.0 PowerPage.qml
+InputPage 1.0 InputPage.qml
+DefaultAppsPage 1.0 DefaultAppsPage.qml
+DateTimePage 1.0 DateTimePage.qml
+AboutPage 1.0 AboutPage.qml

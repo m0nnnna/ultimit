@@ -16,6 +16,12 @@ Scope {
     readonly property bool envMotion: !!Quickshell.env("ULTIMIT_MOTION")
     readonly property bool envBoot: !!Quickshell.env("ULTIMIT_BOOT")
 
+    // Idle timings: an ULTIMIT_*_AFTER / ULTIMIT_SUSPEND_ON_AC env var wins for that run (and is not saved).
+    readonly property bool envDim: !!Quickshell.env("ULTIMIT_DIM_AFTER")
+    readonly property bool envLock: !!Quickshell.env("ULTIMIT_LOCK_AFTER")
+    readonly property bool envSuspend: !!Quickshell.env("ULTIMIT_SUSPEND_AFTER")
+    readonly property bool envSuspendAC: !!Quickshell.env("ULTIMIT_SUSPEND_ON_AC")
+
     function clampDensity(v) { return Math.max(16, Math.min(60, Math.round(v))); }
 
     // file -> singletons
@@ -25,6 +31,10 @@ Scope {
         if (!root.envMotion) Config.motion = a.motion;
         if (!root.envBoot) Config.bootOnStart = a.bootOnStart;
         Config.shardDensity = clampDensity(a.shardDensity);
+        if (!root.envDim) Config.dimAfter = a.dimAfter;
+        if (!root.envLock) Config.lockAfter = a.lockAfter;
+        if (!root.envSuspend) Config.suspendAfter = a.suspendAfter;
+        if (!root.envSuspendAC) Config.suspendOnAC = a.suspendOnAC;
     }
     // singletons -> file
     function push() {
@@ -35,6 +45,10 @@ Scope {
         if (!root.envMotion && a.motion !== Config.motion) { a.motion = Config.motion; changed = true; }
         if (a.shardDensity !== Config.shardDensity) { a.shardDensity = Config.shardDensity; changed = true; }
         if (!root.envBoot && a.bootOnStart !== Config.bootOnStart) { a.bootOnStart = Config.bootOnStart; changed = true; }
+        if (!root.envDim && a.dimAfter !== Config.dimAfter) { a.dimAfter = Config.dimAfter; changed = true; }
+        if (!root.envLock && a.lockAfter !== Config.lockAfter) { a.lockAfter = Config.lockAfter; changed = true; }
+        if (!root.envSuspend && a.suspendAfter !== Config.suspendAfter) { a.suspendAfter = Config.suspendAfter; changed = true; }
+        if (!root.envSuspendAC && a.suspendOnAC !== Config.suspendOnAC) { a.suspendOnAC = Config.suspendOnAC; changed = true; }
         if (changed) save.restart();
     }
 
@@ -49,6 +63,10 @@ Scope {
         function onMotionChanged() { root.push(); }
         function onShardDensityChanged() { root.push(); }
         function onBootOnStartChanged() { root.push(); }
+        function onDimAfterChanged() { root.push(); }
+        function onLockAfterChanged() { root.push(); }
+        function onSuspendAfterChanged() { root.push(); }
+        function onSuspendOnACChanged() { root.push(); }
     }
 
     // Debounce: the density slider fires continuously.
@@ -72,6 +90,10 @@ Scope {
             property bool motion: true
             property int shardDensity: 34
             property bool bootOnStart: true
+            property real dimAfter: 300
+            property real lockAfter: 360
+            property real suspendAfter: 900
+            property bool suspendOnAC: false
         }
     }
 }

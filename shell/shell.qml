@@ -5,14 +5,14 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import "components"
-import "apps/accessory"
+import "apps/settings"
 import "apps/games"
 import "apps/polkit"
 
 ShellRoot {
     Persist { id: persist }                              // ~/.config/ultimit/shell.json
     Boot { settingsReady: persist.ready }                // boot overlay (startup + on demand)
-    Accessory {}                                         // Accessory settings window
+    SettingsWindow {}                                    // Settings window (replaces Accessory; rail ACCESSORY button)
     LockScreen {}                                        // session lock, idle dim/lock/suspend, lock on sleep
     Polkit {}                                            // polkit authentication agent + dialog
     GamesWindow {}   // Ultimit Games app (toggle: qs ipc call games toggle)
