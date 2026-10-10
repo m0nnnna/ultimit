@@ -1,0 +1,35 @@
+# Managed by Ultimit: replaced on login while this line is here.
+# Delete this line to keep your own edits.
+# PDF viewer look: Mine skin.
+
+set font                    "Share Tech Mono 11"
+set default-bg              "#050607"
+set default-fg              "#eef1f4"
+set statusbar-bg            "#0d0f12"
+set statusbar-fg            "#8d949e"
+set inputbar-bg             "#0d0f12"
+set inputbar-fg             "#eef1f4"
+set notification-bg         "#0d0f12"
+set notification-fg         "#eef1f4"
+set notification-error-bg   "#0d0f12"
+set notification-error-fg   "#ff8a8a"
+set notification-warning-bg "#0d0f12"
+set notification-warning-fg "#ffd98f"
+set highlight-color         "rgba(212,235,255,0.35)"
+set highlight-active-color  "rgba(212,235,255,0.65)"
+set completion-bg           "#0d0f12"
+set completion-fg           "#8d949e"
+set completion-highlight-bg "#d4ebff"
+set completion-highlight-fg "#07090b"
+set index-bg                "#050607"
+set index-fg                "#eef1f4"
+set index-active-bg         "#d4ebff"
+set index-active-fg         "#07090b"
+set recolor-lightcolor      "#050607"
+set recolor-darkcolor       "#eef1f4"
+set statusbar-h-padding     12
+set statusbar-v-padding     6
+set page-padding            8
+set selection-clipboard     clipboard
+set window-title-basename   true
+set adjust-open             width

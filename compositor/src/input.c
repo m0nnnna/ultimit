@@ -472,7 +472,7 @@ static bool handle_keybinding(struct ul_server *server, uint32_t mods, xkb_keysy
 	}
 	if (ctrl && alt && (sym == XKB_KEY_t || sym == XKB_KEY_T)) {
 		const char *term = getenv("ULTIMIT_TERMINAL");
-		server_spawn(term ? term : "ptyxis --new-window || foot || kitty || xterm");
+		server_spawn(term ? term : "foot || kitty || ptyxis --new-window || xterm");
 		return true;
 	}
 	if (alt && sym == XKB_KEY_Tab) {

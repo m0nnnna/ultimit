@@ -19,6 +19,17 @@ export PATH="$DEPS/bin:$ROOT/shell/bin:$PATH"
 mkdir -p "$HOME/.config/xdg-desktop-portal"
 cp "$ROOT/session/portals/ultimit-portals.conf" "$HOME/.config/xdg-desktop-portal/"
 
+# Ultimit-styled configs for the terminal (foot), PDF viewer (zathura) and
+# image viewer (imv). Installed only where missing or still marked
+# "Managed by Ultimit", so the user's own edits are never overwritten.
+for f in foot/foot.ini zathura/zathurarc imv/config; do
+	dst="$HOME/.config/$f"
+	if [ ! -e "$dst" ] || head -n1 "$dst" | grep -q "Managed by Ultimit"; then
+		mkdir -p "$(dirname "$dst")"
+		cp "$ROOT/session/defaults/$f" "$dst"
+	fi
+done
+
 # Keep a log of the last session for debugging; the previous one is kept too.
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/ultimit"
 mkdir -p "$LOG_DIR"

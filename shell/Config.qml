@@ -131,8 +131,8 @@ Singleton {
 
     // Terminal candidates for the desktop menu.
     readonly property var terminals: [
-        { bin: "ptyxis", cmd: "ptyxis" }, { bin: "foot", cmd: "foot" },
-        { bin: "kitty", cmd: "kitty" }, { bin: "xterm", cmd: "xterm" }
+        { bin: "foot", cmd: "foot" }, { bin: "kitty", cmd: "kitty" },
+        { bin: "ptyxis", cmd: "ptyxis" }, { bin: "xterm", cmd: "xterm" }
     ]
 
     // Detected launch commands: { appId: cmd } (missing key = nothing installed).
