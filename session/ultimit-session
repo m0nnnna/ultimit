@@ -7,7 +7,7 @@ DEPS=${ULTIMIT_DEPS:-$HOME/.local/ultimit-deps}
 export XDG_CURRENT_DESKTOP=Ultimit
 export XDG_SESSION_DESKTOP=ultimit
 export XDG_SESSION_TYPE=wayland
-export PATH="$DEPS/bin:$ROOT/shell/bin:$PATH"
+export PATH="$DEPS/bin:$ROOT/shell/bin:$HOME/.local/bin:$PATH"
 
 # Flatpak apps (Ungoogled Chromium): their desktop entries and icons live
 # in the export dirs, which only a login shell's profile.d would add.
@@ -68,7 +68,7 @@ mkdir -p "$LOG_DIR"
 # apps they launch (portals, notifications, file pickers) find this session,
 # stop any portal that started too early without them (it restarts on
 # demand with the right environment), then start the shell.
-STARTUP="dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_DATA_DIRS GTK_THEME ADW_DEBUG_COLOR_SCHEME QS_ICON_THEME SSH_AUTH_SOCK XCURSOR_THEME XCURSOR_SIZE; systemctl --user stop xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr 2>/dev/null; mountpoint -q "\${XDG_RUNTIME_DIR}/doc" || systemctl --user restart xdg-document-portal 2>/dev/null; ('$ROOT/session/ultimit-secrets' &); ('$ROOT/shell/bin/ultimit-agents' &); '$ROOT/session/ultimit-autostart'; '$ROOT/session/ultimit-shell'"
+STARTUP="dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_DATA_DIRS GTK_THEME ADW_DEBUG_COLOR_SCHEME QS_ICON_THEME SSH_AUTH_SOCK XCURSOR_THEME XCURSOR_SIZE; systemctl --user stop xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr 2>/dev/null; mountpoint -q "\${XDG_RUNTIME_DIR}/doc" || systemctl --user restart xdg-document-portal 2>/dev/null; systemctl --user start nekomail.service 2>/dev/null; ('$ROOT/session/ultimit-secrets' &); ('$ROOT/shell/bin/ultimit-agents' &); '$ROOT/session/ultimit-autostart'; '$ROOT/session/ultimit-shell'"
 
 # Lets scripts/restart-session.sh find this session's compositor (exec keeps the pid).
 echo $$ >"${XDG_RUNTIME_DIR:-/tmp}/ultimit-session.pid"

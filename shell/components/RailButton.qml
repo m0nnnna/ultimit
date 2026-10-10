@@ -11,6 +11,7 @@ Item {
     property string label: "GAMES"
     property bool on: false
     property bool missing: false   // no candidate app installed
+    property int badge: 0          // unread-style count tag on the icon (MAILER); hidden at 0
     // Pinned desktop apps: themed icon (URL from Icons.path) drawn inside a chamfered frame like the WINDOWS list;
     // `letter` is the fallback when it does not resolve. Built-ins leave `iconSrc` and `letter` empty.
     property string iconSrc: ""
@@ -167,6 +168,41 @@ Item {
             text: "NOT INSTALLED"
             color: Theme.dim
             font.family: Theme.mono; font.pixelSize: 6; font.letterSpacing: 0.6
+        }
+    }
+    // Count tag: tiny chamfered accent tag at the icon's top-right (hidden at 0).
+    Item {
+        id: tag
+        visible: root.badge > 0 && !root.framed
+        x: content.x + coreIcon.x + coreIcon.width - 6
+        y: content.y + coreIcon.y - 7
+        width: Math.max(15, tagText.implicitWidth + 8)
+        height: 14
+        Shape {
+            anchors.fill: parent
+            preferredRendererType: Shape.CurveRenderer
+            ShapePath {
+                strokeWidth: 1
+                strokeColor: Theme.accent
+                fillColor: Theme.light ? Qt.rgba(1, 1, 1, 0.94) : Qt.rgba(0.02, 0.025, 0.03, 0.94)
+                joinStyle: ShapePath.MiterJoin
+                startX: 0.5; startY: 0.5
+                PathLine { x: tag.width - 3.5; y: 0.5 }
+                PathLine { x: tag.width - 0.5; y: 3.5 }
+                PathLine { x: tag.width - 0.5; y: tag.height - 0.5 }
+                PathLine { x: 3.5; y: tag.height - 0.5 }
+                PathLine { x: 0.5; y: tag.height - 3.5 }
+                PathLine { x: 0.5; y: 0.5 }
+            }
+        }
+        Text {
+            id: tagText
+            anchors.centerIn: parent
+            text: root.badge > 99 ? "99+" : String(root.badge)
+            color: Theme.accent
+            font.family: Theme.mono
+            font.pixelSize: 9
+            font.letterSpacing: 0.4
         }
     }
     MouseArea {

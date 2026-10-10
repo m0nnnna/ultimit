@@ -182,6 +182,7 @@ PanelWindow {
                             iconSrc: modelData.builtin ? "" : (modelData.icon ? Icons.path(modelData.icon) : "")
                             letter: modelData.builtin ? "" : ((modelData.name || modelData.label || "?").charAt(0).toUpperCase())
                             missing: modelData.builtin ? !Config.available(modelData.app) : !modelData.found
+                            badge: modelData.builtin && modelData.id === "mailer" ? Config.mailUnread : 0
                             on: { win.tick; return win.pinToplevel(modelData) !== null; }
                             onClicked: win.activatePin(modelData)
                             onRightClicked: gy => Pins.openMenu(modelData.id, gy, win.screen ? win.screen.name : "")

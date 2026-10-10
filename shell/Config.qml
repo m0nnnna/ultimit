@@ -99,6 +99,11 @@ Singleton {
           appIds: ["steam", "lutris", "heroic", "com.heroicgameslauncher.hgl", "net.lutris.lutris"] },
         { id: "mailer",    label: "MAILER",
           tryCmds: [
+              // NekoMail (Ultimit's own mail app, ~/code/nekomail ultimit branch): the `nekomail`
+              // window command (single instance; starts its background service if needed).
+              // ~/.local/bin is where its installer puts it, which a session PATH may lack.
+              { bin: "nekomail", cmd: "$(command -v nekomail || echo \"$HOME/.local/bin/nekomail\")",
+                check: "command -v nekomail >/dev/null 2>&1 || [ -x \"$HOME/.local/bin/nekomail\" ]" },
               { bin: "thunderbird", cmd: "thunderbird" },
               { bin: "evolution",   cmd: "evolution" },
               { bin: "geary",       cmd: "geary" },
@@ -106,7 +111,7 @@ Singleton {
                 check: "command -v xdg-open >/dev/null && [ -n \"$(xdg-mime query default x-scheme-handler/mailto 2>/dev/null)\" ]" }
           ],
           hint: { what: "No mail app installed", install: "sudo apt install thunderbird" },
-          appIds: ["thunderbird", "org.mozilla.thunderbird", "org.gnome.evolution", "evolution", "geary", "org.gnome.geary"] },
+          appIds: ["nekomail", "thunderbird", "org.mozilla.thunderbird", "org.gnome.evolution", "evolution", "geary", "org.gnome.geary"] },
         { id: "news",      label: "NEWS",
           tryCmds: [ { bin: "xdg-open", cmd: "xdg-open https://news.ycombinator.com" } ],
           hint: { what: "No default browser launcher", install: "sudo apt install xdg-utils firefox" },
@@ -138,6 +143,24 @@ Singleton {
         { bin: "foot", cmd: "foot" }, { bin: "kitty", cmd: "kitty" },
         { bin: "ptyxis", cmd: "ptyxis" }, { bin: "xterm", cmd: "xterm" }
     ]
+
+    // ---- NekoMail unread badge (MAILER rail button, see RailButton.qml `badge`) ----
+    // NekoMail's server rewrites this file (a plain integer: total inbox unread) atomically whenever
+    // the count changes; no auth needed. Missing file or 0 = no badge. The watcher reloads on change;
+    // the timer also catches the atomic rename replacing the watched inode.
+    readonly property string mailUnreadFile: Quickshell.env("NEKOMAIL_UNREAD_FILE")
+        || ((Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/nekomail/unread")
+    property int mailUnread: 0
+    FileView {
+        id: mailUnreadView
+        path: root.mailUnreadFile
+        printErrors: false
+        watchChanges: true
+        onFileChanged: reload()
+        onLoaded: { const n = parseInt(text().trim()); root.mailUnread = isNaN(n) || n < 0 ? 0 : n; }
+        onLoadFailed: root.mailUnread = 0
+    }
+    Timer { interval: 5000; repeat: true; running: true; onTriggered: mailUnreadView.reload() }
 
     // Detected launch commands: { appId: cmd } (missing key = nothing installed).
     property var resolved: ({})
