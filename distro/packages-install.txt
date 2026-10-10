@@ -1,0 +1,26 @@
+# Login and session
+greetd
+# Apps and tools the desktop uses
+foot
+zathura
+zathura-pdf-poppler
+imv
+go-mtpfs
+system-config-printer
+flatpak
+# Desktop plumbing that ubuntu-desktop-minimal used to pull in (kept manual)
+xwayland
+xdg-desktop-portal-gtk
+xdg-desktop-portal-wlr
+pipewire-audio
+pipewire-alsa
+bluez
+udisks2
+power-profiles-daemon
+switcheroo-control
+gamemode
+gcr
+grim
+slurp
+wl-clipboard
+wtype
