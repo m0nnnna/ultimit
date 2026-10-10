@@ -24,10 +24,14 @@ export XDG_DATA_DIRS
 "$ROOT/shell/theme/install-gtk-theme.sh" >/dev/null 2>&1 || true
 # Ultimit icon themes (one per skin), rebuilt each login so they follow the repo.
 "$ROOT/shell/theme/icons/install-icons.sh" >/dev/null 2>&1 || true
+# Shard cursor themes (one per skin); skipped when unchanged.
+"$ROOT/shell/theme/cursors/install-cursors.sh" >/dev/null 2>&1 || true
 . "$ROOT/shell/theme/session-env.sh"
 # Apps that don't inherit this environment read the themes from gsettings.
 case "$QS_ICON_THEME" in Ultimit-*) gsettings set org.gnome.desktop.interface icon-theme "$QS_ICON_THEME" 2>/dev/null ;; esac
 gsettings set org.gnome.desktop.interface gtk-theme "$GTK_THEME" 2>/dev/null
+[ -n "$XCURSOR_THEME" ] && gsettings set org.gnome.desktop.interface cursor-theme "$XCURSOR_THEME" 2>/dev/null
+gsettings set org.gnome.desktop.interface cursor-size "${XCURSOR_SIZE:-24}" 2>/dev/null
 gsettings set org.gnome.desktop.wm.preferences button-layout ':minimize,maximize,close' 2>/dev/null
 
 # Tell xdg-desktop-portal which backends serve an Ultimit desktop. Without
@@ -64,7 +68,7 @@ mkdir -p "$LOG_DIR"
 # apps they launch (portals, notifications, file pickers) find this session,
 # stop any portal that started too early without them (it restarts on
 # demand with the right environment), then start the shell.
-STARTUP="dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_DATA_DIRS GTK_THEME ADW_DEBUG_COLOR_SCHEME QS_ICON_THEME SSH_AUTH_SOCK; systemctl --user stop xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr 2>/dev/null; mountpoint -q "\${XDG_RUNTIME_DIR}/doc" || systemctl --user restart xdg-document-portal 2>/dev/null; ('$ROOT/session/ultimit-secrets' &); ('$ROOT/shell/bin/ultimit-agents' &); '$ROOT/session/ultimit-autostart'; '$ROOT/session/ultimit-shell'"
+STARTUP="dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_DATA_DIRS GTK_THEME ADW_DEBUG_COLOR_SCHEME QS_ICON_THEME SSH_AUTH_SOCK XCURSOR_THEME XCURSOR_SIZE; systemctl --user stop xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr 2>/dev/null; mountpoint -q "\${XDG_RUNTIME_DIR}/doc" || systemctl --user restart xdg-document-portal 2>/dev/null; ('$ROOT/session/ultimit-secrets' &); ('$ROOT/shell/bin/ultimit-agents' &); '$ROOT/session/ultimit-autostart'; '$ROOT/session/ultimit-shell'"
 
 # Lets scripts/restart-session.sh find this session's compositor (exec keeps the pid).
 echo $$ >"${XDG_RUNTIME_DIR:-/tmp}/ultimit-session.pid"

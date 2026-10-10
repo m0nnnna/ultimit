@@ -23,7 +23,15 @@ esac
 # Silver (the theme imports the matching libadwaita stylesheet; this also makes
 # @media (prefers-color-scheme) rules match).
 export ADW_DEBUG_COLOR_SCHEME=$_ul_scheme
-unset _ul_cfg _ul_skin _ul_scheme
+
+# Mouse cursor: the skin's Shard theme (theme/cursors), when installed.
+case "$_ul_skin" in amber|silver|verdant) _ul_cur=$_ul_skin ;; *) _ul_cur=mine ;; esac
+_ul_cur="UltimitCursor-$(printf '%s' "$_ul_cur" | sed 's/./\U&/')"
+if [ -z "${XCURSOR_THEME:-}" ] && [ -e "$HOME/.local/share/icons/$_ul_cur/cursors/default" ]; then
+	export XCURSOR_THEME=$_ul_cur
+fi
+export XCURSOR_SIZE=${XCURSOR_SIZE:-24}
+unset _ul_cfg _ul_skin _ul_scheme _ul_cur
 
 # Note for the session script: apps started via D-Bus/systemd activation (e.g.
 # nautilus launched by a portal) do not inherit this shell env; add
