@@ -32,6 +32,8 @@ enum ul_layer {
 	UL_LAYER_BG,
 	UL_LAYER_BOTTOM,
 	UL_LAYER_VIEWS,
+	UL_LAYER_GHOSTS, /* close/minimize animations: above windows, so focusing the
+	                  * next window (and raising it) can't cover them */
 	UL_LAYER_TOP,
 	UL_LAYER_FULLSCREEN,
 	UL_LAYER_OVERLAY,
