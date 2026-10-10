@@ -121,8 +121,8 @@ done
 echo
 echo "scenario           result  time  detail"
 echo "------------------------------------------------------------------------------"
-for r in "${ROWS[@]}"; do echo "$r"; done
+for r in "${ROWS[@]}"; do echo "$r"; done | tee "$OUTDIR/summary.txt"
 echo "------------------------------------------------------------------------------"
-echo "screenshots + state: test-results/$TS/"
+echo "screenshots + state: test-results/$TS/ (summary.txt)"
 if [ "$NFAIL" -gt 0 ]; then echo "FAILED ($NFAIL)"; exit 1; fi
 echo "OK"
