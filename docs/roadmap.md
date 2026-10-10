@@ -43,7 +43,25 @@ GNOME stays installed as a safety net until phase 4.
 - [x] Terminal: foot, themed
 - [ ] Non-GNOME picks for PDF and images (to be replaced later)
 
+## Phase 3b: what GNOME did quietly
+- [x] SSH agent: export gcr's socket (gcr4 stays)
+- [x] Icon theme for the shell without a Qt platform theme (QS_ICON_THEME)
+- [ ] Bluetooth pairing agent (PIN/passkey/confirm prompts)
+- [ ] NetworkManager secret agent (Wi-Fi password, 802.1X, VPN prompts)
+- [ ] Printer setup UI: system-config-printer (GTK, not GNOME)
+- [ ] Secret portal for Flatpak apps: oo7-portal (only if Flatpak is ever used)
+
 ## Phase 4: the proof
+Dry run (`apt-get -s purge`, 2026-10-10) removes exactly these 30 packages
+and nothing else: evolution-data-server ubuntu-desktop-minimal gdm3
+gnome-calculator gnome-characters gnome-clocks ubuntu-session
+gnome-shell-ubuntu-extensions gnome-shell gnome-control-center
+gnome-disk-utility gnome-initial-setup seahorse gnome-keyring gnome-logs
+gnome-online-accounts gnome-session-bin gnome-settings-daemon
+gnome-terminal gnome-text-editor xdg-desktop-portal-gnome nautilus
+gvfs-backends gvfs-fuse gvfs gvfs-daemons loupe papers ptyxis
+yaru-theme-gnome-shell. Follow with `apt autoremove` (review its list).
+
 - [ ] Purge the packages above, reboot, log in through the Ultimit greeter
 - [ ] `scripts/test.sh` green; manual checklist (Wi-Fi, sound, Bluetooth,
       suspend/resume, lock, screenshots, USB drive, printing, file picker
