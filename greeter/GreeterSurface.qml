@@ -69,7 +69,7 @@ PanelWindow {
             Emblem { anchors.horizontalCenter: parent.horizontalCenter; size: 54 * win.u; color: Theme.fg }
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: win.p2(win.now.getHours()) + ":" + win.p2(win.now.getMinutes())
+                text: ((win.now.getHours() % 12) || 12) + ":" + win.p2(win.now.getMinutes()) + (win.now.getHours() < 12 ? " AM" : " PM")
                 color: Theme.fg
                 font.family: Theme.display; font.pixelSize: 104 * win.u; font.letterSpacing: 6 * win.u
                 font.features: { "tnum": 1 }

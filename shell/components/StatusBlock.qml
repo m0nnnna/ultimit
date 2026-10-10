@@ -59,7 +59,7 @@ PanelWindow {
 
         Text {
             anchors.right: parent.right
-            text: win.p2(win.now.getHours()) + ":" + win.p2(win.now.getMinutes()) + ":" + win.p2(win.now.getSeconds())
+            text: ((win.now.getHours() % 12) || 12) + ":" + win.p2(win.now.getMinutes()) + ":" + win.p2(win.now.getSeconds()) + (win.now.getHours() < 12 ? " AM" : " PM")
             color: hit.containsMouse || SysState.qsOpen ? Theme.accent : Theme.fg
             font.family: Theme.mono; font.pixelSize: 26
             font.letterSpacing: 1.56

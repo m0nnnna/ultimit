@@ -68,7 +68,7 @@ WlSessionLockSurface {
             Emblem { anchors.horizontalCenter: parent.horizontalCenter; size: 54 * surf.u; color: Theme.fg }
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: surf.p2(surf.now.getHours()) + ":" + surf.p2(surf.now.getMinutes())
+                text: ((surf.now.getHours() % 12) || 12) + ":" + surf.p2(surf.now.getMinutes()) + (surf.now.getHours() < 12 ? " AM" : " PM")
                 color: Theme.fg
                 font.family: Theme.display; font.pixelSize: 104 * surf.u; font.letterSpacing: 6 * surf.u
                 font.features: { "tnum": 1 }
