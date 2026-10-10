@@ -277,7 +277,8 @@ static void ghost_destroy(struct ul_ghost *g) {
  * frame's top-left at layout (fx, fy), faded to alpha a, and content cut
  * off below layout-relative y `cut` (content coords; INT_MAX = no cut). */
 static void ghost_layout(struct ul_ghost *g, double fx, double fy, double s,
-		double a, int cut, bool chrome) {
+		double a, int cut, bool chrome, int frame_dy) {
+	int frame_mid = g->frame.y + g->frame.height / 2;
 	for (size_t i = 0; i < g->n; i++) {
 		struct ghost_elem *e = &g->elems[i];
 		if (!e->content && !chrome) {
@@ -285,7 +286,20 @@ static void ghost_layout(struct ul_ghost *g, double fx, double fy, double s,
 			continue;
 		}
 		int w = e->box.width, h = e->box.height;
+		int ey = e->box.y;
+		struct clipped_region clip = e->clip;
 		double src_h = e->src.height;
+		/* The frame collapses with the wiped content: the border shortens
+		 * and whatever sits on the bottom edge (brackets) rides up with it. */
+		if (!e->content && frame_dy > 0) {
+			if (!wlr_box_empty(&clip.area)) {
+				h -= frame_dy;
+				clip.area.height -= frame_dy;
+				if (clip.area.height < 0) clip.area.height = 0;
+			} else if (e->box.y + e->box.height / 2 > frame_mid) {
+				ey -= frame_dy;
+			}
+		}
 		if (e->content && e->box.y + h > cut) {
 			int vis = cut - e->box.y;
 			if (vis <= 0) {
@@ -297,7 +311,7 @@ static void ghost_layout(struct ul_ghost *g, double fx, double fy, double s,
 		}
 		wlr_scene_node_set_enabled(e->node, true);
 		int x = (int)(fx + (e->box.x - g->frame.x) * s);
-		int y = (int)(fy + (e->box.y - g->frame.y) * s);
+		int y = (int)(fy + (ey - g->frame.y) * s);
 		int sw = (int)(w * s), sh = (int)(h * s);
 		if (sw < 1) sw = 1;
 		if (sh < 1) sh = 1;
@@ -306,7 +320,7 @@ static void ghost_layout(struct ul_ghost *g, double fx, double fy, double s,
 			struct wlr_scene_rect *r = wlr_scene_rect_from_node(e->node);
 			wlr_scene_rect_set_size(r, sw, sh);
 			if (!wlr_box_empty(&e->clip.area)) {
-				struct clipped_region c = e->clip;
+				struct clipped_region c = clip;
 				c.area = (struct wlr_box){ (int)(c.area.x * s), (int)(c.area.y * s),
 					(int)(c.area.width * s), (int)(c.area.height * s) };
 				wlr_scene_rect_set_clipped_region(r, c);
@@ -340,11 +354,12 @@ static int ghost_tick(void *data) {
 		int fw = g->frame.width;
 		if (elapsed < CLOSE_WIPE_MS) {
 			double p = ease(elapsed / (double)CLOSE_WIPE_MS);
-			int cut = g->content_y + (int)(g->content_h * (1 - p));
-			ghost_layout(g, fx0, fy0, 1, 1, cut, true);
+			int removed = (int)(g->content_h * p);
+			int cut = g->content_y + g->content_h - removed;
+			ghost_layout(g, fx0, fy0, 1, 1, cut, true, removed);
 		} else if (elapsed < CLOSE_WIPE_MS + CLOSE_LINE_MS) {
 			double p = ease((elapsed - CLOSE_WIPE_MS) / (double)CLOSE_LINE_MS);
-			ghost_layout(g, fx0, fy0, 1, 1, INT_MIN / 2, false);
+			ghost_layout(g, fx0, fy0, 1, 1, INT_MIN / 2, false, 0);
 			int w = (int)(fw * (1 - p));
 			if (w < 2) w = 2;
 			wlr_scene_rect_set_size(g->line, w, UL_BRACKET_W);
@@ -373,7 +388,7 @@ static int ghost_tick(void *data) {
 		double tx = g->target.x + (g->target.width - g->frame.width * se) / 2;
 		double ty = g->target.y + (g->target.height - g->frame.height * se) / 2;
 		double a = 1 - p * p;
-		ghost_layout(g, fx0 + (tx - fx0) * p, fy0 + (ty - fy0) * p, s, a, INT_MAX, true);
+		ghost_layout(g, fx0 + (tx - fx0) * p, fy0 + (ty - fy0) * p, s, a, INT_MAX, true, 0);
 	}
 	wl_event_source_timer_update(g->timer, TICK_MS);
 	return 0;
