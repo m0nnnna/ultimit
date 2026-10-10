@@ -1,0 +1,16 @@
+#!/bin/sh
+# Keep Flatpak's document portal mounted. Without its FUSE mount at
+# $XDG_RUNTIME_DIR/doc, every Flatpak app (Ungoogled Chromium) fails to
+# start ("bwrap: Can't find source path .../doc/by-app/..."). The previous
+# session's teardown can take the mount down after the new session has
+# started, while the service keeps running, so check periodically and
+# restart the portal when it's gone. Exits with the compositor.
+DOC="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/doc"
+PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/ultimit-session.pid"
+COMP=$(cat "$PIDFILE" 2>/dev/null)
+while [ -z "$COMP" ] || kill -0 "$COMP" 2>/dev/null; do
+	if ! mountpoint -q "$DOC"; then
+		systemctl --user restart xdg-document-portal.service 2>/dev/null
+	fi
+	sleep 30
+done
