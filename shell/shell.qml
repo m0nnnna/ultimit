@@ -10,6 +10,7 @@ import "apps/games"
 import "apps/data"
 import "apps/calc"
 import "apps/polkit"
+import "apps/agents"
 
 ShellRoot {
     Persist { id: persist }                              // ~/.config/ultimit/shell.json
@@ -17,6 +18,7 @@ ShellRoot {
     SettingsWindow {}                                    // Settings window (replaces Accessory; rail ACCESSORY button)
     LockScreen {}                                        // session lock, idle dim/lock/suspend, lock on sleep
     Polkit {}                                            // polkit authentication agent + dialog
+    Agents {}        // Bluetooth pairing / Wi-Fi & VPN password prompts (bin/ultimit-agents)
     DataWindow {}    // DATA file manager (ultimit-data, qs ipc call data open <path>)
     CalcWindow {}    // CALC calculator (ultimit-calc, qs ipc call calc toggle|open|close)
     GamesWindow {}   // Ultimit Games app (toggle: qs ipc call games toggle)

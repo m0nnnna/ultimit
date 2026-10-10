@@ -1,0 +1,3 @@
+singleton AgentPrompt 1.0 AgentPrompt.qml
+Agents 1.0 Agents.qml
+AgentDialog 1.0 AgentDialog.qml

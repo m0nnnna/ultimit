@@ -1,0 +1,661 @@
+#!/usr/bin/env python3
+"""ultimit-agents - the two background agents GNOME Shell used to provide.
+
+  * BlueZ pairing agent        org.bluez.Agent1                        (system bus)
+  * NetworkManager secret agent org.freedesktop.NetworkManager.SecretAgent (system bus)
+
+Prompts are shown by the Ultimit shell (apps/agents/): this daemon runs
+    qs -p <shell dir> ipc call agents ask <id> <kind> <json>      (and: ... cancel <id>)
+and the shell answers with one JSON line on the unix socket
+    $XDG_RUNTIME_DIR/ultimit-agents.sock     {"id": "...", "ok": true, "values": {...}}
+Typed secrets only travel over that socket: never argv, env, files or logs.
+
+Single instance: the daemon owns org.ultimit.Agents on the *session* bus and exits when
+that bus goes away.  Environment (all optional, mostly for tests):
+  ULTIMIT_AGENTS_BUS      address of the bus where org.bluez / NetworkManager live
+                          (default: the real system bus)
+  ULTIMIT_AGENTS_SOCK     reply socket path
+  ULTIMIT_AGENTS_TIMEOUT  seconds before an unanswered prompt gives up (default 60)
+  ULTIMIT_SHELL_DIR       shell dir for `qs -p` (default: parent of this script's bin/)
+  ULTIMIT_QS              qs binary (default: qs)
+
+NetworkManager coverage: 802-11-wireless-security (psk / sae -> psk, wep-key0..3,
+leap-password), 802-1x (password, private-key-password, ... plus identity when the
+connection has none), vpn (secrets named by NM's hints or by "<name>-flags" = agent-owned /
+not-saved; plain string fields only; the plugin's own auth-dialog is NOT spawned, so exotic
+plugins that need it get NoSecrets), and any other setting whose hints are plain secret
+names (pppoe, gsm, ...).  SaveSecrets / DeleteSecrets are no-ops (NM stores system-owned
+secrets itself).
+"""
+import json
+import os
+import re
+import signal
+import sys
+
+import warnings
+warnings.simplefilter("ignore")   # deprecation noise from register_object / unix_signal_add (both work)
+import gi
+gi.require_version("Gio", "2.0")
+gi.require_version("GLib", "2.0")
+from gi.repository import Gio, GLib  # noqa: E402
+
+BUS_NAME = "org.ultimit.Agents"
+TIMEOUT = float(os.environ.get("ULTIMIT_AGENTS_TIMEOUT") or 60)
+SHELL_DIR = os.environ.get("ULTIMIT_SHELL_DIR") or os.path.dirname(
+    os.path.dirname(os.path.realpath(__file__)))
+QS = os.environ.get("ULTIMIT_QS") or "qs"
+SOCK_PATH = os.environ.get("ULTIMIT_AGENTS_SOCK") or os.path.join(
+    os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "ultimit-agents.sock")
+
+BZ_NAME = "org.bluez"
+BZ_AGENT_PATH = "/org/ultimit/Agents/Bluez"
+NM_NAME = "org.freedesktop.NetworkManager"
+NM_AGENT_PATH = "/org/freedesktop/NetworkManager/SecretAgent"
+NM_MGR_PATH = "/org/freedesktop/NetworkManager/AgentManager"
+NM_ERR = "org.freedesktop.NetworkManager.SecretAgent."
+
+FLAG_INTERACT, FLAG_NEW, FLAG_USER, FLAG_ONLY_SYSTEM = 0x1, 0x2, 0x4, 0x80000000
+
+loop = GLib.MainLoop()
+exit_code = [0]
+
+
+def log(*a):
+    print("ultimit-agents:", *a, file=sys.stderr, flush=True)
+
+
+def quit_loop(code=0):
+    exit_code[0] = code
+    loop.quit()
+
+
+# --------------------------------------------------------------------------- prompts
+class Pending:
+    def __init__(self, pid, done):
+        self.pid, self.done, self.timer = pid, done, 0
+
+
+pending = {}
+
+
+def _arm(p):
+    if p.timer:
+        GLib.source_remove(p.timer)
+    p.timer = GLib.timeout_add(int(TIMEOUT * 1000), lambda: (finish(p.pid, "timeout"), False)[1])
+
+
+def _shell_call(args, pid=None):
+    """Run `qs ipc call agents ...`; if it fails and pid is given, fail that prompt now."""
+    argv = [QS, "-p", SHELL_DIR, "ipc", "call", "agents"] + args
+    try:
+        proc = Gio.Subprocess.new(argv, Gio.SubprocessFlags.STDOUT_SILENCE |
+                                  Gio.SubprocessFlags.STDERR_SILENCE)
+    except GLib.Error as e:
+        log("cannot run qs:", e.message)
+        if pid:
+            GLib.idle_add(lambda: (finish(pid, "noshell"), False)[1])
+        return
+
+    def cb(p, res):
+        try:
+            p.wait_check_finish(res)
+        except GLib.Error:
+            if pid:
+                log("shell not reachable, failing", pid)
+                finish(pid, "noshell")
+    proc.wait_check_async(None, cb)
+
+
+def prompt(pid, kind, data, done):
+    """Show a prompt. done(status, values): status in ok|no|timeout|cancelled|noshell."""
+    p = pending.get(pid)
+    if p is None:
+        p = pending[pid] = Pending(pid, done)
+    else:
+        p.done = done
+    _arm(p)
+    log("ask", pid, kind)
+    _shell_call(["ask", pid, kind, json.dumps(data)], pid)
+
+
+def finish(pid, status, values=None):
+    p = pending.pop(pid, None)
+    if p is None:
+        return
+    if p.timer:
+        GLib.source_remove(p.timer)
+        p.timer = 0
+    if status in ("timeout", "cancelled"):
+        _shell_call(["cancel", pid])      # close the dialog
+    log("done", pid, status)
+    try:
+        p.done(status, values or {})
+    except Exception as e:  # never let a handler kill the loop
+        log("handler error", repr(e))
+
+
+def finish_group(prefix, status):
+    for pid in [k for k in pending if k.startswith(prefix)]:
+        finish(pid, status)
+
+
+# ----------------------------------------------------------- reply socket (from shell)
+def on_line(line):
+    try:
+        msg = json.loads(line)
+        pid, ok = msg["id"], bool(msg["ok"])
+        values = msg.get("values") or {}
+        if not isinstance(pid, str) or not isinstance(values, dict):
+            raise ValueError("bad types")
+    except Exception:
+        log("bad reply line ignored")          # do not log content: may hold a secret
+        return
+    finish(pid, "ok" if ok else "no", values if ok else {})
+
+
+def read_next(stream):
+    def cb(s, res):
+        try:
+            line, _len = s.read_line_finish_utf8(res)
+        except GLib.Error:
+            s.close_async(0, None, None)
+            return
+        if line is None:
+            s.close_async(0, None, None)
+            return
+        on_line(line)
+        read_next(s)
+    stream.read_line_async(GLib.PRIORITY_DEFAULT, None, cb)
+
+
+def start_socket():
+    try:
+        os.unlink(SOCK_PATH)
+    except FileNotFoundError:
+        pass
+    svc = Gio.SocketService.new()
+    addr = Gio.UnixSocketAddress.new(SOCK_PATH)
+    svc.add_address(addr, Gio.SocketType.STREAM, Gio.SocketProtocol.DEFAULT, None)
+    os.chmod(SOCK_PATH, 0o600)
+
+    def incoming(_svc, conn, _src):
+        try:
+            if conn.get_socket().get_credentials().get_unix_user() != os.getuid():
+                conn.close(None)
+                return True
+        except GLib.Error:
+            conn.close(None)
+            return True
+        stream = Gio.DataInputStream.new(conn.get_input_stream())
+        stream.set_close_base_stream(True)
+        read_next(stream)
+        conn.keep = stream      # keep alive
+        return True
+    svc.connect("incoming", incoming)
+    svc.start()
+    return svc
+
+
+# ------------------------------------------------------------------------- helpers
+def new_conn_for_agents():
+    addr = os.environ.get("ULTIMIT_AGENTS_BUS")
+    if addr:
+        return Gio.DBusConnection.new_for_address_sync(
+            addr, Gio.DBusConnectionFlags.AUTHENTICATION_CLIENT |
+            Gio.DBusConnectionFlags.MESSAGE_BUS_CONNECTION, None, None)
+    return Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
+
+
+def export(conn, path, xml, handler):
+    info = Gio.DBusNodeInfo.new_for_xml(xml).interfaces[0]
+
+    def method_call(connection, sender, opath, iface, method, params, inv):
+        try:
+            handler(sender, method, params, inv)
+        except Exception as e:
+            log("internal error in", method, repr(e))
+            inv.return_dbus_error("org.freedesktop.DBus.Error.Failed", "internal error")
+    conn.register_object(path, info, method_call, None, None)
+
+
+def retry_later(fn, secs=5):
+    GLib.timeout_add_seconds(secs, lambda: (fn(), False)[1])
+
+
+# ------------------------------------------------------------------------- BlueZ
+BZ_XML = """<node><interface name="org.bluez.Agent1">
+<method name="Release"/>
+<method name="RequestPinCode"><arg type="o" direction="in"/><arg type="s" direction="out"/></method>
+<method name="DisplayPinCode"><arg type="o" direction="in"/><arg type="s" direction="in"/></method>
+<method name="RequestPasskey"><arg type="o" direction="in"/><arg type="u" direction="out"/></method>
+<method name="DisplayPasskey"><arg type="o" direction="in"/><arg type="u" direction="in"/><arg type="q" direction="in"/></method>
+<method name="RequestConfirmation"><arg type="o" direction="in"/><arg type="u" direction="in"/></method>
+<method name="RequestAuthorization"><arg type="o" direction="in"/></method>
+<method name="AuthorizeService"><arg type="o" direction="in"/><arg type="s" direction="in"/></method>
+<method name="Cancel"/>
+</interface></node>"""
+
+UUIDS = {"0000110a": "audio source", "0000110b": "audio output (A2DP)", "0000110c": "remote control",
+         "0000110e": "remote control", "0000111e": "hands-free", "00001108": "headset",
+         "00001124": "input device (HID)", "00001812": "input device (HID)",
+         "00001105": "file transfer (OPP)", "00001132": "message access", "0000112f": "phonebook access"}
+
+
+def uuid_name(u):
+    return UUIDS.get(u[:8].lower(), u)
+
+
+class Bluez:
+    def __init__(self, conn):
+        self.conn, self.owner, self.seq = conn, None, 0
+        export(conn, BZ_AGENT_PATH, BZ_XML, self.on_call)
+        Gio.bus_watch_name_on_connection(conn, BZ_NAME, Gio.BusNameWatcherFlags.NONE,
+                                         self.appeared, self.vanished)
+
+    # --- registration
+    def appeared(self, conn, name, owner):
+        log("bluez appeared", owner)
+        self.owner = owner
+        self.register()
+
+    def vanished(self, conn, name):
+        if self.owner:
+            log("bluez vanished")
+        self.owner = None
+        finish_group("bz:", "cancelled")
+
+    def _call(self, method, params, cb):
+        self.conn.call(BZ_NAME, "/org/bluez", "org.bluez.AgentManager1", method, params,
+                       None, Gio.DBusCallFlags.NONE, 5000, None, cb)
+
+    def register(self):
+        owner = self.owner
+
+        def done(conn, res):
+            try:
+                conn.call_finish(res)
+            except GLib.Error as e:
+                if "AlreadyExists" not in (e.message or ""):
+                    log("bluez RegisterAgent failed:", e.message)
+                    if self.owner == owner:
+                        retry_later(lambda: self.owner == owner and self.register())
+                    return
+            self._call("RequestDefaultAgent", GLib.Variant("(o)", (BZ_AGENT_PATH,)),
+                       lambda c, r: self._default_done(c, r))
+        self._call("RegisterAgent", GLib.Variant("(os)", (BZ_AGENT_PATH, "KeyboardDisplay")), done)
+
+    def _default_done(self, conn, res):
+        try:
+            conn.call_finish(res)
+            log("bluez agent registered (default)")
+        except GLib.Error as e:
+            log("bluez RequestDefaultAgent failed:", e.message)
+
+    def unregister_sync(self):
+        if self.owner:
+            try:
+                self.conn.call_sync(BZ_NAME, "/org/bluez", "org.bluez.AgentManager1",
+                                    "UnregisterAgent", GLib.Variant("(o)", (BZ_AGENT_PATH,)),
+                                    None, Gio.DBusCallFlags.NONE, 1000, None)
+            except GLib.Error:
+                pass
+
+    # --- device info
+    def device_info(self, path, cb):
+        def done(conn, res):
+            try:
+                info = conn.call_finish(res).unpack()[0]
+            except GLib.Error:
+                info = {}
+            cb(info)
+        self.conn.call(BZ_NAME, path, "org.freedesktop.DBus.Properties", "GetAll",
+                       GLib.Variant("(s)", ("org.bluez.Device1",)),
+                       GLib.VariantType("(a{sv})"), Gio.DBusCallFlags.NONE, 3000, None, done)
+
+    @staticmethod
+    def label(info, path):
+        return info.get("Alias") or info.get("Name") or info.get("Address") or path.rsplit("/", 1)[-1]
+
+    # --- agent methods
+    def on_call(self, sender, method, params, inv):
+        if self.owner is None or sender != self.owner:
+            inv.return_dbus_error("org.bluez.Error.Rejected", "caller is not bluetoothd")
+            return
+        args = params.unpack()
+        getattr(self, "m_" + method)(inv, *args)
+
+    def newid(self):
+        self.seq += 1
+        return "bz:%d" % self.seq
+
+    @staticmethod
+    def err(inv, status):
+        if status in ("timeout", "cancelled"):
+            inv.return_dbus_error("org.bluez.Error.Canceled", "request canceled")
+        else:
+            inv.return_dbus_error("org.bluez.Error.Rejected", "request rejected")
+
+    def m_Release(self, inv):
+        finish_group("bz:", "cancelled")
+        inv.return_value(None)
+
+    def m_Cancel(self, inv):
+        finish_group("bz:", "cancelled")
+        inv.return_value(None)
+
+    def ask_device(self, inv, dev, kind, build, on_ok, pid=None):
+        pid = pid or self.newid()
+
+        def have(info):
+            name = self.label(info, dev)
+            data = build(name)
+            data.setdefault("detail", info.get("Address", dev))
+
+            def done(status, values):
+                if status == "ok":
+                    on_ok(values)
+                else:
+                    self.err(inv, status)
+            prompt(pid, kind, data, done)
+        self.device_info(dev, have)
+
+    def m_RequestPinCode(self, inv, dev):
+        def ok(v):
+            pin = str(v.get("pin", ""))
+            if 1 <= len(pin) <= 16:
+                inv.return_value(GLib.Variant("(s)", (pin,)))
+            else:
+                self.err(inv, "no")
+        self.ask_device(inv, dev, "pin", lambda n: {
+            "message": "Enter the PIN code for %s" % n,
+            "fields": [{"key": "pin", "label": "PIN code", "minLen": 1, "max": 16}]}, ok)
+
+    def m_RequestPasskey(self, inv, dev):
+        def ok(v):
+            s = str(v.get("passkey", ""))
+            if s.isdigit() and 0 <= int(s) <= 999999:
+                inv.return_value(GLib.Variant("(u)", (int(s),)))
+            else:
+                self.err(inv, "no")
+        self.ask_device(inv, dev, "passkey", lambda n: {
+            "message": "Enter the passkey for %s" % n,
+            "fields": [{"key": "passkey", "label": "Passkey (0-999999)", "minLen": 1,
+                        "max": 6, "digits": True}]}, ok)
+
+    def m_RequestConfirmation(self, inv, dev, passkey):
+        self.ask_device(inv, dev, "confirm", lambda n: {
+            "message": "Does this code match the one shown on %s?" % n,
+            "code": "%06d" % passkey}, lambda v: inv.return_value(None))
+
+    def m_RequestAuthorization(self, inv, dev):
+        self.ask_device(inv, dev, "authorize", lambda n: {
+            "message": "Allow %s to pair with this computer?" % n},
+            lambda v: inv.return_value(None))
+
+    def m_AuthorizeService(self, inv, dev, uuid):
+        def have(info):
+            if info.get("Paired") and info.get("Trusted"):
+                log("authorize service: auto-accept trusted device")
+                inv.return_value(None)
+                return
+            name = self.label(info, dev)
+            data = {"message": "Allow %s to use %s?" % (name, uuid_name(uuid)),
+                    "detail": info.get("Address", dev)}
+
+            def done(status, values):
+                if status == "ok":
+                    inv.return_value(None)
+                else:
+                    self.err(inv, status)
+            prompt(self.newid(), "authorize", data, done)
+        self.device_info(dev, have)
+
+    def _display(self, inv, dev, code, entered=None):
+        def have(info):
+            data = {"message": "Type this code on %s, then press Enter" % self.label(info, dev),
+                    "detail": info.get("Address", dev), "code": code}
+            if entered is not None:
+                data["entered"] = entered
+            prompt("bz:disp:" + dev, "display", data, lambda s, v: None)
+        self.device_info(dev, have)
+        inv.return_value(None)
+
+    def m_DisplayPinCode(self, inv, dev, pin):
+        self._display(inv, dev, pin)
+
+    def m_DisplayPasskey(self, inv, dev, passkey, entered):
+        self._display(inv, dev, "%06d" % passkey, entered)
+
+
+# --------------------------------------------------------------- NetworkManager
+NM_XML = """<node><interface name="org.freedesktop.NetworkManager.SecretAgent">
+<method name="GetSecrets"><arg type="a{sa{sv}}" direction="in"/><arg type="o" direction="in"/>
+<arg type="s" direction="in"/><arg type="as" direction="in"/><arg type="u" direction="in"/>
+<arg type="a{sa{sv}}" direction="out"/></method>
+<method name="CancelGetSecrets"><arg type="o" direction="in"/><arg type="s" direction="in"/></method>
+<method name="SaveSecrets"><arg type="a{sa{sv}}" direction="in"/><arg type="o" direction="in"/></method>
+<method name="DeleteSecrets"><arg type="a{sa{sv}}" direction="in"/><arg type="o" direction="in"/></method>
+</interface></node>"""
+
+KEY_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+WIFI_KEYS = ("psk", "wep-key0", "wep-key1", "wep-key2", "wep-key3", "leap-password")
+WIFI_LABEL = {"psk": "Password", "wep-key0": "WEP key", "wep-key1": "WEP key 1",
+              "wep-key2": "WEP key 2", "wep-key3": "WEP key 3", "leap-password": "LEAP password"}
+X1_SECRETS = ("password", "private-key-password", "phase2-private-key-password",
+              "client-cert-password", "phase2-client-cert-password", "pin")
+
+
+def pretty(name):
+    return name.replace("-", " ").replace("_", " ").strip().capitalize()
+
+
+def ssid_text(conn_dict):
+    raw = conn_dict.get("802-11-wireless", {}).get("ssid", b"")
+    if isinstance(raw, (list, tuple)):
+        raw = bytes(raw)
+    return bytes(raw).decode("utf-8", "replace") if raw else ""
+
+
+class NM:
+    def __init__(self, conn):
+        self.conn, self.owner, self.registered_for = conn, None, None
+        export(conn, NM_AGENT_PATH, NM_XML, self.on_call)
+        Gio.bus_watch_name_on_connection(conn, NM_NAME, Gio.BusNameWatcherFlags.NONE,
+                                         self.appeared, self.vanished)
+
+    def appeared(self, conn, name, owner):
+        log("NetworkManager appeared", owner)
+        self.owner = owner
+        self.register()
+
+    def vanished(self, conn, name):
+        if self.owner:
+            log("NetworkManager vanished")
+        self.owner = None
+        finish_group("nm:", "cancelled")
+
+    def register(self):
+        owner = self.owner
+
+        def done(conn, res):
+            try:
+                conn.call_finish(res)
+                log("NM secret agent registered")
+            except GLib.Error as e:
+                log("NM RegisterWithCapabilities failed:", e.message)
+                if self.owner == owner:
+                    retry_later(lambda: self.owner == owner and self.register())
+        self.conn.call(NM_NAME, NM_MGR_PATH, "org.freedesktop.NetworkManager.AgentManager",
+                       "RegisterWithCapabilities", GLib.Variant("(su)", ("org.ultimit.agents", 0)),
+                       None, Gio.DBusCallFlags.NONE, 5000, None, done)
+
+    def unregister_sync(self):
+        if self.owner:
+            try:
+                self.conn.call_sync(NM_NAME, NM_MGR_PATH,
+                                    "org.freedesktop.NetworkManager.AgentManager", "Unregister",
+                                    None, None, Gio.DBusCallFlags.NONE, 1000, None)
+            except GLib.Error:
+                pass
+
+    def on_call(self, sender, method, params, inv):
+        if self.owner is None or sender != self.owner:
+            inv.return_dbus_error(NM_ERR + "NotAuthorized", "caller is not NetworkManager")
+            return
+        if method == "GetSecrets":
+            self.get_secrets(inv, *params.unpack())
+        elif method == "CancelGetSecrets":
+            path, setting = params.unpack()
+            finish("nm:%s:%s" % (path, setting), "cancelled")
+            inv.return_value(None)
+        else:                                  # SaveSecrets / DeleteSecrets: no-ops
+            inv.return_value(None)
+
+    # --- building the prompt for a setting
+    def plan(self, cd, setting, hints, flags):
+        """-> (kind, data, build) or None. build(values) -> {setting: {key: Variant}}"""
+        name = cd.get("connection", {}).get("id", "") or "connection"
+        retry = bool(flags & FLAG_NEW)
+        sv = cd.get(setting, {})
+        if setting == "802-11-wireless-security":
+            keymgmt = sv.get("key-mgmt", "")
+            key = next((h for h in hints if h in WIFI_KEYS), None)
+            if key is None:
+                key = ("wep-key0" if keymgmt == "none" else
+                       "leap-password" if sv.get("auth-alg") == "leap" else "psk")
+            ssid = ssid_text(cd) or name
+            minlen = 8 if key == "psk" else 5 if key.startswith("wep") else 1
+            data = {"message": "Enter the password for “%s”" % ssid, "detail": name,
+                    "retry": retry,
+                    "fields": [{"key": key, "label": WIFI_LABEL[key], "secret": True,
+                                "minLen": minlen, "max": 64}]}
+            return "wifi", data, lambda v: {setting: {key: GLib.Variant("s", v[key])}}
+        if setting == "802-1x":
+            fields, want_id = [], not sv.get("identity") or "identity" in hints
+            if want_id:
+                fields.append({"key": "identity", "label": "Identity", "value": sv.get("identity", ""),
+                               "minLen": 1})
+            keys = [h for h in hints if h in X1_SECRETS] or ([] if "identity" in hints and
+                                                              len(hints) == 1 else ["password"])
+            for k in keys:
+                fields.append({"key": k, "label": pretty(k), "secret": True, "minLen": 1})
+            data = {"message": "Login required for “%s”" % name, "detail": name,
+                    "retry": retry, "fields": fields}
+            return "8021x", data, lambda v: {setting: {k: GLib.Variant("s", v[k]) for k in v}}
+        if setting == "vpn":
+            vpn_hints = [h[len("vpn.secrets."):] for h in hints if h.startswith("vpn.secrets.")]
+            keys = vpn_hints or [h for h in hints if KEY_RE.match(h) and not h.startswith("vpn.")]
+            if not keys:
+                data_d = sv.get("data", {})
+                keys = [k[:-len("-flags")] for k, v in data_d.items()
+                        if k.endswith("-flags") and str(v) in ("1", "2") and KEY_RE.match(k[:-6])]
+            keys = [k for k in dict.fromkeys(keys) if KEY_RE.match(k)]
+            if not keys:
+                return None
+            fields = [{"key": k, "label": pretty(k), "secret": k not in ("username", "user"),
+                       "minLen": 1} for k in keys]
+            data = {"message": "Authentication required for VPN “%s”" % name,
+                    "detail": sv.get("service-type", name), "retry": retry, "fields": fields}
+            return "vpn", data, lambda v: {setting: {"secrets": GLib.Variant("a{ss}", dict(v))}}
+        keys = [h for h in hints if KEY_RE.match(h)]
+        if not hints or len(keys) != len(hints):
+            return None
+        fields = [{"key": k, "label": pretty(k), "secret": True, "minLen": 1} for k in keys]
+        data = {"message": "Secret required for “%s”" % name, "detail": setting,
+                "retry": retry, "fields": fields}
+        return "vpn", data, lambda v: {setting: {k: GLib.Variant("s", v[k]) for k in v}}
+
+    def get_secrets(self, inv, cd, path, setting, hints, flags):
+        def nosecrets(msg):
+            inv.return_dbus_error(NM_ERR + "NoSecrets", msg)
+        if flags & FLAG_ONLY_SYSTEM:
+            return nosecrets("agent stores no secrets")
+        if not flags & FLAG_INTERACT:
+            return nosecrets("interaction not allowed")
+        plan = self.plan(cd, setting, list(hints), flags)
+        if plan is None:
+            return nosecrets("unsupported secret request for " + setting)
+        kind, data, build = plan
+        pid = "nm:%s:%s" % (path, setting)
+        if pid in pending:
+            finish(pid, "cancelled")       # superseded
+
+        def done(status, values):
+            if status == "ok":
+                try:
+                    out = build({f["key"]: str(values[f["key"]]) for f in data["fields"]})
+                    inv.return_value(GLib.Variant("(a{sa{sv}})", (out,)))
+                except Exception as e:
+                    log("bad answer:", type(e).__name__)
+                    inv.return_dbus_error(NM_ERR + "UserCanceled", "invalid answer")
+            elif status == "cancelled":
+                inv.return_dbus_error(NM_ERR + "AgentCancelled", "request cancelled")
+            else:
+                inv.return_dbus_error(NM_ERR + "UserCanceled", "user canceled")
+        prompt(pid, kind, data, done)
+
+
+# --------------------------------------------------------------------------- main
+state = {"acquired": False}
+keep = []
+
+
+def start_agents():
+    keep.append(start_socket())
+    try:
+        conn = new_conn_for_agents()
+    except GLib.Error as e:
+        log("cannot connect to bus:", e.message)
+        quit_loop(1)
+        return
+    conn.connect("closed", lambda c, remote, err: (log("agent bus closed"), quit_loop(0)))
+    keep.append(conn)
+    keep.append(Bluez(conn))
+    keep.append(NM(conn))
+
+
+def shutdown(*_):
+    for a in keep:
+        if hasattr(a, "unregister_sync"):
+            a.unregister_sync()
+    try:
+        os.unlink(SOCK_PATH)
+    except OSError:
+        pass
+    quit_loop(0)
+    return False
+
+
+def main():
+    try:
+        session = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+    except GLib.Error as e:
+        log("no session bus:", e.message)
+        return 1
+    session.connect("closed", lambda c, remote, err: quit_loop(0))
+
+    def acquired(conn, name):
+        state["acquired"] = True
+        start_agents()
+
+    def lost(conn, name):
+        if not state["acquired"]:
+            log("already running (%s is owned)" % BUS_NAME)
+            quit_loop(1)
+        else:
+            quit_loop(0)
+    Gio.bus_own_name_on_connection(session, BUS_NAME, Gio.BusNameOwnerFlags.DO_NOT_QUEUE,
+                                   acquired, lost)
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, sig, shutdown)
+    loop.run()
+    try:
+        os.unlink(SOCK_PATH)
+    except OSError:
+        pass
+    return exit_code[0]
+
+
+if __name__ == "__main__":
+    sys.exit(main())

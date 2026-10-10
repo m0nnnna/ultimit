@@ -46,8 +46,8 @@ GNOME stays installed as a safety net until phase 4.
 ## Phase 3b: what GNOME did quietly
 - [x] SSH agent: export gcr's socket (gcr4 stays)
 - [x] Icon theme for the shell without a Qt platform theme (QS_ICON_THEME)
-- [ ] Bluetooth pairing agent (PIN/passkey/confirm prompts)
-- [ ] NetworkManager secret agent (Wi-Fi password, 802.1X, VPN prompts)
+- [x] Bluetooth pairing agent (PIN/passkey/confirm prompts)
+- [x] NetworkManager secret agent (Wi-Fi password, 802.1X, VPN prompts)
 - [ ] Printer setup UI: system-config-printer (GTK, not GNOME)
 - [ ] Secret portal for Flatpak apps: oo7-portal (only if Flatpak is ever used)
 
