@@ -3,7 +3,7 @@
 // Visibility is driven by Config.accessoryOpen (the rail ACCESSORY button and the desktop menu set
 // it; closing via the frame writes it back). IPC:
 //   qs ipc call settings open <page> | toggle | close
-// Pages: appearance display sound network bluetooth power input defaults datetime about
+// Pages: appearance rail news display sound network bluetooth power input defaults datetime about
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -17,6 +17,8 @@ Scope {
     property string page: "appearance"
     readonly property var pages: [
         { id: "appearance", n: "Appearance",   file: "AppearancePage.qml" },
+        { id: "rail",       n: "Rail",         file: "RailPage.qml" },
+        { id: "news",       n: "News",         file: "NewsPage.qml" },
         { id: "display",    n: "Display",      file: "DisplayPage.qml" },
         { id: "sound",      n: "Sound",        file: "SoundPage.qml" },
         { id: "network",    n: "Network",      file: "NetworkPage.qml" },
@@ -29,6 +31,11 @@ Scope {
     ]
     function fileFor(id) { for (const p of pages) if (p.id === id) return p.file; return "AppearancePage.qml"; }
     function isPage(id) { for (const p of pages) if (p.id === id) return true; return false; }
+
+    Connections {   // Config.openSettings("rail") from the rail menu etc.
+        target: Config
+        function onSettingsRequestChanged() { if (root.isPage(Config.settingsPage)) root.page = Config.settingsPage; }
+    }
 
     FloatingWindow {
         id: win

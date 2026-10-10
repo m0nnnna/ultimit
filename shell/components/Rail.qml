@@ -57,7 +57,24 @@ PanelWindow {
         }
     }
 
+    // Room for the pin area: everything but the emblem block and a floor kept for WINDOWS + tray + version.
+    readonly property real pinsMaxH: Math.max(3 * 66, height - 14 - 40 - 14 - 150 - (tray.visible ? tray.height + 8 : 0))
+
+    function pinToplevel(pin) {
+        return pin.builtin ? findToplevel(pin.app.appIds, pin.app) : Pins.matchToplevel(pin);
+    }
+    function activatePin(pin) {
+        if (pin.builtin) { activate(pin.app); return; }
+        const tl = Pins.matchToplevel(pin);
+        if (tl) { tl.minimized = false; tl.activate(); }
+        else Pins.launch(pin);
+    }
+
     function activate(app) {
+        if (app.id === "news" && Feeds.homeUrl !== "") {   // a feed has loaded: open its site
+            Feeds.open(Feeds.homeUrl);
+            return;
+        }
         if (app.id === "accessory") {
             // Own window: open it, or raise it if already mapped.
             const w = findToplevel(app.appIds, app);
@@ -138,15 +155,44 @@ PanelWindow {
             }
             Item { width: 1; height: 10 }   // emblem margin-bottom 14 = 4 spacing + 10
 
-            Repeater {
-                model: Config.apps
-                delegate: RailButton {
-                    required property var modelData
-                    appId: modelData.id
-                    label: modelData.label
-                    missing: !Config.available(modelData)
-                    on: { win.tick; return win.findToplevel(modelData.appIds, modelData) !== null; }
-                    onClicked: win.activate(modelData)
+            // Pinned items (Pins.qml). Scrolls with the wheel when it would crowd out WINDOWS and the tray.
+            Flickable {
+                id: pinsView
+                width: Config.railWidth   // full rail width so the buttons' accent bar (x: -6) is not clipped
+                height: Math.min(pinCol.implicitHeight, win.pinsMaxH)
+                contentWidth: width
+                contentHeight: pinCol.implicitHeight
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                onContentYChanged: WindowUi.hideTip()
+
+                Column {
+                    id: pinCol
+                    x: (Config.railWidth - 72) / 2
+                    spacing: 4
+                    Repeater {
+                        model: Pins.list
+                        delegate: RailButton {
+                            id: pb
+                            required property var modelData
+                            appId: modelData.builtin ? modelData.id : ""
+                            label: modelData.label
+                            iconSrc: modelData.builtin ? "" : (modelData.icon ? Icons.path(modelData.icon) : "")
+                            letter: modelData.builtin ? "" : ((modelData.name || modelData.label || "?").charAt(0).toUpperCase())
+                            missing: modelData.builtin ? !Config.available(modelData.app) : !modelData.found
+                            on: { win.tick; return win.pinToplevel(modelData) !== null; }
+                            onClicked: win.activatePin(modelData)
+                            onRightClicked: gy => Pins.openMenu(modelData.id, gy, win.screen ? win.screen.name : "")
+                        }
+                    }
+                }
+                Rectangle {   // scroll indicator, only when the pins overflow
+                    visible: pinsView.contentHeight > pinsView.height
+                    anchors.right: parent.right
+                    width: 2
+                    y: pinsView.height * pinsView.visibleArea.yPosition
+                    height: pinsView.height * pinsView.visibleArea.heightRatio
+                    color: Theme.lineStrong
                 }
             }
         }

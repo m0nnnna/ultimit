@@ -2,6 +2,7 @@
 // Hover wash (panel-2), animated accent "on" bar, press feedback, keyboard focus outline.
 // Animation durations go through Config.dur() so they collapse to 0 with motion off.
 import QtQuick
+import QtQuick.Shapes
 import ".."
 
 Item {
@@ -10,7 +11,13 @@ Item {
     property string label: "GAMES"
     property bool on: false
     property bool missing: false   // no candidate app installed
+    // Pinned desktop apps: themed icon (URL from Icons.path) drawn inside a chamfered frame like the WINDOWS list;
+    // `letter` is the fallback when it does not resolve. Built-ins leave `iconSrc` and `letter` empty.
+    property string iconSrc: ""
+    property string letter: ""
+    readonly property bool framed: letter !== ""
     signal clicked()
+    signal rightClicked(real globalY)   // right click / Menu key; y is the button centre in rail coordinates
 
     width: 72
     height: 62
@@ -21,6 +28,9 @@ Item {
     Keys.onPressed: event => {
         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
             root.clicked();
+            event.accepted = true;
+        } else if (event.key === Qt.Key_Menu) {
+            root.rightClicked(root.mapToGlobal(0, root.height / 2).y);
             event.accepted = true;
         }
     }
@@ -72,9 +82,50 @@ Item {
         scale: root.pressed ? 0.94 : 1
         Behavior on scale { NumberAnimation { duration: Config.dur(120); easing.type: Easing.OutCubic } }
         Icon {
+            visible: !root.framed
             anchors.horizontalCenter: parent.horizontalCenter
             name: root.appId
             color: Theme.fg
+        }
+        Item {   // pinned desktop app: themed icon in the Altimit chamfer frame (same cut as WindowList)
+            id: frame
+            visible: root.framed
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: 30; height: 30
+            Shape {
+                anchors.fill: parent
+                preferredRendererType: Shape.CurveRenderer
+                ShapePath {
+                    strokeWidth: 1
+                    strokeColor: root.on ? Theme.accent : Theme.lineStrong
+                    fillColor: root.on ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.10) : "transparent"
+                    joinStyle: ShapePath.MiterJoin
+                    startX: 0.5; startY: 0.5
+                    PathLine { x: 24.5; y: 0.5 }
+                    PathLine { x: 29.5; y: 5.5 }
+                    PathLine { x: 29.5; y: 29.5 }
+                    PathLine { x: 5.5; y: 29.5 }
+                    PathLine { x: 0.5; y: 24.5 }
+                    PathLine { x: 0.5; y: 0.5 }
+                }
+            }
+            Image {
+                id: img
+                anchors.centerIn: parent
+                width: 20; height: 20
+                visible: root.iconSrc !== "" && status !== Image.Error
+                source: root.iconSrc
+                sourceSize: Qt.size(40, 40)
+                fillMode: Image.PreserveAspectFit
+                asynchronous: true
+            }
+            Text {
+                anchors.centerIn: parent
+                visible: root.iconSrc === "" || img.status === Image.Error
+                text: root.letter
+                color: Theme.fg
+                font.family: Theme.display; font.pixelSize: 12
+            }
         }
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
@@ -98,8 +149,12 @@ Item {
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
         onPressed: { root.focusReason = Qt.MouseFocusReason; root.forceActiveFocus(Qt.MouseFocusReason); }
-        onClicked: root.clicked()
+        onClicked: mouseEvent => {
+            if (mouseEvent.button === Qt.RightButton) root.rightClicked(root.mapToGlobal(0, root.height / 2).y);
+            else root.clicked();
+        }
     }
     onActiveFocusChanged: focusReason = activeFocus ? (focusReason === Qt.MouseFocusReason ? focusReason : Qt.TabFocusReason) : Qt.OtherFocusReason
 }

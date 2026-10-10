@@ -22,3 +22,5 @@ Tray 1.0 Tray.qml
 TrayMenu 1.0 TrayMenu.qml
 WallpaperArt 1.0 WallpaperArt.qml
 LockSurface 1.0 LockSurface.qml
+PopupMenu 1.0 PopupMenu.qml
+RailMenu 1.0 RailMenu.qml

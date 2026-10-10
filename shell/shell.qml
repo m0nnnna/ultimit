@@ -36,6 +36,20 @@ ShellRoot {
         function notify(title: string, message: string): void { Toasts.show(title, message); }
     }
 
+    IpcHandler {   // rail pins: qs ipc call rail pin <desktopId|builtin> | unpin <id> | list
+        target: "rail"
+        function pin(spec: string): string { return Pins.pinSpec(spec); }
+        function unpin(id: string): string { return Pins.unpin(id) ? "ok" : (Pins.isLocked(id) ? "error: locked" : "error: not pinned"); }
+        function list(): string { return JSON.stringify(Pins.specs.map(p => p.id)); }
+    }
+
+    IpcHandler {   // news ticker: qs ipc call feeds refresh | list
+        target: "feeds"
+        function refresh(): void { Feeds.refresh(); }
+        function list(): string { return JSON.stringify(Feeds.shown); }
+        function open(url: string): string { return Feeds.open(url) ? "ok" : "refused"; }
+    }
+
     Variants {
         model: Quickshell.screens
 
@@ -49,6 +63,7 @@ ShellRoot {
             Ticker      { screen: scope.modelData }   // top layer, bottom, exclusive zone
             Launcher    { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, app launcher (rail emblem)
             ContextMenu { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, desktop right-click menu
+            RailMenu    { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, rail button right-click menu
             WindowPopups { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, rail window tooltip + menu
             OsdOverlay  { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, volume/brightness OSD
             TrayMenu    { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, tray item menu

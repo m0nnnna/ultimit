@@ -16,13 +16,10 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.namespace: "ultimit-ticker"
 
-    // Pre-built rich text: "<time> headline  ◆  ..." with the time in the fg color.
-    readonly property string html: {
-        const sep = "&nbsp;&nbsp;&nbsp;◆&nbsp;&nbsp;&nbsp;";
-        return Config.headlines.map(function (n) {
-            return "<font color='" + Theme.fg + "'>" + n.t + "</font>&nbsp;&nbsp;" + n.h;
-        }).join(sep);
-    }
+    // Headlines: real feed items (Feeds.qml) once any feed has loaded, else the built-in ones from Config.
+    // { t: time label, h: headline, link: http(s) URL or "" }
+    readonly property var entries: Feeds.hasItems ? Feeds.shown
+        : Config.headlines.map(n => ({ t: n.t, h: n.h, link: "" }))
 
     Rectangle {
         anchors.fill: parent
@@ -34,23 +31,74 @@ PanelWindow {
             anchors { left: tab.right; right: parent.right; top: parent.top; bottom: parent.bottom }
             clip: true
 
-            Text {
+            // "<time> headline  ◆  ..." scrolling right-to-left. Feed text is untrusted: PlainText only.
+            Row {
                 id: msg
                 anchors.verticalCenter: parent.verticalCenter
-                textFormat: Text.StyledText
-                text: win.html
-                color: Theme.dim
-                font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 0.88
+                spacing: 0
                 x: Config.motion ? viewport.width : 16
 
-                // Constant speed (~48 px/s); restarts when the text or viewport changes.
+                // Constant speed (~48 px/s); restarts when the text or viewport changes. Paused while hovered.
                 NumberAnimation on x {
                     running: Config.motion && viewport.width > 0
+                    paused: running && hover.containsMouse
                     from: viewport.width
                     to: -msg.implicitWidth
                     duration: Math.max(1000, (viewport.width + msg.implicitWidth) / 48 * 1000)
                     loops: Animation.Infinite
                 }
+
+                Repeater {
+                    id: rep
+                    model: win.entries
+                    delegate: Row {
+                        id: item
+                        required property var modelData
+                        required property int index
+                        readonly property bool hot: hover.hoverIdx === index && modelData.link !== ""
+                        spacing: 0
+                        Text {
+                            text: item.modelData.t
+                            textFormat: Text.PlainText
+                            color: Theme.fg
+                            font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 0.88
+                        }
+                        Text {
+                            text: "\u00a0\u00a0" + item.modelData.h
+                            textFormat: Text.PlainText
+                            color: item.hot ? Theme.accent : Theme.dim
+                            font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 0.88
+                            font.underline: item.hot
+                        }
+                        Text {
+                            text: "\u00a0\u00a0\u00a0\u25c6\u00a0\u00a0\u00a0"
+                            visible: item.index < win.entries.length - 1
+                            color: Theme.dim
+                            font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 0.88
+                        }
+                    }
+                }
+            }
+
+            // Hover pauses the scroll; clicking a headline opens its link (http/https only) via xdg-open.
+            MouseArea {
+                id: hover
+                anchors.fill: parent
+                hoverEnabled: true
+                property int hoverIdx: -1
+                function hit(mx) {
+                    const px = mx - msg.x;
+                    for (let i = 0; i < rep.count; i++) {
+                        const it = rep.itemAt(i);
+                        if (it && px >= it.x && px < it.x + it.width) return i;
+                    }
+                    return -1;
+                }
+                function linkAt(mx) { const i = hit(mx); return i >= 0 ? win.entries[i].link : ""; }
+                onPositionChanged: mouse => hoverIdx = hit(mouse.x)
+                onExited: hoverIdx = -1
+                cursorShape: hoverIdx >= 0 && win.entries[hoverIdx] && win.entries[hoverIdx].link !== "" ? Qt.PointingHandCursor : Qt.ArrowCursor
+                onClicked: mouse => { const l = linkAt(mouse.x); if (l !== "") Feeds.open(l); }
             }
         }
 

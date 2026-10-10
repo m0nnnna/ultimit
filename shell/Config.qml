@@ -30,6 +30,10 @@ Singleton {
     // Accessory window visibility; the window writes back here when closed via its frame.
     property bool accessoryOpen: false
     readonly property string accessoryTitle: "Settings"   // the Settings window (apps/settings) replaces Accessory
+    // Ask the Settings window to open on a page (id from SettingsWindow.pages), e.g. "rail", "news".
+    property string settingsPage: ""
+    property int settingsRequest: 0
+    function openSettings(page) { settingsPage = page || ""; settingsRequest++; accessoryOpen = true; }
     // Bumped to ask Boot.qml to (re)play the boot overlay.
     property int bootRequest: 0
     function playBoot() { bootRequest++; }

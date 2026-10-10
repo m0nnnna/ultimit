@@ -1,4 +1,4 @@
-// Persist.qml - loads/saves user settings (skin, motion, shard density, boot-on-start)
+// Persist.qml - loads/saves user settings (skin, motion, shard density, boot-on-start, rail pins, news feeds)
 // to ~/.config/ultimit/shell.json using FileView + JsonAdapter, and syncs them
 // with the Theme / Config singletons in both directions.
 // Env overrides (ULTIMIT_SKIN, ULTIMIT_MOTION, ULTIMIT_BOOT) win over the file for that run.
@@ -15,6 +15,9 @@ Scope {
     readonly property bool envSkin: !!Quickshell.env("ULTIMIT_SKIN")
     readonly property bool envMotion: !!Quickshell.env("ULTIMIT_MOTION")
     readonly property bool envBoot: !!Quickshell.env("ULTIMIT_BOOT")
+    // ULTIMIT_PINS="games,foot,accessory" and ULTIMIT_FEEDS="url url" ("-" = none) override the file for that run (not saved).
+    readonly property bool envPins: !!Quickshell.env("ULTIMIT_PINS")
+    readonly property bool envFeeds: !!Quickshell.env("ULTIMIT_FEEDS")
 
     // Idle timings: an ULTIMIT_*_AFTER / ULTIMIT_SUSPEND_ON_AC env var wins for that run (and is not saved).
     readonly property bool envDim: !!Quickshell.env("ULTIMIT_DIM_AFTER")
@@ -35,6 +38,20 @@ Scope {
         if (!root.envLock) Config.lockAfter = a.lockAfter;
         if (!root.envSuspend) Config.suspendAfter = a.suspendAfter;
         if (!root.envSuspendAC) Config.suspendOnAC = a.suspendOnAC;
+        root.applyRailNews();
+    }
+    function applyRailNews() {
+        const a = store.adapter;
+        Pins.setSpecs(root.envPins ? Pins.fromTokens(Quickshell.env("ULTIMIT_PINS")) : a.pins);
+        Feeds.urls = root.envFeeds ? root.envFeedList() : root.cleanFeeds(a.feeds);
+        Feeds.start();
+    }
+    function envFeedList() { const e = Quickshell.env("ULTIMIT_FEEDS").trim(); return e === "-" ? [] : cleanFeeds(e.split(/[\s,]+/)); }
+    // Keep only http(s) URLs, no duplicates.
+    function cleanFeeds(arr) {
+        const out = [];
+        for (const u of (arr || [])) if (Feeds.isHttp(u) && out.indexOf(u) < 0) out.push(u);
+        return out;
     }
     // singletons -> file
     function push() {
@@ -49,6 +66,8 @@ Scope {
         if (!root.envLock && a.lockAfter !== Config.lockAfter) { a.lockAfter = Config.lockAfter; changed = true; }
         if (!root.envSuspend && a.suspendAfter !== Config.suspendAfter) { a.suspendAfter = Config.suspendAfter; changed = true; }
         if (!root.envSuspendAC && a.suspendOnAC !== Config.suspendOnAC) { a.suspendOnAC = Config.suspendOnAC; changed = true; }
+        if (!root.envPins && JSON.stringify(a.pins) !== JSON.stringify(Pins.specs)) { a.pins = Pins.specs; changed = true; }
+        if (!root.envFeeds && JSON.stringify(a.feeds) !== JSON.stringify(Feeds.urls)) { a.feeds = Feeds.urls; changed = true; }
         if (changed) save.restart();
     }
 
@@ -77,6 +96,15 @@ Scope {
         function onSuspendOnACChanged() { root.push(); }
     }
 
+    Connections {
+        target: Pins
+        function onSpecsChanged() { root.push(); }
+    }
+    Connections {
+        target: Feeds
+        function onUrlsChanged() { root.push(); }
+    }
+
     // Debounce: the density slider fires continuously.
     Timer { id: save; interval: 400; onTriggered: store.writeAdapter() }
 
@@ -89,6 +117,7 @@ Scope {
         onLoaded: { root.apply(); root.ready = true; }
         onLoadFailed: error => {   // typically FileNotFound on first run
             root.ready = true;
+            root.applyRailNews();   // no file yet: defaults (or env overrides) still start the ticker feeds
             if (error === FileViewError.FileNotFound) store.writeAdapter();   // first run: write defaults
             else console.warn("ultimit: settings load failed:", error);
         }
@@ -102,6 +131,12 @@ Scope {
             property real lockAfter: 360
             property real suspendAfter: 900
             property bool suspendOnAC: false
+            property var pins: [   // rail pinned items, in order (see Pins.qml); ACCESSORY is always kept
+                { id: "games", label: "GAMES", icon: "games" }, { id: "mailer", label: "MAILER", icon: "mailer" },
+                { id: "news", label: "NEWS", icon: "news" }, { id: "audio", label: "AUDIO", icon: "audio" },
+                { id: "data", label: "DATA", icon: "data" }, { id: "accessory", label: "ACCESSORY", icon: "accessory" }
+            ]
+            property var feeds: ["https://meowops.net/feed.xml"]   // news ticker feeds; [] = built-in headlines
         }
     }
 }

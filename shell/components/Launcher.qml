@@ -29,37 +29,10 @@ PanelWindow {
     property string query: ""
     property var results: []
 
-    // ---- filtering ----
-    function subseq(needle, hay) {
-        let i = 0;
-        for (let j = 0; j < hay.length && i < needle.length; j++) if (hay[j] === needle[i]) i++;
-        return i === needle.length;
-    }
-    function score(e, q) {
-        const n = (e.name || "").toLowerCase();
-        if (n.startsWith(q)) return 100;
-        if (n.indexOf(" " + q) >= 0) return 90;
-        if (n.indexOf(q) >= 0) return 80;
-        const g = (e.genericName || "").toLowerCase();
-        if (g.indexOf(q) >= 0) return 60;
-        const kw = (e.keywords || []).join(" ").toLowerCase();
-        if (kw.indexOf(q) >= 0) return 50;
-        if ((e.comment || "").toLowerCase().indexOf(q) >= 0) return 30;
-        if (q.length >= 3 && subseq(q, n)) return 20;
-        return 0;
-    }
+    // ---- filtering (AppSearch.qml, shared with Settings -> Rail) ----
     function refilter() {
-        const q = query.trim().toLowerCase();
-        const all = DesktopEntries.applications.values.filter(e => !e.noDisplay && Config.launcherHidden.indexOf(e.id) < 0);
-        let out;
-        if (q === "") {
-            out = all.slice().sort((a, b) => a.name.localeCompare(b.name));
-        } else {
-            out = all.map(e => ({ e: e, s: score(e, q) })).filter(x => x.s > 0)
-                .sort((a, b) => b.s - a.s || a.e.name.localeCompare(b.e.name)).map(x => x.e);
-        }
-        results = out;
-        list.currentIndex = out.length ? 0 : -1;
+        results = AppSearch.filter(query);
+        list.currentIndex = results.length ? 0 : -1;
     }
     onQueryChanged: refilter()
     Connections {
@@ -73,6 +46,29 @@ PanelWindow {
             search.forceActiveFocus();
             powerRow.disarmAll();
         }
+        ctxOpen = false;
+    }
+
+    // ---- right-click menu: Pin to rail / Unpin from rail ----
+    property bool ctxOpen: false
+    property var ctxEntry: null
+    property real ctxX: 0
+    property real ctxY: 0
+    readonly property var ctxItems: {
+        const e = ctxEntry;
+        Pins.specs;   // re-evaluate when the pins change
+        if (!e) return [];
+        return [{ id: "pin", label: Pins.hasDesktop(e.id) ? "Unpin from rail" : "Pin to rail" }];
+    }
+    function openCtx(e, x, y) {   // x, y in panel coordinates
+        ctxEntry = e; ctxX = x; ctxY = y; ctxPm.cur = 0; ctxOpen = true;
+    }
+    function ctxActivate(it) {
+        const e = ctxEntry;
+        ctxOpen = false;
+        if (!e || !it) return;
+        if (Pins.hasDesktop(e.id)) Pins.unpin("app:" + e.id);
+        else Pins.pinEntry(e);
     }
 
     function runEntry(e) {
@@ -147,7 +143,16 @@ PanelWindow {
                     focus: true
                     onTextChanged: win.query = text
                     Keys.onPressed: event => {
-                        if (event.key === Qt.Key_Escape) { Config.closeLauncher(); event.accepted = true; }
+                        if (win.ctxOpen) {   // the pin menu has the keyboard
+                            if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) win.ctxActivate(win.ctxItems[Math.max(0, ctxPm.cur)]);
+                            else if (event.key === Qt.Key_Escape || event.key === Qt.Key_Left) win.ctxOpen = false;
+                            event.accepted = true; return;
+                        }
+                        if (event.key === Qt.Key_Menu) {
+                            const cur = win.results[list.currentIndex];
+                            if (cur && list.currentItem) win.openCtx(cur, 60, list.mapToItem(panel, 0, 0).y + list.currentItem.y - list.contentY + 22);
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_Escape) { Config.closeLauncher(); event.accepted = true; }
                         else if (event.key === Qt.Key_Down) { list.incrementCurrentIndex(); event.accepted = true; }
                         else if (event.key === Qt.Key_Up) { list.decrementCurrentIndex(); event.accepted = true; }
                         else if (event.key === Qt.Key_PageDown) { list.currentIndex = Math.min(list.count - 1, list.currentIndex + 8); event.accepted = true; }
@@ -232,13 +237,25 @@ PanelWindow {
                             font.family: Theme.mono; font.pixelSize: 10
                         }
                     }
+                    Rectangle {   // pinned marker
+                        visible: { Pins.specs; return Pins.hasDesktop(row.modelData.id); }
+                        anchors.right: parent.right; anchors.rightMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 5; height: 5; color: Theme.accent
+                    }
                     MouseArea {
                         id: rowMouse
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
                         onPositionChanged: list.currentIndex = row.index
-                        onClicked: win.runEntry(row.modelData)
+                        onClicked: mouse => {
+                            if (mouse.button === Qt.RightButton) {
+                                const p = rowMouse.mapToItem(panel, mouse.x, mouse.y);
+                                win.openCtx(row.modelData, p.x, p.y);
+                            } else win.runEntry(row.modelData);
+                        }
                     }
                 }
 
@@ -249,6 +266,26 @@ PanelWindow {
                     color: Theme.dim
                     font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 2
                 }
+            }
+        }
+
+        // right-click menu (inside the panel; a click anywhere else closes it)
+        Item {
+            id: ctxLayer
+            anchors.fill: parent
+            visible: win.ctxOpen
+            z: 50
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+                onPressed: win.ctxOpen = false
+            }
+            PopupMenu {
+                id: ctxPm
+                x: Math.max(4, Math.min(win.ctxX, panel.width - width - 4))
+                y: Math.max(4, Math.min(win.ctxY, panel.height - height - 4))
+                items: win.ctxItems
+                onActivated: item => win.ctxActivate(item)
             }
         }
 
