@@ -45,6 +45,14 @@ Page {
         onMoved: v => Config.shardDensity = v
     }
 
+    SectionLabel { text: "Rail icons" }
+    Chips {
+        Layout.fillWidth: true
+        options: [{ id: "always", label: "Always turn" }, { id: "hover", label: "Turn on hover" }, { id: "off", label: "Still" }]
+        current: Config.railSpin
+        onPicked: id => Config.railSpin = id
+    }
+
     SectionLabel { text: "System" }
     ToggleRow {
         Layout.fillWidth: true

@@ -16,6 +16,25 @@ Item {
     property string iconSrc: ""
     property string letter: ""
     readonly property bool framed: letter !== ""
+    // Altimit-style turntable: the core icons turn slowly on their vertical
+    // axis, faster under the pointer (Config.railSpin: always | hover | off).
+    property real phase: 0
+    property real spinAngle: phase
+    readonly property bool spinning: !framed && Config.motion && Config.railSpin !== "off"
+        && (Config.railSpin === "always" || mouse.containsMouse || spinAngle % 360 !== 0)
+    property real spinSpeed: mouse.containsMouse ? 200 : 36   // degrees per second
+    Behavior on spinSpeed { NumberAnimation { duration: Config.dur(400); easing.type: Easing.OutCubic } }
+    Timer {   // 30 steps a second: smooth enough, and the rail doesn't repaint at full refresh
+        interval: 33; repeat: true
+        running: root.spinning && root.visible
+        onTriggered: {
+            let a = root.spinAngle + root.spinSpeed * interval / 1000;
+            // In hover-only mode, settle facing front once the pointer leaves.
+            if (Config.railSpin === "hover" && !mouse.containsMouse && a >= 360)
+                a = 0;
+            root.spinAngle = a % 360;
+        }
+    }
     signal clicked()
     signal rightClicked(real globalY)   // right click / Menu key; y is the button centre in rail coordinates
 
@@ -82,10 +101,16 @@ Item {
         scale: root.pressed ? 0.94 : 1
         Behavior on scale { NumberAnimation { duration: Config.dur(120); easing.type: Easing.OutCubic } }
         Icon {
+            id: coreIcon
             visible: !root.framed
             anchors.horizontalCenter: parent.horizontalCenter
             name: root.appId
             color: Theme.fg
+            transform: Rotation {
+                axis { x: 0; y: 1; z: 0 }
+                origin.x: coreIcon.width / 2; origin.y: coreIcon.height / 2
+                angle: Config.motion && Config.railSpin !== "off" ? root.spinAngle : 0
+            }
         }
         Item {   // pinned desktop app: themed icon in the Altimit chamfer frame (same cut as WindowList)
             id: frame

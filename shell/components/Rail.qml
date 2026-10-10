@@ -175,6 +175,8 @@ PanelWindow {
                         delegate: RailButton {
                             id: pb
                             required property var modelData
+                            required property int index
+                            phase: index * 52   // staggered so the icons don't turn in lockstep
                             appId: modelData.builtin ? modelData.id : ""
                             label: modelData.label
                             iconSrc: modelData.builtin ? "" : (modelData.icon ? Icons.path(modelData.icon) : "")

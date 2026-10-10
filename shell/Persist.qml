@@ -32,6 +32,7 @@ Scope {
         const a = store.adapter;
         if (!root.envSkin && a.skin in Theme.skins) Theme.skin = a.skin;
         if (!root.envMotion) Config.motion = a.motion;
+        Config.railSpin = a.railSpin;
         if (!root.envBoot) Config.bootOnStart = a.bootOnStart;
         Config.shardDensity = clampDensity(a.shardDensity);
         if (!root.envDim) Config.dimAfter = a.dimAfter;
@@ -60,6 +61,7 @@ Scope {
         let changed = false;
         if (!root.envSkin && a.skin !== Theme.skin) { a.skin = Theme.skin; changed = true; }
         if (!root.envMotion && a.motion !== Config.motion) { a.motion = Config.motion; changed = true; }
+        if (a.railSpin !== Config.railSpin) { a.railSpin = Config.railSpin; changed = true; }
         if (a.shardDensity !== Config.shardDensity) { a.shardDensity = Config.shardDensity; changed = true; }
         if (!root.envBoot && a.bootOnStart !== Config.bootOnStart) { a.bootOnStart = Config.bootOnStart; changed = true; }
         if (!root.envDim && a.dimAfter !== Config.dimAfter) { a.dimAfter = Config.dimAfter; changed = true; }
@@ -88,6 +90,7 @@ Scope {
     Connections {
         target: Config
         function onMotionChanged() { root.push(); }
+        function onRailSpinChanged() { root.push(); }
         function onShardDensityChanged() { root.push(); }
         function onBootOnStartChanged() { root.push(); }
         function onDimAfterChanged() { root.push(); }
@@ -125,6 +128,7 @@ Scope {
         adapter: JsonAdapter {
             property string skin: "mine"
             property bool motion: true
+            property string railSpin: "always"
             property int shardDensity: 34
             property bool bootOnStart: true
             property real dimAfter: 300

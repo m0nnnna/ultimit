@@ -22,6 +22,8 @@ Singleton {
     // Play the boot sequence overlay once at shell startup.
     property bool bootOnStart: Quickshell.env("ULTIMIT_BOOT") !== "0"
 
+    // Rail core icons turn like Altimit's: "always" | "hover" | "off" (Settings > Appearance).
+    property string railSpin: "always"
     // UI animation duration scale: 0 when motion is off (reduced motion), else 1.
     readonly property real motionScale: motion ? 1 : 0
     function dur(ms) { return Math.round(ms * motionScale); }
