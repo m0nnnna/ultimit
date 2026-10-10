@@ -72,4 +72,10 @@ if [ -s "$out/unexpected.txt" ]; then
 fi
 echo "Removing $(wc -l <"$out/final.txt") packages ($(comm -13 "$out/final.txt" "$out/expected.txt" | wc -l) leftovers stay as dependencies of kept packages)."
 sudo apt-get purge --autoremove -y "${installed[@]}" 2>&1 | tee "$out/apt.log"
+# greetd starts only through the display-manager.service alias, which
+# purging gdm3 leaves broken: recreate it, or the next boot has no login.
+sudo systemctl enable --force greetd
+echo /usr/sbin/greetd | sudo tee /etc/X11/default-display-manager >/dev/null
+systemctl is-enabled greetd >/dev/null && [ "$(readlink -f /etc/systemd/system/display-manager.service)" = "$(readlink -f /usr/lib/systemd/system/greetd.service)" ] \
+	|| { echo "WARNING: greetd is not the display manager; fix before rebooting: sudo systemctl enable --force greetd"; exit 1; }
 echo "Done. Reboot to finish (log: $out/apt.log)."

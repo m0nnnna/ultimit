@@ -44,15 +44,17 @@ polkit.addRule(function(action, subject) {
     }
 });
 RULE
-systemctl disable gdm3
-systemctl enable greetd
+systemctl disable gdm3 2>/dev/null || true
+systemctl enable --force greetd   # its only hook is the display-manager.service alias
+echo /usr/sbin/greetd >/etc/X11/default-display-manager
 SUDO
 	echo "greetd is the login screen from the next boot."
 	;;
 gdm)
 	sudo sh -e <<'SUDO'
 systemctl disable greetd
-systemctl enable gdm3
+systemctl enable --force gdm3
+echo /usr/sbin/gdm3 >/etc/X11/default-display-manager
 rm -f /etc/polkit-1/rules.d/50-ultimit-greetd.rules
 SUDO
 	echo "GDM is the login screen from the next boot."

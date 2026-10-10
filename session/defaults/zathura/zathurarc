@@ -29,7 +29,6 @@ set recolor-lightcolor      "#050607"
 set recolor-darkcolor       "#eef1f4"
 set statusbar-h-padding     12
 set statusbar-v-padding     6
-set page-padding            8
 set selection-clipboard     clipboard
 set window-title-basename   true
 set adjust-open             width

@@ -41,7 +41,7 @@ GNOME stays installed as a safety net until phase 4.
 - [x] Text editor (MEMO, own process, draft recovery)
 - [x] Calculator (CALC)
 - [x] Terminal: foot, themed
-- [ ] Non-GNOME picks for PDF and images (to be replaced later)
+- [x] Non-GNOME picks for PDF and images: zathura, imv (to be replaced later)
 
 ## Phase 3b: what GNOME did quietly
 - [x] SSH agent: export gcr's socket (gcr4 stays)
@@ -62,7 +62,9 @@ gnome-terminal gnome-text-editor xdg-desktop-portal-gnome nautilus
 gvfs-backends gvfs-fuse gvfs gvfs-daemons loupe papers ptyxis
 yaru-theme-gnome-shell. Follow with `apt autoremove` (review its list).
 
-- [ ] Purge the packages above, reboot, log in through the Ultimit greeter
+- [x] Purge the packages above, reboot, log in through the Ultimit greeter
+      (2026-10-10: 135 packages removed by scripts/purge-gnome.sh; greetd's
+      display-manager alias had to be re-enabled by hand, now automatic)
 - [ ] `scripts/test.sh` green; manual checklist (Wi-Fi, sound, Bluetooth,
       suspend/resume, lock, screenshots, USB drive, printing, file picker
       in Firefox)
