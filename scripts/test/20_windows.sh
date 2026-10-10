@@ -17,6 +17,7 @@ scenario_frame_alignment() {
 	# name | kind | app_id match | want_ssd | command...
 	while IFS='|' read -r name kind app ssd cmd; do
 		[ -z "$name" ] && continue
+		cmd=${cmd//@ROOT@/$ROOT}
 		local exe=${cmd%% *}
 		if ! have "$exe" || { [ "$kind" = x ] && [ -z "$XDISP" ]; }; then note "skipped $name (not installed)"; continue; fi
 		# shellcheck disable=SC2086
@@ -25,6 +26,7 @@ scenario_frame_alignment() {
 		check_frame "$WID" "$name" "$ssd"
 		close_win "$WID" || fail "$name did not close"
 	done <<'APPS'
+probe(gtk4+adw)|gtk|Probe|False|python3 @ROOT@/scripts/test/apps/gtk4-probe.py
 text-editor(gtk4)|gtk|TextEditor|False|gnome-text-editor
 calculator(gtk4)|gtk|Calculator|False|gnome-calculator
 zenity(gtk3)|gtk|zenity|False|zenity --info --text=frame-test
@@ -37,10 +39,9 @@ APPS
 }
 
 scenario_placement() {
-	have gnome-text-editor || skip "gnome-text-editor not installed"
 	local ids=() i
 	for i in 1 2 3; do
-		open_app gtk TextEditor gnome-text-editor || return
+		open_app gtk Probe $PROBE || return
 		ids+=("$WID")
 	done
 	local a=${ids[0]} b=${ids[1]} c=${ids[2]}
@@ -54,9 +55,8 @@ scenario_placement() {
 }
 
 scenario_focus_and_raise() {
-	have gnome-text-editor || skip "gnome-text-editor not installed"
-	open_app gtk TextEditor gnome-text-editor || return; local a=$WID
-	open_app gtk TextEditor gnome-text-editor || return; local b=$WID
+	open_app gtk Probe $PROBE || return; local a=$WID
+	open_app gtk Probe $PROBE || return; local b=$WID
 	assert_json "W($b)['focused'] and not W($a)['focused']" "newest window starts focused"
 	assert_json "wins[0]['id']==$b" "newest window is on top"
 	# A is offset up-left of B, so a strip of A's left edge is uncovered.
@@ -118,7 +118,7 @@ check_states() {
 scenario_maximize_fullscreen_minimize() {
 	local ran=0
 	if have gnome-text-editor; then
-		open_app gtk TextEditor gnome-text-editor && { check_states "$WID" "text-editor(csd)"; ran=1; snap; close_win "$WID"; }
+		open_app gtk Probe $PROBE && { check_states "$WID" "text-editor(csd)"; ran=1; snap; close_win "$WID"; }
 	fi
 	if open_ssd_app; then
 		check_states "$WID" "$SSD_APP(ssd)"; ran=1
