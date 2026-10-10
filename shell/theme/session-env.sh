@@ -22,3 +22,8 @@ if [ -z "$QS_ICON_THEME" ]; then
 	QS_ICON_THEME=$(gsettings get org.gnome.desktop.interface icon-theme 2>/dev/null | tr -d "'")
 	export QS_ICON_THEME="${QS_ICON_THEME:-Yaru-dark}"
 fi
+
+# SSH agent: gcr's (from gcr4, not GNOME) listens here; GNOME used to export it.
+if [ -z "$SSH_AUTH_SOCK" ] && [ -S "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gcr/ssh" ]; then
+	export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gcr/ssh"
+fi
