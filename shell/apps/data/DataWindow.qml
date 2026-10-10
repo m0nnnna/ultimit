@@ -82,8 +82,11 @@ FloatingWindow {
             if (one && one.d && Data.clipPaths.length) items.push({ id: "pasteinto", label: "Paste into folder" });
             items.push({ kind: "sep" });
             items.push({ id: "rename", label: "Rename", hint: "F2", disabled: t.length !== 1 });
-            items.push({ id: "trash", label: "Move to Trash", hint: "Del" });
-            items.push({ id: "delete", label: "Delete permanently", hint: "Shift+Del" });
+            if (Data.onMtp) items.push({ id: "delete", label: "Delete permanently", hint: "Del" });   // no trash on phones
+            else {
+                items.push({ id: "trash", label: "Move to Trash", hint: "Del" });
+                items.push({ id: "delete", label: "Delete permanently", hint: "Shift+Del" });
+            }
             items.push({ kind: "sep" });
             items.push({ id: "props", label: "Properties" });
         }
@@ -124,6 +127,11 @@ FloatingWindow {
         menu.kind = "drive"; menu.drive = drv;
         menu.popup(x, y);
     }
+    function openPhoneMenu(ph, x, y) {
+        menu.items = [{ id: "p-open", label: "Open" }, { id: "p-eject", label: "Eject", disabled: !ph.mount }];
+        menu.kind = "phone"; menu.drive = ph;
+        menu.popup(x, y);
+    }
     function onMenuPicked(id) {
         switch (id) {
         case "open": Data.openSelected(); break;
@@ -150,6 +158,8 @@ FloatingWindow {
         case "viewgrid": Data.viewMode = "grid"; break;
         case "selectall": Data.selectAll(); break;
         case "sortdir": Data.sortDesc = !Data.sortDesc; break;
+        case "p-open": Data.openPhone(menu.drive); break;
+        case "p-eject": Data.ejectPhone(menu.drive); break;
         case "d-open": Data.openDrive(menu.drive); break;
         case "d-unmount": Data.driveAction(menu.drive, "unmount"); break;
         case "d-power": Data.driveAction(menu.drive, "poweroff"); break;
@@ -204,10 +214,11 @@ FloatingWindow {
         property bool current: false
         property string dropPath: ""
         property bool eject: false
+        property bool stacked: false     // sub-label on a second line (phones)
         signal clicked()
         signal ejectClicked()
         signal menuRequested(real x, real y)
-        width: parent ? parent.width : 100; height: 30
+        width: parent ? parent.width : 100; height: sr.stacked ? 40 : 30
         Rectangle {
             anchors.fill: parent
             color: sr.current || sm.containsMouse || sdrop.containsDrag ? Theme.panel2 : "transparent"
@@ -219,8 +230,8 @@ FloatingWindow {
             sourceSize: Qt.size(36, 36); source: sr.icon
         }
         Text {
-            x: 40; anchors.verticalCenter: parent.verticalCenter
-            width: parent.width - 40 - (sr.eject ? 34 : 10) - (subT.visible ? subT.implicitWidth + 4 : 0)
+            x: 40; y: sr.stacked ? 6 : (parent.height - height) / 2
+            width: parent.width - 40 - (sr.eject ? 34 : 10) - (subT.visible && !sr.stacked ? subT.implicitWidth + 4 : 0)
             text: sr.label.toUpperCase(); elide: Text.ElideRight
             color: sr.current ? Theme.accent : Theme.fg
             font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.4
@@ -228,7 +239,8 @@ FloatingWindow {
         Text {
             id: subT
             visible: sr.sub !== ""
-            anchors.right: parent.right; anchors.rightMargin: sr.eject ? 34 : 10; anchors.verticalCenter: parent.verticalCenter
+            x: sr.stacked ? 40 : parent.width - width - (sr.eject ? 34 : 10)
+            y: sr.stacked ? 23 : (parent.height - height) / 2
             text: sr.sub; color: Theme.dim
             font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1
         }
@@ -371,7 +383,7 @@ FloatingWindow {
                         onClicked: Data.goTo(Data.trashUri)
                     }
                     Item { width: 1; height: 10 }
-                    Lbl { x: 14; width: parent.width - 28; text: "DRIVES"; rtext: Data.drives.length ? "" : "NONE" }
+                    Lbl { x: 14; width: parent.width - 28; text: "DRIVES"; rtext: Data.drives.length || Data.phones.length ? "" : "NONE" }
                     Item { width: 1; height: 6 }
                     Repeater {
                         model: Data.drives
@@ -384,6 +396,21 @@ FloatingWindow {
                             onClicked: Data.openDrive(modelData)
                             onEjectClicked: Data.driveAction(modelData, "unmount")
                             onMenuRequested: (x, y) => win.openDriveMenu(modelData, x, y)
+                        }
+                    }
+                    Repeater {
+                        model: Data.phones
+                        delegate: SideRow {
+                            required property var modelData
+                            stacked: true
+                            label: modelData.label; icon: Data.phoneIcon()
+                            sub: (modelData.mount !== "" ? "MOUNTED" : "PHONE · TAP TO OPEN")
+                            eject: modelData.mount !== ""
+                            current: !Data.isTrash && modelData.mount !== "" && (Data.path === modelData.mount || Data.path.startsWith(modelData.mount + "/"))
+                            dropPath: modelData.mount
+                            onClicked: Data.openPhone(modelData)
+                            onEjectClicked: Data.ejectPhone(modelData)
+                            onMenuRequested: (x, y) => win.openPhoneMenu(modelData, x, y)
                         }
                     }
                     Item { width: 1; height: 10 }

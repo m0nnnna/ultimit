@@ -8,6 +8,8 @@ pragma Singleton
 //   ULTIMIT_DATA_START=<dir>   first location (default: $HOME)
 //   ULTIMIT_DRY_RUN=1          log udisksctl / opener commands instead of running them
 //   ULTIMIT_FAKE_LSBLK=<file>  read lsblk JSON from a file (fake removable drives)
+//   ULTIMIT_FAKE_MTP=<json>    fake MTP phones: [{id,vendor,model,serial,bus,dev}] (see data.py)
+//   ULTIMIT_FAKE_MTPFS=<exe>   stand-in for go-mtpfs (called: exe [-dev RE] MOUNTPOINT)
 // Entry points:  Data.show(path) / Data.toggle()  (QML)
 //                qs -p <shell> ipc call data open <path> | toggle   (see DataWindow.qml)
 import QtQuick
@@ -117,6 +119,10 @@ Singleton {
         stdout: StdioCollector {
             onStreamFinished: {
                 if (lister.listPath !== root.path) return;
+                if (root.listTimedOut) {
+                    root.listTimedOut = false; root.loading = false; root.entries = [];
+                    root.error = "Phone not responding. Is it unlocked?"; root.rebuild(); return;
+                }
                 try {
                     const d = JSON.parse(text);
                     root.error = d.err;
@@ -135,6 +141,12 @@ Singleton {
             }
         }
         onExited: if (root.loadQueued) { root.loadQueued = false; root.load(); }
+    }
+    property bool listTimedOut: false
+    Timer {   // a stalled phone must not leave the window "READING…" forever
+        interval: 20000
+        running: lister.running && root.onMtp
+        onTriggered: { root.listTimedOut = true; lister.running = false; }
     }
     // Directory changes made elsewhere: poll the directory's mtime (cheap) while DATA is open.
     Timer {
@@ -482,6 +494,7 @@ Singleton {
     function trashSel() {
         const t = targets();
         if (isTrash || !t.length) return;
+        if (onMtp) { deleteSel(); return; }   // the trash lives on another filesystem: moving would be a copy
         enqueue({ title: "Moving to Trash", items: t.map(e => ({ op: "trash", src: e.p })),
                   done: "Trashed", dest: trashUri });
     }
@@ -582,6 +595,7 @@ Singleton {
     function init() {
         placesProc.running = true;
         drivesProc.running = true;
+        scanPhones();
     }
     Process {
         id: placesProc
@@ -608,7 +622,7 @@ Singleton {
     Timer {
         interval: 4000; repeat: true; triggeredOnStart: false
         running: root.open && root.started
-        onTriggered: if (!drivesProc.running) drivesProc.running = true
+        onTriggered: { if (!drivesProc.running) drivesProc.running = true; root.scanPhones(); }
     }
     Process {
         id: drivesProc
@@ -678,6 +692,114 @@ Singleton {
         }
     }
     function drv(p) { return drives.some(d => d.mount !== "" && (p === d.mount || p.startsWith(d.mount + "/"))); }
+
+    // ---------------------------------------------------------------- phones (MTP via go-mtpfs, no gvfs)
+    // Detection + mounts come from `data.py mtp` (polled with the drives); mounting runs data.py mtp-mount,
+    // which starts go-mtpfs detached. Mounts live in $XDG_RUNTIME_DIR/ultimit-mtp/<name>, belong to the
+    // session (survive DATA/shell reloads) and are re-adopted from /proc/mounts on every scan.
+    property var phones: []          // [{id, safe, label, mount ("" if not mounted), bus, dev}]
+    property string mtpRoot: (Quickshell.env("XDG_RUNTIME_DIR") || "") !== "" ? Quickshell.env("XDG_RUNTIME_DIR") + "/ultimit-mtp" : ""
+    readonly property bool onMtp: isMtpPath(path)
+    function isMtpPath(p) { return mtpRoot !== "" && p.startsWith(mtpRoot + "/"); }
+    property bool mtpTool: true
+    property var mtpOrphans: []
+    Process {
+        id: mtpScan
+        command: ["python3", root.helper, "mtp"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let d;
+                try { d = JSON.parse(text); } catch (e) { return; }
+                if (!d.ok) return;           // detection failed: do NOT treat phones as unplugged
+                if (d.root) root.mtpRoot = d.root;
+                root.mtpTool = d.tool;
+                const mounts = {};
+                for (const m of d.mounts) mounts[m.name] = m.mp;
+                const seen = {};
+                const out = d.devices.map(x => {
+                    seen[x.safe] = true;
+                    return { id: x.id, safe: x.safe, label: x.label, mount: mounts[x.safe] || "", bus: x.bus, dev: x.dev };
+                });
+                const sig = JSON.stringify(out);
+                if (sig !== JSON.stringify(root.phones)) root.phones = out;
+                // mounted phones that vanished from USB: lazy-unmount and forget them
+                root.mtpOrphans = d.mounts.filter(m => !seen[m.name]);
+                root.reapOrphans();
+            }
+        }
+    }
+    function reapOrphans() {
+        if (mtpOp.running || !mtpOrphans.length) return;
+        const m = mtpOrphans[0];
+        mtpOp.kind = "reap"; mtpOp.mp = m.mp; mtpOp.label = m.name;
+        mtpOp.command = ["python3", helper, "mtp-umount", m.mp, "lazy"];
+        mtpOp.running = true;
+    }
+    function scanPhones() { if (!mtpScan.running) mtpScan.running = true; }
+    function phoneIcon() {
+        for (const n of ["phone", "smartphone", "multimedia-player", "drive-removable-media"]) {
+            const p = Quickshell.iconPath(n, true);
+            if (p !== "") return p;
+        }
+        return "";
+    }
+    function openPhone(ph) {
+        if (!ph) return;
+        if (ph.mount) { goTo(ph.mount); return; }
+        if (mtpOp.running) { toast("Phone", "Busy, try again in a moment."); return; }
+        mtpOp.kind = "mount"; mtpOp.mp = ""; mtpOp.label = ph.label;
+        mtpOp.command = ["python3", helper, "mtp-mount", ph.id];
+        mtpOp.running = true;
+        toast("Phone", "Opening " + ph.label + "…");
+    }
+    function ejectPhone(ph) {
+        if (!ph || !ph.mount) return;
+        if (mtpOp.running) { toast("Phone", "Busy, try again in a moment."); return; }
+        mtpOp.kind = "eject"; mtpOp.mp = ph.mount; mtpOp.label = ph.label;
+        mtpOp.command = ["python3", helper, "mtp-umount", ph.mount];
+        mtpOp.running = true;
+    }
+    Process {
+        id: mtpOp
+        property string kind: ""
+        property string mp: ""
+        property string label: ""
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let r;
+                try { r = JSON.parse(text.trim().split("\n").pop()); } catch (e) { r = { ok: false, err: "helper failed" }; }
+                root.mtpDone(mtpOp.kind, mtpOp.mp, mtpOp.label, r);
+            }
+        }
+        onExited: root.scanPhones()
+    }
+    function mtpDone(kind, mp, label, r) {
+        if (r.dry) {
+            for (const c of r.dry) console.log("DATA dry-run: " + c);
+            toast("Phone", "dry run: " + r.dry.join(" ; "));
+            return;
+        }
+        if (kind === "mount") {
+            if (r.ok) {
+                if (r.empty) toast("Phone", label + " shows no storage yet. Unlock it and choose File transfer, then reopen.");
+                goTo(r.mp);
+            } else if (r.err === "nomtpfs") {
+                toast("Phone", "Install go-mtpfs to open phones: sudo apt install go-mtpfs");
+            } else {
+                toast("Phone", "Couldn't open " + label + ". Unlock the phone and set USB to File transfer, then try again."
+                      + (r.log ? " (" + r.log + ")" : ""));
+            }
+        } else if (kind === "eject") {
+            if (r.ok) {
+                if (isMtpPath(path) && (path === mp || path.startsWith(mp + "/"))) goTo(home);
+                toast("Phone", "Ejected " + label + ".");
+            } else toast("Phone", "Couldn't eject " + label + ": " + (r.err || "unknown error"));
+        } else if (kind === "reap") {
+            mtpOrphans = mtpOrphans.filter(m => m.mp !== mp);
+            if (isMtpPath(path) && (path === mp || path.startsWith(mp + "/"))) goTo(home);
+            toast("Phone", label + " was unplugged." + (r.ok ? "" : " " + (r.err || "")));
+        }
+    }
 
     // ---------------------------------------------------------------- disk meter
     property var disk: ({ total: 0, used: 0, avail: 0, mount: "" })
@@ -817,6 +939,9 @@ Singleton {
         case "drive": { const d = drives.find(x => x.dev === arg); if (!d) return "no such drive"; openDrive(d); return "ok"; }
         case "unmount": { const d = drives.find(x => x.dev === arg); if (!d) return "no such drive"; driveAction(d, "unmount"); return "ok"; }
         case "poweroff": { const d = drives.find(x => x.dev === arg); if (!d) return "no such drive"; driveAction(d, "poweroff"); return "ok"; }
+        case "phone": { const p = phones.find(x => x.id === arg); if (!p) return "no such phone"; openPhone(p); return "ok"; }
+        case "eject": { const p = phones.find(x => x.id === arg); if (!p) return "no such phone"; ejectPhone(p); return "ok"; }
+        case "scanphones": scanPhones(); return "ok";
         case "terminal": openTerminalHere(); return "ok";
         }
         return "unknown action";
@@ -825,7 +950,8 @@ Singleton {
         return JSON.stringify({ path: path, count: view.length, total: entries.length, sel: selectedEntries().map(e => e.n),
             cur: cur, job: jobActive, queue: jobQueue.length, dialog: dialog ? dialog.kind : "", rename: renamePath, filter: filter,
             hidden: showHidden, sort: sortKey, desc: sortDesc, view: viewMode, clip: clipPaths.length, cut: clipCut,
-            first: view.slice(0, 5).map(e => e.n), drives: drives.length, disk: disk, err: error,
+            first: view.slice(0, 5).map(e => e.n), drives: drives.length, phones: phones.map(p => ({ id: p.id, label: p.label, mount: p.mount })), mtpBusy: mtpOp.running,
+            mtpTool: mtpTool, onMtp: onMtp, disk: disk, err: error,
             props: propsStat ? { size: propsStat.size, mode: propsStat.mode, mime: propsStat.mime, du: propsDu } : null });
     }
 }

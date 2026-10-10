@@ -6,7 +6,13 @@
   data.py props <path>...          JSON lines: {"stat":..} then {"du":..}
   data.py apps <mime>              JSON [{id,name,icon,path,default}]
   data.py mime <path>              JSON {"mime": ..}
-  data.py serve                    reads one JSON job spec per stdin line, streams JSON progress lines, streams JSON progress lines
+  data.py serve                    reads one JSON job spec per stdin line, streams JSON progress lines
+  data.py mtp                      JSON {ok, tool, root, devices[], mounts[]}: MTP phones (udev ID_MTP_DEVICE=1) + live mounts
+  data.py mtp-mount <id>           start go-mtpfs detached for device <id>, wait until usable -> JSON {ok, mp, err, ...}
+  data.py mtp-umount <mp> [lazy]   fusermount3 -u[z] (fallback fusermount), rmdir the mountpoint -> JSON {ok, err}
+
+MTP env gates: ULTIMIT_FAKE_MTP=<json> fakes detection, ULTIMIT_FAKE_MTPFS=<script> replaces go-mtpfs
+(called as: script [-dev RE] MOUNTPOINT), ULTIMIT_DRY_RUN=1 only reports the command lines.
 
 Trash follows the freedesktop spec under $XDG_DATA_HOME/Trash (always the home trash).
 """
@@ -296,14 +302,20 @@ class Job:
                 fo.write(b)
                 self.done_bytes += len(b)
                 self.tick(os.path.basename(s))
-        shutil.copystat(s, d, follow_symlinks=False)
+        try:
+            shutil.copystat(s, d, follow_symlinks=False)
+        except OSError:
+            pass                      # e.g. MTP/FUSE cannot set times or modes
 
     def copytree(self, s, d):
         os.makedirs(d, exist_ok=True)
         for e in os.scandir(s):
             t = os.path.join(d, e.name)
             self.copyany(e.path, t)
-        shutil.copystat(s, d, follow_symlinks=False)
+        try:
+            shutil.copystat(s, d, follow_symlinks=False)
+        except OSError:
+            pass
 
     def copyany(self, s, d):
         if os.path.islink(s):
@@ -473,8 +485,244 @@ class Job:
 def cmd_serve():
     for line in sys.stdin:
         line = line.strip()
-        if line:
+        if not line:
+            continue
+        try:
             Job(json.loads(line)).run()
+        except Exception as ex:      # never die silently: the UI would wait forever
+            out({"done": True, "errors": ["job failed: %s" % ex], "results": [], "count": 0})
+
+# ---------------------------------------------------------------- MTP phones (go-mtpfs, no gvfs)
+def mtp_root():
+    rd = os.environ.get("XDG_RUNTIME_DIR") or "/run/user/%d" % os.getuid()
+    return os.path.join(rd, "ultimit-mtp")
+
+def safe_name(s):
+    return re.sub(r"[^A-Za-z0-9._-]+", "_", s).strip("._-")[:64] or "phone"
+
+def udev_dec(s):
+    return re.sub(r"\\x([0-9a-fA-F]{2})", lambda m: chr(int(m.group(1), 16)), s)
+
+def mk_device(dev_id, vendor, model, serial, bus, devnum):
+    label = model or vendor or "Phone"
+    return {"id": dev_id, "safe": safe_name(label + "-" + (serial or dev_id)), "label": label, "vendor": vendor,
+            "model": model, "serial": serial, "bus": bus, "dev": devnum}
+
+def mtp_devices():
+    """List MTP devices. Raises on a hard failure so callers do not mistake it for 'unplugged'."""
+    fake = os.environ.get("ULTIMIT_FAKE_MTP")
+    if fake:
+        with open(fake, encoding="utf-8") as f:
+            d = json.load(f)
+        if isinstance(d, dict):
+            d = d.get("devices", [])
+        return [mk_device(str(x.get("id") or x.get("serial") or "fake%d" % i), x.get("vendor", ""), x.get("model", ""),
+                          x.get("serial", ""), int(x.get("bus", 1)), int(x.get("dev", i + 2)))
+                for i, x in enumerate(d)]
+    base = "/sys/bus/usb/devices"
+    res = []
+    for name in sorted(os.listdir(base)):
+        if ":" in name:
+            continue                  # interfaces
+        p = os.path.join(base, name)
+        try:
+            with open(os.path.join(p, "bDeviceClass")) as f:
+                if f.read().strip() == "09":
+                    continue          # hubs
+        except OSError:
+            pass
+        try:
+            r = subprocess.run(["udevadm", "info", "-q", "property", "-p", p], capture_output=True, text=True, timeout=5)
+        except FileNotFoundError:
+            raise
+        except Exception:
+            continue
+        props = {}
+        for line in r.stdout.splitlines():
+            k, _, v = line.partition("=")
+            props[k] = v
+        if props.get("ID_MTP_DEVICE") != "1":
+            continue
+        vendor = props.get("ID_VENDOR_FROM_DATABASE") or udev_dec(props.get("ID_VENDOR_ENC", "")) or props.get("ID_VENDOR", "").replace("_", " ")
+        model = udev_dec(props.get("ID_MODEL_ENC", "")) or props.get("ID_MODEL", "").replace("_", " ") or props.get("ID_MODEL_FROM_DATABASE", "")
+        try:
+            bus, devnum = int(props.get("BUSNUM", "0")), int(props.get("DEVNUM", "0"))
+        except ValueError:
+            bus = devnum = 0
+        res.append(mk_device("usb-" + name if not props.get("ID_SERIAL_SHORT") else props["ID_SERIAL_SHORT"],
+                             vendor.strip(), model.strip(), props.get("ID_SERIAL_SHORT", ""), bus, devnum))
+    return res
+
+def pid_alive(pid):
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+def mtp_mounts():
+    """Live MTP mounts under mtp_root(): real fuse mounts from /proc/mounts (+ pid-file fakes)."""
+    root = mtp_root()
+    res = {}
+    try:
+        with open("/proc/mounts", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                p = line.split()
+                # go-mtpfs mounts show up as fuse.rawBridge
+                if len(p) < 3 or not (p[2] == "fuse" or p[2].startswith("fuse.")):
+                    continue
+                mp = re.sub(r"\\([0-7]{3})", lambda m: chr(int(m.group(1), 8)), p[1])
+                if os.path.dirname(mp) == root:
+                    res[os.path.basename(mp)] = mp
+    except OSError:
+        pass
+    if os.environ.get("ULTIMIT_FAKE_MTPFS"):
+        try:
+            for n in os.listdir(root):
+                if n.startswith(".fake-") and n.endswith(".pid"):
+                    nm = n[6:-4]
+                    with open(os.path.join(root, n)) as f:
+                        pid = int(f.read().strip() or 0)
+                    if pid and pid_alive(pid) and os.path.isdir(os.path.join(root, nm)):
+                        res[nm] = os.path.join(root, nm)
+        except (OSError, ValueError):
+            pass
+    return [{"name": k, "mp": v} for k, v in sorted(res.items())]
+
+def mtp_tool():
+    fake = os.environ.get("ULTIMIT_FAKE_MTPFS")
+    if fake:
+        return fake if os.access(fake, os.X_OK) else ""
+    return shutil.which("go-mtpfs") or ""
+
+def cmd_mtp():
+    try:
+        devs = mtp_devices()
+    except Exception as ex:
+        out({"ok": False, "err": str(ex), "root": mtp_root(), "devices": [], "mounts": [], "tool": bool(mtp_tool())})
+        return
+    out({"ok": True, "root": mtp_root(), "tool": bool(mtp_tool()), "devices": devs, "mounts": mtp_mounts()})
+
+def mtp_in_root(mp):
+    return os.path.dirname(os.path.normpath(mp)) == mtp_root()
+
+def mtp_nonempty(mp):
+    try:
+        return any(True for _ in os.scandir(mp))
+    except OSError:
+        return False
+
+def cmd_mtp_mount(dev_id):
+    dry = os.environ.get("ULTIMIT_DRY_RUN") == "1"
+    try:
+        devs = mtp_devices()
+    except Exception as ex:
+        out({"ok": False, "err": "cannot enumerate USB devices: %s" % ex}); return
+    d = next((x for x in devs if x["id"] == dev_id), None)
+    if not d:
+        out({"ok": False, "err": "phone not found (unplugged?)"}); return
+    root = mtp_root()
+    mp = os.path.join(root, d["safe"])
+    tool = mtp_tool() or "go-mtpfs"
+    argv = [tool]
+    if len(devs) > 1:
+        argv += ["-dev", re.escape(d["serial"] or d["model"] or d["label"])]
+    argv.append(mp)
+    if dry:
+        out({"ok": False, "dry": ["mkdir -p " + mp, " ".join(argv)], "mp": mp}); return
+    if not mtp_tool():
+        out({"ok": False, "err": "nomtpfs"}); return
+    if any(m["name"] == d["safe"] for m in mtp_mounts()):
+        out({"ok": True, "mp": mp, "already": True}); return
+    os.makedirs(root, mode=0o700, exist_ok=True)
+    os.makedirs(mp, exist_ok=True)
+    logf = os.path.join(root, ".log-" + d["safe"])
+    pidf = os.path.join(root, ".fake-" + d["safe"] + ".pid")
+    with open(logf, "wb") as lf:
+        pr = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=lf, stderr=lf, start_new_session=True)
+    if os.environ.get("ULTIMIT_FAKE_MTPFS"):      # real mounts are tracked via /proc/mounts
+        with open(pidf, "w") as f:
+            f.write(str(pr.pid))
+    t0 = time.time()
+    ok = empty = False
+    while time.time() - t0 < 15:
+        if pr.poll() is not None:
+            break
+        if mtp_nonempty(mp):
+            ok = True; break
+        if os.path.ismount(mp):
+            for _ in range(8):        # mounted but nothing listed yet (locked phone?): give it a moment
+                time.sleep(0.5)
+                if mtp_nonempty(mp):
+                    break
+            ok = True; empty = not mtp_nonempty(mp); break
+        time.sleep(0.25)
+    try:
+        with open(logf, encoding="utf-8", errors="replace") as f:
+            tail = [l.strip() for l in f.read().splitlines() if l.strip()][-1:]
+    except OSError:
+        tail = []
+    if ok:
+        out({"ok": True, "mp": mp, "empty": empty, "log": tail[0] if tail else ""}); return
+    code = pr.poll()
+    if code is None:
+        pr.terminate()
+        try: pr.wait(3)
+        except Exception: pr.kill()
+    try: os.unlink(pidf)
+    except OSError: pass
+    try: os.rmdir(mp)
+    except OSError: pass
+    out({"ok": False, "err": "timeout" if code is None else "exited", "log": tail[0] if tail else "", "code": code})
+
+def cmd_mtp_umount(mp, lazy):
+    dry = os.environ.get("ULTIMIT_DRY_RUN") == "1"
+    mp = os.path.normpath(mp)
+    if not mtp_in_root(mp):
+        out({"ok": False, "err": "not an Ultimit MTP mountpoint"}); return
+    flag = "-uz" if lazy else "-u"
+    cmds = [["fusermount3", flag, mp], ["fusermount", flag, mp]]
+    fake = os.environ.get("ULTIMIT_FAKE_MTPFS")
+    if dry:
+        out({"ok": True, "dry": [" ".join(c) for c in cmds[:1]] + ["rmdir " + mp]}); return
+    err = ""
+    if fake:
+        pidf = os.path.join(os.path.dirname(mp), ".fake-" + os.path.basename(mp) + ".pid")
+        try:
+            with open(pidf) as f:
+                pid = int(f.read().strip())
+            os.kill(pid, 15)
+        except (OSError, ValueError):
+            pass
+        try: os.unlink(pidf)
+        except OSError: pass
+        if os.path.isdir(mp):
+            for n in os.listdir(mp):
+                remove_any(os.path.join(mp, n))
+    else:
+        done = False
+        for c in cmds:
+            try:
+                r = subprocess.run(c, capture_output=True, text=True, timeout=30)
+            except FileNotFoundError:
+                continue
+            except subprocess.TimeoutExpired:
+                err = "%s timed out" % c[0]; continue
+            if r.returncode == 0:
+                done = True; break
+            lines = (r.stderr or r.stdout).strip().splitlines()
+            err = lines[-1] if lines else err
+        if not done and not any(m["mp"] == mp for m in mtp_mounts()):
+            done = True               # already gone
+        if not done:
+            out({"ok": False, "err": err or "fusermount not found"}); return
+    try:
+        os.rmdir(mp)
+    except FileNotFoundError:
+        pass
+    except OSError as ex:
+        out({"ok": False, "err": "unmounted, but cannot remove %s: %s" % (mp, ex.strerror)}); return
+    out({"ok": True})
 
 def main():
     a = sys.argv[1:]
@@ -485,6 +733,9 @@ def main():
         elif a[0] == "apps": cmd_apps(a[1])
         elif a[0] == "mime": out({"mime": file_mime(a[1])})
         elif a[0] == "serve": cmd_serve()
+        elif a[0] == "mtp": cmd_mtp()
+        elif a[0] == "mtp-mount": cmd_mtp_mount(a[1])
+        elif a[0] == "mtp-umount": cmd_mtp_umount(a[1], len(a) > 2 and a[2] == "lazy")
     except BrokenPipeError:
         pass
     except KeyboardInterrupt:
