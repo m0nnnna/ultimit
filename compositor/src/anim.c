@@ -152,6 +152,7 @@ struct ul_ghost {
 	struct wlr_scene_tree *tree;
 	struct ghost_elem *elems;
 	size_t n, cap;
+	int bufs_seen, bufs_copied, bufs_readback; /* diagnostics */
 	struct wlr_scene_rect *line;
 	struct wlr_box frame;  /* frame box relative to content origin */
 	struct wlr_box target; /* layout coords: rail entry (minimize/restore) */
@@ -212,6 +213,7 @@ static void ghost_copy(struct ul_ghost *g, struct ul_view *view, struct wlr_scen
 			/* wlroots lets go of a buffer once it's uploaded; our own
 			 * titlebar can simply be drawn again. */
 			struct wlr_buffer *buf = b->buffer, *fresh = NULL;
+			g->bufs_seen++;
 			if (!buf && b == view->deco.titlebar) {
 				buf = fresh = decoration_titlebar_buffer(view);
 			}
@@ -220,11 +222,13 @@ static void ghost_copy(struct ul_ghost *g, struct ul_view *view, struct wlr_scen
 			 * is in wlroots' private section (we pin our own wlroots/SceneFX). */
 			if (!buf && b->WLR_PRIVATE.texture) {
 				buf = fresh = buffer_from_texture(b->WLR_PRIVATE.texture);
+				if (buf) g->bufs_readback++;
 			}
 			if (!buf) continue;
 			struct wlr_scene_buffer *copy = wlr_scene_buffer_create(g->tree, buf);
 			if (fresh) wlr_buffer_drop(fresh);
 			if (!copy) continue;
+			g->bufs_copied++;
 			wlr_scene_buffer_set_backdrop_blur(copy, b->backdrop_blur);
 			wlr_scene_buffer_set_backdrop_blur_optimized(copy, b->backdrop_blur_optimized);
 			int w = b->dst_width > 0 ? b->dst_width : buf->width;
@@ -390,6 +394,8 @@ static struct ul_ghost *ghost_create(struct ul_view *view, enum ghost_kind kind)
 	g->line->accepts_input = false;
 	wlr_scene_node_set_enabled(&g->line->node, false);
 	wl_list_insert(&server->ghosts, &g->link);
+	wlr_log(WLR_INFO, "anim: ghost kind=%d view=%u elems=%zu buffers seen=%d copied=%d readback=%d",
+		kind, view->id, g->n, g->bufs_seen, g->bufs_copied, g->bufs_readback);
 	g->start = now_ms();
 	g->timer = wl_event_loop_add_timer(wl_display_get_event_loop(server->display), ghost_tick, g);
 	return g;
@@ -451,6 +457,9 @@ void anim_track_commits(struct ul_view *view, bool track) {
 
 /* Called on unmap, before the view's scene is hidden. */
 void anim_close(struct ul_view *view) {
+	wlr_log(WLR_INFO, "anim: close view=%u snapshot=%s can=%d enabled=%d min=%d fs=%d",
+		view->id, view->closing ? (view->closing->requested ? "requested" : "commit") : "none",
+		can_close_anim(view), view->tree->node.enabled, view->minimized, view->fullscreen);
 	if (view->ghost) {
 		ghost_destroy(view->ghost); /* a restore still in flight */
 	}
@@ -491,6 +500,8 @@ static bool target_box(struct ul_view *view, struct wlr_box *out) {
 /* Minimize (true) after the real tree was hidden, or restore (false)
  * with the real tree still hidden: the ghost shows it when it lands. */
 void anim_minimize(struct ul_view *view, bool minimize) {
+	wlr_log(WLR_INFO, "anim: %s view=%u rail_rect=%d", minimize ? "minimize" : "restore",
+		view->id, view->has_rail_rect);
 	if (view->ghost) {
 		ghost_destroy(view->ghost);
 	}
