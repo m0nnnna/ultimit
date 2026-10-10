@@ -1,0 +1,280 @@
+#!/usr/bin/env python3
+"""Generate the Ultimit GTK themes (Mine, Amber, Silver, Verdant + alias).
+
+Stdlib only. Reads templates/gtk-3.0.css.in and templates/gtk-4.0.css.in,
+substitutes one palette per skin and writes complete theme directories:
+
+    OUT/Ultimit-Mine/{index.theme,gtk-3.0/gtk.css,gtk-4.0/gtk.css}
+    OUT/Ultimit-Amber/ ...  Ultimit-Silver/ ...  Ultimit-Verdant/ ...
+    OUT/Ultimit -> alias of the current skin (--alias SKIN, default: read from
+                   ~/.config/ultimit/shell.json, fallback mine)
+
+Template syntax: {{ python-expression }} evaluated with the palette tokens as
+variables plus helper functions (chamfer, svg_btn, mix, alpha, ...).
+Palettes mirror shell/Theme.qml; keep them in sync.
+
+Usage: build-gtk.py OUT_DIR [--alias SKIN] [--only SKIN]
+"""
+import json, os, re, sys
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+TPL = os.path.join(HERE, "templates")
+
+# Mirror of Theme.qml skins (panel/panel2/line are rgba there).
+SKINS = {
+    "mine": dict(
+        panel=(13, 15, 18), fg=(238, 241, 244), dim=(141, 148, 158),
+        line=(235, 240, 245, .16), line2=(235, 240, 245, .48),
+        accent=(212, 235, 255), on_acc=(7, 9, 11),
+        ok=(143, 227, 176), warn=(255, 217, 143), bad=(255, 138, 138), light=False),
+    "amber": dict(
+        panel=(34, 17, 5), fg=(255, 244, 230), dim=(220, 180, 140),
+        line=(255, 226, 196, .20), line2=(255, 226, 196, .55),
+        accent=(255, 176, 74), on_acc=(42, 20, 4),
+        ok=(143, 227, 176), warn=(255, 217, 143), bad=(255, 138, 138), light=False),
+    "silver": dict(
+        panel=(248, 249, 251), fg=(20, 23, 27), dim=(90, 98, 109),
+        line=(20, 24, 30, .16), line2=(20, 24, 30, .50),
+        accent=(44, 91, 136), on_acc=(255, 255, 255),
+        ok=(31, 138, 82), warn=(166, 107, 0), bad=(192, 57, 43), light=True),
+    "verdant": dict(
+        panel=(5, 20, 8), fg=(239, 251, 233), dim=(163, 204, 149),
+        line=(220, 255, 205, .18), line2=(220, 255, 205, .50),
+        accent=(185, 255, 140), on_acc=(8, 32, 8),
+        ok=(143, 227, 176), warn=(255, 217, 143), bad=(255, 138, 138), light=False),
+}
+NAMES = {"mine": "Mine", "amber": "Amber", "silver": "Silver", "verdant": "Verdant"}
+
+
+def hexc(c):
+    return "#%02x%02x%02x" % tuple(int(round(v)) for v in c[:3])
+
+
+def rgba(c, a=None):
+    a = c[3] if a is None and len(c) > 3 else (1 if a is None else a)
+    return "rgba(%d,%d,%d,%s)" % (c[0], c[1], c[2], ("%.3f" % a).rstrip("0").rstrip("."))
+
+
+def mix(a, b, t):
+    """a*(1-t) + b*t on rgb triples."""
+    return tuple(a[i] * (1 - t) + b[i] * t for i in range(3))
+
+
+def parse_css(c):
+    """'#rrggbb' or 'rgba(r,g,b,a)' -> (r,g,b,a)."""
+    if c.startswith("#"):
+        return (int(c[1:3], 16), int(c[3:5], 16), int(c[5:7], 16), 1.0)
+    m = re.match(r"rgba?\(([^)]*)\)", c)
+    p = [float(x) for x in m.group(1).split(",")]
+    return (p[0], p[1], p[2], p[3] if len(p) > 3 else 1.0)
+
+
+def tr(c):
+    p = parse_css(c)
+    return "rgba(%d,%d,%d,0)" % p[:3]
+
+
+def palette(name):
+    s = SKINS[name]
+    light = s["light"]
+    panel, fg, accent = s["panel"], s["fg"], s["accent"]
+    black, white = (0, 0, 0), (255, 255, 255)
+    if light:
+        bg = mix(panel, black, .035)
+        deep = white
+        side = mix(panel, black, .06)
+        field = white
+        hover = mix(panel, black, .07)
+        card = mix(panel, white, .5)
+        thumb = mix(panel, black, .12)
+    else:
+        bg = mix(panel, black, .22)
+        deep = mix(panel, black, .60)
+        side = mix(panel, black, .35)
+        field = mix(deep, fg, .06)
+        hover = mix(bg, fg, .09)
+        card = mix(bg, fg, .05)
+        thumb = mix(bg, fg, .12)
+    if name == "mine":  # exact historical values
+        bg, deep, side = (10, 12, 15), (5, 6, 7), (8, 10, 12)
+    sel = mix(bg, accent, .22 if not light else .20)
+    selst = mix(bg, accent, .38 if not light else .32)   # text selection (solid)
+    ns = dict(
+        name=name, Name=NAMES[name], light=light,
+        scheme="light" if light else "dark",
+        dark_suffix="" if light else "-dark",
+        panel=hexc(panel), bg=hexc(bg), deep=hexc(deep), side=hexc(side),
+        field=hexc(field), hover=hexc(hover), card=hexc(card), thumb=hexc(thumb),
+        sel=hexc(sel), selst=hexc(selst),
+        fg=hexc(fg), dim=hexc(s["dim"]),
+        line=rgba(s["line"]), line2=rgba(s["line2"]),
+        line_solid=hexc(mix(bg, fg, .16)), line2_solid=hexc(mix(bg, fg, .48)),
+        accent=hexc(accent), on_acc=hexc(s["on_acc"]),
+        accent20=rgba(accent + (.20,)), accent40=rgba(accent + (.40,)),
+        ok=hexc(s["ok"]), warn=hexc(s["warn"]), bad=hexc(s["bad"]),
+        shadow=rgba((0, 0, 0, .35 if light else .5)),
+        shade=rgba((0, 0, 0, .15 if light else .4)),
+    )
+    ns["accent_hover"] = hexc(mix(accent, white, .18) if not light else mix(accent, black, .15))
+    return ns
+
+
+# --- template helpers -------------------------------------------------------
+def chamfer(line, cut, c=6):
+    """Declarations drawing a 1px outline whose top-left and bottom-right
+    corners are cut at 45 degrees. `line` is the outline colour, `cut` the
+    colour of whatever lies behind the widget (paints the cut corners).
+    The fill is the caller's background-color. CSS has no clip-path, so the
+    four edges and both diagonals are background-image gradients."""
+    t = c / (2 ** 0.5)           # gradient offset of the anti-diagonal
+    z = tr(line)
+    a, b, d, e = t - .9, t - .35, t + .35, t + .9
+    tl = ("linear-gradient(135deg, %s 0, %s %.2fpx, %s %.2fpx, %s %.2fpx, %s %.2fpx)"
+          % (cut, cut, a, line, b, line, d, z, e))
+    br = tl.replace("135deg", "315deg")
+    edge = lambda d_: "linear-gradient(to %s, %s, %s)" % (d_, line, line)
+    imgs = [tl, br, edge("right"), edge("right"), edge("bottom"), edge("bottom")]
+    sizes = ["%dpx %dpx" % (c, c)] * 2 + ["100% 1px"] * 2 + ["1px 100%"] * 2
+    pos = ["left top", "right bottom", "left top", "left bottom", "left top", "right top"]
+    return ("background-image: %s; background-size: %s; background-position: %s; "
+            "background-repeat: no-repeat;" % (", ".join(imgs), ", ".join(sizes), ", ".join(pos)))
+
+
+def bracket(color, length=14, w=2):
+    """Accent corner bracket (top-left) as background layers (list entries)."""
+    return [("linear-gradient(to right, %s, %s)" % (color, color), "%dpx %dpx" % (length, w), "left top"),
+            ("linear-gradient(to bottom, %s, %s)" % (color, color), "%dpx %dpx" % (w, length), "left top")]
+
+
+def layers(*ls):
+    """Join several (image, size, position) layer lists into declarations."""
+    flat = [x for l in ls for x in l]
+    return ("background-image: %s; background-size: %s; background-position: %s; "
+            "background-repeat: no-repeat;" % (", ".join(f[0] for f in flat),
+                                              ", ".join(f[1] for f in flat),
+                                              ", ".join(f[2] for f in flat)))
+
+
+def hb_bg(accent, line2, line):
+    """Headerbar layers: accent corner bracket + bottom rule fading out."""
+    rule = [("linear-gradient(to right, %s, %s)" % (line2, line), "100% 1px", "left bottom")]
+    return layers(bracket(accent), rule)
+
+
+GLYPHS = {
+    "min": "<path d='M16 11.5H26'/>",
+    "max": "<rect x='16.5' y='4.5' width='9' height='7'/>",
+    "restore": "<path d='M18.5 6.5V4.5H25.5V9.5H23.5'/><rect x='16.5' y='6.5' width='7' height='5'/>",
+    "close": "<path d='M17 4.5L25 11.5M25 4.5L17 11.5'/>",
+}
+
+
+# libadwaita resets window-control buttons with a very specific selector; ours must out-weigh it
+WCB = "button.image-button:not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque)"
+ASSETS = {}   # filename -> svg text, written next to each gtk.css by build()
+
+
+def svg_btn(kind, color):
+    """Ultimit-style bracketed window button '[ x ]' as an SVG asset file.
+    (GTK3's CSS parser does not load data: URIs, so it is a relative file.)"""
+    svg = ("<svg xmlns='http://www.w3.org/2000/svg' width='42' height='16' viewBox='0 0 42 16' "
+           "fill='none' stroke='%s' stroke-width='1.2' stroke-linecap='square'>"
+           "<path d='M7.5 2.5H4.5V13.5H7.5M34.5 2.5H37.5V13.5H34.5'/>%s</svg>"
+           % (hexc(parse_css(color)) if color.startswith(("#", "rgb")) else color, GLYPHS[kind]))
+    name = "btn-%s-%s.svg" % (kind, hexc(parse_css(color))[1:])
+    ASSETS[name] = svg
+    return 'url("assets/%s")' % name
+
+
+def titlebuttons(ns, roots, btn="button"):
+    """CSS giving each window-control button its bracketed SVG per state.
+    GtkImage ignores -gtk-icon-source when it has an icon-name, so the glyph is
+    the button's background-image and the stock icon is made invisible.
+    roots: container selectors ('headerbar', '.titlebar', 'windowcontrols')."""
+    out = []
+    rules = (("", ns["dim"]), (":hover", ns["fg"]), (":active", ns["accent"]),
+             (":backdrop", ns["line2_solid"]))
+    tail = "background-repeat: no-repeat; background-position: center; background-size: 42px 16px;"
+    for kind, cls in (("min", "minimize"), ("max", "maximize"), ("close", "close")):
+        for suffix, color in rules:
+            if cls == "close" and suffix == ":hover":
+                color = ns["bad"]
+            sel = ", ".join("%s %s.%s%s" % (r, btn, cls, suffix) for r in roots)
+            out.append("%s { background-image: %s; %s }" % (sel, svg_btn(kind, color), tail))
+            if cls == "maximize":
+                sel = ", ".join(".maximized %s %s.maximize%s" % (r, btn, suffix) for r in roots)
+                out.append("%s { background-image: %s; %s }" % (sel, svg_btn("restore", color), tail))
+    return "\n".join(out)
+
+
+def render(text, ns):
+    env = dict(ns, WCB=WCB, titlebuttons=lambda roots, btn="button": titlebuttons(ns, roots, btn), chamfer=chamfer, bracket=bracket, layers=layers, hb_bg=hb_bg,
+               svg_btn=svg_btn, mix=mix, tr=tr, hexc=hexc, rgba=rgba)
+    return re.sub(r"\{\{(.*?)\}\}", lambda m: str(eval(m.group(1).strip(), {}, env)), text, flags=re.S)
+
+
+INDEX = """[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name={name}
+Comment=Ultimit (Altimit-style) GTK theme, {Name} skin. GENERATED by build-gtk.py
+Encoding=UTF-8
+
+[X-GNOME-Metatheme]
+GtkTheme={name}
+IconTheme=Adwaita
+CursorTheme=Adwaita
+"""
+
+
+def build(out, tname, skin):
+    ns = palette(skin)
+    ns["tname"] = tname
+    d = os.path.join(out, tname)
+    for sub, src in (("gtk-3.0", "gtk-3.0.css.in"), ("gtk-4.0", "gtk-4.0.css.in")):
+        os.makedirs(os.path.join(d, sub), exist_ok=True)
+        with open(os.path.join(TPL, src)) as f:
+            css = render(f.read(), ns)
+        # radius resets: appended last so they win at equal specificity
+        rad = os.path.join(TPL, src.replace(".css.in", "-radius.css"))
+        if os.path.exists(rad):
+            css += "\n" + open(rad).read()
+        with open(os.path.join(d, sub, "gtk.css"), "w") as f:
+            f.write(css)
+        os.makedirs(os.path.join(d, sub, "assets"), exist_ok=True)
+        for fn, svg in ASSETS.items():
+            with open(os.path.join(d, sub, "assets", fn), "w") as f:
+                f.write(svg)
+        ASSETS.clear()
+    with open(os.path.join(d, "index.theme"), "w") as f:
+        f.write(INDEX.format(name=tname, Name=NAMES[skin]))
+
+
+def current_skin():
+    p = os.path.expanduser("~/.config/ultimit/shell.json")
+    try:
+        s = json.load(open(p)).get("skin", "mine")
+        return s if s in SKINS else "mine"
+    except Exception:
+        return "mine"
+
+
+def main(argv):
+    if not argv or argv[0].startswith("-"):
+        sys.exit(__doc__)
+    out, alias, only = argv[0], None, None
+    if "--alias" in argv:
+        alias = argv[argv.index("--alias") + 1]
+    if "--only" in argv:
+        only = argv[argv.index("--only") + 1]
+    alias = alias if alias in SKINS else current_skin()
+    for skin in SKINS:
+        if only and skin != only:
+            continue
+        build(out, "Ultimit-" + NAMES[skin], skin)
+    if not only:
+        build(out, "Ultimit", alias)
+    print("built %d themes in %s (Ultimit = %s)" % (len(SKINS) + 1, out, alias))
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

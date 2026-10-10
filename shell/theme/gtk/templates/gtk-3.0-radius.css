@@ -1,0 +1,58 @@
+/* Every selector GTK3's builtin Adwaita gives a non-zero border-radius, reset to 0 at the same specificity (loaded last). Regenerate with the snippet in theme/README.md when GTK3 changes. */
+.view:selected:focus, iconview:selected:focus, .view:selected, iconview:selected, .view text:selected:focus, iconview text:selected:focus, textview text:selected:focus, .view text:selected, iconview text:selected, textview text:selected { border-radius: 0; }
+spinbutton:not(.vertical), entry { border-radius: 0; }
+button.titlebutton, notebook > header > tabs > arrow, button { border-radius: 0; }
+button.osd { border-radius: 0; }
+button.circular { border-radius: 0; }
+.linked:not(.vertical) > combobox:only-child > box > button.combo, filechooser .path-bar.linked > button:only-child, .linked:not(.vertical) > spinbutton:only-child:not(.vertical), .linked:not(.vertical) > entry:only-child, .inline-toolbar button:only-child, .linked > button:only-child, toolbar.inline-toolbar toolbutton:only-child > button.flat { border-radius: 0; }
+.linked.vertical > combobox:only-child > box > button.combo, .linked.vertical > spinbutton:only-child:not(.vertical), .linked.vertical > entry:only-child, .linked.vertical > button:only-child { border-radius: 0; }
+modelbutton.flat, .menuitem.button.flat { border-radius: 0; }
+spinbutton:not(.vertical) button:dir(ltr):last-child { border-radius: 0; }
+spinbutton:not(.vertical) button:dir(rtl):first-child { border-radius: 0; }
+.osd spinbutton:not(.vertical) button:dir(ltr):last-child { border-radius: 0; }
+.osd spinbutton:not(.vertical) button:dir(rtl):first-child { border-radius: 0; }
+spinbutton.vertical button.up { border-radius: 0; }
+spinbutton.vertical button.down { border-radius: 0; }
+toolbar.osd { border-radius: 0; }
+.inline-toolbar { border-radius: 0; }
+.csd menu, .csd .menu, .csd .context-menu { border-radius: 0; }
+.csd popover.background, popover.background { border-radius: 0; }
+scrollbar slider { border-radius: 0; }
+scrollbar.overlay-indicator:not(.dragging):not(.hovering) button { border-radius: 0; }
+switch { border-radius: 0; }
+switch slider { border-radius: 0; }
+.view.content-view.check:not(list), iconview.content-view.check:not(list), .content-view:not(list) check { border-radius: 0; }
+.view.content-view.check:hover:not(list), iconview.content-view.check:hover:not(list), .content-view:not(list) check:hover { border-radius: 0; }
+.view.content-view.check:active:not(list), iconview.content-view.check:active:not(list), .content-view:not(list) check:active { border-radius: 0; }
+.view.content-view.check:backdrop:not(list), iconview.content-view.check:backdrop:not(list), .content-view:not(list) check:backdrop { border-radius: 0; }
+.view.content-view.check:checked:not(list), iconview.content-view.check:checked:not(list), .content-view:not(list) check:checked { border-radius: 0; }
+.view.content-view.check:checked:hover:not(list), iconview.content-view.check:checked:hover:not(list), .content-view:not(list) check:checked:hover { border-radius: 0; }
+.view.content-view.check:checked:active:not(list), iconview.content-view.check:checked:active:not(list), .content-view:not(list) check:checked:active { border-radius: 0; }
+.view.content-view.check:backdrop:checked:not(list), iconview.content-view.check:backdrop:checked:not(list), .content-view:not(list) check:backdrop:checked { border-radius: 0; }
+check { border-radius: 0; }
+treeview.view radio:selected:focus, treeview.view radio:selected, radio { border-radius: 0; }
+progressbar trough, scale fill, scale trough { border-radius: 0; }
+progressbar progress, scale highlight { border-radius: 0; }
+scale.fine-tune fill, scale.fine-tune highlight, scale.fine-tune trough { border-radius: 0; }
+scale slider { border-radius: 0; }
+progressbar progress { border-radius: 0; }
+levelbar trough { border-radius: 0; }
+levelbar block { border-radius: 0; }
+.app-notification, .app-notification.frame { border-radius: 0; }
+calendar:selected { border-radius: 0; }
+button.sidebar-button { border-radius: 0; }
+tooltip { border-radius: 0; }
+colorswatch#add-color-button { border-radius: 0; }
+colorswatch#add-color-button:only-child { border-radius: 0; }
+colorswatch#editor-color-sample { border-radius: 0; }
+colorswatch#editor-color-sample overlay { border-radius: 0; }
+colorchooser .popover.osd { border-radius: 0; }
+.osd .scale-popup button.flat { border-radius: 0; }
+.scale-popup button:hover { border-radius: 0; }
+decoration { border-radius: 0; }
+.csd.popup decoration { border-radius: 0; }
+tooltip.csd decoration { border-radius: 0; }
+messagedialog.csd decoration { border-radius: 0; }
+button.titlebutton:not(.appmenu) { border-radius: 0; }
+.keycap { border-radius: 0; }
+popover.emoji-picker .emoji :hover { border-radius: 0; }

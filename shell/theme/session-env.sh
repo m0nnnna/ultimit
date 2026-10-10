@@ -2,15 +2,28 @@
 # BEFORE starting the compositor so every app it launches inherits these.
 # POSIX sh. Requires shell/theme/install-gtk-theme.sh to have been run once.
 # Does not touch gsettings/dconf or ~/.config/gtk-*/gtk.css.
+# A skin change needs a new session (or restart of the GTK apps) to take effect.
 
-# Select the Ultimit theme for GTK3 and GTK4/libadwaita apps. NOTE: with
-# GTK_THEME set, libadwaita does not load its own stylesheet; our gtk.css
-# re-imports it from the libadwaita gresource and then overrides it.
-export GTK_THEME=Ultimit
+# Select the Ultimit GTK theme for the current skin (shell.json "skin": mine |
+# amber | silver | verdant) so GTK3, GTK4/libadwaita, Electron and Chromium
+# (GTK mode) windows match the desktop. Falls back to Ultimit-Mine. Themes come
+# from install-gtk-theme.sh. NOTE: with GTK_THEME set, libadwaita does not load
+# its own stylesheet; our gtk.css re-imports it from the libadwaita gresource.
+_ul_cfg="${ULTIMIT_SHELL_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/ultimit/shell.json}"
+_ul_skin=$(sed -n 's/.*"skin"[[:space:]]*:[[:space:]]*"\([A-Za-z]*\)".*/\1/p' "$_ul_cfg" 2>/dev/null | head -n 1)
+[ -n "${ULTIMIT_SKIN:-}" ] && _ul_skin=$ULTIMIT_SKIN
+case "$_ul_skin" in
+	amber)   export GTK_THEME=Ultimit-Amber;   _ul_scheme=prefer-dark ;;
+	silver)  export GTK_THEME=Ultimit-Silver;  _ul_scheme=prefer-light ;;
+	verdant) export GTK_THEME=Ultimit-Verdant; _ul_scheme=prefer-dark ;;
+	*)       export GTK_THEME=Ultimit-Mine;    _ul_scheme=prefer-dark ;;
+esac
 
-# Force libadwaita's dark colour scheme for these processes (the theme is a
-# dark skin; this also makes @media (prefers-color-scheme: dark) rules match).
-export ADW_DEBUG_COLOR_SCHEME=prefer-dark
+# libadwaita colour scheme per skin: dark for Mine/Amber/Verdant, light for
+# Silver (the theme imports the matching libadwaita stylesheet; this also makes
+# @media (prefers-color-scheme) rules match).
+export ADW_DEBUG_COLOR_SCHEME=$_ul_scheme
+unset _ul_cfg _ul_skin _ul_scheme
 
 # Note for the session script: apps started via D-Bus/systemd activation (e.g.
 # nautilus launched by a portal) do not inherit this shell env; add

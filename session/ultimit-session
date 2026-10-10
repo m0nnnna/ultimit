@@ -25,6 +25,10 @@ export XDG_DATA_DIRS
 # Ultimit icon themes (one per skin), rebuilt each login so they follow the repo.
 "$ROOT/shell/theme/icons/install-icons.sh" >/dev/null 2>&1 || true
 . "$ROOT/shell/theme/session-env.sh"
+# Apps that don't inherit this environment read the themes from gsettings.
+case "$QS_ICON_THEME" in Ultimit-*) gsettings set org.gnome.desktop.interface icon-theme "$QS_ICON_THEME" 2>/dev/null ;; esac
+gsettings set org.gnome.desktop.interface gtk-theme "$GTK_THEME" 2>/dev/null
+gsettings set org.gnome.desktop.wm.preferences button-layout ':minimize,maximize,close' 2>/dev/null
 
 # Tell xdg-desktop-portal which backends serve an Ultimit desktop. Without
 # this, GTK apps wait on portal timeouts at startup (slow launches).

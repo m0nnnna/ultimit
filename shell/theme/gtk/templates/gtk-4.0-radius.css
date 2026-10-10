@@ -1,0 +1,105 @@
+/* Every selector libadwaita (Ubuntu/Yaru build) gives a non-zero border-radius, reset to 0 at the same specificity (loaded last). Regenerate with the snippet in theme/README.md when libadwaita changes. avatar stays round. */
+notebook > header > tabs > arrow, row.spin spinbutton > button.image-button.up:not(.flat):not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque):last-child, row.spin spinbutton > button.image-button.up:not(.flat):not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque):last-child:dir(ltr):last-child, row.spin spinbutton > button.image-button.up:not(.flat):not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque):last-child:dir(rtl):first-child, row.spin spinbutton > button.image-button.down:not(.flat):not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque), row.spin spinbutton > button.image-button.down:not(.flat):not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque):dir(ltr):last-child, row.spin spinbutton > button.image-button.down:not(.flat):not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque):dir(rtl):first-child, colorswatch#add-color-button > overlay, button { border-radius: 0; }
+row.spin spinbutton > button.image-button.up:not(.flat):not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque):last-child, row.spin spinbutton > button.image-button.up:not(.flat):not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque):last-child:dir(ltr):last-child, row.spin spinbutton > button.image-button.up:not(.flat):not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque):last-child:dir(rtl):first-child, row.spin spinbutton > button.image-button.down:not(.flat):not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque), row.spin spinbutton > button.image-button.down:not(.flat):not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque):dir(ltr):last-child, row.spin spinbutton > button.image-button.down:not(.flat):not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque):dir(rtl):first-child, button.emoji-section.image-button:not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque), menubutton.circular > button, button.circular { border-radius: 0; }
+menubutton.pill > button, button.pill { border-radius: 0; }
+button.color > colorswatch:only-child { border-radius: 0; }
+button.color > colorswatch:only-child > overlay { border-radius: 0; }
+menubutton.suggested-action, menubutton.opaque { border-radius: 0; }
+menubutton.suggested-action.circular, menubutton.suggested-action.pill, menubutton.opaque.circular, menubutton.opaque.pill { border-radius: 0; }
+menubutton.card > button { border-radius: 0; }
+splitbutton { border-radius: 0; }
+actionbar > revealer > box splitbutton:not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque) > button, searchbar > revealer > box splitbutton:not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque) > button, .toolbar splitbutton:not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque) > button, headerbar splitbutton:not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque) > button, actionbar > revealer > box splitbutton:not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque) > menubutton > button, searchbar > revealer > box splitbutton:not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque) > menubutton > button, .toolbar splitbutton:not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque) > menubutton > button, headerbar splitbutton:not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque) > menubutton > button, splitbutton.flat > button, splitbutton.flat > menubutton > button { border-radius: 0; }
+calendar > grid > label.day-number:checked { border-radius: 0; }
+calendar > grid > label.day-number:selected { border-radius: 0; }
+checkbutton { border-radius: 0; }
+checkbutton.grouped { border-radius: 0; }
+check { border-radius: 0; }
+radio { border-radius: 0; }
+checkbutton.selection-mode { border-radius: 0; }
+checkbutton.selection-mode check, checkbutton.selection-mode radio { border-radius: 0; }
+colorswatch#add-color-button > overlay { border-radius: 0; }
+colorswatch#add-color-button:only-child > overlay { border-radius: 0; }
+colorswatch#editor-color-sample { border-radius: 0; }
+colorswatch#editor-color-sample > overlay { border-radius: 0; }
+colorchooser .popover.osd { border-radius: 0; }
+floating-sheet > sheet { border-radius: 0; }
+window.assistant .sidebar > label { border-radius: 0; }
+infobar .close { border-radius: 0; }
+shortcut { border-radius: 0; }
+shortcut > .keycap { border-radius: 0; }
+.app-notification { border-radius: 0; }
+popover.emoji-picker emoji { border-radius: 0; }
+emoji-completion-row { border-radius: 0; }
+spinbutton, entry { border-radius: 0; }
+expander-widget > box > title { border-radius: 0; }
+button.sidebar-button { border-radius: 0; }
+filechooser gridview > child { border-radius: 0; }
+windowcontrols > button > image { border-radius: 0; }
+.accent-color-row color { border-radius: 0; }
+adaptive-preview .device-view { border-radius: 0; }
+adaptive-preview .device-view .screen-view { border-radius: 0; }
+levelbar.horizontal trough > block { border-radius: 0; }
+levelbar.horizontal trough > block.empty, levelbar.horizontal trough > block.full { border-radius: 0; }
+levelbar.horizontal.discrete > trough > block:first-child { border-radius: 0; }
+levelbar.horizontal.discrete > trough > block:last-child { border-radius: 0; }
+levelbar.vertical trough > block { border-radius: 0; }
+levelbar.vertical trough > block.empty, levelbar.vertical trough > block.full { border-radius: 0; }
+levelbar.vertical.discrete > trough > block:first-child { border-radius: 0; }
+levelbar.vertical.discrete > trough > block:last-child { border-radius: 0; }
+popover.menu modelbutton { border-radius: 0; }
+popover.menu list > row, popover.menu listview > row { border-radius: 0; }
+menubar > item { border-radius: 0; }
+menubar > item popover.menu popover.menu > contents { border-radius: 0; }
+window.dialog.message.csd:not(.solid-csd) { border-radius: 0; }
+window.dialog.message.csd .dialog-action-area > button { border-radius: 0; }
+dialog-host > dialog.alert sheet { border-radius: 0; }
+window.messagedialog.csd:not(.solid-csd), window.dialog-window.alert.csd:not(.solid-csd) { border-radius: 0; }
+window.messagedialog .response-area > button, dialog.alert .response-area > button { border-radius: 0; }
+frame { border-radius: 0; }
+toast { border-radius: 0; }
+video image.osd { border-radius: 0; }
+window.about .main-page .app-version, dialog.about .main-page .app-version { border-radius: 0; }
+list.boxed-list, list.content, list.boxed-list-separate > row, .card { border-radius: 0; }
+popover > contents { border-radius: 0; }
+progressbar > trough > progress { border-radius: 0; }
+scale > trough > fill, scale > trough, progressbar > trough { border-radius: 0; }
+scale > trough > highlight, progressbar > trough > progress { border-radius: 0; }
+scale > trough > slider { border-radius: 0; }
+scale.horizontal.marks-before.marks-after > trough > slider { border-radius: 0; }
+scale.color > trough { border-radius: 0; }
+scrollbar > range > trough { border-radius: 0; }
+scrollbar > range > trough > slider { border-radius: 0; }
+dialog.shortcuts .navigation-box > button { border-radius: 0; }
+shortcut-label { border-radius: 0; }
+shortcut-label .keycap { border-radius: 0; }
+.navigation-sidebar > row { border-radius: 0; }
+.navigation-sidebar > child, .navigation-sidebar > flowboxchild { border-radius: 0; }
+view-switcher-sidebar .indicator { border-radius: 0; }
+spinbutton:not(.vertical) > button.image-button.up:not(.flat):not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque):dir(ltr):last-child, spinbutton:not(.vertical) > button.image-button.down:not(.flat):not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque):dir(ltr):last-child { border-radius: 0; }
+spinbutton:not(.vertical) > button.image-button.up:not(.flat):not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque):dir(rtl):first-child, spinbutton:not(.vertical) > button.image-button.down:not(.flat):not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque):dir(rtl):first-child { border-radius: 0; }
+spinbutton.vertical > button.image-button.up:not(.flat):not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque):last-child, spinbutton.vertical > button.image-button.down:not(.flat):not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque):last-child { border-radius: 0; }
+spinbutton.vertical > button.image-button.up:not(.flat):not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque):first-child, spinbutton.vertical > button.image-button.down:not(.flat):not(.raised):not(.suggested-action):not(.destructive-action):not(.opaque):first-child { border-radius: 0; }
+switch { border-radius: 0; }
+switch > slider { border-radius: 0; }
+tabbar tabbox > tabboxchild { border-radius: 0; }
+tabbar tabbox > revealer > indicator { border-radius: 0; }
+tabbar tab, dnd tab { border-radius: 0; }
+tabbar tab button.image-button, dnd tab button.image-button { border-radius: 0; }
+tabbar tab indicator, dnd tab indicator { border-radius: 0; }
+tabthumbnail { border-radius: 0; }
+tabthumbnail .needs-attention > widget { border-radius: 0; }
+tabthumbnail .card picture { border-radius: 0; }
+tabthumbnail button { border-radius: 0; }
+tabthumbnail button > image { border-radius: 0; }
+cursor-handle > contents { border-radius: 0; }
+toggle-group { border-radius: 0; }
+toggle-group > toggle { border-radius: 0; }
+toggle-group.round { border-radius: 0; }
+toggle-group.round toggle { border-radius: 0; }
+.toolbar.osd { border-radius: 0; }
+searchbar > revealer > box .close { border-radius: 0; }
+tooltip { border-radius: 0; }
+.view:selected:focus, .view:selected, window.print:not(.ssd-frame) .dialog-action-box:selected, textview > text:selected, dialog-host > dialog.view sheet:selected, window.print:not(.ssd-frame) dialog-host > dialog.dialog-action-box sheet:selected, iconview:selected { border-radius: 0; }
+flowbox > flowboxchild, gridview > child { border-radius: 0; }
+indicatorbin > indicator, indicatorbin > mask { border-radius: 0; }
+window.csd { border-radius: 0; }

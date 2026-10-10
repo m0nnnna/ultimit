@@ -1,67 +1,65 @@
 # Ultimit GTK theme
 
-Restyles GTK4/libadwaita and GTK3 apps (headerbars, buttons, entries, lists,
-popovers, switches, scrollbars) to the "Mine" skin of `docs/design/mockup.html`,
-**only inside Ultimit sessions**. Nothing global is touched: no
-`~/.config/gtk-{3,4}.0/gtk.css`, no gsettings/dconf. A normal GNOME session never
-selects the theme, so it is unaffected.
+Restyles GTK3, GTK4/libadwaita, Electron (Wayland CSD) and Chromium (GTK theme
+mode) windows so they sit next to Ultimit's own server-side titlebar
+(`compositor/src/decoration.c`): glass-black panels, thin light lines, 34 px
+titlebar with the title in Michroma, bracketed `[ _ ] [ □ ] [ × ]` window
+buttons, accent corner bracket top-left, chamfered buttons, ice-blue accent (or
+the skin's accent). **Only inside Ultimit sessions**: nothing global is touched
+(no `~/.config/gtk-*/gtk.css`, no gsettings/dconf); a normal GNOME session never
+selects the themes.
 
 ## Files
-- `gtk/Ultimit/gtk-4.0/gtk.css`, `gtk/Ultimit/gtk-3.0/gtk.css`, `gtk/Ultimit/index.theme`
-- `install-gtk-theme.sh`: symlinks (or `--copy`) the theme to `~/.local/share/themes/Ultimit`. Idempotent.
-- `session-env.sh`: `.`-source from the session script; exports `GTK_THEME=Ultimit` and `ADW_DEBUG_COLOR_SCHEME=prefer-dark`.
+- `gtk/build-gtk.py`: stdlib generator. Palettes for the four skins (mirror of
+  `Theme.qml`), helpers (chamfer, bracket, window-button SVGs), renders
+  `gtk/templates/*` into complete theme dirs.
+- `gtk/templates/gtk-3.0.css.in`, `gtk-4.0.css.in`: the two templates (`{{ expr }}`
+  = python expression over the palette tokens).
+- `gtk/templates/gtk-3.0-radius.css`, `gtk-4.0-radius.css`: generated lists of every
+  selector GTK3-Adwaita / libadwaita gives a rounded corner, reset to 0 (appended last).
+- `install-gtk-theme.sh`: builds + installs `Ultimit-Mine`, `Ultimit-Amber`,
+  `Ultimit-Silver`, `Ultimit-Verdant` and `Ultimit` (alias of the current skin)
+  into `${XDG_DATA_HOME:-~/.local/share}/themes`; seeds `gtk-3.0/4.0 settings.ini`
+  `gtk-decoration-layout` if the key is missing. Idempotent.
+- `session-env.sh`: `GTK_THEME=Ultimit-<Skin>` from `~/.config/ultimit/shell.json`
+  (fallback Mine), `ADW_DEBUG_COLOR_SCHEME=prefer-light` for Silver else `prefer-dark`.
 
-## Approach and why
-Options evaluated:
+Generated output (`Ultimit-*/gtk-{3,4}.0/gtk.css`, `assets/btn-*.svg`) is not
+committed; run the installer. Edit templates, not output.
 
-1. **`GTK_THEME=Ultimit` + `~/.local/share/themes/Ultimit/gtk-4.0/gtk.css` (chosen).**
-   Per-process env, no global config. Verified empirically on this machine
-   (libadwaita 1.9.1 Ubuntu build, GTK 4.22.4): when `GTK_THEME` is set,
-   libadwaita does **not** load its own stylesheet at all (a plain theme with one
-   rule rendered an unstyled white window). So a theme must supply everything. Our
-   `gtk.css` therefore starts with
-   `@import url("resource:///org/gnome/Adwaita/styles/main-dark-yaru-default.css")`
-   (libadwaita's stylesheet, which stays in its gresource even when not
-   auto-loaded), then overrides it. Later rules at the same priority win, so
-   widget selectors in our file beat the imported ones.
-2. **libadwaita named colours / CSS variables** (`--window-bg-color`,
-   `--headerbar-bg-color`, `--accent-bg-color`, ... and the `@define-color`
-   twins). These only recolour; they cannot change radii, borders, fonts or the
-   window controls. We use them (set in `:root` and via `@define-color`) so
-   libadwaita's own derived colours follow the skin, and add widget rules for shape.
-3. **`ADW_DEBUG_COLOR_SCHEME=prefer-dark`.** Forces dark per-process so
-   `prefers-color-scheme: dark` blocks in the imported sheet match. Kept.
-4. **`~/.config/gtk-4.0/gtk.css`** (the only no-env way to restyle libadwaita)
-   or `XDG_CONFIG_HOME` redirection: rejected (global / breaks every app's config).
-5. **GTK3: `GTK_THEME=Ultimit`** picks `gtk-3.0/gtk.css` the same way. GTK3 has no
-   auto-loaded base theme under a custom name either, so we `@import` the
-   built-in `resource:///org/gtk/libgtk/theme/Adwaita/gtk-contained-dark.css`
-   and override. The `:dark` suffix is not needed (the theme is dark only).
+## How it works
+- GTK3: `@import` of the builtin Adwaita(-dark) contained CSS, then overrides.
+  Headerbar/`.titlebar` is opaque panel colour (Chromium samples it), 34 px, bracket
+  and bottom rule as background gradients. Window buttons: stock icon hidden, the
+  bracketed glyph is the button's `background-image` (an SVG file in `assets/`;
+  GTK3 does not load `data:` URIs and ignores `-gtk-icon-source` on a GtkImage
+  that has an icon name). Chamfer: 1 px outline from four gradient edges plus two
+  diagonal gradient corners painted in the surrounding colour.
+- GTK4/libadwaita: with `GTK_THEME` set libadwaita skips its own stylesheet, so the
+  theme `@import`s `resource:///org/gnome/Adwaita/styles/main-{dark,light}-yaru-default.css`
+  and overrides it; named colours both as `@define-color` and `:root` vars.
+  libadwaita resets window-control buttons with a 5-`:not()` selector, so ours are
+  over-qualified (`WCB` in build-gtk.py).
+- The compositor draws frame, corner brackets and shadow for CSD windows, so the
+  client keeps no shadow and no invisible resize border.
 
-## Skins
-Edit only the token block at the top of each gtk.css (`@define-color u_*` plus
-the `:root` variable block in GTK4; keep the two in sync). Amber/Silver/Verdant
-= same block with the mockup's values.
+## Chromium / Electron
+Chromium (GTK mode) renders the `headerbar.titlebar`, window, button, entry, menu
+and selection style contexts into pixels and samples them; all of those are
+opaque solid colours here and selection is a solid accent mix. Electron apps (e.g.
+the Claude desktop app) draw a GTK-themed CSD frame on Wayland from GTK3's
+headerbar style, so the GTK3 theme is what they use.
 
-## Verification (headless compositor)
-GTK4 and GTK3 probe windows were rendered offscreen and inspected; no
-"Theme parser error" / parsing warnings after the final edit.
+## Regenerating the radius lists (after a libadwaita / GTK3 upgrade)
+Extract the stylesheet with `gresource extract <lib> <path>` (libadwaita:
+`/org/gnome/Adwaita/styles/default-dark-yaru-default.css`; GTK3:
+`/org/gtk/libgtk/theme/Adwaita/gtk-contained-dark.css`), collect every rule whose
+`border-radius` is not 0 (except `avatar`) and write `selector { border-radius: 0; }`.
 
 ## Known limitations
-- Ubuntu-specific import path (`main-dark-yaru-default.css`): libadwaita is
-  Yaru-patched here. On a stock libadwaita the file name would be `main-dark.css`.
-- GTK CSS has no `clip-path`/chamfers, so buttons are square. Only the
-  top-left accent corner bracket is drawn (on the headerbar); the bottom-right
-  one is not possible since window content is opaque.
-- Window control icons stay symbolic icons (can't render `[ _ ]` text via CSS);
-  they are flat square buttons, close hover = danger colour.
-- `text-transform` works in GTK4 but not GTK3 (subtitle uppercase only in GTK4).
-- libadwaita apps that ship their own CSS (e.g. custom accent classes) may
-  keep some rounded corners. GTK3 window top corners may remain slightly rounded.
-- With `GTK_THEME` set, libadwaita may print a notice that it is not using its
-  stylesheet; harmless.
-- Apps started by D-Bus/systemd activation do not inherit the session shell env;
-  export `GTK_THEME` and `ADW_DEBUG_COLOR_SCHEME` via `dbus-update-activation-environment`.
+See the end of NOTES in the handoff; in short: titles are centred (GtkHeaderBar),
+small-caps only via `text-transform` in GTK4, Ubuntu/Yaru-specific libadwaita import
+path, running apps keep their skin until restarted.
 
 ## Icon theme
 `theme/icons/` builds the four `Ultimit-<Skin>` freedesktop icon themes (see `theme/icons/README.md`);
