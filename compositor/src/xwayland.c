@@ -68,12 +68,23 @@ static void unmanaged_request_configure(struct wl_listener *listener, void *data
 		event->width, event->height);
 }
 
+/* wlroots maps an X11 surface on its first commit *after* the X window and
+ * the wl_surface are paired. Xwayland can commit the window's only frame
+ * before the pairing message arrives; a window that never redraws (dialogs,
+ * launchers, a game's splash) would then never appear. Map it here instead. */
+static void map_if_ready(struct wlr_surface *surface) {
+	if (!surface->mapped && wlr_surface_has_buffer(surface)) {
+		wlr_surface_map(surface);
+	}
+}
+
 static void unmanaged_associate(struct wl_listener *listener, void *data) {
 	struct ul_unmanaged *u = wl_container_of(listener, u, associate);
 	u->map.notify = unmanaged_map;
 	wl_signal_add(&u->xsurface->surface->events.map, &u->map);
 	u->unmap.notify = unmanaged_unmap;
 	wl_signal_add(&u->xsurface->surface->events.unmap, &u->unmap);
+	map_if_ready(u->xsurface->surface);
 }
 
 static void unmanaged_dissociate(struct wl_listener *listener, void *data) {
@@ -157,6 +168,7 @@ static void x_associate(struct wl_listener *listener, void *data) {
 	wl_signal_add(&surface->events.unmap, &view->unmap);
 	view->commit.notify = x_commit;
 	wl_signal_add(&surface->events.commit, &view->commit);
+	map_if_ready(surface);
 }
 
 static void x_dissociate(struct wl_listener *listener, void *data) {

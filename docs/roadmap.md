@@ -69,7 +69,6 @@ yaru-theme-gnome-shell. Follow with `apt autoremove` (review its list).
       suspend/resume, lock, screenshots, USB drive, printing, file picker
       in Firefox)
 - [ ] Then: gaming (Steam, Proton, NVIDIA offload, VRR, direct scanout)
-- [ ] Bug: ~1 in 70 rapid X11 launches never shows (X window exists, xwm's
-      _NET_CLIENT_LIST stays empty, so the wl_surface never mapped). Seen
-      with xmessage relaunched right after the previous client was killed;
-      shows up as a flaky frame_alignment test. Chase before Steam testing.
+- [x] Bug: X11 windows that commit their only frame before Xwayland's
+      surface pairing never mapped (~1 in 25 launches under load). Fixed in
+      xwayland.c (map on associate when a buffer is already there).
