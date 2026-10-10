@@ -98,7 +98,9 @@ spawn_app() {
 		cd / || exit 1
 		export WAYLAND_DISPLAY="$SOCK"
 		case $kind in
-		gtk) export GDK_BACKEND=wayland XDG_DATA_HOME="$APPDATA" GSETTINGS_BACKEND=memory
+		# no-portals: each app gets a private bus, and activating a portal
+		# there can stall startup past the timeout (tests check windows, not portals).
+		gtk) export GDK_BACKEND=wayland XDG_DATA_HOME="$APPDATA" GSETTINGS_BACKEND=memory GDK_DEBUG=no-portals GTK_USE_PORTAL=0
 		     exec setsid dbus-run-session -- "$@" ;;
 		x)   export DISPLAY="$XDISP"; unset GDK_BACKEND
 		     exec setsid "$@" ;;
