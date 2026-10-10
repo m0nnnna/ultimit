@@ -58,13 +58,17 @@ if [ "${1:-}" != "--yes" ]; then
 fi
 
 sudo apt-mark manual $(cat "$out/keep.txt") >/dev/null
-# Check the result before touching anything: only purge + leftovers may go.
+# Check the result before touching anything: nothing outside purge +
+# leftovers may go. (Fewer is fine: some leftovers are still needed by a
+# kept package and stay.)
 apt-get -s purge --autoremove "${installed[@]}" 2>/dev/null | awk '/^Purg/ {print $2}' | sort >"$out/final.txt"
 sort -u "$out/purge.txt" "$out/leftovers.txt" >"$out/expected.txt"
-if ! diff -q "$out/final.txt" "$out/expected.txt" >/dev/null; then
+comm -23 "$out/final.txt" "$out/expected.txt" >"$out/unexpected.txt"
+if [ -s "$out/unexpected.txt" ]; then
 	echo "Unexpected removals; stopping before anything is removed:"
-	diff "$out/expected.txt" "$out/final.txt" || true
+	cat "$out/unexpected.txt"
 	exit 1
 fi
+echo "Removing $(wc -l <"$out/final.txt") packages ($(comm -13 "$out/final.txt" "$out/expected.txt" | wc -l) leftovers stay as dependencies of kept packages)."
 sudo apt-get purge --autoremove -y "${installed[@]}" 2>&1 | tee "$out/apt.log"
 echo "Done. Reboot to finish (log: $out/apt.log)."
