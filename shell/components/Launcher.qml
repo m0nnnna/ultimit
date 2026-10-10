@@ -45,7 +45,7 @@ PanelWindow {
     }
     function refilter() {
         const q = query.trim().toLowerCase();
-        const all = DesktopEntries.applications.values.filter(e => !e.noDisplay);
+        const all = DesktopEntries.applications.values.filter(e => !e.noDisplay && Config.launcherHidden.indexOf(e.id) < 0);
         let out;
         if (q === "") {
             out = all.slice().sort((a, b) => a.name.localeCompare(b.name));

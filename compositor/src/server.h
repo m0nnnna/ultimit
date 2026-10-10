@@ -133,6 +133,7 @@ struct ul_server {
 
 	struct wl_list views; /* ul_view.link, most recently focused first */
 	struct wl_list ghosts; /* ul_ghost.link: close/minimize animations (anim.c) */
+	bool super_tap; /* Super pressed with nothing else since (input.c) */
 	struct ul_view *focused_view;
 	struct wlr_layer_surface_v1 *focused_layer;
 

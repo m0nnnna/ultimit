@@ -310,6 +310,7 @@ static bool alt_held(struct ul_server *server) {
 
 static void cursor_button(struct wl_listener *listener, void *data) {
 	struct ul_server *server = wl_container_of(listener, server, cursor_button);
+	server->super_tap = false; /* Super+click isn't a tap */
 	struct wlr_pointer_button_event *event = data;
 	idle_activity(server);
 	if (server->locked) {
@@ -517,6 +518,21 @@ static void keyboard_key(struct wl_listener *listener, void *data) {
 	struct ul_server *server = keyboard->server;
 	struct wlr_keyboard_key_event *event = data;
 	idle_activity(server);
+
+	/* Super tapped on its own (no other key or click while held) opens the
+	 * launcher; Super+key shortcuts don't. */
+	xkb_keysym_t key_sym = xkb_state_key_get_one_sym(keyboard->wlr_keyboard->xkb_state,
+		event->keycode + 8);
+	bool is_super = key_sym == XKB_KEY_Super_L || key_sym == XKB_KEY_Super_R;
+	if (event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
+		server->super_tap = is_super;
+	} else if (is_super) {
+		if (server->super_tap && !server->locked) {
+			const char *cmd = getenv("ULTIMIT_LAUNCHER");
+			server_spawn(cmd ? cmd : "ultimit-launcher");
+		}
+		server->super_tap = false;
+	}
 
 	bool handled = false;
 	if (event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {

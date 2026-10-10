@@ -1,0 +1,4 @@
+#!/bin/sh
+# ultimit-launcher - toggle the app launcher (the compositor runs this when
+# Super is tapped on its own).
+exec qs -p "${ULTIMIT_SHELL_DIR:-$(dirname "$(dirname "$(readlink -f "$0")")")}" ipc call launcher toggle

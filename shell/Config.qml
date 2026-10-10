@@ -121,6 +121,12 @@ Singleton {
           appIds: ["gnome-control-center", "org.gnome.settings"] }
     ]
 
+    // Desktop entries the launcher never lists (by id): helpers and duplicates
+    // that installed packages ship. Foot stays; its client/server variants go.
+    readonly property var launcherHidden: [
+        "footclient", "foot-server", "debian-xterm", "debian-uxterm", "xterm", "uxterm"
+    ]
+
     // Terminal candidates for the desktop menu.
     readonly property var terminals: [
         { bin: "foot", cmd: "foot" }, { bin: "kitty", cmd: "kitty" },
