@@ -39,7 +39,7 @@ GNOME stays installed as a safety net until phase 4.
 - [x] DATA: file manager (trash, removable drives, network shares via
       udisks/mount; no gvfs)
 - [ ] Text editor
-- [ ] Calculator
+- [x] Calculator (CALC)
 - [x] Terminal: foot, themed
 - [ ] Non-GNOME picks for PDF and images (to be replaced later)
 

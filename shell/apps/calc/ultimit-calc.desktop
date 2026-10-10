@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=CALC
+GenericName=Calculator
+Comment=Ultimit calculator
+Exec=ultimit-calc
+Icon=accessories-calculator
+Terminal=false
+Categories=Utility;Calculator;

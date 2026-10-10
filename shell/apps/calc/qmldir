@@ -1,0 +1,3 @@
+singleton Calc 1.0 Calc.qml
+CalcWindow 1.0 CalcWindow.qml
+CalcKey 1.0 CalcKey.qml
