@@ -59,6 +59,19 @@ struct ul_config {
 	int repeat_delay;
 };
 
+/* One [connector] section of ~/.config/ultimit/displays.conf (config.c),
+ * written by Settings > Display when the user presses Keep. */
+struct ul_output_conf {
+	bool enabled;
+	int width, height;    /* 0: keep the preferred mode */
+	double refresh_hz;    /* 0: best refresh for that size */
+	double scale;         /* 0: leave alone */
+	bool has_pos;
+	int x, y;
+	int transform;        /* enum wl_output_transform */
+	bool adaptive_sync;
+};
+
 struct ul_pointer {
 	struct wl_list link;
 	struct wlr_input_device *device;
@@ -182,6 +195,7 @@ struct ul_output {
 	struct wlr_scene_output *scene_output;
 	struct wlr_box full_area;   /* layout coordinates */
 	struct wlr_box usable_area; /* full_area minus exclusive zones */
+	bool vrr_always; /* user turned adaptive sync on; else only for fullscreen */
 	struct wl_list layer_surfaces[4]; /* ul_layer_surface.link, per zwlr layer */
 
 	struct wl_listener frame;
@@ -296,6 +310,7 @@ void config_load(struct ul_server *server);
 void config_reload(struct ul_server *server);
 void config_apply_pointer(struct ul_server *server, struct wlr_input_device *device);
 void config_apply_keyboard(struct ul_server *server, struct wlr_keyboard *keyboard);
+bool config_output_lookup(const char *name, struct ul_output_conf *out);
 
 /* lock.c */
 void lock_init(struct ul_server *server);

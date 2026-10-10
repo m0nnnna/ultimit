@@ -23,6 +23,15 @@
 #include <xkbcommon/xkbcommon.h>
 #include "server.h"
 
+static void config_path(char *path, size_t size, const char *file) {
+	const char *xdg = getenv("XDG_CONFIG_HOME");
+	if (xdg && *xdg) {
+		snprintf(path, size, "%s/ultimit/%s", xdg, file);
+	} else {
+		snprintf(path, size, "%s/.config/ultimit/%s", getenv("HOME"), file);
+	}
+}
+
 static void set_defaults(struct ul_config *c) {
 	*c = (struct ul_config){
 		.tap = true,
@@ -54,12 +63,7 @@ void config_load(struct ul_server *server) {
 	set_defaults(c);
 
 	char path[512];
-	const char *xdg = getenv("XDG_CONFIG_HOME");
-	if (xdg && *xdg) {
-		snprintf(path, sizeof(path), "%s/ultimit/compositor.ini", xdg);
-	} else {
-		snprintf(path, sizeof(path), "%s/.config/ultimit/compositor.ini", getenv("HOME"));
-	}
+	config_path(path, sizeof(path), "compositor.ini");
 	FILE *f = fopen(path, "r");
 	if (!f) {
 		return;
@@ -155,4 +159,75 @@ void config_reload(struct ul_server *server) {
 	input_reapply_keyboards(server);
 	wlr_log(WLR_INFO, "Config reloaded (tap=%d natural_scroll=%d layout=%s)",
 		server->config.tap, server->config.natural_scroll, server->config.layout);
+}
+
+/*
+ * ~/.config/ultimit/displays.conf, one section per connector:
+ *
+ *   [eDP-1]
+ *   enabled = true
+ *   mode = 1920x1080@144.000    (the @Hz part is optional)
+ *   scale = 1.00
+ *   x = 0
+ *   y = 0
+ *   transform = normal          (90, 180, 270, flipped, flipped-90, ...)
+ *   adaptive_sync = false
+ *
+ * Read when an output connects. Returns false if it has no section.
+ */
+static int parse_transform(const char *v) {
+	static const char *names[] = {
+		"normal", "90", "180", "270",
+		"flipped", "flipped-90", "flipped-180", "flipped-270",
+	};
+	for (int i = 0; i < 8; i++) {
+		if (strcmp(v, names[i]) == 0) return i; /* matches enum wl_output_transform */
+	}
+	return 0;
+}
+
+bool config_output_lookup(const char *name, struct ul_output_conf *out) {
+	char path[512];
+	config_path(path, sizeof(path), "displays.conf");
+	FILE *f = fopen(path, "r");
+	if (!f) {
+		return false;
+	}
+	*out = (struct ul_output_conf){ .enabled = true };
+	bool found = false, in_section = false;
+	char line[512];
+	while (fgets(line, sizeof(line), f)) {
+		char *s = trim(line);
+		char *comment = strpbrk(s, "#;");
+		if (comment && comment != s) *comment = '\0';
+		s = trim(s);
+		if (*s == '\0' || *s == '#' || *s == ';') continue;
+		if (*s == '[') {
+			char *end = strchr(s, ']');
+			if (end) *end = '\0';
+			in_section = strcmp(s + 1, name) == 0;
+			found |= in_section;
+			continue;
+		}
+		if (!in_section) continue;
+		char *eq = strchr(s, '=');
+		if (!eq) continue;
+		*eq = '\0';
+		char *key = trim(s), *val = trim(eq + 1);
+		if (strcmp(key, "enabled") == 0) out->enabled = parse_bool(val);
+		else if (strcmp(key, "mode") == 0) {
+			out->refresh_hz = 0;
+			if (sscanf(val, "%dx%d@%lf", &out->width, &out->height, &out->refresh_hz) < 2) {
+				out->width = out->height = 0;
+			}
+		}
+		else if (strcmp(key, "scale") == 0) out->scale = atof(val);
+		else if (strcmp(key, "x") == 0) { out->x = atoi(val); out->has_pos = true; }
+		else if (strcmp(key, "y") == 0) { out->y = atoi(val); out->has_pos = true; }
+		else if (strcmp(key, "transform") == 0) out->transform = parse_transform(val);
+		else if (strcmp(key, "adaptive_sync") == 0) out->adaptive_sync = parse_bool(val);
+	}
+	fclose(f);
+	if (out->scale < 0.25 || out->scale > 4) out->scale = 0;
+	return found;
 }

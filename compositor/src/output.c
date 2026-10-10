@@ -4,6 +4,7 @@
  * page flips if the game asked for them (wp_tearing_control).
  */
 
+#include <math.h>
 #include <stdlib.h>
 #include <time.h>
 #include "server.h"
@@ -71,7 +72,7 @@ static void output_frame(struct wl_listener *listener, void *data) {
 		wlr_output_state_init(&state);
 
 		struct ul_view *game = fullscreen_view_on(output);
-		bool want_vrr = game != NULL;
+		bool want_vrr = game != NULL || output->vrr_always;
 		bool vrr_on = wlr_output->adaptive_sync_status == WLR_OUTPUT_ADAPTIVE_SYNC_ENABLED;
 		bool vrr_change = wlr_output->adaptive_sync_supported && want_vrr != vrr_on;
 		if (vrr_change) {
@@ -132,16 +133,64 @@ static void new_output(struct wl_listener *listener, void *data) {
 
 	wlr_output_init_render(wlr_output, server->allocator, server->renderer);
 
+	/* The user's saved setup (Settings > Display), else the preferred mode:
+	 * normally the native resolution at its highest refresh rate. */
+	struct ul_output_conf conf;
+	bool have_conf = config_output_lookup(wlr_output->name, &conf);
+	if (have_conf && !conf.enabled && wl_list_empty(&server->outputs)) {
+		/* Never start with every screen off; the next one may never come. */
+		wlr_log(WLR_INFO, "Output %s is disabled in displays.conf but is the only one; enabling",
+			wlr_output->name);
+		conf.enabled = true;
+	}
+	bool enabled = !have_conf || conf.enabled;
+
 	struct wlr_output_state state;
 	wlr_output_state_init(&state);
-	wlr_output_state_set_enabled(&state, true);
-	/* The preferred mode is normally the monitor's native resolution at its
-	 * highest refresh rate for that resolution. */
+	wlr_output_state_set_enabled(&state, enabled);
 	struct wlr_output_mode *mode = wlr_output_preferred_mode(wlr_output);
-	if (mode) {
+	if (enabled && have_conf && conf.width > 0) {
+		struct wlr_output_mode *m, *best = NULL;
+		wl_list_for_each(m, &wlr_output->modes, link) {
+			if (m->width != conf.width || m->height != conf.height) continue;
+			if (conf.refresh_hz > 0) {
+				if (fabs(m->refresh / 1000.0 - conf.refresh_hz) < 0.5 &&
+						(!best || fabs(m->refresh / 1000.0 - conf.refresh_hz) <
+						fabs(best->refresh / 1000.0 - conf.refresh_hz))) {
+					best = m;
+				}
+			} else if (!best || m->refresh > best->refresh) {
+				best = m;
+			}
+		}
+		if (best) {
+			mode = best;
+		} else if (wl_list_empty(&wlr_output->modes)) {
+			/* Nested/headless outputs have no mode list. */
+			mode = NULL;
+			wlr_output_state_set_custom_mode(&state, conf.width, conf.height,
+				(int)(conf.refresh_hz * 1000));
+		}
+	}
+	if (enabled && mode) {
 		wlr_output_state_set_mode(&state, mode);
 	}
-	wlr_output_commit_state(wlr_output, &state);
+	if (enabled && have_conf) {
+		if (conf.scale > 0) wlr_output_state_set_scale(&state, conf.scale);
+		wlr_output_state_set_transform(&state, conf.transform);
+	}
+	if (!wlr_output_commit_state(wlr_output, &state) && have_conf && enabled) {
+		/* A saved mode the monitor no longer takes: fall back to defaults. */
+		wlr_log(WLR_ERROR, "Output %s rejected displays.conf; using its preferred mode",
+			wlr_output->name);
+		wlr_output_state_finish(&state);
+		wlr_output_state_init(&state);
+		wlr_output_state_set_enabled(&state, true);
+		if ((mode = wlr_output_preferred_mode(wlr_output))) {
+			wlr_output_state_set_mode(&state, mode);
+		}
+		wlr_output_commit_state(wlr_output, &state);
+	}
 	wlr_output_state_finish(&state);
 
 	struct ul_output *output = calloc(1, sizeof(*output));
@@ -160,9 +209,15 @@ static void new_output(struct wl_listener *listener, void *data) {
 	wl_signal_add(&wlr_output->events.destroy, &output->destroy);
 	wl_list_insert(&server->outputs, &output->link);
 
-	struct wlr_output_layout_output *layout_output =
-		wlr_output_layout_add_auto(server->output_layout, wlr_output);
+	output->vrr_always = have_conf && conf.adaptive_sync;
 	output->scene_output = wlr_scene_output_create(server->scene, wlr_output);
+	if (!enabled) {
+		wlr_log(WLR_INFO, "Output %s: disabled (displays.conf)", wlr_output->name);
+		return;
+	}
+	struct wlr_output_layout_output *layout_output = have_conf && conf.has_pos ?
+		wlr_output_layout_add(server->output_layout, wlr_output, conf.x, conf.y) :
+		wlr_output_layout_add_auto(server->output_layout, wlr_output);
 	wlr_scene_output_layout_add_output(server->scene_layout, layout_output,
 		output->scene_output);
 
@@ -208,6 +263,7 @@ static void apply_output_config(struct ul_server *server,
 			struct wlr_output *wlr_output = head->state.output;
 			struct ul_output *output = wlr_output->data;
 			if (!output) continue;
+			output->vrr_always = head->state.enabled && head->state.adaptive_sync_enabled;
 			if (head->state.enabled) {
 				struct wlr_output_layout_output *lo = wlr_output_layout_add(
 					server->output_layout, wlr_output, head->state.x, head->state.y);
