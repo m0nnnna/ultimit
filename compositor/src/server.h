@@ -384,6 +384,7 @@ void anim_open(struct ul_view *view);
 void anim_cancel(struct ul_view *view);
 bool anim_running(struct ul_view *view);
 void anim_close(struct ul_view *view);
+void anim_close_requested(struct ul_view *view);
 struct wlr_buffer *decoration_titlebar_buffer(struct ul_view *view);
 void anim_track_commits(struct ul_view *view, bool track);
 void anim_minimize(struct ul_view *view, bool minimize);

@@ -159,6 +159,8 @@ struct ul_ghost {
 	int content_y, content_h;
 	struct wl_event_source *timer;
 	uint32_t start;
+	bool pending;   /* snapshot waiting for the window to unmap */
+	bool requested; /* taken when we asked the client to close */
 };
 
 static bool animations_enabled(void) {
@@ -305,8 +307,15 @@ static void ghost_layout(struct ul_ghost *g, double fx, double fy, double s,
 	}
 }
 
+#define CLOSE_REQUEST_WAIT_MS 3000
+
 static int ghost_tick(void *data) {
 	struct ul_ghost *g = data;
+	if (g->pending) {
+		/* A close request the client didn't act on (e.g. "Leave site?"). */
+		ghost_destroy(g);
+		return 0;
+	}
 	uint32_t elapsed = now_ms() - g->start;
 	double fx0 = g->origin_x + g->frame.x, fy0 = g->origin_y + g->frame.y;
 
@@ -399,11 +408,28 @@ static void handle_client_commit(struct wl_listener *listener, void *data) {
 			struct ul_ghost *g = ghost_create(view, GHOST_CLOSE);
 			wlr_scene_node_set_enabled(&g->tree->node, false);
 			g->view = view;
+			g->pending = true;
 			view->closing = g;
 		}
-	} else if (view->closing) {
+	} else if (view->closing && !view->closing->requested) {
 		ghost_destroy(view->closing);
 	}
+}
+
+/* Some clients (Chromium) never detach the main surface's buffer before
+ * their toplevel goes; by unmap their content is gone. So when we ask a
+ * window to close, snapshot it then, while it still shows. */
+void anim_close_requested(struct ul_view *view) {
+	if (view->closing || !view->mapped || !can_close_anim(view)) {
+		return;
+	}
+	struct ul_ghost *g = ghost_create(view, GHOST_CLOSE);
+	wlr_scene_node_set_enabled(&g->tree->node, false);
+	g->view = view;
+	g->pending = true;
+	g->requested = true;
+	view->closing = g;
+	wl_event_source_timer_update(g->timer, CLOSE_REQUEST_WAIT_MS);
 }
 
 void anim_track_commits(struct ul_view *view, bool track) {
@@ -426,6 +452,10 @@ void anim_close(struct ul_view *view) {
 	if (g) {
 		view->closing = NULL;
 		g->view = NULL;
+		g->pending = false;
+		/* The window may have moved since a close-request snapshot. */
+		g->origin_x = view->x;
+		g->origin_y = view->y;
 		g->start = now_ms();
 		wlr_scene_node_set_enabled(&g->tree->node, true);
 	} else if (can_close_anim(view)) {

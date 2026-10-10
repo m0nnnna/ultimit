@@ -302,6 +302,7 @@ void view_set_minimized(struct ul_view *view, bool minimized) {
 }
 
 void view_close(struct ul_view *view) {
+	anim_close_requested(view);
 	if (view->type == UL_VIEW_XDG) {
 		wlr_xdg_toplevel_send_close(view->xdg_toplevel);
 	} else {
