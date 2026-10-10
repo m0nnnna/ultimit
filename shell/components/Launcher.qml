@@ -13,13 +13,18 @@ PanelWindow {
     // Set by shell.qml (avoids a visible <-> screen binding loop).
     property string screenName: ""
 
-    visible: Config.launcherOpen && Config.isUiScreen(screenName)
+    // Open state; the window stays mapped until the panel has faded out so
+    // closing animates too, and lets clicks through while it fades.
+    readonly property bool shown: Config.launcherOpen && Config.isUiScreen(screenName)
+    visible: shown || panel.opacity > 0.01
+    mask: shown ? null : noInput
+    Region { id: noInput }
     anchors { left: true; right: true; top: true; bottom: true }
     exclusionMode: ExclusionMode.Ignore
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "ultimit-launcher"
-    WlrLayershell.keyboardFocus: visible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: shown ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     property string query: ""
     property var results: []
@@ -61,8 +66,8 @@ PanelWindow {
         target: DesktopEntries.applications
         function onValuesChanged() { win.refilter(); }
     }
-    onVisibleChanged: {
-        if (visible) {
+    onShownChanged: {
+        if (shown) {
             query = ""; search.text = ""; refilter();
             list.positionViewAtBeginning();
             search.forceActiveFocus();
@@ -100,8 +105,13 @@ PanelWindow {
         MouseArea { anchors.fill: parent }
         Brackets {}
 
-        opacity: win.visible ? 1 : 0
+        opacity: win.shown ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: Config.dur(180); easing.type: Easing.OutCubic } }
+        // Slides out of / back into the rail.
+        transform: Translate {
+            x: win.shown ? 0 : -14
+            Behavior on x { NumberAnimation { duration: Config.dur(180); easing.type: Easing.OutCubic } }
+        }
 
         Column {
             anchors.fill: parent
