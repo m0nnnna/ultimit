@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=NekoCore
+GenericName=World of Warcraft 3.3.5a launcher
+Comment=Patch, update and play on the NekoCore realm
+Exec=/home/mino/.local/bin/nekocore
+Icon=applications-games
+Terminal=false
+Categories=Game;
+Keywords=wow;warcraft;wotlk;nekocore;

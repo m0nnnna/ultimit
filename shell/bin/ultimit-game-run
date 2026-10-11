@@ -1,49 +1,105 @@
-#!/bin/sh
-# ultimit-game-run - per-game launch wrapper for Ultimit.
-# Set as a Steam launch option:   ultimit-game-run %command%
-# Reads $SteamAppId, looks up ~/.config/ultimit/games.json (written by the Games
-# window) and execs the command with that game's GPU / GameMode / MangoHud /
-# Gamescope settings. Missing tools are skipped with a message, never an error.
+#!/usr/bin/env python3
+"""ultimit-game-run - per-game launch wrapper for Ultimit (the one place launch logic lives).
 
-[ "$#" -gt 0 ] || { echo "usage: ultimit-game-run %command%" >&2; exit 2; }
+  ultimit-game-run %command%              Steam launch option: wraps Steam's command, game id = $SteamAppId
+  ultimit-game-run --id ID [-- CMD...]    Non-Steam game (desktop:<file>.desktop or manual:<token>); without
+                                          CMD the command is resolved from the desktop entry / manual record
+  ultimit-game-run --plan --id ID [-- CMD...]   print the plan as JSON, run nothing
+  --dry-run (same as ULTIMIT_DRY_RUN=1) logs the plan instead of executing
 
-PATH="$PATH:/usr/games:/usr/local/games"
-CONF="${XDG_CONFIG_HOME:-$HOME/.config}/ultimit/games.json"
+Applies the game's options from ~/.config/ultimit/games.json (GPU, GameMode, MangoHud, Gamescope,
+Wine prefix + DXVK, extra env / arguments) via apps/games/scan.py, records "last launched", then
+execs. With ULTIMIT_DRY_RUN=1 nothing is executed: the plan is logged to
+$ULTIMIT_DRY_RUN_LOG (default ~/.cache/ultimit/dry-run.log). Missing tools are skipped with a
+message; if the helper cannot be loaded the command is run unmodified - never an error.
+"""
+import importlib.util, json, os, subprocess, sys
 
-# Emits GPU=.. GM=.. HUD=.. SCOPE=.. (only whitelisted values). Defaults match the
-# Games window: NVIDIA when an NVIDIA driver is loaded, GameMode on, rest off.
-eval "$(python3 - "$CONF" "${SteamAppId:-}" <<'PY'
-import json, os, sys
-conf, appid = sys.argv[1], sys.argv[2]
-try:
-    with open(conf) as f:
-        g = json.load(f).get("games", {}).get(appid, {})
-except Exception:
-    g = {}
-gpu = g.get("gpu", "nvidia" if os.path.exists("/proc/driver/nvidia") else "auto")
-if gpu not in ("auto", "nvidia", "integrated"):
-    gpu = "auto"
-b = lambda k, d: 1 if g.get(k, d) is True else 0
-print("GPU=%s GM=%d HUD=%d SCOPE=%d" % (gpu, b("gamemode", True), b("overlay", False), b("gamescope", False)))
-PY
-)" || { GPU=auto; GM=0; HUD=0; SCOPE=0; }
+HERE = os.path.dirname(os.path.realpath(__file__))
 
-have() { command -v "$1" >/dev/null 2>&1; }
 
-if [ "$GPU" = nvidia ]; then
-    export __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia \
-           __VK_LAYER_NV_optimus=NVIDIA_only DXVK_FILTER_DEVICE_NAME=NVIDIA
-fi
+def load_helper():
+    for p in (os.environ.get("ULTIMIT_GAMES_SCAN"), os.path.join(HERE, "..", "apps", "games", "scan.py")):
+        if p and os.path.isfile(p):
+            spec = importlib.util.spec_from_file_location("ultimit_games_scan", p)
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            return mod
+    return None
 
-# Wrappers are prepended innermost first: gamescope -f -- mangohud gamemoderun <cmd>
-if [ "$GM" = 1 ]; then
-    if have gamemoderun; then set -- gamemoderun "$@"; else echo "ultimit-game-run: gamemoderun not installed, skipping GameMode" >&2; fi
-fi
-if [ "$HUD" = 1 ]; then
-    if have mangohud; then set -- mangohud "$@"; else echo "ultimit-game-run: mangohud not installed, skipping overlay" >&2; fi
-fi
-if [ "$SCOPE" = 1 ]; then
-    if have gamescope; then set -- gamescope -f -- "$@"; else echo "ultimit-game-run: gamescope not installed, skipping Gamescope" >&2; fi
-fi
 
-exec "$@"
+def say(msg):
+    print("ultimit-game-run: " + msg, file=sys.stderr)
+
+
+def main(argv):
+    gid, show_plan, cmd = "", False, []
+    args = list(argv)
+    while args:
+        a = args.pop(0)
+        if a == "--id" and args:
+            gid = args.pop(0)
+        elif a == "--dry-run":
+            os.environ["ULTIMIT_DRY_RUN"] = "1"
+        elif a == "--plan":
+            show_plan = True
+        elif a == "--":
+            cmd = args
+            break
+        else:
+            cmd = [a] + args
+            break
+    if not gid and cmd:
+        gid = os.environ.get("SteamAppId", "")
+    if not cmd and not gid:
+        say("usage: ultimit-game-run %command%  |  --id ID [-- CMD...]")
+        return 2
+
+    helper = None
+    try:
+        helper = load_helper()
+        p = helper.plan(gid, cmd or None)
+    except Exception as e:
+        say("%s%s" % (e, "; running the command unmodified" if cmd else ""))
+        if not cmd:
+            return 1
+        p = {"id": gid, "argv": cmd, "env": {}, "cwd": "", "pre": [], "notes": []}
+    for n in p["notes"]:
+        say(n)
+    if show_plan:
+        print(json.dumps(p, indent=2))
+        return 0
+    if helper:
+        try:
+            helper.touch(gid)
+        except Exception as e:
+            say("could not record last-launched: %s" % e)
+    if os.environ.get("ULTIMIT_DRY_RUN") == "1":
+        helper.dry_log(p) if helper else say("DRYRUN " + json.dumps(p))
+        return 0
+
+    env = dict(os.environ)
+    env.update(p["env"])
+    env["PATH"] = env.get("PATH", "") + ":/usr/games:/usr/local/games"
+    for st in p["pre"]:
+        try:
+            if st["step"] == "wineboot":
+                say("setting up Wine prefix %s (first run, takes a minute)" % st["prefix"])
+                os.makedirs(st["prefix"], exist_ok=True)
+                subprocess.run(["wineboot", "-u"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            elif st["step"] == "dxvk":
+                for f in helper.install_dxvk(st["prefix"], st["src"]):
+                    say("DXVK: installed " + f)
+        except Exception as e:
+            say("%s step failed: %s" % (st["step"], e))
+    if p["cwd"] and os.path.isdir(p["cwd"]):
+        os.chdir(p["cwd"])
+    try:
+        os.execvpe(p["argv"][0], p["argv"], env)
+    except OSError as e:
+        say("cannot run %s: %s" % (p["argv"][0], e))
+        return 127
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

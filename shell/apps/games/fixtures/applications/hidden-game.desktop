@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Hidden Game
+Exec=/bin/true
+Categories=Game;
+NoDisplay=true

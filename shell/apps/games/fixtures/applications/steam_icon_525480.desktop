@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Portal 2 (Steam shortcut)
+Exec=steam steam://rungameid/525480
+Icon=steam_icon_525480
+Categories=Game;

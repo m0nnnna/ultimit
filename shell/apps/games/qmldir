@@ -5,3 +5,10 @@ GChip 1.0 GChip.qml
 GToggle 1.0 GToggle.qml
 GButton 1.0 GButton.qml
 CopyText 1.0 CopyText.qml
+GLabel 1.0 GLabel.qml
+GInput 1.0 GInput.qml
+GSeg 1.0 GSeg.qml
+SteamCard 1.0 SteamCard.qml
+Brackets 1.0 Brackets.qml
+GameArt 1.0 GameArt.qml
+AddGameDialog 1.0 AddGameDialog.qml

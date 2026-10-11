@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=SuperTux
+Comment=Jump'n'run game starring Tux
+Exec=env SDL_VIDEODRIVER=wayland supertux2 --fullscreen "%f" %U
+Icon=/tmp/claude-1000/games-home/icons/tux.svg
+Categories=Game;ArcadeGame;

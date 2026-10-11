@@ -43,7 +43,7 @@ Item {
             y: 2; width: 10; height: 10
             x: root.checked && root.available ? 20 : 2
             color: root.checked && root.available ? Theme.accent : Theme.dim
-            Behavior on x { NumberAnimation { duration: 150 } }
+            Behavior on x { NumberAnimation { duration: Config.dur(150) } }
         }
     }
     MouseArea {

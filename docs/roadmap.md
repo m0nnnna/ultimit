@@ -72,7 +72,7 @@ yaru-theme-gnome-shell. Follow with `apt autoremove` (review its list).
 - [ ] Then: gaming (Steam, Proton, NVIDIA offload, VRR, direct scanout)
   - [x] Wine games: i386 + wine32 + 32-bit Vulkan, pinned DXVK (scripts/get-dxvk.sh),
         X11 placement/fullscreen fixes; WoW 3.3.5a via NekoCoreLauncher runs well (2026-10-11)
-  - [ ] GAMES app lists non-Steam games (desktop entries with Categories=Game)
+  - [x] GAMES app lists non-Steam games (desktop entries, manual .exe/commands) with per-game launch options
   - [ ] Steam (deb), Proton, MangoHud, gamescope
 - [x] Bug: X11 windows that commit their only frame before Xwayland's
       surface pairing never mapped (~1 in 25 launches under load). Fixed in

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Starfall
+Comment=A Flatpak space game
+Exec=flatpak run --branch=stable --arch=x86_64 --command=starfall org.example.Starfall @@u %U @@
+Icon=org.example.Starfall
+Categories=Game;StrategyGame;
+X-Flatpak=org.example.Starfall

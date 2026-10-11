@@ -9,6 +9,8 @@ Rectangle {
     color: Theme.panel2
     border.color: Theme.line
     border.width: 1
+    // Copy the text to the clipboard (select-all + copy; needs this window focused).
+    function copy() { edit.selectAll(); edit.copy(); edit.deselect(); }
     TextEdit {
         id: edit
         anchors.fill: parent
