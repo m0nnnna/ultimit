@@ -579,6 +579,13 @@ FloatingWindow {
                     }
                     function beginEdit() { editing = true; pathInput.text = Data.isTrash ? "trash:" : (Data.isArc ? Data.arcFile : Data.path); pathInput.forceActiveFocus(); pathInput.selectAll(); }
                     function endEdit() { editing = false; ui.forceActiveFocus(); }
+                    // Navigating (list, sidebar, back/up) leaves edit mode, so the bar always
+                    // shows where you are; a click in the list doesn't take focus from it.
+                    Connections {
+                        target: Data
+                        function onPathChanged() { if (crumb.editing) crumb.endEdit(); }
+                        function onArcInnerChanged() { if (crumb.editing) crumb.endEdit(); }
+                    }
 
                     Rectangle { anchors.fill: parent; color: "transparent"; border.width: 1; border.color: crumb.editing ? Theme.accent : Theme.line }
                     // Explorer-style: click the bar to edit (all selected), right-click for
