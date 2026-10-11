@@ -24,3 +24,11 @@ grim
 slurp
 wl-clipboard
 wtype
+# Media and archives
+mpv
+ffmpeg
+ffmpegthumbnailer
+7zip
+# Security
+ufw
+unattended-upgrades
