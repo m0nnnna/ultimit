@@ -9,5 +9,9 @@ top of Ubuntu 26.04 LTS. Keep them in step with what this dev machine runs.
 - `flatpaks.txt`: Flathub apps installed system-wide
 - `snaps-remove.txt`: snaps Ubuntu preinstalls that Ultimit removes
 
+Gaming: scripts/get-dxvk.sh installs the pinned, checksum-verified DXVK
+release (32- and 64-bit; Ubuntu ships only 64-bit) into /opt/ultimit/dxvk on
+the ISO, or ~/.local/share/ultimit/dxvk per user.
+
 Setup scripts used by both: scripts/purge-gnome.sh, scripts/setup-browser.sh,
 scripts/install-system.sh, scripts/switch-dm.sh greetd.
