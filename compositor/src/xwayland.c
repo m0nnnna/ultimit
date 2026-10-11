@@ -7,6 +7,7 @@
 
 #include <stdlib.h>
 #include "server.h"
+#include "theme.h"
 
 struct ul_unmanaged {
 	struct ul_server *server;
@@ -192,6 +193,30 @@ static void x_request_configure(struct wl_listener *listener, void *data) {
 		/* Tell the client the size it already has. */
 		wlr_xwayland_surface_configure(view->xwayland_surface,
 			view->x, view->y, view->width, view->height);
+		return;
+	}
+	/* X11 apps place themselves; keep them clear of the rail and the
+	 * bottom bar. A window that covers a whole output is a game asking for
+	 * borderless fullscreen (Wine does this): make it real fullscreen. */
+	struct ul_output *output = output_at(view->server,
+		event->x + event->width / 2.0, event->y + event->height / 2.0);
+	if (output) {
+		struct wlr_box full = output->full_area, area = output->usable_area;
+		if (event->x <= full.x && event->y <= full.y &&
+				event->width >= full.width && event->height >= full.height) {
+			view_set_fullscreen(view, true);
+			return;
+		}
+		int bar = view->ssd ? UL_TITLEBAR_H : 0;
+		int x = event->x, y = event->y;
+		if (x + event->width > area.x + area.width) x = area.x + area.width - event->width;
+		if (y + event->height > area.y + area.height) y = area.y + area.height - event->height;
+		if (x < area.x) x = area.x;
+		if (y < area.y + bar) y = area.y + bar;
+		view->x = x;
+		view->y = y;
+		view_request_size(view, event->width, event->height);
+		view_set_position(view, x, y);
 		return;
 	}
 	view->x = event->x;
