@@ -57,8 +57,8 @@ PanelWindow {
         }
     }
 
-    // Room for the pin area: everything but the emblem block and a floor kept for WINDOWS + tray + version.
-    readonly property real pinsMaxH: Math.max(3 * 66, height - 14 - 40 - 14 - 150 - (tray.visible ? tray.height + 8 : 0))
+    // Room for the pin area: everything but the emblem block and a floor kept for WINDOWS + version.
+    readonly property real pinsMaxH: Math.max(3 * 66, height - 14 - 40 - 14 - 150)
 
     function pinToplevel(pin) {
         return pin.builtin ? findToplevel(pin.app.appIds, pin.app) : Pins.matchToplevel(pin);
@@ -155,7 +155,7 @@ PanelWindow {
             }
             Item { width: 1; height: 10 }   // emblem margin-bottom 14 = 4 spacing + 10
 
-            // Pinned items (Pins.qml). Scrolls with the wheel when it would crowd out WINDOWS and the tray.
+            // Pinned items (Pins.qml). Scrolls with the wheel when it would crowd out WINDOWS.
             Flickable {
                 id: pinsView
                 width: Config.railWidth   // full rail width so the buttons' accent bar (x: -6) is not clipped
@@ -203,21 +203,13 @@ PanelWindow {
         // Open windows; the list scrolls inside the space between the buttons and the version text.
         WindowList {
             anchors.top: btnCol.bottom; anchors.topMargin: 8
-            anchors.bottom: tray.visible ? tray.top : bottomEdge.top; anchors.bottomMargin: tray.visible ? 8 : 12
+            anchors.bottom: bottomEdge.top; anchors.bottomMargin: 12
             anchors.left: parent.left; anchors.right: parent.right
             screenName: win.screen ? win.screen.name : ""
             panel: win
         }
 
-        // StatusNotifierItem tray, pinned above the version text; hidden when empty.
-        Tray {
-            id: tray
-            anchors.bottom: bottomEdge.top; anchors.bottomMargin: 12
-            anchors.left: parent.left; anchors.right: parent.right
-            screenName: win.screen ? win.screen.name : ""
-        }
-
-        // What the window list and tray sit on: the version text, or the rail's
+        // What the window list sits on: the version text, or the rail's
         // bottom edge when the screen is too short to spare it (720p).
         Item {
             id: bottomEdge
@@ -230,7 +222,7 @@ PanelWindow {
         // to open windows when there isn't room for at least two entries.
         Item {
             id: verItem
-            visible: parent.height - btnCol.y - btnCol.height - (tray.visible ? tray.height + 8 : 0) - height > 140
+            visible: parent.height - btnCol.y - btnCol.height - height > 140
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 14
             anchors.horizontalCenter: parent.horizontalCenter

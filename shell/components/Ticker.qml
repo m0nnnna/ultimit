@@ -1,5 +1,6 @@
 // Ticker.qml - bottom news ticker (layer: top, exclusive zone = ticker height).
-// Accent "NEWS" tab on the left, headlines scrolling right-to-left.
+// Accent "NEWS" tab on the left, headlines scrolling right-to-left, and the system tray cluster
+// (StatusTray.qml) at the right end on the primary screen. The ticker clips before the tray.
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
@@ -15,6 +16,7 @@ PanelWindow {
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.namespace: "ultimit-ticker"
+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand   // Tab / Enter on the tray cluster
 
     // Headlines: real feed items (Feeds.qml) once any feed has loaded, else the built-in ones from Config.
     // { t: time label, h: headline, link: http(s) URL or "" }
@@ -28,7 +30,7 @@ PanelWindow {
 
         Item {
             id: viewport
-            anchors { left: tab.right; right: parent.right; top: parent.top; bottom: parent.bottom }
+            anchors { left: tab.right; right: tray.visible ? tray.left : parent.right; top: parent.top; bottom: parent.bottom }
             clip: true
 
             // "<time> headline  ◆  ..." scrolling right-to-left. Feed text is untrusted: PlainText only.
@@ -100,6 +102,14 @@ PanelWindow {
                 cursorShape: hoverIdx >= 0 && win.entries[hoverIdx] && win.entries[hoverIdx].link !== "" ? Qt.PointingHandCursor : Qt.ArrowCursor
                 onClicked: mouse => { const l = linkAt(mouse.x); if (l !== "") Feeds.open(l); }
             }
+        }
+
+        StatusTray {
+            id: tray
+            visible: Config.isTrayScreen(win.screen ? win.screen.name : "")
+            screenName: win.screen ? win.screen.name : ""
+            anchors { right: parent.right; top: parent.top; topMargin: 1; bottom: parent.bottom }
+            height: undefined
         }
 
         Rectangle {

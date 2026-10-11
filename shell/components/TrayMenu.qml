@@ -47,8 +47,10 @@ PanelWindow {
 
     Rectangle {
         id: menu
-        x: Config.railWidth + 4
-        y: Math.max(8, Math.min(TrayUi.y - 20, win.height - height - 8))
+        readonly property bool fromBar: TrayUi.x >= 0
+        x: fromBar ? Math.max(8, Math.min(TrayUi.x - width / 2, win.width - width - 8)) : Config.railWidth + 4
+        y: fromBar ? win.height - Config.tickerHeight - 6 - height
+            : Math.max(8, Math.min(TrayUi.y - 20, win.height - height - 8))
         width: win.menuW
         height: col.implicitHeight + 12
         color: Theme.panel

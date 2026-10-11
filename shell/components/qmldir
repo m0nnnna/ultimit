@@ -19,6 +19,8 @@ QuickSettings 1.0 QuickSettings.qml
 NotifCard 1.0 NotifCard.qml
 OsdOverlay 1.0 OsdOverlay.qml
 Tray 1.0 Tray.qml
+StatusTray 1.0 StatusTray.qml
+StatusIcon 1.0 StatusIcon.qml
 TrayMenu 1.0 TrayMenu.qml
 WallpaperArt 1.0 WallpaperArt.qml
 LockSurface 1.0 LockSurface.qml

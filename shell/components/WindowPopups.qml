@@ -15,9 +15,12 @@ Scope {
     PanelWindow {
         screen: root.screen
         visible: WindowUi.tipText !== "" && WindowUi.tipScreen === root.screenName && !WindowUi.menuOpen
-        anchors { left: true; top: true }
-        margins.left: Config.railWidth + 6
+        readonly property bool bar: WindowUi.tipX >= 0
+        anchors { left: true; top: !bar; bottom: bar }
+        margins.left: bar ? Math.max(4, Math.min(WindowUi.tipX - width / 2, (screen ? screen.width : 4000) - width - 4))
+            : Config.railWidth + 6
         margins.top: Math.max(4, WindowUi.tipY - height / 2)
+        margins.bottom: Config.tickerHeight + 6
         implicitWidth: tipBox.width
         implicitHeight: tipBox.height
         exclusionMode: ExclusionMode.Ignore
@@ -28,7 +31,7 @@ Scope {
 
         Rectangle {
             id: tipBox
-            width: Math.min(360, tipTxt.implicitWidth + 28); height: 30
+            width: Math.min(360, tipTxt.implicitWidth + 28); height: tipTxt.implicitHeight + 16
             color: Theme.panel
             border.width: 1; border.color: Theme.lineStrong
             Brackets { size: 6 }
@@ -37,7 +40,9 @@ Scope {
                 anchors.verticalCenter: parent.verticalCenter
                 x: 14; width: parent.width - 28
                 text: WindowUi.tipText
+                textFormat: Text.PlainText
                 elide: Text.ElideRight
+                lineHeight: 1.15
                 color: Theme.fg
                 font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 0.8
             }

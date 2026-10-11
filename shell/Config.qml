@@ -65,7 +65,7 @@ Singleton {
 
     // Layout metrics (px)
     readonly property int railWidth: 84
-    readonly property int tickerHeight: 26
+    readonly property int tickerHeight: 30   // bottom bar (ticker + tray cluster)
 
     // ---- launcher / context menu state (see components/Launcher.qml, ContextMenu.qml) ----
     property bool launcherOpen: false
@@ -81,6 +81,14 @@ Singleton {
     function closeMenu() { menuOpen = false; }
     function isUiScreen(name) {
         if (uiScreen !== "") return uiScreen === name;
+        const s = Quickshell.screens;
+        return s.length > 0 && s[0].name === name;
+    }
+
+    // The screen that carries the bottom-bar tray cluster. Deliberately NOT isUiScreen(): that one
+    // follows the launcher/menu (uiScreen), so the tray would hop screens whenever the launcher
+    // opens elsewhere. The tray stays on the first (primary) screen, like the OSD default.
+    function isTrayScreen(name) {
         const s = Quickshell.screens;
         return s.length > 0 && s[0].name === name;
     }

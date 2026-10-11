@@ -23,9 +23,11 @@ Singleton {
     // ---------------- panel state ----------------
     property bool qsOpen: false
     property string qsScreen: ""
-    function openQs(screenName) { Config.closeLauncher(); Config.closeMenu(); qsScreen = screenName || ""; qsOpen = true; }
+    // Where the panel sits: "top" (under the desktop clock, top right) or "bottom" (above the tray, bottom right).
+    property string qsAnchor: "top"
+    function openQs(screenName, anchor) { Config.closeLauncher(); Config.closeMenu(); qsScreen = screenName || ""; qsAnchor = anchor || "top"; qsOpen = true; }
     function closeQs() { qsOpen = false; }
-    function toggleQs(screenName) { if (qsOpen) closeQs(); else openQs(screenName); }
+    function toggleQs(screenName, anchor) { if (qsOpen) closeQs(); else openQs(screenName, anchor); }
     function isQsScreen(name) {
         if (qsScreen !== "") return qsScreen === name;
         const s = Quickshell.screens;
@@ -35,9 +37,27 @@ Singleton {
     IpcHandler {
         target: "quicksettings"
         function toggle(): void { root.toggleQs(""); }
+        function toggleBottom(): void { root.toggleQs("", "bottom"); }
         function open(): void { root.openQs(""); }
         function close(): void { root.closeQs(); }
     }
+
+    // ---------------- debug: fake status ----------------
+    // ULTIMIT_FAKE_STATUS='{"batt":15,"charging":true,...}' (JSON, read once at startup) overrides what the
+    // tray and quick settings *display*. Display only: nothing real is changed. Keys (all optional):
+    //   batt (0-100, implies a battery), charging, full, battTime ("1h 05m"), profile
+    //   net ("wifi"|"eth"|"off"), ssid, signal (0..1), ip, airplane (bool: Wi-Fi radio off)
+    //   bt ("none"|"off"|"on"|"connected"), btDevices (["Name", ...])
+    //   vol (0-100), muted, sinkName
+    //   dnd (bool, applied to Notifs once), unread (int, extra badge count when no real history)
+    readonly property var fake: {
+        const e = Quickshell.env("ULTIMIT_FAKE_STATUS");
+        if (!e) return ({});
+        try { const o = JSON.parse(e); return (o && typeof o === "object") ? o : ({}); }
+        catch (err) { console.warn("ULTIMIT_FAKE_STATUS: bad JSON: " + err); return ({}); }
+    }
+    function fk(key, real) { return fake[key] !== undefined ? fake[key] : real; }
+    Component.onCompleted: { if (fake.dnd !== undefined) Notifs.dnd = !!fake.dnd; refreshBrightness(); refreshIp(); }
 
     // ---------------- side-effect helper ----------------
     // argv: command; shown: optional text for the log (to mask secrets).
@@ -48,16 +68,22 @@ Singleton {
     function note(text) { if (dryRun) console.log("[dry-run] " + text); }
 
     // ---------------- network ----------------
-    readonly property bool wifiEnabled: Networking.wifiEnabled
+    readonly property bool wifiEnabled: fake.airplane !== undefined ? !fake.airplane : Networking.wifiEnabled
     readonly property var wifiDev: {
         const v = Networking.devices.values;
         for (let i = 0; i < v.length; i++) if (v[i].type === DeviceType.Wifi) return v[i];
         return null;
     }
-    readonly property bool ethConnected: {
+    readonly property bool ethConnected: fake.net !== undefined ? fake.net === "eth" : ethConnectedReal
+    readonly property bool ethConnectedReal: {
         const v = Networking.devices.values;
         for (let i = 0; i < v.length; i++) if (v[i].type === DeviceType.Wired && v[i].connected) return true;
         return false;
+    }
+    readonly property string ethName: {
+        const v = Networking.devices.values;
+        for (let i = 0; i < v.length; i++) if (v[i].type === DeviceType.Wired && v[i].connected) return v[i].name;
+        return "";
     }
     readonly property var activeWifi: {
         if (!wifiDev || !Networking.wifiEnabled) return null;
@@ -66,9 +92,22 @@ Singleton {
         return null;
     }
     // "wifi" | "eth" | "off"
-    readonly property string netKind: activeWifi ? "wifi" : (ethConnected ? "eth" : "off")
-    readonly property string netName: activeWifi ? activeWifi.name : ""
-    readonly property real netStrength: activeWifi ? activeWifi.signalStrength : 0
+    readonly property string netKind: fake.net !== undefined ? fake.net : (activeWifi ? "wifi" : (ethConnected ? "eth" : "off"))
+    readonly property string netName: fake.ssid !== undefined ? fake.ssid : (activeWifi ? activeWifi.name : "")
+    readonly property real netStrength: fake.signal !== undefined ? fake.signal : (activeWifi ? activeWifi.signalStrength : 0)
+    // IPv4 address of the default route (read-only `ip route get`), refreshed on network changes and every 60 s.
+    property string netIp: fake.ip !== undefined ? fake.ip : ""
+    function refreshIp() { if (fake.ip === undefined) { ipProc.running = false; ipProc.running = true; } }
+    Process {
+        id: ipProc
+        command: ["sh", "-c", "ip -4 route get 1.1.1.1 2>/dev/null | head -n1"]
+        stdout: StdioCollector {
+            onStreamFinished: { const m = /\bsrc\s+([0-9.]+)/.exec(text); root.netIp = m ? m[1] : ""; }
+        }
+    }
+    Timer { interval: 60000; repeat: true; running: true; onTriggered: root.refreshIp() }
+    onNetKindChanged: refreshIp()
+    onNetNameChanged: refreshIp()
     // Nearby networks: connected first, then by signal at the time the set last changed. The
     // list only rebuilds when the set of SSIDs / the connected one changes (stable rows, so an
     // inline password field keeps focus) and never while `netFreeze` is set.
@@ -123,10 +162,12 @@ Singleton {
 
     // ---------------- Bluetooth ----------------
     readonly property var btAdapter: Bluetooth.defaultAdapter
-    readonly property bool btAvailable: btAdapter !== null
-    readonly property bool btOn: btAdapter ? btAdapter.enabled : false
+    readonly property bool btAvailable: fake.bt !== undefined ? fake.bt !== "none" : btAdapter !== null
+    readonly property bool btOn: fake.bt !== undefined ? (fake.bt === "on" || fake.bt === "connected") : (btAdapter ? btAdapter.enabled : false)
     readonly property var btPaired: btAdapter ? btAdapter.devices.values.filter(d => d.paired || d.bonded) : []
-    readonly property int btConnectedCount: btAdapter ? btAdapter.devices.values.filter(d => d.connected).length : 0
+    readonly property var btConnectedNames: fake.bt !== undefined ? (fake.bt === "connected" ? (fake.btDevices || ["Fake Headset"]) : [])
+        : (btAdapter ? btAdapter.devices.values.filter(d => d.connected).map(d => d.name || d.address) : [])
+    readonly property int btConnectedCount: btConnectedNames.length
     function setBtEnabled(on) {
         if (dryRun) { note("Bluetooth.defaultAdapter.enabled = " + on); return; }
         if (btAdapter) btAdapter.enabled = on;
@@ -140,10 +181,11 @@ Singleton {
     readonly property var sink: Pipewire.defaultAudioSink
     readonly property var source: Pipewire.defaultAudioSource
     PwObjectTracker { objects: [root.sink, root.source].filter(n => n) }
-    readonly property bool sinkReady: sink !== null && sink.audio !== null
+    readonly property bool sinkReady: fake.vol !== undefined || (sink !== null && sink.audio !== null)
     readonly property bool srcReady: source !== null && source.audio !== null
-    readonly property int sinkVol: sinkReady ? Math.round(sink.audio.volume * 100) : 0
-    readonly property bool sinkMuted: sinkReady ? sink.audio.muted : false
+    readonly property int sinkVol: fake.vol !== undefined ? fake.vol : (sinkReady ? Math.round(sink.audio.volume * 100) : 0)
+    readonly property bool sinkMuted: fake.muted !== undefined ? !!fake.muted : (sinkReady ? sink.audio.muted : false)
+    readonly property string sinkName: fake.sinkName !== undefined ? fake.sinkName : nodeLabel(sink)
     readonly property int srcVol: srcReady ? Math.round(source.audio.volume * 100) : 0
     readonly property bool srcMuted: srcReady ? source.audio.muted : false
     readonly property var sinks: Pipewire.nodes.values.filter(n => n.isSink && !n.isStream && n.audio !== null)
@@ -171,23 +213,23 @@ Singleton {
 
     // ---------------- battery ----------------
     readonly property var batt: UPower.displayDevice
-    readonly property bool hasBattery: batt !== null && batt.isPresent && (batt.isLaptopBattery || batt.energyCapacity > 0)
+    readonly property bool hasBattery: fake.batt !== undefined || (batt !== null && batt.isPresent && (batt.isLaptopBattery || batt.energyCapacity > 0))
     // Quickshell UPower percentage is a 0..1 fraction
-    readonly property int battPct: hasBattery ? Math.round(batt.percentage * 100) : 0
-    readonly property bool charging: hasBattery && (batt.state === UPowerDeviceState.Charging || batt.state === UPowerDeviceState.PendingCharge)
-    readonly property bool full: hasBattery && batt.state === UPowerDeviceState.FullyCharged
+    readonly property int battPct: fake.batt !== undefined ? fake.batt : (hasBattery ? Math.round(batt.percentage * 100) : 0)
+    readonly property bool charging: fake.batt !== undefined ? !!fake.charging : (hasBattery && (batt.state === UPowerDeviceState.Charging || batt.state === UPowerDeviceState.PendingCharge))
+    readonly property bool full: fake.batt !== undefined ? !!fake.full : (hasBattery && batt.state === UPowerDeviceState.FullyCharged)
     readonly property string battState: !hasBattery ? "" : (charging ? "CHARGING" : (full ? "FULL" : "DISCHARGING"))
     function fmtTime(sec) {
         if (!sec || sec <= 0) return "";
         const m = Math.round(sec / 60);
         return Math.floor(m / 60) + "h " + String(m % 60).padStart(2, "0") + "m";
     }
-    readonly property string battTime: !hasBattery ? "" : (charging ? fmtTime(batt.timeToFull) : (full ? "" : fmtTime(batt.timeToEmpty)))
+    readonly property string battTime: fake.battTime !== undefined ? fake.battTime : (!hasBattery ? "" : (charging ? fmtTime(batt.timeToFull) : (full ? "" : fmtTime(batt.timeToEmpty))))
 
     // ---------------- power profile ----------------
     property bool profilesAvailable: false
     property var profileList: []
-    property string profile: ""
+    property string profile: fake.profile !== undefined ? fake.profile : ""
     function refreshProfiles() { profList.running = false; profList.running = true; profGet.running = false; profGet.running = true; }
     function setProfile(p) {
         exec(["powerprofilesctl", "set", p]);
@@ -213,7 +255,7 @@ Singleton {
     Process {
         id: profGet
         command: ["sh", "-c", "command -v powerprofilesctl >/dev/null && powerprofilesctl get"]
-        stdout: StdioCollector { onStreamFinished: root.profile = text.trim() }
+        stdout: StdioCollector { onStreamFinished: { if (root.fake.profile === undefined) root.profile = text.trim(); } }
     }
 
     // ---------------- backlight ----------------
@@ -270,7 +312,6 @@ Singleton {
         onTriggered: { root.refreshBrightness(); root.profGetTick(); }
     }
     function profGetTick() { profGet.running = false; profGet.running = true; }
-    Component.onCompleted: refreshBrightness()
 
     // ---------------- media ----------------
     readonly property var player: {

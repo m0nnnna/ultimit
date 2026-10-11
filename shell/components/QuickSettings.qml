@@ -1,6 +1,6 @@
 // QuickSettings.qml - status-block popover: Wi-Fi, Bluetooth, sound, brightness, battery /
 // power profile, now playing and the power row. Overlay-layer, full-screen transparent window
-// (click outside / Escape closes) with the glass panel anchored under the status block.
+// (click outside / Escape closes) with the glass panel under the status block (SysState.qsAnchor "top") or above the bottom-bar tray ("bottom").
 // Open with a click on the status block or `qs ipc call quicksettings toggle|open|close`.
 // State and side effects live in SysState.qml (ULTIMIT_DRY_RUN=1 logs instead of acting).
 import QtQuick
@@ -116,11 +116,16 @@ PanelWindow {
 
     Rectangle {
         id: panel
+        // "top": under the desktop clock (top right). "bottom": above the tray cluster (bottom right).
+        readonly property bool atBottom: SysState.qsAnchor === "bottom"
         readonly property real topY: 100
+        readonly property real maxH: atBottom ? win.height - Config.tickerHeight - 6 - 12
+                                              : win.height - topY - Config.tickerHeight - 6
         width: 360
-        x: win.width - 24 - width
-        y: topY - (1 - win.reveal) * 10
-        height: Math.min(flick.contentHeight + 28, win.height - topY - Config.tickerHeight - 6)
+        x: win.width - (atBottom ? 8 : 24) - width
+        height: Math.min(flick.contentHeight + 28, maxH)
+        y: atBottom ? win.height - Config.tickerHeight - 6 - height + (1 - win.reveal) * 10
+                    : topY - (1 - win.reveal) * 10
         opacity: win.reveal
         color: Theme.panel
         border.width: 1
