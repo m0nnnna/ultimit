@@ -34,4 +34,5 @@ ufw
 unattended-upgrades
 # Apps
 deluge-gtk
+python3-libtorrent
 fastfetch
