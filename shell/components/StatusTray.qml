@@ -1,8 +1,10 @@
 // StatusTray.qml - the always-visible system tray at the right end of the bottom bar (Ticker.qml):
 //   [ app tray icons (SNI) | network  bluetooth  volume  battery  bell | clock ]
 // A thin left divider and a slightly darker panel set it apart from the ticker. Every status
-// element opens Quick Settings (anchored above the tray); each has Accessible.name, keyboard focus
-// (Tab / Enter) and a 500 ms hover tooltip drawn by WindowPopups.qml (WindowUi.showBarTip).
+// element opens its own flyout (Flyout.qml / FlyoutState.qml: network, sound, Bluetooth, battery,
+// clock + bell = notification centre); each has Accessible.name, keyboard focus (Tab / Enter) and a
+// 500 ms hover tooltip drawn by WindowPopups.qml (WindowUi.showBarTip). Quick Settings is now
+// opened from the big desktop clock (StatusBlock) and `qs ipc call quicksettings ...`.
 // State comes from SysState (ULTIMIT_FAKE_STATUS can override it for screenshots / tests).
 import QtQuick
 import Quickshell
@@ -18,7 +20,17 @@ Item {
 
     readonly property var days: ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
     function p2(n) { return String(n).padStart(2, "0"); }
-    function openQs() { SysState.toggleQs(root.screenName, "bottom"); }
+    function openFly(kind) { root.publish(); FlyoutState.toggle(kind, root.screenName); }
+    // Tell FlyoutState where the icons are (screen-global x; the bar window starts at the rail's edge).
+    property var flyButtons: []
+    function publish() {
+        FlyoutState.trayX = Config.railWidth + panel.mapToItem(null, 0, 0).x;
+        FlyoutState.trayW = panel.width;
+        for (const b of flyButtons) if (b.visible && b.fly !== "") FlyoutState.setAnchor(b.fly, b.centerX());
+    }
+    Connections { target: FlyoutState; function onOpenChanged() { root.publish(); } }
+    Component.onCompleted: publish()
+    onWidthChanged: publish()
 
     SystemClock { id: clock; precision: SystemClock.Minutes }
     readonly property date now: clock.date
@@ -49,14 +61,18 @@ Item {
         if (SysState.profile !== "") t += "\nPOWER PROFILE  " + SysState.profile.toUpperCase();
         return t;
     }
-    readonly property string bellTip: (Notifs.dnd ? "DO NOT DISTURB ON" : "NOTIFICATIONS") + "\n" + root.unread + " IN HISTORY  CLICK: " + (Notifs.dnd ? "ALLOW" : "MUTE")
+    readonly property string bellTip: (Notifs.dnd ? "DO NOT DISTURB ON" : "NOTIFICATIONS") + "\n" + root.unread + " IN HISTORY  RIGHT-CLICK: " + (Notifs.dnd ? "ALLOW" : "MUTE")
 
     // ---- one tray button: hover plate, focus ring, tooltip, click / wheel signals ----
     component StatusButton: Item {
         id: sb
         property string name: ""
         property string tip: ""
-        property bool lit: false          // accent plate (panel open)
+        property string fly: ""           // flyout this button opens ("" = none)
+        property bool lit: FlyoutState.open && FlyoutState.kind === sb.fly && sb.fly !== ""   // accent plate (flyout open)
+        Component.onCompleted: { if (sb.fly !== "") root.flyButtons = root.flyButtons.concat([sb]); }
+        onWidthChanged: root.publish()
+        onVisibleChanged: root.publish()
         default property alias content: slot.data
         signal clicked(int button)
         signal wheeled(int delta)
@@ -130,8 +146,9 @@ Item {
                 id: net
                 name: "Network: " + (SysState.netKind === "wifi" ? "Wi-Fi " + SysState.netName : (SysState.netKind === "eth" ? "Ethernet" : (root.airplane ? "Airplane mode" : "Offline")))
                 tip: root.netTip
+                fly: "network"
                 width: 28
-                onClicked: root.openQs()
+                onClicked: root.openFly("network")
                 StatusIcon {
                     anchors.centerIn: parent
                     kind: SysState.netKind === "eth" ? "eth" : (root.airplane ? "airplane" : "wifi")
@@ -146,8 +163,9 @@ Item {
                 visible: SysState.btAvailable
                 name: "Bluetooth: " + (!SysState.btOn ? "off" : (SysState.btConnectedCount > 0 ? SysState.btConnectedCount + " connected" : "on"))
                 tip: root.btTip
+                fly: "bluetooth"
                 width: visible ? 28 : 0
-                onClicked: root.openQs()
+                onClicked: root.openFly("bluetooth")
                 StatusIcon {
                     anchors.centerIn: parent
                     kind: "bt"
@@ -160,13 +178,14 @@ Item {
                 visible: SysState.sinkReady
                 name: "Volume: " + (SysState.sinkMuted ? "muted" : SysState.sinkVol + " percent")
                 tip: root.volTip
+                fly: "sound"
                 width: visible ? 28 : 0
                 property real acc: 0
                 onClicked: button => {
                     if (button === Qt.MiddleButton) {
                         SysState.toggleSinkMute();
                         Osd.flash("volume", SysState.sinkVol, !SysState.sinkMuted);
-                    } else root.openQs();
+                    } else root.openFly("sound");
                 }
                 onWheeled: delta => {
                     // 5 % per wheel notch (120 units); touchpads accumulate
@@ -192,8 +211,9 @@ Item {
                 name: "Battery: " + SysState.battPct + " percent" + (SysState.charging ? ", charging" : "")
                 tip: root.battTip
                 width: visible ? batt.width + 14 : 0
+                fly: "battery"
                 onHovered: SysState.refreshProfiles()
-                onClicked: root.openQs()
+                onClicked: root.openFly("battery")
                 Row {
                     id: batt
                     anchors.centerIn: parent
@@ -225,8 +245,9 @@ Item {
                 visible: Notifs.dnd || root.unread > 0
                 name: (Notifs.dnd ? "Do not disturb on, " : "Notifications, ") + root.unread + " in history"
                 tip: root.bellTip
+                fly: "clock"
                 width: visible ? 28 : 0
-                onClicked: button => { if (button === Qt.LeftButton) Notifs.toggleDnd(); }
+                onClicked: button => { if (button === Qt.LeftButton) root.openFly("clock"); else if (button === Qt.RightButton) Notifs.toggleDnd(); }
                 StatusIcon {
                     anchors.centerIn: parent
                     kind: "bell"
@@ -257,9 +278,9 @@ Item {
             StatusButton {
                 name: "Clock: " + root.timeText + ", " + root.dateText
                 tip: root.dateText
-                lit: false
+                fly: "clock"
                 width: clockText.implicitWidth + 20
-                onClicked: root.openQs()   // no notification-history panel exists yet: open Quick Settings
+                onClicked: root.openFly("clock")
                 Text {
                     id: clockText
                     anchors.centerIn: parent

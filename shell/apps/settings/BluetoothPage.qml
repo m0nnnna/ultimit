@@ -25,6 +25,14 @@ Page {
         startedScan = on;
     }
     Component.onDestruction: if (startedScan && ad) ad.discovering = false
+    // "Add device..." in the Bluetooth flyout asks for a scan (Config.btScanRequest)
+    function consumeScanRequest() {
+        if (!Config.btScanRequest) return;
+        Config.btScanRequest = false;
+        if (SysState.btOn) setScan(true);
+    }
+    Component.onCompleted: consumeScanRequest()
+    Connections { target: Config; function onBtScanRequestChanged() { pg.consumeScanRequest(); } }
 
     SectionLabel { text: "Adapter" }
     Text {

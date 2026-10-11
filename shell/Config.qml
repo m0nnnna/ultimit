@@ -35,6 +35,9 @@ Singleton {
     // Ask the Settings window to open on a page (id from SettingsWindow.pages), e.g. "rail", "news".
     property string settingsPage: ""
     property int settingsRequest: 0
+    // "Add device..." in the Bluetooth flyout: Settings > Bluetooth starts a scan when it shows the page.
+    property bool btScanRequest: false
+    function openBluetoothAdd() { btScanRequest = true; openSettings("bluetooth"); }
     function openSettings(page) { settingsPage = page || ""; settingsRequest++; accessoryOpen = true; }
     // Bumped to ask Boot.qml to (re)play the boot overlay.
     property int bootRequest: 0

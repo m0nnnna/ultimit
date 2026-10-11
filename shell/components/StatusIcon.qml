@@ -12,6 +12,8 @@
 //         "battery"  pct 0..100 fill in `tone`
 //         "bolt"     charging bolt (colour = `tone`)
 //         "bell"     `muted` = slashed (do-not-disturb)
+//         "mic"      `muted` = dim + slashed (sound flyout)
+//         "sun"      screen brightness (battery flyout)
 import QtQuick
 import QtQuick.Shapes
 import ".."
@@ -68,6 +70,13 @@ Item {
         }
         case "bolt":
             return [["M13 2L5 13.5h6L10 22l8-11.5h-6z", fg, false]];
+        case "mic": {
+            const m = "M9 3h6v9l-3 2-3-2z M5 11v2l7 5 7-5v-2 M12 18v3 M9 21h6";
+            if (root.muted) return [[m, dim, false], ["M3 3l18 18", Theme.warn, false]];
+            return [[m, fg, false]];
+        }
+        case "sun":
+            return [["M9 9h6v6H9z", fg, false], ["M12 3v3 M12 18v3 M3 12h3 M18 12h3 M5.5 5.5l2 2 M16.5 16.5l2 2 M5.5 18.5l2-2 M16.5 7.5l2-2", dim, false]];
         case "bell": {
             const bell = "M6 17v-6l3-6h6l3 6v6l2 2H4z M10 21.5h4";
             if (root.muted) return [[bell, dim, false], ["M3 3l18 18", Theme.warn, false]];

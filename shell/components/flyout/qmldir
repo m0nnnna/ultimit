@@ -1,0 +1,10 @@
+FlySlider 1.0 FlySlider.qml
+FlyRow 1.0 FlyRow.qml
+FlyLock 1.0 FlyLock.qml
+FlyBtn 1.0 FlyBtn.qml
+FlyHead 1.0 FlyHead.qml
+NetworkFlyout 1.0 NetworkFlyout.qml
+SoundFlyout 1.0 SoundFlyout.qml
+BluetoothFlyout 1.0 BluetoothFlyout.qml
+BatteryFlyout 1.0 BatteryFlyout.qml
+ClockFlyout 1.0 ClockFlyout.qml

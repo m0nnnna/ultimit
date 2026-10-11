@@ -68,6 +68,7 @@ ShellRoot {
             OsdOverlay  { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, volume/brightness OSD
             TrayMenu    { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, tray item menu
             ToastOverlay { screen: scope.modelData; screenName: scope.modelData.name }  // overlay, top-right toasts
+            Flyout      { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, tray icon flyouts
             QuickSettings { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, status-block popover
         }
     }

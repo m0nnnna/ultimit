@@ -12,17 +12,12 @@ Page {
 
     readonly property var nodes: Pipewire.nodes.values
     readonly property var outputs: nodes.filter(n => n.isSink && !n.isStream && n.audio !== null)
-    readonly property var inputs: nodes.filter(n => !n.isSink && !n.isStream && n.audio !== null)
-    readonly property var streams: nodes.filter(n => n.isStream && n.audio !== null && !n.isSink)
+    readonly property var inputs: SysState.sources
+    readonly property var streams: SysState.streams
     // bind node properties/audio for everything shown here
     PwObjectTracker { objects: pg.nodes.filter(n => n.audio !== null || n.isStream) }
 
-    function streamName(n) {
-        const p = n.properties || {};
-        const app = p["application.name"] || n.description || n.name;
-        const media = p["media.name"] || "";
-        return media && media !== app ? app + " — " + media : app;
-    }
+    function streamName(n) { return SysState.streamName(n); }
     function isDefault(n, d) { return d && n && d.id === n.id; }
 
     SectionLabel { text: "Output" }
@@ -69,10 +64,7 @@ Page {
                 title: SysState.nodeLabel(modelData)
                 selected: pg.isDefault(modelData, SysState.source)
                 badge: selected ? "default" : ""
-                onClicked: {
-                    if (SetSys.dryRun) SetSys.note("default source = " + SysState.nodeLabel(modelData));
-                    else Pipewire.preferredDefaultAudioSource = modelData;
-                }
+                onClicked: SysState.setDefaultSource(modelData)
             }
         }
         Text {
@@ -109,10 +101,7 @@ Page {
                 label: pg.streamName(sr.modelData)
                 from: 0; to: 100
                 value: sr.modelData.audio ? Math.round(sr.modelData.audio.volume * 100) : 0
-                onMoved: v => {
-                    if (SetSys.dryRun) SetSys.note("stream '" + pg.streamName(sr.modelData) + "' volume = " + v + "%");
-                    else if (sr.modelData.audio) sr.modelData.audio.volume = v / 100;
-                }
+                onMoved: v => SysState.setNodeVol(sr.modelData, v)
             }
         }
     }

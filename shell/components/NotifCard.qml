@@ -23,6 +23,10 @@ Rectangle {
     required property string command
     required property int rev
 
+    // In the notification-centre list: no expiry timer, no popup actions; the x removes it from history.
+    property bool inHistory: false
+    function dismissMe() { if (inHistory) Notifs.dismiss(nid); else Notifs.closePopup(nid); }
+
     readonly property var actionList: { try { return JSON.parse(actions); } catch (e) { return []; } }
     readonly property color accentColor: urgency === 2 ? Theme.bad : (urgency === 0 ? Theme.dim : Theme.accent)
     readonly property string pic: image !== "" ? image : icon
@@ -48,7 +52,7 @@ Rectangle {
     Timer {
         id: life
         interval: Math.max(50, card.remaining)
-        running: card.timeout > 0 && !hover.hovered
+        running: card.timeout > 0 && !hover.hovered && !card.inHistory
         onRunningChanged: {
             if (running) card.startedAt = Date.now();
             else if (card.startedAt > 0)
@@ -61,10 +65,11 @@ Rectangle {
     MouseArea {
         anchors.fill: parent
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
-        cursorShape: card.hasDefault ? Qt.PointingHandCursor : Qt.ArrowCursor
+        cursorShape: card.hasDefault && !card.inHistory ? Qt.PointingHandCursor : Qt.ArrowCursor
         onClicked: mouse => {
-            if (mouse.button === Qt.LeftButton && card.hasDefault) Notifs.invoke(card.nid, "default");
-            else Notifs.closePopup(card.nid);
+            if (card.inHistory) { if (mouse.button === Qt.MiddleButton) card.dismissMe(); }
+            else if (mouse.button === Qt.LeftButton && card.hasDefault) Notifs.invoke(card.nid, "default");
+            else card.dismissMe();
         }
     }
 
@@ -148,7 +153,7 @@ Rectangle {
                 }
             }
             Flow {
-                visible: card.actionList.length > 0
+                visible: card.actionList.length > 0 && !card.inHistory
                 width: parent.width
                 spacing: 6
                 topPadding: 4
@@ -180,7 +185,7 @@ Rectangle {
             anchors.fill: parent; anchors.margins: -4
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: Notifs.closePopup(card.nid)
+            onClicked: card.dismissMe()
         }
     }
 }

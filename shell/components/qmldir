@@ -26,3 +26,5 @@ WallpaperArt 1.0 WallpaperArt.qml
 LockSurface 1.0 LockSurface.qml
 PopupMenu 1.0 PopupMenu.qml
 RailMenu 1.0 RailMenu.qml
+singleton FlyoutState 1.0 FlyoutState.qml
+Flyout 1.0 Flyout.qml

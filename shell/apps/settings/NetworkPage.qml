@@ -81,7 +81,7 @@ Page {
                     ChamferButton {
                         visible: nrow.modelData.known && !nrow.connected
                         text: "Forget"
-                        onClicked: { if (SetSys.dryRun) SetSys.note("forget network " + nrow.modelData.name); else nrow.modelData.forget(); }
+                        onClicked: SysState.forgetWifi(nrow.modelData)
                     }
                     ChamferButton {
                         primary: !nrow.connected
