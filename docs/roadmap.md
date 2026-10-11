@@ -76,14 +76,16 @@ yaru-theme-gnome-shell. Follow with `apt autoremove` (review its list).
 
 ## Phase 5: everyday completeness (from docs/audit-2026-10-11.md)
 Windows-parity gaps found by the read-only audit, in priority order.
-- [ ] Tray flyouts: network, sound, Bluetooth, battery, clock/notifications (in progress)
-- [ ] Video/music player + codecs + video thumbnails (mpv, ffmpeg, ffmpegthumbnailer); MIME defaults incl. mailto -> NekoMail
-- [ ] Firewall on by default (ufw deny incoming)
+- [x] Tray flyouts: network, sound, Bluetooth, battery, clock/notifications
+- [x] Video/music player + codecs + video thumbnails (mpv, ffmpeg, ffmpegthumbnailer); MIME defaults (mailto -> NekoMail still open)
+- [x] Firewall on by default (ufw deny incoming)
 - [ ] Low-battery warning and critical action
 - [ ] Updates page in Settings (apt, flatpak, fwupd; reboot-needed; apply via pkexec)
 - [ ] App store over Flathub (install/remove/update flatpaks)
-- [ ] Window snapping (Super+Left/Right/Up), workspaces, Alt+Tab overlay
-- [ ] Shortcuts: Super+D/E/R/V/Space, configurable bindings, cheat sheet
+- [x] Window snapping (Super+Left/Right/Up/Down, drag to edges) and Alt+Tab overlay
+- [ ] Workspaces
+- [x] Shortcuts: Super+D/E/R/Tab, one key table (keys.c, `ultimitctl keys`, docs/keybindings.md)
+- [ ] Super+V/Space, configurable bindings, cheat sheet overlay
 - [ ] Wallpaper picker (images alongside the shard wallpaper)
 - [ ] Archives in DATA (extract/compress; 7z/zip/tar)
 - [ ] Users page (create user, change password)

@@ -1,0 +1,63 @@
+# Ultimit keybindings
+
+All compositor keybindings live in one table: `compositor/src/keys.c` (`bindings[]`).
+Edit it to add or change a shortcut; `ultimitctl keys` prints it as JSON (for a cheat sheet),
+and this page is generated from that output. "Gesture" rows are documentation only; their
+behaviour is implemented elsewhere (input.c, alttab.c).
+
+
+## Windows
+
+| Keys | Action |
+|---|---|
+| Alt+Tab | Switch windows (hold Alt, Tab to step, release to go) |
+| Alt+Shift+Tab | Switch windows, backwards |
+| Super+Tab | Switch windows (same as Alt+Tab) |
+| Super+Shift+Tab | Switch windows, backwards |
+| Escape | Cancel the window switcher (while it is open) |
+| Alt+F4 | Close window |
+| Super+Left | Snap left (repeat: 1/2, 1/3, 2/3; Super+Right restores) |
+| Super+Right | Snap right (repeat: 1/2, 1/3, 2/3; Super+Left restores) |
+| Super+Up | Maximize |
+| Super+Down | Restore a snapped/maximized window, otherwise minimize |
+| Alt+F10 | Maximize / restore |
+| Alt+F11 | Fullscreen |
+| Super+F | Fullscreen |
+| Super+D | Show desktop (minimize all; press again to restore) |
+| Drag titlebar to a screen edge | Snap to that half; the top edge maximizes |
+| Alt/Super + left drag | Move a window from anywhere |
+| Alt/Super + right drag | Resize a window from anywhere |
+
+## Apps
+
+| Keys | Action |
+|---|---|
+| Ctrl+Alt+T | Open a terminal |
+| Super+E | Open DATA (files) |
+| Super+R | Open the launcher |
+| Super (tap) | Open the launcher when Super is tapped on its own |
+
+## Session
+
+| Keys | Action |
+|---|---|
+| Super+L | Lock the screen |
+| Super+Shift+S | Screenshot a region |
+| Print | Screenshot the screen |
+| Ctrl+Alt+BackSpace | Quit Ultimit (log out) |
+| Ctrl+Alt+F1..F12 | Switch virtual terminal |
+
+## Media
+
+| Keys | Action |
+|---|---|
+| AudioRaiseVolume | Volume up |
+| AudioLowerVolume | Volume down |
+| AudioMute | Mute |
+| AudioMicMute | Mute microphone |
+| MonBrightnessUp | Brightness up |
+| MonBrightnessDown | Brightness down |
+| AudioPlay | Play / pause |
+| AudioPause | Play / pause |
+| AudioNext | Next track |
+| AudioPrev | Previous track |

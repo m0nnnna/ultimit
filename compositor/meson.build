@@ -72,6 +72,9 @@ executable(
 		'src/xdg.c',
 		'src/xwayland.c',
 		'src/layer.c',
+		'src/json.c',
+		'src/keys.c',
+		'src/alttab.c',
 		protocol_headers,
 	],
 	dependencies: [

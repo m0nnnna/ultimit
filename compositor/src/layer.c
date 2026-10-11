@@ -72,14 +72,11 @@ void layer_arrange(struct ul_output *output) {
 	bool changed = memcmp(&usable, &output->usable_area, sizeof(usable)) != 0;
 	output->usable_area = usable;
 	if (changed) {
-		/* Re-fit maximized windows on this output to the new free area. */
+		/* Re-fit maximized and snapped windows on this output to the new free area. */
 		struct ul_view *view;
 		wl_list_for_each(view, &output->server->views, link) {
-			if (view->maximized && output_for_view(view) == output) {
-				view->maximized = false;
-				struct wlr_box saved = view->saved;
-				view_set_maximized(view, true);
-				view->saved = saved;
+			if ((view->maximized || view->snapped) && output_for_view(view) == output) {
+				view_refit(view);
 			}
 		}
 	}

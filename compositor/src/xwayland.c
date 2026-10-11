@@ -188,7 +188,7 @@ static void x_request_configure(struct wl_listener *listener, void *data) {
 			event->x, event->y, event->width, event->height);
 		return;
 	}
-	if (view->fullscreen || view->maximized) {
+	if (view->fullscreen || view->maximized || view->snapped) {
 		/* Tell the client the size it already has. */
 		wlr_xwayland_surface_configure(view->xwayland_surface,
 			view->x, view->y, view->width, view->height);

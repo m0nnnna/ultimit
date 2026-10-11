@@ -191,6 +191,93 @@ void input_update_pointer_focus(struct ul_server *server, uint32_t time_msec) {
 	check_constraint(server, surface);
 }
 
+/* ---- drag-to-snap ----------------------------------------------------------- */
+
+static void preview_rects(struct ul_server *server, struct wlr_box box) {
+	static const float fill[4] = { 212 / 255.0f * 0.22f, 235 / 255.0f * 0.22f, 1.0f * 0.22f, 0.22f };
+	static const float edge[4] = { 212 / 255.0f * 0.85f, 235 / 255.0f * 0.85f, 1.0f * 0.85f, 0.85f };
+	const int t = 2;
+	if (!server->snap_preview) {
+		server->snap_preview = wlr_scene_tree_create(server->layers[UL_LAYER_GHOSTS]);
+		server->snap_preview_rects[0] = wlr_scene_rect_create(server->snap_preview, 1, 1, fill);
+		for (int i = 1; i < 5; i++) {
+			server->snap_preview_rects[i] = wlr_scene_rect_create(server->snap_preview, 1, 1, edge);
+		}
+	}
+	wlr_scene_node_set_position(&server->snap_preview->node, box.x, box.y);
+	struct { int x, y, w, h; } r[5] = {
+		{ 0, 0, box.width, box.height },
+		{ 0, 0, box.width, t }, { 0, box.height - t, box.width, t },
+		{ 0, 0, t, box.height }, { box.width - t, 0, t, box.height },
+	};
+	for (int i = 0; i < 5; i++) {
+		wlr_scene_rect_set_size(server->snap_preview_rects[i], r[i].w, r[i].h);
+		wlr_scene_node_set_position(&server->snap_preview_rects[i]->node, r[i].x, r[i].y);
+	}
+	wlr_scene_node_set_enabled(&server->snap_preview->node, true);
+}
+
+void input_snap_preview_hide(struct ul_server *server) {
+	server->snap_zone = UL_ZONE_NONE;
+	server->snap_zone_output = NULL;
+	if (server->snap_preview) {
+		wlr_scene_node_set_enabled(&server->snap_preview->node, false);
+	}
+}
+
+/* Where would the dragged window land if released now? Left/right screen
+ * edge: that half of the output; top edge: maximized. Edges shared with
+ * another output don't count, so crossing monitors never snaps. */
+static void update_snap_zone(struct ul_server *server) {
+	double cx = server->cursor->x, cy = server->cursor->y;
+	struct ul_output *out = output_at(server, cx, cy);
+	enum ul_snap_zone zone = UL_ZONE_NONE;
+	if (out && server->grabbed_view && !server->grabbed_view->fullscreen) {
+		struct wlr_box a = out->full_area;
+		if (cx <= a.x + UL_SNAP_EDGE && !output_at(server, a.x - 1, cy)) {
+			zone = UL_ZONE_LEFT;
+		} else if (cx >= a.x + a.width - 1 - UL_SNAP_EDGE &&
+				!output_at(server, a.x + a.width, cy)) {
+			zone = UL_ZONE_RIGHT;
+		} else if (cy <= a.y + UL_SNAP_EDGE && !output_at(server, cx, a.y - 1)) {
+			zone = UL_ZONE_MAXIMIZE;
+		}
+	}
+	if (zone == server->snap_zone && out == server->snap_zone_output) {
+		return;
+	}
+	if (zone == UL_ZONE_NONE) {
+		input_snap_preview_hide(server);
+		return;
+	}
+	server->snap_zone = zone;
+	server->snap_zone_output = out;
+	struct wlr_box box = out->usable_area;
+	if (zone != UL_ZONE_MAXIMIZE) {
+		box = view_snap_frame(box, zone == UL_ZONE_LEFT ? UL_SNAP_LEFT : UL_SNAP_RIGHT, 0);
+	}
+	preview_rects(server, box);
+}
+
+static void apply_snap_zone(struct ul_server *server) {
+	struct ul_view *view = server->grabbed_view;
+	enum ul_snap_zone zone = server->snap_zone;
+	struct ul_output *out = server->snap_zone_output;
+	input_snap_preview_hide(server);
+	if (!view || !out || zone == UL_ZONE_NONE || !view->mapped) {
+		return;
+	}
+	/* What Restore returns to should be on screen, on the target output. */
+	if (!view->maximized && !view->snapped) {
+		view_clamp_into(view, out->usable_area);
+	}
+	if (zone == UL_ZONE_MAXIMIZE) {
+		view_set_maximized(view, true);
+	} else {
+		view_snap(view, zone == UL_ZONE_LEFT ? UL_SNAP_LEFT : UL_SNAP_RIGHT, 0);
+	}
+}
+
 static void process_move(struct ul_server *server) {
 	struct ul_view *view = server->grabbed_view;
 	if (server->restore_on_drag) {
@@ -203,12 +290,13 @@ static void process_move(struct ul_server *server) {
 		server->restore_on_drag = false;
 		double rel = (server->press_x - view->x) / (double)(view->width ? view->width : 1);
 		int grab_y = server->press_y - view->y;
-		view_set_maximized(view, false);
+		view_restore(view);
 		server->grab_x = rel * view->saved.width;
 		server->grab_y = grab_y;
 	}
 	view_set_position(view, server->cursor->x - server->grab_x,
 		server->cursor->y - server->grab_y);
+	update_snap_zone(server);
 }
 
 static void process_resize(struct ul_server *server) {
@@ -301,6 +389,15 @@ static void end_interactive(struct ul_server *server) {
 	server->cursor_mode = UL_CURSOR_PASSTHROUGH;
 	server->grabbed_view = NULL;
 	server->restore_on_drag = false;
+	input_snap_preview_hide(server);
+}
+
+/* Button released (or the test hook's drop): snap if over a zone, then stop. */
+static void finish_grab(struct ul_server *server) {
+	if (server->cursor_mode == UL_CURSOR_MOVE) {
+		apply_snap_zone(server);
+	}
+	end_interactive(server);
 }
 
 static bool alt_held(struct ul_server *server) {
@@ -321,7 +418,7 @@ static void cursor_button(struct wl_listener *listener, void *data) {
 
 	if (event->state == WL_POINTER_BUTTON_STATE_RELEASED) {
 		if (server->cursor_mode != UL_CURSOR_PASSTHROUGH) {
-			end_interactive(server);
+			finish_grab(server);
 			return;
 		}
 		wlr_seat_pointer_notify_button(server->seat, event->time_msec,
@@ -430,88 +527,30 @@ static void request_set_shape(struct wl_listener *listener, void *data) {
 	}
 }
 
-/* ---- keyboard ------------------------------------------------------------ */
-
-static bool handle_keybinding(struct ul_server *server, uint32_t mods, xkb_keysym_t sym) {
-	bool ctrl = mods & WLR_MODIFIER_CTRL;
-	bool alt = mods & WLR_MODIFIER_ALT;
-	bool logo = mods & WLR_MODIFIER_LOGO;
-	struct ul_view *view = server->focused_view;
-
-	if (sym >= XKB_KEY_XF86Switch_VT_1 && sym <= XKB_KEY_XF86Switch_VT_12) {
-		if (server->session) {
-			wlr_session_change_vt(server->session, sym - XKB_KEY_XF86Switch_VT_1 + 1);
-		}
-		return true;
+/* Test hook (ultimitctl drag / drag-release): drive the real titlebar-drag
+ * path without a pointer that can hold a button. The first call grabs the
+ * window by the middle of its titlebar; every call then walks the pointer to
+ * layout X,Y in small steps. Release (or view == NULL) drops it. */
+void input_test_drag(struct ul_server *server, struct ul_view *view, int x, int y, bool release) {
+	if (release) {
+		if (server->cursor_mode != UL_CURSOR_PASSTHROUGH) finish_grab(server);
+		return;
 	}
-	/* Media keys work everywhere, including over the lock screen. */
-	static const struct { xkb_keysym_t sym; const char *cmd; } media[] = {
-		{ XKB_KEY_XF86AudioRaiseVolume, "ultimit-media volume up" },
-		{ XKB_KEY_XF86AudioLowerVolume, "ultimit-media volume down" },
-		{ XKB_KEY_XF86AudioMute, "ultimit-media volume mute" },
-		{ XKB_KEY_XF86AudioMicMute, "ultimit-media mic mute" },
-		{ XKB_KEY_XF86MonBrightnessUp, "ultimit-media brightness up" },
-		{ XKB_KEY_XF86MonBrightnessDown, "ultimit-media brightness down" },
-		{ XKB_KEY_XF86AudioPlay, "ultimit-media play-pause" },
-		{ XKB_KEY_XF86AudioPause, "ultimit-media play-pause" },
-		{ XKB_KEY_XF86AudioNext, "ultimit-media next" },
-		{ XKB_KEY_XF86AudioPrev, "ultimit-media prev" },
-	};
-	for (size_t i = 0; i < sizeof(media) / sizeof(media[0]); i++) {
-		if (sym == media[i].sym) {
-			server_spawn(media[i].cmd);
-			return true;
-		}
+	if (server->cursor_mode != UL_CURSOR_MOVE || server->grabbed_view != view) {
+		int bar = view->ssd ? UL_TITLEBAR_H : 0;
+		wlr_cursor_warp_closest(server->cursor, NULL, view->x + view->width / 2.0,
+			view->y - bar / 2.0 + (bar ? 0 : 10));
+		view_focus(view);
+		view_begin_interactive(view, UL_CURSOR_MOVE, 0);
 	}
-	/* Nothing else may get past the lock screen (not even quitting). */
-	if (server->locked) {
-		return false;
+	double sx = server->cursor->x, sy = server->cursor->y;
+	for (int i = 1; i <= 12; i++) {
+		wlr_cursor_warp_closest(server->cursor, NULL, sx + (x - sx) * i / 12.0, sy + (y - sy) * i / 12.0);
+		process_motion(server, 0);
 	}
-	if (ctrl && alt && sym == XKB_KEY_BackSpace) {
-		wl_display_terminate(server->display);
-		return true;
-	}
-	if (ctrl && alt && (sym == XKB_KEY_t || sym == XKB_KEY_T)) {
-		const char *term = getenv("ULTIMIT_TERMINAL");
-		server_spawn(term ? term : "foot || kitty || ptyxis --new-window || xterm");
-		return true;
-	}
-	if (alt && sym == XKB_KEY_Tab) {
-		view_focus_next(server);
-		return true;
-	}
-	if (alt && sym == XKB_KEY_F4) {
-		if (view) view_close(view);
-		return true;
-	}
-	if ((alt && sym == XKB_KEY_F11) || (logo && (sym == XKB_KEY_f || sym == XKB_KEY_F))) {
-		if (view) view_set_fullscreen(view, !view->fullscreen);
-		return true;
-	}
-	if ((alt && sym == XKB_KEY_F10) || (logo && sym == XKB_KEY_Up)) {
-		if (view) view_set_maximized(view, !view->maximized);
-		return true;
-	}
-	if (logo && sym == XKB_KEY_Down) {
-		if (view) view_set_minimized(view, true);
-		return true;
-	}
-	if (logo && (sym == XKB_KEY_l || sym == XKB_KEY_L)) {
-		server_spawn("ultimit-lock");
-		return true;
-	}
-	/* Screenshots (shell/bin/ultimit-screenshot): region picker, full screen. */
-	bool shift = mods & WLR_MODIFIER_SHIFT;
-	if (logo && shift && (sym == XKB_KEY_s || sym == XKB_KEY_S)) {
-		server_spawn("ultimit-screenshot area");
-		return true;
-	}
-	if (sym == XKB_KEY_Print) {
-		server_spawn("ultimit-screenshot full");
-		return true;
-	}
-	return false;
 }
+
+/* ---- keyboard ------------------------------------------------------------ */
 
 static void keyboard_key(struct wl_listener *listener, void *data) {
 	struct ul_keyboard *keyboard = wl_container_of(listener, keyboard, key);
@@ -528,8 +567,7 @@ static void keyboard_key(struct wl_listener *listener, void *data) {
 		server->super_tap = is_super;
 	} else if (is_super) {
 		if (server->super_tap && !server->locked) {
-			const char *cmd = getenv("ULTIMIT_LAUNCHER");
-			server_spawn(cmd ? cmd : "ultimit-launcher");
+			keys_super_tap(server);
 		}
 		server->super_tap = false;
 	}
@@ -541,7 +579,7 @@ static void keyboard_key(struct wl_listener *listener, void *data) {
 		int nsyms = xkb_state_key_get_syms(keyboard->wlr_keyboard->xkb_state,
 			event->keycode + 8, &syms);
 		for (int i = 0; i < nsyms && !handled; i++) {
-			handled = handle_keybinding(server, mods, syms[i]);
+			handled = keys_handle(server, mods, syms[i]);
 		}
 	}
 	if (!handled) {
@@ -553,6 +591,7 @@ static void keyboard_key(struct wl_listener *listener, void *data) {
 
 static void keyboard_modifiers(struct wl_listener *listener, void *data) {
 	struct ul_keyboard *keyboard = wl_container_of(listener, keyboard, modifiers);
+	alttab_modifiers(keyboard->server, wlr_keyboard_get_modifiers(keyboard->wlr_keyboard));
 	wlr_seat_set_keyboard(keyboard->server->seat, keyboard->wlr_keyboard);
 	wlr_seat_keyboard_notify_modifiers(keyboard->server->seat,
 		&keyboard->wlr_keyboard->modifiers);
@@ -560,6 +599,8 @@ static void keyboard_modifiers(struct wl_listener *listener, void *data) {
 
 static void keyboard_destroy(struct wl_listener *listener, void *data) {
 	struct ul_keyboard *keyboard = wl_container_of(listener, keyboard, destroy);
+	/* Its release of Alt/Super will never arrive: don't leave the switcher open. */
+	alttab_cancel(keyboard->server);
 	wl_list_remove(&keyboard->modifiers.link);
 	wl_list_remove(&keyboard->key.link);
 	wl_list_remove(&keyboard->destroy.link);

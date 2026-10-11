@@ -25,6 +25,7 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
 #include <wlr/xwayland/xwayland.h>
+#include <xkbcommon/xkbcommon.h>
 
 /* Scene layers, bottom to top. The optimized blur node sits between
  * UL_LAYER_BOTTOM and UL_LAYER_VIEWS, so glass samples the wallpaper. */
@@ -40,6 +41,27 @@ enum ul_layer {
 	UL_LAYER_LOCK, /* lock screen; covers everything while locked */
 	UL_LAYER_COUNT,
 };
+
+/* Window tiling (view.c): which half of the output a window is snapped to. */
+enum ul_snap {
+	UL_SNAP_NONE,
+	UL_SNAP_LEFT,
+	UL_SNAP_RIGHT,
+};
+
+/* What dropping a dragged window at the current pointer position would do. */
+enum ul_snap_zone {
+	UL_ZONE_NONE,
+	UL_ZONE_LEFT,
+	UL_ZONE_RIGHT,
+	UL_ZONE_MAXIMIZE,
+};
+
+#define UL_SNAP_STEPS 3        /* widths cycled by repeating Super+Left/Right: 1/2, 1/3, 2/3 */
+#define UL_SNAP_EDGE 6         /* px from the screen edge that arms drag-to-snap */
+#define UL_ALTTAB_MAX 64
+#define UL_ALTTAB_DELAY_MS 150 /* a quicker Alt+Tab never shows the overlay */
+#define UL_DESKTOP_MAX 128
 
 enum ul_cursor_mode {
 	UL_CURSOR_PASSTHROUGH,
@@ -168,7 +190,25 @@ struct ul_server {
 	double grab_x, grab_y;
 	struct wlr_box grab_box;
 	uint32_t resize_edges;
-	bool restore_on_drag; /* grabbed a maximized window; restore once it moves */
+	bool restore_on_drag; /* grabbed a maximized/snapped window; restore once it moves */
+	enum ul_snap_zone snap_zone;      /* drag-to-snap target under the pointer (input.c) */
+	struct ul_output *snap_zone_output;
+	struct wlr_scene_tree *snap_preview; /* translucent accent rectangle for the zone */
+	struct wlr_scene_rect *snap_preview_rects[5]; /* fill + 4 edges */
+
+	/* Alt+Tab switcher (alttab.c) */
+	struct {
+		bool active;
+		bool shown;           /* overlay announced to the shell */
+		uint32_t hold_mods;   /* the modifier(s) that must stay down */
+		int count, index;
+		unsigned ids[UL_ALTTAB_MAX]; /* view ids, most recently focused first */
+		struct wl_event_source *timer;
+	} alttab;
+
+	/* Show desktop (Super+D): the windows it minimized, most recent first */
+	unsigned desktop_ids[UL_DESKTOP_MAX];
+	int desktop_n;
 	double press_x, press_y;
 
 	/* Lock and idle (lock.c) */
@@ -274,7 +314,9 @@ struct ul_view {
 	int x, y;          /* layout position of the content's top-left */
 	int width, height; /* content size */
 	int geo_x, geo_y;  /* last seen xdg geometry offset (invisible margins) */
-	struct wlr_box saved; /* content box before maximize/fullscreen */
+	struct wlr_box saved; /* content box before maximize/snap/fullscreen */
+	enum ul_snap snapped;
+	int snap_step;        /* index into the 1/2, 1/3, 2/3 width cycle */
 
 	struct wl_event_source *anim_timer;
 	uint32_t anim_start;
@@ -332,7 +374,23 @@ void lock_arrange(struct ul_server *server);
 void idle_activity(struct ul_server *server);
 void idle_update_inhibit(struct ul_server *server);
 
+struct out;
+/* keys.c: the keybinding table */
+bool keys_handle(struct ul_server *server, uint32_t mods, xkb_keysym_t sym);
+void keys_write_json(struct out *o);
+void keys_super_tap(struct ul_server *server);
+
+/* alttab.c */
+bool alttab_active(struct ul_server *server);
+void alttab_step(struct ul_server *server, uint32_t mods, int dir);
+void alttab_modifiers(struct ul_server *server, uint32_t mods);
+bool alttab_key(struct ul_server *server, xkb_keysym_t sym);
+void alttab_cancel(struct ul_server *server);
+void alttab_view_gone(struct ul_server *server, unsigned id);
+
 /* ipc.c */
+void ipc_broadcast(const char *line);
+void ipc_emit_alttab(struct ul_server *server, const char *action);
 void ipc_init(struct ul_server *server, const char *wayland_socket);
 void ipc_finish(struct ul_server *server);
 
@@ -358,6 +416,8 @@ void input_init(struct ul_server *server);
 void input_update_pointer_focus(struct ul_server *server, uint32_t time_msec);
 void input_reapply_keyboards(struct ul_server *server);
 void input_focus_layer(struct ul_server *server, struct wlr_layer_surface_v1 *layer_surface);
+void input_test_drag(struct ul_server *server, struct ul_view *view, int x, int y, bool release);
+void input_snap_preview_hide(struct ul_server *server);
 
 /* view.c */
 struct ul_view *view_from_node(struct wlr_scene_node *node);
@@ -374,6 +434,14 @@ void view_set_position(struct ul_view *view, int x, int y);
 void view_request_size(struct ul_view *view, int width, int height);
 void view_update_size(struct ul_view *view, int width, int height);
 void view_set_maximized(struct ul_view *view, bool maximized);
+void view_snap(struct ul_view *view, enum ul_snap side, int step);
+void view_clear_snap(struct ul_view *view);
+void view_restore(struct ul_view *view); /* un-snap or un-maximize */
+void view_refit(struct ul_view *view);   /* re-fit a snapped/maximized window after the usable area changed */
+struct wlr_box view_snap_frame(struct wlr_box area, enum ul_snap side, int step);
+void view_clamp_into(struct ul_view *view, struct wlr_box area);
+struct ul_view *view_by_id(struct ul_server *server, unsigned id);
+void view_show_desktop(struct ul_server *server);
 void view_set_fullscreen(struct ul_view *view, bool fullscreen);
 void view_set_minimized(struct ul_view *view, bool minimized);
 void view_close(struct ul_view *view);

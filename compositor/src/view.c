@@ -6,6 +6,7 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 #include <xcb/xproto.h>
 #include "server.h"
 #include "theme.h"
@@ -192,12 +193,137 @@ static struct wlr_box output_box(struct ul_view *view, bool usable) {
 	return usable ? output->usable_area : output->full_area;
 }
 
+/* Tiled edges tell CSD clients to square their corners (xdg_toplevel
+ * set_tiled_*); X11 has no equivalent. */
+static void view_set_tiled(struct ul_view *view, enum ul_snap side) {
+	if (view->type != UL_VIEW_XDG) {
+		return;
+	}
+	uint32_t edges = 0;
+	if (side == UL_SNAP_LEFT) edges = WLR_EDGE_LEFT | WLR_EDGE_TOP | WLR_EDGE_BOTTOM;
+	if (side == UL_SNAP_RIGHT) edges = WLR_EDGE_RIGHT | WLR_EDGE_TOP | WLR_EDGE_BOTTOM;
+	wlr_xdg_toplevel_set_tiled(view->xdg_toplevel, edges);
+}
+
+/* Frame box (content + titlebar + border) of a snapped window: half, third
+ * or two thirds of the area, flush with the left or right edge. Left and
+ * right halves are floor/ceil so together they cover the area exactly. */
+struct wlr_box view_snap_frame(struct wlr_box area, enum ul_snap side, int step) {
+	int w;
+	switch (step) {
+	case 1: w = area.width / 3; break;
+	case 2: w = area.width - area.width / 3; break;
+	default: w = side == UL_SNAP_LEFT ? area.width / 2 : area.width - area.width / 2; break;
+	}
+	return (struct wlr_box){ side == UL_SNAP_LEFT ? area.x : area.x + area.width - w,
+		area.y, w, area.height };
+}
+
+static void view_apply_snap(struct ul_view *view) {
+	struct wlr_box area = output_box(view, true);
+	struct wlr_box f = view_snap_frame(area, view->snapped, view->snap_step);
+	int bar = view->ssd ? UL_TITLEBAR_H : 0;
+	view_set_position(view, f.x + UL_BORDER, f.y + bar + UL_BORDER);
+	view_request_size(view, f.width - 2 * UL_BORDER, f.height - bar - 2 * UL_BORDER);
+	view_set_tiled(view, view->snapped);
+	if (view->type == UL_VIEW_XDG && view->xdg_toplevel->base->initialized) {
+		wlr_xdg_surface_schedule_configure(view->xdg_toplevel->base);
+	}
+}
+
+/* Snap to the left/right of the output's usable area. A maximized window
+ * keeps its pre-maximize geometry as the thing to restore to. */
+void view_snap(struct ul_view *view, enum ul_snap side, int step) {
+	if (view->fullscreen || !view->mapped || side == UL_SNAP_NONE) {
+		return;
+	}
+	if (!view->snapped && !view->maximized) {
+		view->saved = (struct wlr_box){ view->x, view->y, view->width, view->height };
+	}
+	if (view->maximized) {
+		view->maximized = false;
+		if (view->type == UL_VIEW_XDG) {
+			wlr_xdg_toplevel_set_maximized(view->xdg_toplevel, false);
+		} else {
+			wlr_xwayland_surface_set_maximized(view->xwayland_surface, false, false);
+		}
+		if (view->foreign) {
+			wlr_foreign_toplevel_handle_v1_set_maximized(view->foreign, false);
+		}
+	}
+	view->snapped = side;
+	view->snap_step = step % UL_SNAP_STEPS;
+	view_apply_snap(view);
+}
+
+/* Forget the snap without moving or resizing (the user resized the window,
+ * or it is about to be maximized). */
+void view_clear_snap(struct ul_view *view) {
+	if (!view->snapped) {
+		return;
+	}
+	view->snapped = UL_SNAP_NONE;
+	view->snap_step = 0;
+	view_set_tiled(view, UL_SNAP_NONE);
+	if (view->type == UL_VIEW_XDG && view->xdg_toplevel->base->initialized) {
+		wlr_xdg_surface_schedule_configure(view->xdg_toplevel->base);
+	}
+}
+
+void view_restore(struct ul_view *view) {
+	if (view->maximized) {
+		view_set_maximized(view, false);
+	} else if (view->snapped) {
+		view_clear_snap(view);
+		view_set_position(view, view->saved.x, view->saved.y);
+		view_request_size(view, view->saved.width, view->saved.height);
+	}
+}
+
+void view_refit(struct ul_view *view) {
+	if (view->maximized) {
+		struct wlr_box saved = view->saved;
+		view->maximized = false;
+		view_set_maximized(view, true);
+		view->saved = saved;
+	} else if (view->snapped && !view->fullscreen) {
+		view_apply_snap(view);
+	}
+}
+
+/* Move a window so its frame lies inside area (used before snapping a
+ * dragged window, so what Restore returns to is on screen). */
+void view_clamp_into(struct ul_view *view, struct wlr_box area) {
+	int bar = view->ssd ? UL_TITLEBAR_H : 0;
+	int x = view->x, y = view->y;
+	if (x + view->width + UL_BORDER > area.x + area.width) x = area.x + area.width - UL_BORDER - view->width;
+	if (y + view->height + UL_BORDER > area.y + area.height) y = area.y + area.height - UL_BORDER - view->height;
+	if (x < area.x + UL_BORDER) x = area.x + UL_BORDER;
+	if (y < area.y + bar + UL_BORDER) y = area.y + bar + UL_BORDER;
+	view_set_position(view, x, y);
+}
+
+struct ul_view *view_by_id(struct ul_server *server, unsigned id) {
+	struct ul_view *view;
+	wl_list_for_each(view, &server->views, link) {
+		if (view->id == id) return view;
+	}
+	return NULL;
+}
+
 void view_set_maximized(struct ul_view *view, bool maximized) {
 	if (view->fullscreen || view->maximized == maximized) {
 		goto done;
 	}
 	if (maximized) {
-		view->saved = (struct wlr_box){ view->x, view->y, view->width, view->height };
+		if (view->snapped) {
+			/* Keep the geometry from before the snap as the restore target. */
+			view->snapped = UL_SNAP_NONE;
+			view->snap_step = 0;
+			view_set_tiled(view, UL_SNAP_NONE);
+		} else {
+			view->saved = (struct wlr_box){ view->x, view->y, view->width, view->height };
+		}
 		struct wlr_box area = output_box(view, true);
 		int bar = view->ssd ? UL_TITLEBAR_H : 0;
 		view->maximized = true;
@@ -236,7 +362,7 @@ void view_set_fullscreen(struct ul_view *view, bool fullscreen) {
 		goto done;
 	}
 	if (fullscreen) {
-		if (!view->maximized) {
+		if (!view->maximized && !view->snapped) {
 			view->saved = (struct wlr_box){ view->x, view->y, view->width, view->height };
 		}
 		struct wlr_box area = output_box(view, false);
@@ -252,6 +378,8 @@ void view_set_fullscreen(struct ul_view *view, bool fullscreen) {
 		if (view->maximized) {
 			view->maximized = false;
 			view_set_maximized(view, true);
+		} else if (view->snapped) {
+			view_apply_snap(view);
 		} else {
 			view_set_position(view, view->saved.x, view->saved.y);
 			view_request_size(view, view->saved.width, view->saved.height);
@@ -301,6 +429,49 @@ void view_set_minimized(struct ul_view *view, bool minimized) {
 	}
 }
 
+/* Super+D. First press minimizes every visible window and remembers them
+ * (most recently focused first); the next press, once nothing is visible,
+ * brings exactly those back, restoring the old stacking order and focus.
+ * If something was opened or restored in between, the press hides that too
+ * and adds it to the set. */
+void view_show_desktop(struct ul_server *server) {
+	unsigned order[UL_DESKTOP_MAX];
+	int n = 0;
+	struct ul_view *view;
+	wl_list_for_each(view, &server->views, link) {
+		if (view->mapped && !view->minimized && n < UL_DESKTOP_MAX) {
+			order[n++] = view->id;
+		}
+	}
+	if (n > 0) {
+		/* Merge with whatever an earlier press recorded, keeping ours first. */
+		unsigned merged[UL_DESKTOP_MAX];
+		int m = 0;
+		for (int i = 0; i < n; i++) merged[m++] = order[i];
+		for (int i = 0; i < server->desktop_n && m < UL_DESKTOP_MAX; i++) {
+			bool dup = false;
+			for (int j = 0; j < n; j++) dup |= order[j] == server->desktop_ids[i];
+			if (!dup) merged[m++] = server->desktop_ids[i];
+		}
+		for (int i = 0; i < n; i++) {
+			struct ul_view *v = view_by_id(server, order[i]);
+			if (v) view_set_minimized(v, true);
+		}
+		memcpy(server->desktop_ids, merged, m * sizeof(unsigned));
+		server->desktop_n = m;
+		return;
+	}
+	/* Restore least recently focused first so the original top window ends up on top. */
+	int count = server->desktop_n;
+	server->desktop_n = 0;
+	for (int i = count - 1; i >= 0; i--) {
+		struct ul_view *v = view_by_id(server, server->desktop_ids[i]);
+		if (v && v->mapped && v->minimized) {
+			view_focus(v);
+		}
+	}
+}
+
 void view_close(struct ul_view *view) {
 	anim_close_requested(view);
 	if (view->type == UL_VIEW_XDG) {
@@ -317,7 +488,10 @@ void view_begin_interactive(struct ul_view *view, enum ul_cursor_mode mode, uint
 	}
 	/* A maximized window only restores once it's actually dragged (see
 	 * process_move); restoring on press broke clicks and double-clicks. */
-	server->restore_on_drag = mode == UL_CURSOR_MOVE && view->maximized;
+	server->restore_on_drag = mode == UL_CURSOR_MOVE && (view->maximized || view->snapped);
+	if (mode == UL_CURSOR_RESIZE) {
+		view_clear_snap(view); /* a hand-resized window is no longer a tile */
+	}
 	server->press_x = server->cursor->x;
 	server->press_y = server->cursor->y;
 	server->grabbed_view = view;
@@ -531,7 +705,9 @@ void view_unmap(struct ul_view *view) {
 	if (server->grabbed_view == view) {
 		server->cursor_mode = UL_CURSOR_PASSTHROUGH;
 		server->grabbed_view = NULL;
+		input_snap_preview_hide(server);
 	}
+	alttab_view_gone(server, view->id);
 	if (server->last_click_view == view) {
 		server->last_click_view = NULL;
 	}
