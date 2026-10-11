@@ -97,6 +97,39 @@ Singleton {
         load();
         refreshDisk();
     }
+    // Address bar (Explorer-style): a folder opens, a file opens its folder
+    // with the file selected, anything else says so.
+    function goAddress(t) {
+        t = t.trim();
+        if (t === "") return;
+        if (t === "trash:" || t === "trash") { goTo(trashUri); return; }
+        if (t.startsWith("file://")) t = decodeURIComponent(t.slice(7));
+        let p = expand(t);
+        if (!p.startsWith("/")) p = join(path === trashUri ? home : (isArc ? dirname(arcFile) : path), p);
+        addrProbe.target = p;
+        addrProbe.exec(["sh", "-c", 'if [ -d "$1" ]; then echo dir; elif [ -e "$1" ]; then echo file; else echo none; fi', "sh", p]);
+    }
+    Process {
+        id: addrProbe
+        property string target: ""
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const kind = text.trim();
+                if (kind === "dir") root.goTo(addrProbe.target);
+                else if (kind === "file") { root.pendingSelect = addrProbe.target; root.goTo(root.dirname(addrProbe.target)); }
+                else root.toast("Can't find", addrProbe.target);
+            }
+        }
+    }
+    function copyAddress() {
+        const a = isTrash ? "trash:" : (isArc ? arcFile : path);
+        Quickshell.clipboardText = a;
+        toast("Address copied", a);
+    }
+    function pasteAddress() {
+        const t = (Quickshell.clipboardText || "").split("\n")[0];
+        if (t.trim() !== "") goAddress(t);
+    }
     function goBack() {
         if (!backStack.length) return;
         const b = backStack.slice(); const p = b.pop(); backStack = b;

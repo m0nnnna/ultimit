@@ -112,6 +112,13 @@ FloatingWindow {
         menu.kind = "item";
         menu.popup(x, y);
     }
+    function openAddressMenu(x, y) {
+        menu.items = [{ id: "addr-copy", label: "Copy address" },
+                      { id: "addr-paste", label: "Paste and go", disabled: (Quickshell.clipboardText || "").trim() === "" },
+                      { kind: "sep" }, { id: "addr-edit", label: "Edit address", hint: "Ctrl+L" }];
+        menu.kind = "addr";
+        menu.popup(x, y);
+    }
     function openBgMenu(x, y) {
         let items;
         if (Data.isTrash) {
@@ -159,6 +166,9 @@ FloatingWindow {
     function onMenuPicked(id) {
         switch (id) {
         case "open": Data.openSelected(); break;
+        case "addr-copy": Data.copyAddress(); break;
+        case "addr-paste": Data.pasteAddress(); break;
+        case "addr-edit": crumb.beginEdit(); break;
         case "openwith": Data.showOpenWith(); break;
         case "extracthere": Data.extractArchives(Data.archiveTargets(), "here", ""); break;
         case "extractfolder": Data.extractArchives(Data.archiveTargets(), "folder", ""); break;
@@ -337,6 +347,7 @@ FloatingWindow {
                 else if (event.key === Qt.Key_Right) Data.goForward();
                 else if (event.key === Qt.Key_Up) Data.goUp();
                 else if (event.key === Qt.Key_Home) Data.goTo(Data.home);
+                else if (event.key === Qt.Key_D) crumb.beginEdit();   // Explorer: Alt+D focuses the address bar
                 else event.accepted = false;
                 return;
             }
@@ -365,6 +376,7 @@ FloatingWindow {
                 if (Data.filter !== "") Data.filter = ""; else Data.clearSel();
                 return;
             case Qt.Key_F2: Data.startRename(); return;
+            case Qt.Key_F4: crumb.beginEdit(); return;   // Explorer: F4 opens the address bar
             case Qt.Key_F5: Data.refresh(true); return;
             case Qt.Key_Delete:
                 if (shift || Data.isTrash) Data.deleteSel(); else Data.trashSel();
@@ -569,12 +581,29 @@ FloatingWindow {
                     function endEdit() { editing = false; ui.forceActiveFocus(); }
 
                     Rectangle { anchors.fill: parent; color: "transparent"; border.width: 1; border.color: crumb.editing ? Theme.accent : Theme.line }
-                    MouseArea { anchors.fill: parent; onClicked: crumb.beginEdit(); cursorShape: Qt.IBeamCursor }
+                    // Explorer-style: click the bar to edit (all selected), right-click for
+                    // copy/paste; segments still navigate. The right end always stays free.
+                    MouseArea {
+                        anchors.fill: parent; cursorShape: Qt.IBeamCursor
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+                        onClicked: mouse => {
+                            if (mouse.button === Qt.RightButton) { const p = mapToItem(ui, mouse.x, mouse.y); win.openAddressMenu(p.x, p.y); }
+                            else crumb.beginEdit();
+                        }
+                    }
+                    Text {   // copy-address button at the right end
+                        id: copyAddr
+                        visible: !crumb.editing
+                        anchors { right: parent.right; rightMargin: 8; verticalCenter: parent.verticalCenter }
+                        text: "⧉"; color: copyMa.containsMouse ? Theme.accent : Theme.dim
+                        font.pixelSize: 14
+                        MouseArea { id: copyMa; anchors.fill: parent; anchors.margins: -6; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Data.copyAddress() }
+                    }
 
                     Item {
                         id: crumbClip
                         visible: !crumb.editing
-                        anchors { fill: parent; leftMargin: 10; rightMargin: 10 }
+                        anchors { fill: parent; leftMargin: 10; rightMargin: 48 }
                         clip: true
                         Row {
                             id: crumbRow
@@ -627,7 +656,7 @@ FloatingWindow {
                         verticalAlignment: TextInput.AlignVCenter
                         color: Theme.fg; selectionColor: Theme.accent; selectedTextColor: Theme.onAccent
                         font.family: Theme.mono; font.pixelSize: 12; clip: true
-                        onAccepted: { const t = text.trim(); crumb.endEdit(); if (t === "trash:" || t === "trash") Data.goTo(Data.trashUri); else if (t !== "") Data.goTo(t); }
+                        onAccepted: { const t = text; crumb.endEdit(); Data.goAddress(t); }
                         onActiveFocusChanged: if (!activeFocus && crumb.editing) crumb.editing = false
                         Keys.onPressed: event => { if (event.key === Qt.Key_Escape) { crumb.endEdit(); event.accepted = true; } }
                     }
