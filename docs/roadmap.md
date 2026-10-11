@@ -73,3 +73,29 @@ yaru-theme-gnome-shell. Follow with `apt autoremove` (review its list).
 - [x] Bug: X11 windows that commit their only frame before Xwayland's
       surface pairing never mapped (~1 in 25 launches under load). Fixed in
       xwayland.c (map on associate when a buffer is already there).
+
+## Phase 5: everyday completeness (from docs/audit-2026-10-11.md)
+Windows-parity gaps found by the read-only audit, in priority order.
+- [ ] Tray flyouts: network, sound, Bluetooth, battery, clock/notifications (in progress)
+- [ ] Video/music player + codecs + video thumbnails (mpv, ffmpeg, ffmpegthumbnailer); MIME defaults incl. mailto -> NekoMail
+- [ ] Firewall on by default (ufw deny incoming)
+- [ ] Low-battery warning and critical action
+- [ ] Updates page in Settings (apt, flatpak, fwupd; reboot-needed; apply via pkexec)
+- [ ] App store over Flathub (install/remove/update flatpaks)
+- [ ] Window snapping (Super+Left/Right/Up), workspaces, Alt+Tab overlay
+- [ ] Shortcuts: Super+D/E/R/V/Space, configurable bindings, cheat sheet
+- [ ] Wallpaper picker (images alongside the shard wallpaper)
+- [ ] Archives in DATA (extract/compress; 7z/zip/tar)
+- [ ] Users page (create user, change password)
+- [ ] Privacy indicators (camera/mic/screencast), screen recording, window capture for sharing
+- [ ] Clipboard history (Super+V) and emoji picker
+- [ ] Input methods (text-input-v3 / input-method-v2 in the compositor; IBus/Fcitx) and layout switching
+- [ ] Network extras: VPN/WireGuard import, hotspot, captive portal
+- [ ] Night light, accessibility toggles, logout/hibernate in the power menu
+- [ ] Session hygiene: stale oo7-daemon processes and logind sessions after restarts; keyring unlock with autologin
+
+## Phase 6: installable (ISO blockers, see the audit)
+- [ ] Install compositor, shell, session, deps (wlroots/scenefx/qs/oo7) system-wide under /opt/ultimit; no $HOME/.local/ultimit-deps or checkout paths
+- [ ] Session runs installed shell (no git-archive fallback); theme/icon/cursor install at package time, not per login
+- [ ] greetd config and autologin for the installing user, not "mino"; NekoMail packaged
+- [ ] distro/ manifest complete (ufw, unattended-upgrades, VPN plugins, fonts, players); snap removal list complete

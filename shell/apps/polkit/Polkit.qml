@@ -44,7 +44,7 @@ Scope {
         property string message: "Authentication is required to install software"
         property string iconName: ""
         property string actionId: "org.freedesktop.packagekit.package-install"
-        property var identities: [{ string: "mino", displayName: "Mino" }, { string: "root", displayName: "System Administrator" }]
+        property var identities: [{ string: Quickshell.env("USER") || "user", displayName: Quickshell.env("USER") || "User" }, { string: "root", displayName: "System Administrator" }]
         property var selectedIdentity: identities[0]
         property bool isResponseRequired: true
         property string inputPrompt: "Password:"
