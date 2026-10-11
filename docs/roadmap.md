@@ -87,7 +87,7 @@ Windows-parity gaps found by the read-only audit, in priority order.
 - [x] Shortcuts: Super+D/E/R/Tab, one key table (keys.c, `ultimitctl keys`, docs/keybindings.md)
 - [ ] Super+V/Space, configurable bindings, cheat sheet overlay
 - [ ] Wallpaper picker (images alongside the shard wallpaper)
-- [ ] Archives in DATA (extract/compress; 7z/zip/tar)
+- [x] Archives in DATA (extract here/to, browse inside, compress zip/7z/tar.gz, passwords, zip-slip safe)
 - [ ] Users page (create user, change password)
 - [ ] Privacy indicators (camera/mic/screencast), screen recording, window capture for sharing
 - [ ] Clipboard history (Super+V) and emoji picker

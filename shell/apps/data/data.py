@@ -7,6 +7,9 @@
   data.py apps <mime>              JSON [{id,name,icon,path,default}]
   data.py mime <path>              JSON {"mime": ..}
   data.py serve                    reads one JSON job spec per stdin line, streams JSON progress lines
+                                   (ops: copy move rename delete trash restore mkdir newfile emptytrash,
+                                   and the archive ops extract / compress, see arc.py)
+  data.py arc-ls <archive> [--pw]  JSON listing of an archive for the archive view (--pw: password on stdin line 1)
   data.py mtp                      JSON {ok, tool, root, devices[], mounts[]}: MTP phones (udev ID_MTP_DEVICE=1) + live mounts
   data.py mtp-mount <id>           start go-mtpfs detached for device <id>, wait until usable -> JSON {ok, mp, err, ...}
   data.py mtp-umount <mp> [lazy]   fusermount3 -u[z] (fallback fusermount), rmdir the mountpoint -> JSON {ok, err}
@@ -17,6 +20,8 @@ MTP env gates: ULTIMIT_FAKE_MTP=<json> fakes detection, ULTIMIT_FAKE_MTPFS=<scri
 Trash follows the freedesktop spec under $XDG_DATA_HOME/Trash (always the home trash).
 """
 import sys, os, json, re, stat, shutil, time, pwd, grp, subprocess, urllib.parse, configparser
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import arc
 
 HOME = os.path.expanduser("~")
 DATA_HOME = os.environ.get("XDG_DATA_HOME") or os.path.join(HOME, ".local", "share")
@@ -252,9 +257,6 @@ def cmd_apps(mime):
     out(res)
 
 # ---------------------------------------------------------------- job runner
-class Cancelled(Exception):
-    pass
-
 def unique_name(dst):
     d, n = os.path.split(dst)
     base, ext = os.path.splitext(n)
@@ -286,6 +288,9 @@ class Job:
         self.errors = []
         self.idx = 0
         self.results = []
+        self.warns = []           # non-fatal notes shown in the done toast
+        self.codes = []           # machine-readable failure codes (needpw / wrongpw / ...) for the UI to react to
+        self.retry = []           # indexes of items that failed with needpw / wrongpw
 
     def tick(self, name, force=False):
         now = time.time()
@@ -376,6 +381,10 @@ class Job:
                 try: os.unlink(os.path.join(TINFO, n))
                 except OSError: pass
             return
+        if op == "extract":
+            arc.do_extract(self, it); return
+        if op == "compress":
+            arc.do_compress(self, it); return
         if op in ("copy", "move"):
             dst = self.resolve(it)
             if dst is None:
@@ -478,9 +487,14 @@ class Job:
                 self.do(it)
                 if it["op"] == "delete":
                     self.delete_trash_info(it["src"])
+            except arc.ArcError as ex:
+                if ex.code in ("needpw", "wrongpw"):
+                    self.codes.append(ex.code); self.retry.append(i)
+                self.errors.append("%s: %s" % (name, ex))
             except Exception as ex:
                 self.errors.append("%s: %s" % (name, getattr(ex, "strerror", None) or str(ex)))
-        out({"done": True, "errors": self.errors, "results": self.results, "count": len(self.items)})
+        out({"done": True, "errors": self.errors, "results": self.results, "count": len(self.items),
+             "warns": self.warns, "codes": self.codes, "retry": self.retry})
 
 def cmd_serve():
     for line in sys.stdin:
@@ -725,6 +739,7 @@ def cmd_mtp_umount(mp, lazy):
     out({"ok": True})
 
 def main():
+    arc.init(mime_of_name, natkey)
     a = sys.argv[1:]
     try:
         if a[0] == "ls": cmd_ls(a[1])
@@ -732,13 +747,16 @@ def main():
         elif a[0] == "props": cmd_props(a[1:])
         elif a[0] == "apps": cmd_apps(a[1])
         elif a[0] == "mime": out({"mime": file_mime(a[1])})
-        elif a[0] == "serve": cmd_serve()
+        elif a[0] == "serve": arc.install_cancel_handler(); cmd_serve()
+        elif a[0] == "arc-ls": out(arc.cmd_arc_ls(a[1], "--pw" in a[2:]))
         elif a[0] == "mtp": cmd_mtp()
         elif a[0] == "mtp-mount": cmd_mtp_mount(a[1])
         elif a[0] == "mtp-umount": cmd_mtp_umount(a[1], len(a) > 2 and a[2] == "lazy")
     except BrokenPipeError:
         pass
     except KeyboardInterrupt:
+        pass
+    except arc.Cancelled:             # SIGTERM from the shell's Cancel: children and staging are already gone
         pass
 
 if __name__ == "__main__":

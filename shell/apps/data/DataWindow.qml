@@ -37,6 +37,7 @@ FloatingWindow {
     readonly property bool grid: Data.viewMode === "grid"
     readonly property var lv: grid ? gridView : listView
     readonly property int sideW: 196
+    readonly property int arcBarH: Data.isArc ? 34 : 0     // archive strip under the toolbar
     readonly property int cols: Math.max(1, Math.floor(gridView.width / gridView.cellWidth))
 
     // -------- drag ghost (internal drag and drop inside DATA)
@@ -69,11 +70,23 @@ FloatingWindow {
         const t = Data.targets();
         const one = t.length === 1 ? t[0] : null;
         let items;
+        const arcs = Data.archiveTargets();
+        const shorten = n => n.length > 13 ? n.slice(0, 12) + "…" : n;
         if (Data.isTrash) {
             items = [{ id: "restore", label: "Restore" }, { id: "delete", label: "Delete permanently", hint: "Del" },
                      { kind: "sep" }, { id: "props", label: "Properties" }];
+        } else if (Data.isArc) {
+            items = [{ id: "open", label: "Open", hint: "Enter" },
+                     { kind: "sep" },
+                     { id: "extractsel", label: "Extract selected…" }, { id: "extractall", label: "Extract all…" },
+                     { kind: "sep" }, { id: "props", label: "Archive properties" }];
         } else {
             items = [{ id: "open", label: one && one.d ? "Open" : "Open", hint: "Enter" }];
+            if (arcs.length) {
+                items.push({ id: "extracthere", label: "Extract here" });
+                if (arcs.length === 1) items.push({ id: "extractfolder", label: "Extract to “" + shorten(Data.archiveStem(arcs[0].n)) + "/”" });
+                items.push({ id: "extractto", label: "Extract to…" });
+            }
             if (one && !one.d) items.push({ id: "openwith", label: "Open with…" });
             if (one && one.d) items.push({ id: "openterm", label: "Open terminal here" });
             items.push({ kind: "sep" });
@@ -81,6 +94,11 @@ FloatingWindow {
             items.push({ id: "copy", label: "Copy", hint: "Ctrl+C" });
             if (one && one.d && Data.clipPaths.length) items.push({ id: "pasteinto", label: "Paste into folder" });
             items.push({ kind: "sep" });
+            if (t.length) {
+                items.push({ id: "compressquick", label: "Compress to “" + shorten(Data.compressBase(t) + ".zip") + "”" });
+                items.push({ id: "compress", label: "Compress…" });
+                items.push({ kind: "sep" });
+            }
             items.push({ id: "rename", label: "Rename", hint: "F2", disabled: t.length !== 1 });
             if (Data.onMtp) items.push({ id: "delete", label: "Delete permanently", hint: "Del" });   // no trash on phones
             else {
@@ -99,6 +117,12 @@ FloatingWindow {
         if (Data.isTrash) {
             items = [{ id: "emptytrash", label: "Empty Trash", disabled: Data.entries.length === 0 },
                      { id: "selectall", label: "Select all", hint: "Ctrl+A" }];
+        } else if (Data.isArc) {
+            items = [{ id: "extractall", label: "Extract all…" }, { kind: "sep" },
+                     { id: "viewlist", label: "List view", check: !win.grid }, { id: "viewgrid", label: "Grid view", check: win.grid },
+                     { kind: "sep" }].concat(sortItems()).concat([
+                     { kind: "sep" }, { id: "selectall", label: "Select all", hint: "Ctrl+A" },
+                     { id: "props", label: "Archive properties" }]);
         } else {
             items = [{ id: "newfolder", label: "New folder", hint: "Ctrl+Shift+N" }, { id: "newfile", label: "New file" },
                      { id: "paste", label: "Paste", hint: "Ctrl+V", disabled: Data.clipPaths.length === 0 },
@@ -136,6 +160,13 @@ FloatingWindow {
         switch (id) {
         case "open": Data.openSelected(); break;
         case "openwith": Data.showOpenWith(); break;
+        case "extracthere": Data.extractArchives(Data.archiveTargets(), "here", ""); break;
+        case "extractfolder": Data.extractArchives(Data.archiveTargets(), "folder", ""); break;
+        case "extractto": Data.extractToDialog(); break;
+        case "extractall": Data.extractAllDialog(); break;
+        case "extractsel": Data.extractSelectedDialog(); break;
+        case "compressquick": Data.compressQuick(); break;
+        case "compress": Data.compressDialog(); break;
         case "openterm": {
             const t = Data.targets();
             if (menu.kind === "item" && t.length === 1 && t[0].d) { Data.goTo(t[0].p); }
@@ -267,7 +298,7 @@ FloatingWindow {
             id: sdrop
             anchors.fill: parent
             keys: ["data-file"]
-            enabled: sr.dropPath !== "" && !Data.isTrash
+            enabled: sr.dropPath !== "" && !Data.isTrash && !Data.isArc
             onDropped: drop => { drop.accept(); Data.dropOn(sr.dropPath, ghost.paths, ghost.copy); }
         }
     }
@@ -521,12 +552,20 @@ FloatingWindow {
                     readonly property var segs: {
                         const out = [];
                         if (Data.isTrash) { out.push({ label: "trash", path: Data.trashUri }); return out; }
+                        if (Data.isArc) {
+                            let ai = "";
+                            for (const p of Data.arcInner.split("/").filter(x => x !== "")) {
+                                ai = ai === "" ? p : ai + "/" + p;
+                                out.push({ label: p, path: Data.arcLoc(Data.arcFile, ai) });
+                            }
+                            return out;
+                        }
                         const parts = Data.path.split("/").filter(x => x !== "");
                         let acc = "";
                         for (const p of parts) { acc += "/" + p; out.push({ label: p, path: acc }); }
                         return out;
                     }
-                    function beginEdit() { editing = true; pathInput.text = Data.isTrash ? "trash:" : Data.path; pathInput.forceActiveFocus(); pathInput.selectAll(); }
+                    function beginEdit() { editing = true; pathInput.text = Data.isTrash ? "trash:" : (Data.isArc ? Data.arcFile : Data.path); pathInput.forceActiveFocus(); pathInput.selectAll(); }
                     function endEdit() { editing = false; ui.forceActiveFocus(); }
 
                     Rectangle { anchors.fill: parent; color: "transparent"; border.width: 1; border.color: crumb.editing ? Theme.accent : Theme.line }
@@ -546,11 +585,11 @@ FloatingWindow {
                                 width: rootT.implicitWidth + 8; height: parent.height
                                 Text {
                                     id: rootT; anchors.verticalCenter: parent.verticalCenter
-                                    text: "/"; color: rootMa.containsMouse || rootDrop.containsDrag ? Theme.accent : (crumb.segs.length === 0 ? Theme.fg : Theme.dim)
+                                    text: Data.isArc ? Data.basename(Data.arcFile) + " /" : "/"; color: rootMa.containsMouse || rootDrop.containsDrag ? Theme.accent : (crumb.segs.length === 0 ? Theme.fg : Theme.dim)
                                     font.family: Theme.mono; font.pixelSize: 12
                                 }
-                                MouseArea { id: rootMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Data.goTo("/") }
-                                DropArea { id: rootDrop; anchors.fill: parent; keys: ["data-file"]; enabled: !Data.isTrash
+                                MouseArea { id: rootMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Data.goTo(Data.isArc ? Data.arcLoc(Data.arcFile, "") : "/") }
+                                DropArea { id: rootDrop; anchors.fill: parent; keys: ["data-file"]; enabled: !Data.isTrash && !Data.isArc
                                     onDropped: drop => { drop.accept(); Data.dropOn("/", ghost.paths, ghost.copy); } }
                             }
                             Repeater {
@@ -574,7 +613,7 @@ FloatingWindow {
                                             font.family: Theme.mono; font.pixelSize: 12; font.letterSpacing: 0.7
                                         }
                                         MouseArea { id: segMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Data.goTo(modelData.path) }
-                                        DropArea { id: segDrop; anchors.fill: parent; keys: ["data-file"]; enabled: !Data.isTrash && modelData.path !== Data.trashUri
+                                        DropArea { id: segDrop; anchors.fill: parent; keys: ["data-file"]; enabled: !Data.isTrash && !Data.isArc && modelData.path !== Data.trashUri
                                             onDropped: drop => { drop.accept(); Data.dropOn(modelData.path, ghost.paths, ghost.copy); } }
                                     }
                                 }
@@ -595,11 +634,34 @@ FloatingWindow {
                 }
             }
 
+            // ---- archive strip: what is open + Extract all… / Extract selected…
+            Item {
+                id: arcBar
+                visible: Data.isArc
+                x: 12; y: 44; width: parent.width - 24; height: win.arcBarH
+                Row {
+                    id: arcBtns
+                    anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+                    spacing: 8
+                    GButton { height: 24; text: "Extract selected…"; enabled: Data.selCount > 0 || Data.cur >= 0; onClicked: Data.extractSelectedDialog() }
+                    GButton { height: 24; primary: true; text: "Extract all…"; onClicked: Data.extractAllDialog() }
+                }
+                Text {
+                    anchors { left: parent.left; right: arcBtns.left; rightMargin: 12; verticalCenter: parent.verticalCenter }
+                    elide: Text.ElideRight
+                    text: !Data.arcListing ? "ARCHIVE · READING…"
+                        : "ARCHIVE · " + Data.arcListing.type.toUpperCase() + " · " + Data.arcListing.count + (Data.arcListing.count === 1 ? " ENTRY" : " ENTRIES")
+                          + " · " + Data.fmtSize(Data.arcListing.size).toUpperCase() + (Data.arcListing.enc ? " · ENCRYPTED" : "") + " · READ-ONLY"
+                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.4
+                }
+                Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line; visible: false }
+            }
+
             // ---- column header (list mode)
             Item {
                 id: header
                 visible: !win.grid
-                x: 12; y: 48; width: parent.width - 24; height: 24
+                x: 12; y: 48 + win.arcBarH; width: parent.width - 24; height: 24
                 readonly property int sizeW: 84
                 readonly property int modW: 128
                 readonly property int typeW: width > 620 ? 150 : 0
@@ -630,7 +692,7 @@ FloatingWindow {
             // ---- listing area
             Item {
                 id: area
-                x: 12; y: win.grid ? 48 : 73
+                x: 12; y: (win.grid ? 48 : 73) + win.arcBarH
                 width: parent.width - 24
                 height: parent.height - y - statusBar.height - (progress.visible ? progress.height : 0)
                 clip: true
@@ -664,7 +726,7 @@ FloatingWindow {
                         EntryMouse { id: rowMa; anchors.fill: parent; host: win; entry: row.modelData; idx: row.index }
                         DropArea {
                             id: rowDrop; anchors.fill: parent; keys: ["data-file"]
-                            enabled: row.modelData.d && !Data.isTrash && !row.sel
+                            enabled: row.modelData.d && !Data.isTrash && !Data.isArc && !row.sel
                             onDropped: drop => { drop.accept(); Data.dropOn(row.modelData.p, ghost.paths, ghost.copy); }
                         }
                         Item {
@@ -752,7 +814,7 @@ FloatingWindow {
                         EntryMouse { id: cellMa; anchors.fill: parent; host: win; entry: cell.modelData; idx: cell.index }
                         DropArea {
                             id: cellDrop; anchors.fill: parent; keys: ["data-file"]
-                            enabled: cell.modelData.d && !Data.isTrash && !cell.sel
+                            enabled: cell.modelData.d && !Data.isTrash && !Data.isArc && !cell.sel
                             onDropped: drop => { drop.accept(); Data.dropOn(cell.modelData.p, ghost.paths, ghost.copy); }
                         }
                         Item {

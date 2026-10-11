@@ -39,7 +39,7 @@ MouseArea {
             && Data.selCount > 1 && Data.isSel(entry.p)) Data.selectOnly(idx);
     }
     onPositionChanged: mouse => {
-        if (!pressed || !(pressedButtons & Qt.LeftButton) || Data.isTrash) return;
+        if (!pressed || !(pressedButtons & Qt.LeftButton) || Data.isTrash || Data.isArc) return;
         if (!dragging && Math.abs(mouse.x - px) + Math.abs(mouse.y - py) > 10) {
             dragging = true;
             host.ghostStart(Data.dragPaths(entry), entry.n);

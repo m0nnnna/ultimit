@@ -10,6 +10,10 @@ pragma Singleton
 //   ULTIMIT_FAKE_LSBLK=<file>  read lsblk JSON from a file (fake removable drives)
 //   ULTIMIT_FAKE_MTP=<json>    fake MTP phones: [{id,vendor,model,serial,bus,dev}] (see data.py)
 //   ULTIMIT_FAKE_MTPFS=<exe>   stand-in for go-mtpfs (called: exe [-dev RE] MOUNTPOINT)
+//   ULTIMIT_7Z=<exe>           7-Zip binary used by arc.py (default: 7zz / 7z / 7za on PATH)
+// Archives (see arc.py): archives open like folders (read-only "archive view", virtual location
+// "arc:<archive>\u0001<inner dir>"), context menu Extract here / Extract to / Compress, passwords go to
+// 7z over stdin only.  Extraction never overwrites: it lands in a new, non-conflicting name.
 // Entry points:  Data.show(path) / Data.toggle()  (QML)
 //                qs -p <shell> ipc call data open <path> | toggle   (see DataWindow.qml)
 import QtQuick
@@ -43,6 +47,14 @@ Singleton {
     // ---------------------------------------------------------------- location + history
     property string path: ""
     readonly property bool isTrash: path === trashUri
+    // archive view: path = "arc:" + archive file + arcSep + inner directory ("" = archive root)
+    readonly property string arcSep: "\u0001"
+    readonly property bool isArc: path.startsWith("arc:")
+    readonly property string arcFile: isArc ? path.slice(4, path.indexOf(arcSep)) : ""
+    readonly property string arcInner: isArc ? path.slice(path.indexOf(arcSep) + 1) : ""
+    function arcLoc(file, inner) { return "arc:" + file + arcSep + inner; }
+    // a real directory on disk that "here" means (df meter, terminal, extraction destination)
+    readonly property string fsPath: isTrash ? home : (isArc ? dirname(arcFile) : (path || home))
     property var backStack: []
     property var fwdStack: []
     property bool loading: false
@@ -65,12 +77,15 @@ Singleton {
     }
     function title() {
         if (isTrash) return "Trash";
+        if (isArc) return basename(arcFile);
         return path === "/" ? "/" : basename(path);
     }
 
     function goTo(p, noHistory) {
-        p = p === trashUri ? p : expand(p);
-        if (p !== trashUri && !p.startsWith("/")) p = join(path === trashUri ? home : path, p);
+        const toArc = p.startsWith("arc:");
+        p = (p === trashUri || toArc) ? p : expand(p);
+        if (p !== trashUri && !toArc && !p.startsWith("/")) p = join(path === trashUri ? home : (isArc ? dirname(arcFile) : path), p);
+        if (!toArc) arcListing = null;
         if (!noHistory && path !== "" && p !== path) {
             const b = backStack.slice(); b.push(path); backStack = b; fwdStack = [];
         }
@@ -96,6 +111,11 @@ Singleton {
     }
     function goUp() {
         if (isTrash) { goTo(home); return; }
+        if (isArc) {
+            if (arcInner !== "") { const i = arcInner.lastIndexOf("/"); pendingSelect = path; goTo(arcLoc(arcFile, i < 0 ? "" : arcInner.slice(0, i))); }
+            else { pendingSelect = arcFile; goTo(dirname(arcFile)); }
+            return;
+        }
         if (path === "/") return;
         const from = path;
         pendingSelect = from;
@@ -107,6 +127,7 @@ Singleton {
     property bool loadQueued: false
     function load() {
         if (path === "") return;
+        if (isArc) { loadArc(); return; }
         if (lister.running) { loadQueued = true; return; }
         loading = true;
         lister.listPath = path;
@@ -151,7 +172,7 @@ Singleton {
     // Directory changes made elsewhere: poll the directory's mtime (cheap) while DATA is open.
     Timer {
         interval: 2000; repeat: true
-        running: root.open && root.path !== "" && !root.loading && !root.isTrash
+        running: root.open && root.path !== "" && !root.loading && !root.isTrash && !root.isArc
         onTriggered: if (!statProc.running && !lister.running) statProc.running = true
     }
     Timer {   // trash has no single mtime we can trust across entries: re-list while shown
@@ -282,7 +303,9 @@ Singleton {
     function openEntry(e) {
         if (!e) return;
         if (isTrash) { toast("Trash", "Restore “" + e.n + "” to open it."); return; }
+        if (isArc) { if (e.d) goTo(e.p); else openArcFile(e); return; }
         if (e.d) { goTo(e.p); return; }
+        if (isArchive(e)) { goTo(arcLoc(e.p, "")); return; }   // archives open like folders
         run(["xdg-open", e.p], "xdg-open " + e.p);
     }
     function openSelected() {
@@ -295,7 +318,7 @@ Singleton {
         Quickshell.execDetached(argv);
     }
     function openTerminalHere() {
-        const dir = isTrash ? home : path;
+        const dir = fsPath;
         if (!Config.terminalCmd) { toast("Terminal", "No terminal installed. Try: sudo apt install foot"); return; }
         if (dryRun) { console.log("DATA dry-run: terminal in " + dir + " via " + Config.terminalCmd); return; }
         Quickshell.execDetached({ command: ["sh", "-c", Config.terminalCmd], workingDirectory: dir });
@@ -306,7 +329,7 @@ Singleton {
     property string appsMime: ""
     function showOpenWith() {
         const t = targets();
-        if (!t.length || t[0].d || isTrash) return;
+        if (!t.length || t[0].d || isTrash || isArc) return;
         appsTarget = t[0];
         apps = []; appsMime = t[0].t;
         dialog = { kind: "openwith", entry: t[0] };
@@ -329,10 +352,22 @@ Singleton {
     // ---------------------------------------------------------------- dialogs
     // { kind: "confirm", title, text, ok, danger, action: fn } | { kind: "conflict", ... }
     // | { kind: "props" } | { kind: "openwith", entry }
+    // | { kind: "password", title, text, ok, action: fn({pw}), onCancel? }
+    // | { kind: "input", title, text, value, ok, action: fn({text}) }
+    // | { kind: "compress", count, name, fmt, action: fn({name, fmt, pw}) }
     property var dialog: null
     function closeDialog() {
-        if (dialog && dialog.kind === "props") propsProc.running = false;
+        const d = dialog;
+        if (d && d.kind === "props") propsProc.running = false;
         dialog = null;
+        if (d && d.onCancel) d.onCancel();
+    }
+    // password / input / compress dialogs: DDialog hands the entered values here
+    function submitDialog(v) {
+        const d = dialog;
+        if (!d || !d.action) return;
+        dialog = null;
+        d.action(v);
     }
     function confirm(title, text, ok, action, danger) {
         dialog = { kind: "confirm", title: title, text: text, ok: ok, action: action, danger: !!danger };
@@ -351,10 +386,10 @@ Singleton {
     // ---------------------------------------------------------------- clipboard
     property var clipPaths: []
     property bool clipCut: false
-    function copySel() { const t = targets(); if (isTrash || !t.length) return; clipPaths = t.map(e => e.p); clipCut = false; }
-    function cutSel() { const t = targets(); if (isTrash || !t.length) return; clipPaths = t.map(e => e.p); clipCut = true; }
+    function copySel() { const t = targets(); if (isTrash || isArc || !t.length) return; clipPaths = t.map(e => e.p); clipCut = false; }
+    function cutSel() { const t = targets(); if (isTrash || isArc || !t.length) return; clipPaths = t.map(e => e.p); clipCut = true; }
     function paste() {
-        if (isTrash || !clipPaths.length) return;
+        if (isTrash || isArc || !clipPaths.length) return;
         transfer(clipPaths, path, clipCut ? "move" : "copy");
         if (clipCut) clipPaths = [];
     }
@@ -408,7 +443,7 @@ Singleton {
     }
     // Drag and drop inside DATA (move; Ctrl = copy). Dropping on the current folder is a no-op.
     function dropOn(dir, srcs, copy) {
-        if (isTrash) return;
+        if (isTrash || isArc) return;
         srcs = srcs.filter(s => dirname(s) !== dir || copy);
         if (!srcs.length) return;
         transfer(srcs, dir, copy ? "copy" : "move");
@@ -463,14 +498,19 @@ Singleton {
     function jobDone(m) {
         const j = curJob;
         const n = m.count - m.errors.length;
-        if (m.errors.length) toast(j.done ? j.done : "Error", m.errors.length + " failed: " + m.errors[0]);
+        const pwFail = m.retry && m.retry.length > 0;          // archive needs / rejected a password: ask again
+        const warn = m.warns && m.warns.length ? "  (" + m.warns.join("; ") + ")" : "";
+        if (pwFail && m.errors.length === m.retry.length) { /* handled by the password prompt below */ }
+        else if (m.errors.length) toast(j.fail ? j.fail : (j.done ? j.done : "Error"), (j.fail ? "" : m.errors.length + " failed: ") + m.errors[0]);
+        else if (j.doneMsg) toast(j.done, j.doneMsg(m) + warn);
         else if (j.done) toast(j.done, n + (n === 1 ? " item" : " items") + (j.dest ? " → " + (j.dest === trashUri ? "Trash" : basename(j.dest) || "/") : ""));
         refresh(true);
         if (j.selectResults && m.results.length) {
             const sel = {}; for (const r of m.results) sel[r] = true;
             pendingSel = sel; selectAfterLoad.restart();
         }
-        if (j.after) j.after(m);
+        if (pwFail && j.items) retryWithPassword(j, m);
+        else if (j.after) j.after(m);
         curJob = null; jobActive = false;
         refreshDisk();
         nextJob();
@@ -490,17 +530,221 @@ Singleton {
         }
     }
 
+    // ---------------------------------------------------------------- archives
+    // Recognition: by extension or MIME.  7z (via arc.py) does the work; passwords are only ever written to
+    // 7z's stdin (listing: `data.py arc-ls --pw` reads line 1 of its stdin; jobs: inside the JSON job line).
+    readonly property var archiveMimes: ({
+        "application/zip": 1, "application/x-zip-compressed": 1, "application/x-7z-compressed": 1, "application/vnd.rar": 1,
+        "application/x-rar": 1, "application/x-rar-compressed": 1, "application/x-tar": 1, "application/gzip": 1,
+        "application/x-gzip": 1, "application/x-bzip2": 1, "application/x-bzip": 1, "application/x-xz": 1,
+        "application/zstd": 1, "application/x-zstd": 1, "application/x-compressed-tar": 1, "application/x-bzip-compressed-tar": 1,
+        "application/x-bzip2-compressed-tar": 1, "application/x-xz-compressed-tar": 1, "application/x-zstd-compressed-tar": 1,
+        "application/x-lzma-compressed-tar": 1, "application/x-lzma": 1, "application/x-cd-image": 1, "application/x-iso9660-image": 1,
+        "application/vnd.ms-cab-compressed": 1, "application/x-cab": 1, "application/java-archive": 1,
+        "application/vnd.android.package-archive": 1, "application/vnd.debian.binary-package": 1, "application/x-deb": 1,
+        "application/x-rpm": 1, "application/x-cpio": 1, "application/x-lzh-compressed": 1, "application/x-war": 1
+    })
+    readonly property var archiveExtRe: /\.(zip|7z|rar|tar|tgz|tbz2?|txz|tzst|gz|bz2|xz|zst|lzma|iso|cab|jar|apk|deb|rpm|war|ear|whl|cpio|lzh|lha)$/i
+    function isArchive(e) { return !!e && !e.d && !e.ar && (archiveMimes[e.t] === 1 || archiveExtRe.test(e.n)); }
+    // "foo.tar.gz" -> "foo"   (mirrors arc.py arc_split)
+    function archiveStem(n) {
+        const m = n.match(/^(.+?)\.(tar\.(gz|bz2|xz|zst|lzma|z)|tgz|tbz2|tbz|txz|tzst|taz|tar|zip|7z|rar|gz|bz2|xz|zst|lzma|z|iso|cab|jar|apk|deb|rpm|war|ear|whl|cpio|lzh|lha)$/i);
+        return m ? m[1] : n;
+    }
+    property var arcPw: ({})                 // archive path -> password typed this session (memory only; cleared on hide)
+    onOpenChanged: if (!open) arcPw = ({})
+    property var arcListing: null            // {file, dirs{inner:[entries]}, count, size, truncated, cap, enc, unsafe, type}
+
+    // ---- archive view: listing
+    property bool arcLoadQueued: false
+    function loadArc() {
+        if (arcListing && arcListing.file === arcFile) { showArcDir(); return; }
+        if (arcLister.running) { arcLoadQueued = true; return; }
+        loading = true;
+        entries = []; rebuild();
+        arcLister.file = arcFile;
+        const pw = arcPw[arcFile] || "";
+        arcLister.pw = pw;
+        arcLister.command = ["python3", helper, "arc-ls", arcFile].concat(pw !== "" ? ["--pw"] : []);
+        arcLister.running = true;
+    }
+    function showArcDir() {
+        const d = arcListing.dirs[arcInner];
+        error = d === undefined ? "Folder not found in archive" : "";
+        entries = d === undefined ? [] : d;
+        loading = false;
+        rebuild();
+        if (pendingSelect !== "") {
+            const i = view.findIndex(x => x.p === pendingSelect);
+            pendingSelect = "";
+            if (i >= 0) selectOnly(i);
+        }
+    }
+    Process {
+        id: arcLister
+        property string file: ""
+        property string pw: ""
+        stdinEnabled: true
+        onStarted: if (pw !== "") write(pw + "\n")
+        stdout: StdioCollector { onStreamFinished: root.arcListed(arcLister.file, text) }
+        onExited: if (root.arcLoadQueued) { root.arcLoadQueued = false; root.loadArc(); }
+    }
+    Timer {   // an unresponsive phone must not leave the archive "READING…" forever
+        interval: 120000
+        running: arcLister.running && root.onMtp
+        onTriggered: { arcLister.running = false; root.loading = false; root.error = "Phone not responding. Is it unlocked?"; }
+    }
+    function arcListed(file, text) {
+        if (!isArc || file !== arcFile) return;
+        let d;
+        try { d = JSON.parse(text); } catch (e) { d = { ok: false, err: "listing failed" }; }
+        if (d.needpw || d.wrongpw) {
+            if (d.wrongpw) toast("Wrong password", "That password did not open “" + basename(file) + "”.");
+            askPassword("Password required", "“" + basename(file) + "” is encrypted. Enter its password to open it.", "Open",
+                        v => { arcPw[file] = v.pw; loadArc(); }, () => { if (isArc && arcFile === file) goUp(); });
+            return;
+        }
+        if (!d.ok) {
+            loading = false; entries = []; rebuild();
+            error = d.err || "Cannot open archive";
+            return;
+        }
+        arcListing = { file: file, dirs: d.dirs, count: d.count, size: d.size, truncated: d.truncated, cap: d.cap, enc: d.enc, unsafe: d.unsafe, type: d.type };
+        if (d.truncated) toast("Archive", "Showing only the first " + d.cap.toLocaleString(Qt.locale("en_US"), "f", 0) + " entries of “" + basename(file) + "”.");
+        if (d.unsafe > 0) toast("Archive", d.unsafe + " unsafe path" + (d.unsafe === 1 ? "" : "s") + " (.. or absolute) hidden. Extraction of this archive is refused.");
+        showArcDir();
+    }
+    function askPassword(title, text, ok, action, onCancel) {
+        dialog = { kind: "password", title: title, text: text, ok: ok, action: action, onCancel: onCancel };
+    }
+
+    // ---- extraction (jobs run by data.py `serve`, op "extract")
+    // Where things land: "Extract here" extracts a lone top-level file/folder as is, otherwise into a new folder
+    // named after the archive; "Extract to “name/”" always makes that folder.  Nothing is ever overwritten:
+    // a taken name becomes "name (1)".  (This replaces the Replace / Keep both / Skip conflict dialog.)
+    function archiveTargets() {
+        if (isTrash || isArc) return [];
+        const t = targets();
+        return t.length && t.every(isArchive) ? t : [];
+    }
+    function extractArchives(list, mode, into) {
+        if (!list.length) return;
+        const items = list.map(e => ({ op: "extract", src: e.p, dst: dirname(e.p), mode: mode, into: into || "", pw: arcPw[e.p] || "" }));
+        runExtract(items);
+    }
+    function runExtract(items, opts) {
+        opts = opts || {};
+        const one = items.length === 1;
+        enqueue({ title: opts.title || (one ? "Extracting " + basename(items[0].src) : "Extracting " + items.length + " archives"),
+                  items: items, done: "Extracted", fail: "Extract failed", selectResults: true,
+                  doneMsg: m => one && m.results.length ? basename(items[0].src) + " → " + (basename(m.results[0]) || "/")
+                                                       : (m.count - m.errors.length) + " archives" });
+    }
+    // an archive asked for a password (or rejected ours): prompt, then run the failed items again
+    function retryWithPassword(j, m) {
+        const bad = m.retry.map(i => j.items[i]);
+        const first = bad[0];
+        if (m.codes[0] === "wrongpw") toast("Wrong password", "That password did not open “" + basename(first.src) + "”.");
+        askPassword("Password required", "“" + basename(first.src) + "” is encrypted. Enter its password.", "Extract", v => {
+            arcPw[first.src] = v.pw;
+            const items = bad.map(it => Object.assign({}, it, { pw: arcPw[it.src] || "" }));
+            enqueue(Object.assign({}, j, { items: items }));
+        });
+    }
+    function extractToDialog() {
+        const t = archiveTargets();
+        if (!t.length) return;
+        const one = t.length === 1;
+        dialog = { kind: "input", title: "Extract to…",
+                   text: one ? "Extract “" + t[0].n + "” into this folder (created if needed):" : "Extract " + t.length + " archives, each into its own folder inside:",
+                   value: one ? join(dirname(t[0].p), archiveStem(t[0].n)) : dirname(t[0].p), ok: "Extract",
+                   action: v => extractToPath(t, v.text) };
+    }
+    function resolveDest(p, base) {
+        p = expand(p);
+        return p.startsWith("/") ? p : join(base, p);
+    }
+    function extractToPath(list, dest) {
+        if (!dest.trim()) return;
+        const d = resolveDest(dest, dirname(list[0].p));
+        const mk = (e, mode) => ({ op: "extract", src: e.p, dst: mode === "folder" ? d : dirname(e.p), mode: mode,
+                                   into: mode === "into" ? d : "", pw: arcPw[e.p] || "" });
+        runExtract(list.length === 1 ? [mk(list[0], "into")] : list.map(e => mk(e, "folder")));
+    }
+    // ---- archive view actions
+    function extractAllDialog() {
+        if (!isArc) return;
+        dialog = { kind: "input", title: "Extract all…", text: "Extract everything in “" + basename(arcFile) + "” into this folder (created if needed):",
+                   value: join(dirname(arcFile), archiveStem(basename(arcFile))), ok: "Extract",
+                   action: v => extractFromArc(null, v.text) };
+    }
+    function extractSelectedDialog() {
+        if (!isArc) return;
+        const t = targets();
+        if (!t.length) { toast("Archive", "Select something to extract first."); return; }
+        dialog = { kind: "input", title: "Extract selected…",
+                   text: "Extract " + (t.length === 1 ? "“" + t[0].n + "”" : t.length + " items") + " into this folder:",
+                   value: dirname(arcFile), ok: "Extract",
+                   action: v => extractFromArc(t.map(e => e.ip), v.text) };
+    }
+    function extractFromArc(sel, dest) {
+        if (!isArc || !dest.trim()) return;
+        const d = resolveDest(dest, dirname(arcFile));
+        const it = { op: "extract", src: arcFile, mode: sel ? "selected" : "into", into: d, pw: arcPw[arcFile] || "" };
+        if (sel) it.sel = sel;
+        enqueue({ title: "Extracting " + (sel ? (sel.length === 1 ? basename(sel[0]) : sel.length + " items") : basename(arcFile)),
+                  items: [it], done: "Extracted", fail: "Extract failed", selectResults: false,
+                  doneMsg: m => (m.results.length === 1 ? basename(m.results[0]) : m.results.length + " items") + " → " + (basename(d) || "/") });
+    }
+    // a file inside the archive: extract it to $XDG_RUNTIME_DIR/ultimit-data/arc-<hash>/ and hand it to xdg-open
+    function openArcFile(e) {
+        if (!isArc || e.d) return;
+        enqueue({ title: "Opening " + e.n, fail: "Open failed", items: [{ op: "extract", src: arcFile, mode: "open", sel: [e.ip], pw: arcPw[arcFile] || "" }],
+                  after: m => { if (m.results.length && !m.errors.length) run(["xdg-open", m.results[0]], "xdg-open " + m.results[0]); } });
+    }
+
+    // ---- compression (job op "compress")
+    function compressBase(t) {
+        if (t.length === 1) {
+            const n = t[0].n;
+            const i = n.lastIndexOf(".");
+            return t[0].d || i <= 0 ? n : (isArchive(t[0]) ? archiveStem(n) : n.slice(0, i));
+        }
+        return basename(path) || "Archive";
+    }
+    function compressable() { return !isTrash && !isArc ? targets() : []; }
+    function compressQuick() {
+        const t = compressable();
+        if (t.length) compress(t, compressBase(t), "zip", "");
+    }
+    function compressDialog() {
+        const t = compressable();
+        if (!t.length) return;
+        dialog = { kind: "compress", count: t.length, name: compressBase(t), fmt: "zip", action: v => compress(t, v.name, v.fmt, v.pw) };
+    }
+    function compress(t, base, fmt, pw) {
+        base = base.trim();
+        const ext = "." + fmt;
+        if (base.toLowerCase().endsWith(ext)) base = base.slice(0, -ext.length);
+        if (base === "" || base.indexOf("/") >= 0) { toast("Compress", "Give the archive a name without slashes."); return; }
+        const dst = join(dirname(t[0].p), base + ext);
+        enqueue({ title: "Compressing to " + base + ext,
+                  items: [{ op: "compress", srcs: t.map(e => e.p), dst: dst, fmt: fmt, pw: pw || "" }],
+                  done: "Compressed", fail: "Compress failed", selectResults: true,
+                  doneMsg: m => (m.results.length ? basename(m.results[0]) : base + ext) });
+    }
+
     // ---------------------------------------------------------------- file operations
     function trashSel() {
         const t = targets();
-        if (isTrash || !t.length) return;
+        if (isTrash || isArc || !t.length) return;
         if (onMtp) { deleteSel(); return; }   // the trash lives on another filesystem: moving would be a copy
         enqueue({ title: "Moving to Trash", items: t.map(e => ({ op: "trash", src: e.p })),
                   done: "Trashed", dest: trashUri });
     }
     function deleteSel() {
         const t = targets();
-        if (!t.length) return;
+        if (!t.length || isArc) return;
         const what = t.length === 1 ? "“" + t[0].n + "”" : t.length + " items";
         confirm("Delete permanently", what + " will be removed for good. This cannot be undone.", "Delete",
                 () => enqueue({ title: "Deleting", items: t.map(e => ({ op: "delete", src: e.p })), done: "Deleted" }), true);
@@ -512,13 +756,13 @@ Singleton {
         return base + " " + k;
     }
     function newFolder() {
-        if (isTrash) return;
+        if (isTrash || isArc) return;
         const p = join(path, uniqueName("New Folder"));
         enqueue({ title: "Creating folder", items: [{ op: "mkdir", dst: p }],
                   after: m => { if (m.results.length) { pendingRename = m.results[0]; renameTimer.restart(); } } });
     }
     function newFile() {
-        if (isTrash) return;
+        if (isTrash || isArc) return;
         const p = join(path, uniqueName("New File"));
         enqueue({ title: "Creating file", items: [{ op: "newfile", dst: p }],
                   after: m => { if (m.results.length) { pendingRename = m.results[0]; renameTimer.restart(); } } });
@@ -534,7 +778,7 @@ Singleton {
     }
     property string renamePath: ""
     function startRename() {
-        if (isTrash) return;
+        if (isTrash || isArc) return;
         const t = targets();
         if (t.length !== 1) return;
         renamePath = t[0].p;
@@ -570,7 +814,7 @@ Singleton {
     property var propsDu: null
     function showProps() {
         const t = targets();
-        const paths = t.length ? t.map(e => e.p) : (isTrash ? [] : [path]);
+        const paths = isArc ? [arcFile] : (t.length ? t.map(e => e.p) : (isTrash ? [] : [path]));
         if (!paths.length) return;
         propsStat = null; propsDu = null;
         dialog = { kind: "props", paths: paths };
@@ -699,7 +943,7 @@ Singleton {
     // session (survive DATA/shell reloads) and are re-adopted from /proc/mounts on every scan.
     property var phones: []          // [{id, safe, label, mount ("" if not mounted), bus, dev}]
     property string mtpRoot: (Quickshell.env("XDG_RUNTIME_DIR") || "") !== "" ? Quickshell.env("XDG_RUNTIME_DIR") + "/ultimit-mtp" : ""
-    readonly property bool onMtp: isMtpPath(path)
+    readonly property bool onMtp: isMtpPath(isArc ? arcFile : path)
     function isMtpPath(p) { return mtpRoot !== "" && p.startsWith(mtpRoot + "/"); }
     property bool mtpTool: true
     property var mtpOrphans: []
@@ -807,7 +1051,7 @@ Singleton {
     property bool dfQueued: false
     Process {
         id: dfProc
-        command: ["df", "-P", "-B1", "--", root.isTrash ? root.home : (root.path || root.home)]
+        command: ["df", "-P", "-B1", "--", root.fsPath]
         stdout: StdioCollector {
             onStreamFinished: {
                 const lines = text.trim().split("\n");
@@ -830,6 +1074,7 @@ Singleton {
     }
     function pad(n) { return n < 10 ? "0" + n : "" + n; }
     function fmtDate(t) {
+        if (!t) return "—";     // folders implied by an archive's paths have no date
         const d = new Date(t * 1000), now = new Date();
         const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()];
         const hm = pad(d.getHours()) + ":" + pad(d.getMinutes());
@@ -904,8 +1149,8 @@ Singleton {
             for (const e of view) if (selected[e.p]) { if (!e.d) { sz += e.s; files++; } }
             return selCount + " SELECTED" + (files ? " · " + fmtSize(sz).toUpperCase() : "");
         }
-        const hidden = entries.length - view.length;
-        return view.length + (view.length === 1 ? " ITEM" : " ITEMS") + (filter !== "" ? " MATCH" : "");
+        return view.length + (view.length === 1 ? " ITEM" : " ITEMS") + (filter !== "" ? " MATCH" : "")
+            + (isArc && arcListing && arcListing.truncated ? " · LISTING CAPPED AT " + arcListing.cap.toLocaleString(Qt.locale("en_US"), "f", 0) : "");
     }
 
     // ---------------------------------------------------------------- scripted control (IPC "data run")
@@ -947,8 +1192,36 @@ Singleton {
         case "eject": { const p = phones.find(x => x.id === arg); if (!p) return "no such phone"; ejectPhone(p); return "ok"; }
         case "scanphones": scanPhones(); return "ok";
         case "terminal": openTerminalHere(); return "ok";
+        // archives (test hooks; passwords are read from a file given as "@/path", never from argv)
+        case "extract": {   // here | folder | into:<dir>  -- applies to the selected archive(s)
+            const t = archiveTargets(); if (!t.length) return "no archive selected";
+            if (arg.startsWith("into:")) extractToPath(t, arg.slice(5)); else extractArchives(t, arg === "folder" ? "folder" : "here", "");
+            return "ok";
+        }
+        case "canceljob": cancelJob(); return "ok";
+        case "extractdlg": extractToDialog(); return "ok";
+        case "arcall": extractFromArc(null, arg); return "ok";
+        case "arcsel": { const t = targets(); if (!t.length) return "nothing selected"; extractFromArc(t.map(e => e.ip), arg); return "ok"; }
+        case "arcalldlg": extractAllDialog(); return "ok";
+        case "arcseldlg": extractSelectedDialog(); return "ok";
+        case "compress": {  // fmt|name|@pwfile
+            const t = compressable(); if (!t.length) return "nothing selected";
+            const a = arg.split("|"); compress(t, a[1] || compressBase(t), a[0] || "zip", secret(a[2] || "")); return "ok";
+        }
+        case "compressdlg": compressDialog(); return "ok";
+        case "dialogtext": submitDialog({ text: arg }); return "ok";
+        case "dialogpw": submitDialog({ pw: secret(arg) }); return "ok";
+        case "dialogcompress": { const a = arg.split("|"); submitDialog({ name: a[1], fmt: a[0], pw: secret(a[2] || "") }); return "ok"; }
         }
         return "unknown action";
+    }
+    FileView { id: secretFile; blockLoading: true; printErrors: false }
+    function secret(ref) {   // "@/path/file" -> first line of that file (test hook; keeps passwords out of argv)
+        if (!ref.startsWith("@")) return ref;
+        secretFile.path = "";
+        secretFile.path = ref.slice(1);
+        secretFile.reload();
+        return (secretFile.text() || "").split("\n")[0];
     }
     function stateJson() {
         return JSON.stringify({ path: path, count: view.length, total: entries.length, sel: selectedEntries().map(e => e.n),
@@ -956,6 +1229,9 @@ Singleton {
             hidden: showHidden, sort: sortKey, desc: sortDesc, view: viewMode, clip: clipPaths.length, cut: clipCut,
             first: view.slice(0, 5).map(e => e.n), drives: drives.length, phones: phones.map(p => ({ id: p.id, label: p.label, mount: p.mount })), mtpBusy: mtpOp.running,
             mtpTool: mtpTool, onMtp: onMtp, disk: disk, err: error,
+            arc: isArc ? { file: arcFile, inner: arcInner, count: arcListing ? arcListing.count : -1, type: arcListing ? arcListing.type : "",
+                           truncated: arcListing ? arcListing.truncated : false } : null,
+            jobTitle: jobTitle, jobName: jobName, jobFrac: jobFrac, dialogTitle: dialog && dialog.title ? dialog.title : "",
             props: propsStat ? { size: propsStat.size, mode: propsStat.mode, mime: propsStat.mime, du: propsDu } : null });
     }
 }
