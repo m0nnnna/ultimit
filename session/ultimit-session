@@ -24,6 +24,8 @@ export XDG_DATA_DIRS
 "$ROOT/shell/theme/install-gtk-theme.sh" >/dev/null 2>&1 || true
 # Ultimit icon themes (one per skin), rebuilt each login so they follow the repo.
 "$ROOT/shell/theme/icons/install-icons.sh" >/dev/null 2>&1 || true
+# fastfetch in Ultimit's look, coloured for the skin (unless the user owns the config).
+"$ROOT/session/ultimit-fastfetch-config" >/dev/null 2>&1 || true
 # Shard cursor themes (one per skin); skipped when unchanged.
 "$ROOT/shell/theme/cursors/install-cursors.sh" >/dev/null 2>&1 || true
 . "$ROOT/shell/theme/session-env.sh"

@@ -78,6 +78,11 @@ Scope {
         store.path = root.dir + "/shell.json";
     }
 
+    Timer {
+        id: fastfetchTimer
+        interval: 1500
+        onTriggered: Quickshell.execDetached([Quickshell.shellPath("../session/ultimit-fastfetch-config")])
+    }
     Connections {
         target: Theme
         function onSkinChanged() {
@@ -85,6 +90,8 @@ Scope {
             // Re-colour the mouse cursor with the skin (theme/cursors).
             const name = "UltimitCursor-" + Theme.skin.charAt(0).toUpperCase() + Theme.skin.slice(1);
             Quickshell.execDetached(["sh", "-c", "[ -e \"$HOME/.local/share/icons/" + name + "/cursors/default\" ] && ultimitctl cursor-theme " + name + " && gsettings set org.gnome.desktop.interface cursor-theme " + name]);
+            // fastfetch colours follow the skin too (after shell.json is written).
+            fastfetchTimer.restart();
         }
     }
     Connections {

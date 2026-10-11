@@ -32,3 +32,6 @@ ffmpegthumbnailer
 # Security
 ufw
 unattended-upgrades
+# Apps
+deluge-gtk
+fastfetch

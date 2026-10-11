@@ -1,0 +1,24 @@
+#!/bin/sh
+# Install Ultimit's fastfetch look into ~/.config/fastfetch, coloured for the
+# current skin. Skips a config the user took over (no "Managed by Ultimit").
+ROOT=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
+SRC="$ROOT/session/defaults/fastfetch"
+DST="${XDG_CONFIG_HOME:-$HOME/.config}/fastfetch"
+CFG="$DST/config.jsonc"
+if [ -e "$CFG" ] && ! head -n1 "$CFG" | grep -q "Managed by Ultimit"; then
+	exit 0
+fi
+skin=$(sed -n 's/.*"skin"[[:space:]]*:[[:space:]]*"\([a-z]*\)".*/\1/p' \
+	"${XDG_CONFIG_HOME:-$HOME/.config}/ultimit/shell.json" 2>/dev/null | head -n1)
+case "$skin" in
+	amber)   accent="255;176;74";  dim="220;180;140" ;;
+	silver)  accent="44;91;136";   dim="90;98;109" ;;
+	verdant) accent="185;255;140"; dim="140;170;140" ;;
+	*)       skin=mine; accent="212;235;255"; dim="141;148;158" ;;
+esac
+Skin=$(printf '%s' "$skin" | sed 's/./\U&/')
+mkdir -p "$DST"
+cp "$SRC/ultimit-logo.txt" "$DST/ultimit-logo.txt"
+sed -e "s/{ACCENT}/38;2;$accent/g" -e "s/{DIM}/38;2;$dim/g" -e "s/{SKIN}/$Skin/g" \
+	-e "s/{GTK}/Ultimit-$Skin/g" -e "s/{ICONS}/Ultimit-$Skin/g" \
+	"$SRC/config.jsonc" >"$CFG.tmp" && mv "$CFG.tmp" "$CFG"
