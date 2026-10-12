@@ -6,7 +6,7 @@
   scan.py set <id> '<json>'         merge keys into games[<id>]
   scan.py top <key> '<json>'        set a top-level key (sort, hintDismissed, ...)
   scan.py touch <id>                record last-launched = now
-  scan.py add-manual '<json>'       add a manual game {id,name,kind,target}
+  scan.py add-manual '<json>'       add a manual game {id,name,kind,target[,prefix,runner,proton,gameid]}
   scan.py remove-manual <id>        remove a manual game (and its settings)
   scan.py plan <id> [cmd ...]       print the launch plan (JSON) without running anything
   scan.py dry-log '<json argv>'     append a "would run" line to the dry-run log
@@ -23,6 +23,8 @@ HOME = os.path.expanduser("~")
 DATA_HOME = os.environ.get("XDG_DATA_HOME") or os.path.join(HOME, ".local", "share")
 CONF = os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.join(HOME, ".config"), "ultimit", "games.json")
 DEFAULT_PREFIX = os.path.join(DATA_HOME, "ultimit", "wine", "default")
+# Proton upgrades a prefix to its own layout, so its default is separate from Wine's.
+PROTON_PREFIX = os.path.join(DATA_HOME, "ultimit", "proton", "default")
 SKIP_IDS = {"228980"}
 SKIP_PREFIX = ("proton", "steam linux runtime", "steamworks")
 EXTRA_PATH = ":/usr/games:/usr/local/games"
@@ -362,6 +364,8 @@ def effective(g, nvidia=None):
         "scopeFps": fps if 1 <= fps <= 1000 else 0,
         "dxvk": g.get("dxvk", True) is True, "args": str(g.get("args", "") or ""),
         "env": str(g.get("env", "") or ""), "prefix": str(g.get("prefix", "") or "default") or "default",
+        "runner": "proton" if g.get("runner") == "proton" else "wine",
+        "proton": str(g.get("proton", "") or ""), "gameid": str(g.get("gameid", "") or "").strip() or "umu-default",
         "lastLaunched": int(g.get("lastLaunched", 0) or 0),
     }
 
@@ -401,6 +405,43 @@ def prefix_path(opt):
     if not opt or opt == "default":
         return DEFAULT_PREFIX
     return os.path.abspath(os.path.expanduser(opt))
+
+
+def find_protons():
+    """Installed Proton builds [{name, path}]: custom tools (compatibilitytools.d) first, then Valve's
+    (<library>/steamapps/common/Proton*). A build is valid if it has a `proton` script."""
+    dirs = []
+    for c in steam_candidates() + ([] if os.environ.get("ULTIMIT_STEAM_ROOT") else [os.path.join(HOME, ".steam/root")]):
+        if c:
+            dirs.append(os.path.join(c, "compatibilitytools.d"))
+    custom = [d for t in dirs for d in sorted(glob.glob(os.path.join(t, "*")))]
+    root = find_root()
+    valve = []
+    for lib in libraries(root) if root else []:
+        valve += sorted(glob.glob(os.path.join(lib, "steamapps", "common", "Proton*")))
+    out, seen = [], set()
+    for d in custom + valve:
+        real = os.path.realpath(d)
+        if real in seen or not os.path.isfile(os.path.join(d, "proton")):
+            continue
+        seen.add(real)
+        out.append({"name": os.path.basename(d), "path": d})
+    return out
+
+
+def auto_proton(protons):
+    """Path of the Proton to use when none is chosen: newest GE/DW custom build, else Proton -
+    Experimental, else any Valve Proton; "" lets umu fetch UMU-Proton itself."""
+    def custom(p):
+        return "compatibilitytools.d" in p["path"]
+    ge = sorted((p for p in protons if custom(p) and ("GE-Proton" in p["name"] or "DW-Proton" in p["name"])),
+                key=lambda p: [int(n) if n.isdigit() else 0 for n in re.split(r"(\d+)", p["name"])])
+    if ge:
+        return ge[-1]["path"]
+    exp = [p for p in protons if p["name"] == "Proton - Experimental"]
+    valve = [p for p in protons if not custom(p)]
+    pick = exp or valve or [p for p in protons if custom(p)]
+    return pick[0]["path"] if pick else ""
 
 
 def install_dxvk(prefix, src):
@@ -445,7 +486,7 @@ def plan(gid, argv=None, game=None):
     notes, pre, env, cwd = [], [], {}, ""
     steam = gid.isdigit()
     game = game or (None if steam else find_game(gid))
-    wine = False
+    wine = proton = False
     if argv:
         cmd = list(argv)
     elif steam:
@@ -454,20 +495,36 @@ def plan(gid, argv=None, game=None):
         raise ValueError("unknown game: " + gid)
     elif game["kind"] == "wine":
         wine = True
+        proton = o["runner"] == "proton"
         exe = os.path.expanduser(game["target"])
-        cmd = [which("wine") or "wine", exe]
+        runner = "umu-run" if proton else "wine"
+        cmd = [which(runner) or runner, exe]
         cwd = os.path.dirname(os.path.abspath(exe))
         if not os.path.isfile(exe):
             notes.append("executable not found: " + exe)
-        if not which("wine"):
-            notes.append("wine is not installed")
+        if not which(runner):
+            notes.append("umu-run is not installed" if proton else "wine is not installed")
     elif game["kind"] == "command":
         cmd = split_args(os.path.expanduser(game["target"])) or ["true"]
     else:
         cmd = list(game["exec"])
         cwd = game.get("cwd", "")
 
-    if wine:
+    if proton:
+        # umu creates/upgrades the prefix itself; Proton ships DXVK + vkd3d-proton
+        pfx = PROTON_PREFIX if o["prefix"] == "default" else prefix_path(o["prefix"])
+        if not os.path.isdir(pfx):
+            pre.append({"step": "mkdir", "prefix": pfx})
+        env.update({"WINEPREFIX": pfx, "GAMEID": o["gameid"]})
+        pp = o["proton"] if o["proton"] and os.path.isfile(os.path.join(o["proton"], "proton")) else ""
+        if o["proton"] and not pp:
+            notes.append("Proton not found: " + o["proton"] + "; choosing automatically")
+        pp = pp or auto_proton(find_protons())
+        if pp:
+            env["PROTONPATH"] = pp
+        else:
+            notes.append("no Proton installed; umu-run will download UMU-Proton itself")
+    elif wine:
         pfx = prefix_path(o["prefix"])
         env.update({"WINEPREFIX": pfx, "WINEDEBUG": "-all", "DXVK_LOG_LEVEL": "none"})
         if not os.path.exists(os.path.join(pfx, "system.reg")):
@@ -560,8 +617,9 @@ def scan():
         "games": games,
         "tools": {"gamemode": bool(which("gamemoderun")), "mangohud": bool(which("mangohud")),
                   "gamescope": bool(which("gamescope")), "nvidia": has_nvidia(), "wine": bool(which("wine")),
+                  "umu": bool(which("umu-run")),
                   "dxvk": bool(dx), "dxvkDir": dx},
-        "winePrefix": DEFAULT_PREFIX, "home": HOME, "dryRun": dry_run(),
+        "protons": find_protons(), "winePrefix": DEFAULT_PREFIX, "home": HOME, "dryRun": dry_run(),
         "settings": conf,
     }
 
@@ -590,6 +648,9 @@ def main(argv):
             d["manual"] = [x for x in d["manual"] if x.get("id") != rec["id"]] + [rec]
             if m.get("prefix"):
                 d["games"].setdefault(rec["id"], {})["prefix"] = str(m["prefix"])
+            for k in ("runner", "proton", "gameid"):
+                if m.get(k):
+                    d["games"].setdefault(rec["id"], {})[k] = str(m[k])
         update(add)
     elif cmd == "remove-manual":
         def rm(d):

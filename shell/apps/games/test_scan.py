@@ -80,6 +80,102 @@ class Scan(unittest.TestCase):
         self.assertEqual(scan.parse_env('A=1 B="x y"\nC=3 1BAD=2'), {"A": "1", "B": "x y", "C": "3"})
 
 
+class Proton(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.mkdtemp(prefix="steam-", dir=TMP)
+        self.saved, self.which = os.environ["ULTIMIT_STEAM_ROOT"], scan.which
+        os.environ["ULTIMIT_STEAM_ROOT"] = self.root
+        os.makedirs(self.root + "/steamapps/common")
+        for d in ("compatibilitytools.d/GE-Proton9-5", "compatibilitytools.d/GE-Proton10-1",
+                  "steamapps/common/Proton - Experimental", "steamapps/common/Proton 9.0 (Beta)"):
+            os.makedirs(os.path.join(self.root, d))
+            open(os.path.join(self.root, d, "proton"), "w").close()
+        os.makedirs(self.root + "/compatibilitytools.d/Broken")                  # no proton script
+        os.makedirs(self.root + "/steamapps/common/Proton Hotfix")
+        scan.write_settings(scan.normalize({}))
+        scan.which = lambda n, _w=scan.which: {"umu-run": "/usr/bin/umu-run", "gamemoderun": "/usr/games/gamemoderun",
+                                              "mangohud": "/usr/bin/mangohud"}.get(n, _w(n))
+        self.exe = TMP + "/g/game.exe"
+        scan.main(["x", "add-manual", json.dumps({"id": "manual:p1", "name": "P", "kind": "wine", "target": self.exe,
+                                                   "prefix": TMP + "/ppfx", "runner": "proton"})])
+
+    def tearDown(self):
+        os.environ["ULTIMIT_STEAM_ROOT"] = self.saved
+        scan.which = self.which
+
+    def test_effective(self):
+        e = scan.effective({})
+        self.assertEqual((e["runner"], e["proton"], e["gameid"]), ("wine", "", "umu-default"))
+        e = scan.effective({"runner": "bogus", "gameid": "  ", "proton": None})
+        self.assertEqual((e["runner"], e["proton"], e["gameid"]), ("wine", "", "umu-default"))
+        e = scan.effective({"runner": "proton", "proton": "/p/x", "gameid": "umu-123"})
+        self.assertEqual((e["runner"], e["proton"], e["gameid"]), ("proton", "/p/x", "umu-123"))
+
+    def test_find_protons(self):
+        got = scan.find_protons()
+        self.assertEqual([p["name"] for p in got], ["GE-Proton10-1", "GE-Proton9-5", "Proton - Experimental", "Proton 9.0 (Beta)"])
+        self.assertEqual(got[0]["path"], self.root + "/compatibilitytools.d/GE-Proton10-1")
+        os.symlink(self.root + "/compatibilitytools.d/GE-Proton9-5", self.root + "/compatibilitytools.d/alias")
+        self.assertEqual(len(scan.find_protons()), 4)                              # deduped by realpath
+        d = scan.scan()
+        self.assertEqual(d["protons"], scan.find_protons())
+        self.assertIn("umu", d["tools"])
+
+    def test_plan_proton(self):
+        p = scan.plan("manual:p1")
+        self.assertEqual(p["argv"], ["gamemoderun", "/usr/bin/umu-run", self.exe])
+        self.assertEqual(p["cwd"], os.path.dirname(self.exe))
+        self.assertEqual(p["pre"], [{"step": "mkdir", "prefix": TMP + "/ppfx"}])  # no wineboot/dxvk
+        os.makedirs(TMP + "/ppfx", exist_ok=True)
+        self.assertEqual(scan.plan("manual:p1")["pre"], [])
+        self.assertEqual(p["env"]["WINEPREFIX"], TMP + "/ppfx")
+        self.assertEqual(p["env"]["GAMEID"], "umu-default")
+        self.assertEqual(p["env"]["PROTONPATH"], self.root + "/compatibilitytools.d/GE-Proton10-1")
+        self.assertNotIn("WINEDLLOVERRIDES", p["env"])
+        self.assertNotIn("WINEDEBUG", p["env"])
+        scan.main(["x", "set", "manual:p1", json.dumps({"prefix": "default"})])
+        self.assertEqual(scan.plan("manual:p1")["env"]["WINEPREFIX"], scan.PROTON_PREFIX)  # not Wine's default
+        self.assertNotEqual(scan.PROTON_PREFIX, scan.DEFAULT_PREFIX)
+        scan.main(["x", "set", "manual:p1", json.dumps({"prefix": TMP + "/ppfx"})])
+        scan.main(["x", "set", "manual:p1", json.dumps({"overlay": True, "gameid": "umu-42", "env": "FOO=1", "args": "-w"})])
+        p = scan.plan("manual:p1")
+        self.assertEqual((p["env"]["MANGOHUD"], p["env"]["GAMEID"], p["env"]["FOO"]), ("1", "umu-42", "1"))
+        self.assertEqual(p["argv"][-1], "-w")
+
+    def test_auto_choice(self):
+        valve = self.root + "/steamapps/common/"
+        shutil.rmtree(self.root + "/compatibilitytools.d")
+        self.assertEqual(scan.plan("manual:p1")["env"]["PROTONPATH"], valve + "Proton - Experimental")
+        shutil.rmtree(valve + "Proton - Experimental")
+        self.assertEqual(scan.plan("manual:p1")["env"]["PROTONPATH"], valve + "Proton 9.0 (Beta)")
+        shutil.rmtree(valve + "Proton 9.0 (Beta)")
+        p = scan.plan("manual:p1")
+        self.assertNotIn("PROTONPATH", p["env"])
+        self.assertTrue(any("UMU-Proton" in n for n in p["notes"]))
+
+    def test_explicit_and_missing_umu(self):
+        pick = self.root + "/steamapps/common/Proton 9.0 (Beta)"
+        scan.main(["x", "set", "manual:p1", json.dumps({"proton": pick})])
+        self.assertEqual(scan.plan("manual:p1")["env"]["PROTONPATH"], pick)
+        scan.main(["x", "set", "manual:p1", json.dumps({"proton": "/nope"})])
+        p = scan.plan("manual:p1")
+        self.assertEqual(p["env"]["PROTONPATH"], self.root + "/compatibilitytools.d/GE-Proton10-1")
+        self.assertTrue(any("Proton not found" in n for n in p["notes"]))
+        scan.which = lambda n: ""
+        p = scan.plan("manual:p1")
+        self.assertIn("umu-run is not installed", p["notes"])
+        self.assertEqual(p["argv"][0], "umu-run")
+
+    def test_wine_runner_unchanged(self):
+        scan.main(["x", "set", "manual:p1", json.dumps({"runner": "wine"})])
+        scan.which = lambda n: "/usr/bin/" + n if n == "wine" else ""
+        p = scan.plan("manual:p1")
+        self.assertEqual(p["argv"], ["/usr/bin/wine", self.exe])
+        self.assertEqual([s["step"] for s in p["pre"]], ["wineboot", "dxvk"])
+        self.assertNotIn("GAMEID", p["env"])
+        self.assertEqual(p["env"]["WINEDEBUG"], "-all")
+
+
 class Plan(unittest.TestCase):
     def setUp(self):
         scan.write_settings(scan.normalize({}))

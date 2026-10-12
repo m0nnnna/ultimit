@@ -87,6 +87,8 @@ def main(argv):
                 say("setting up Wine prefix %s (first run, takes a minute)" % st["prefix"])
                 os.makedirs(st["prefix"], exist_ok=True)
                 subprocess.run(["wineboot", "-u"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            elif st["step"] == "mkdir":
+                os.makedirs(st["prefix"], exist_ok=True)
             elif st["step"] == "dxvk":
                 for f in helper.install_dxvk(st["prefix"], st["src"]):
                     say("DXVK: installed " + f)

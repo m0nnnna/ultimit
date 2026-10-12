@@ -31,7 +31,8 @@ Singleton {
     property bool steamBinary: false
     property string winePrefix: ""
     property var allGames: []
-    property var tools: ({ gamemode: false, mangohud: false, gamescope: false, nvidia: false, wine: false, dxvk: false })
+    property var protons: []                   // installed Proton builds [{name, path}] for the umu runner
+    property var tools: ({ gamemode: false, mangohud: false, gamescope: false, nvidia: false, wine: false, umu: false, dxvk: false })
     property var settings: ({ hintDismissed: false, games: {}, manual: [], sort: "recent" })
 
     // ---- library view state ----
@@ -84,6 +85,7 @@ Singleton {
                     root.steamState = d.steamState;
                     root.winePrefix = d.winePrefix;
                     root.tools = d.tools;
+                    root.protons = d.protons || [];
                     root.allGames = d.games;
                     root.settings = d.settings;
                 } catch (e) {
@@ -113,7 +115,9 @@ Singleton {
             dxvk: s.dxvk !== undefined ? s.dxvk : true,
             args: s.args || "",
             env: s.env || "",
-            prefix: s.prefix || "default"
+            prefix: s.prefix || "default",
+            runner: s.runner === "proton" ? "proton" : "wine",
+            proton: s.proton || ""
         };
     }
 
@@ -139,10 +143,12 @@ Singleton {
 
     // ---- manual games ----
     function newManualId() { return "manual:" + Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36); }
-    function addManual(name, kind, target, prefix) {
+    function addManual(name, kind, target, prefix, runner, proton) {
         const id = newManualId();
         const rec = { id: id, name: name, kind: kind, target: target };
         if (prefix) rec.prefix = prefix;
+        if (runner === "proton") rec.runner = "proton";
+        if (proton) rec.proton = proton;
         _py(["add-manual", JSON.stringify(rec)]);
         selectedId = id;
         query = "";
@@ -237,6 +243,7 @@ Singleton {
     function kindLabel(g) {
         if (!g) return "";
         if (g.source === "steam") return g.compat === "proton" ? "Proton" : "Native";
+        if (g.kind === "wine") return (settings.games[g.id] || {}).runner === "proton" ? "Proton" : "Wine";
         return g.kind === "wine" ? "Wine" : (g.flatpak ? "Flatpak" : (g.manual ? "Command" : "Desktop entry"));
     }
     function isWine(g) { return !!g && g.kind === "wine"; }

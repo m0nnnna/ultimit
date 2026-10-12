@@ -522,11 +522,39 @@ FloatingWindow {
                             }
                         }
 
-                        // Wine / manual: DXVK + prefix
+                        // Wine / manual: runner, DXVK + prefix
                         Column {
                             visible: win.isWine
                             width: parent.width; spacing: 8
+                            GLabel { text: "Runner" }
+                            GSeg {
+                                options: [{ id: "wine", label: "Wine" }, { id: "proton", label: "Proton" }]
+                                current: win.cfg ? win.cfg.runner : "wine"
+                                onPicked: id => Games.setSetting(win.sel.id, "runner", id)
+                            }
+                            Column {
+                                visible: win.cfg && win.cfg.runner === "proton"
+                                width: parent.width; spacing: 6
+                                GLabel { text: "Proton version" }
+                                ProtonPicker {
+                                    width: parent.width
+                                    current: win.cfg ? win.cfg.proton : ""
+                                    onPicked: path => Games.setSetting(win.sel.id, "proton", path)
+                                }
+                                Text {
+                                    visible: !Games.tools.umu
+                                    width: parent.width; wrapMode: Text.WordWrap
+                                    color: Theme.warn; font.family: Theme.ui; font.pixelSize: 11
+                                    text: "umu-launcher not installed; Proton games cannot start without umu-run."
+                                }
+                                Text {
+                                    width: parent.width; wrapMode: Text.WordWrap
+                                    color: Theme.dim; font.family: Theme.ui; font.pixelSize: 11
+                                    text: "Proton brings its own DXVK and vkd3d-proton; the prefix is set up by umu on first launch."
+                                }
+                            }
                             GToggle {
+                                visible: !win.cfg || win.cfg.runner !== "proton"
                                 width: parent.width
                                 label: "DXVK"
                                 available: Games.tools.dxvk
@@ -535,6 +563,7 @@ FloatingWindow {
                                 onToggled: v => Games.setSetting(win.sel.id, "dxvk", v)
                             }
                             Text {
+                                visible: !win.cfg || win.cfg.runner !== "proton"
                                 width: parent.width; wrapMode: Text.WordWrap
                                 color: Theme.dim; font.family: Theme.ui; font.pixelSize: 11
                                 text: "Copies Ultimit's DXVK (d3d9, d3d10core, d3d11, dxgi) into the Wine prefix at launch."

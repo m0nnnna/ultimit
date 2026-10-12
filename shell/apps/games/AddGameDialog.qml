@@ -10,12 +10,14 @@ Item {
 
     property string kind: "wine"
     property string prefixMode: "default"
+    property string runner: "wine"
+    property string proton: ""
     readonly property string target: targetField.text.trim()
     readonly property bool valid: target !== ""
         && (kind !== "wine" || prefixMode === "default" || prefixField.text.trim() !== "")
 
     function open() {
-        kind = "wine"; prefixMode = "default";
+        kind = "wine"; prefixMode = "default"; runner = "wine"; proton = "";
         targetField.text = ""; nameField.text = ""; prefixField.text = "";
         visible = true;
         targetField.input.forceActiveFocus();
@@ -29,7 +31,8 @@ Item {
     function submit() {
         if (!visible || !valid) return;
         const nm = nameField.text.trim() || baseName(target);
-        Games.addManual(nm, kind, target, kind === "wine" && prefixMode === "custom" ? prefixField.text.trim() : "");
+        Games.addManual(nm, kind, target, kind === "wine" && prefixMode === "custom" ? prefixField.text.trim() : "",
+                         kind === "wine" ? runner : "", kind === "wine" && runner === "proton" ? proton : "");
         close();
     }
 
@@ -108,7 +111,32 @@ Item {
                 visible: root.kind === "wine"
                 width: parent.width
                 spacing: 6
-                GLabel { text: "Wine prefix" }
+                GLabel { text: "Runner" }
+                GSeg {
+                    options: [{ id: "wine", label: "Wine" }, { id: "proton", label: "Proton (umu)" }]
+                    current: root.runner
+                    onPicked: id => root.runner = id
+                }
+                ProtonPicker {
+                    visible: root.runner === "proton"
+                    width: parent.width
+                    current: root.proton
+                    onPicked: path => root.proton = path
+                }
+                Text {
+                    visible: root.runner === "proton" && !Games.tools.umu
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    color: Theme.warn
+                    font.family: Theme.ui; font.pixelSize: 11
+                    text: "umu-launcher not installed; Proton games cannot start without umu-run."
+                }
+            }
+            Column {
+                visible: root.kind === "wine"
+                width: parent.width
+                spacing: 6
+                GLabel { text: root.runner === "proton" ? "Prefix" : "Wine prefix" }
                 GSeg {
                     options: [{ id: "default", label: "Shared default" }, { id: "custom", label: "Custom" }]
                     current: root.prefixMode
