@@ -179,6 +179,7 @@ int main(int argc, char *argv[]) {
 	wlr_scene_set_gamma_control_manager_v1(server.scene, gamma);
 	server.foreign_toplevels = wlr_foreign_toplevel_manager_v1_create(server.display);
 
+	capture_init(&server);
 	xdg_init(&server);
 	layer_init(&server);
 	input_init(&server);

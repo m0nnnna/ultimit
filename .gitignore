@@ -7,3 +7,4 @@ subprojects/*/
 *.so
 compile_commands.json
 test-results/
+__pycache__/

@@ -534,6 +534,11 @@ void view_update_title(struct ul_view *view) {
 		wlr_foreign_toplevel_handle_v1_set_title(view->foreign, view_title(view));
 		wlr_foreign_toplevel_handle_v1_set_app_id(view->foreign, view_app_id(view));
 	}
+	if (view->ext_foreign) {
+		wlr_ext_foreign_toplevel_handle_v1_update_state(view->ext_foreign,
+			&(struct wlr_ext_foreign_toplevel_handle_v1_state){
+				.title = view_title(view), .app_id = view_app_id(view) });
+	}
 	if (view->mapped && view->ssd) {
 		decoration_update(view);
 	}
@@ -635,10 +640,23 @@ void view_init_foreign(struct ul_view *view) {
 	wl_signal_add(&view->foreign->events.request_fullscreen, &view->foreign_fullscreen);
 	view->foreign_set_rectangle.notify = foreign_set_rectangle;
 	wl_signal_add(&view->foreign->events.set_rectangle, &view->foreign_set_rectangle);
+	/* The same window for screen capture (ext-foreign-toplevel-list). */
+	view->ext_foreign = wlr_ext_foreign_toplevel_handle_v1_create(view->server->ext_toplevel_list,
+		&(struct wlr_ext_foreign_toplevel_handle_v1_state){
+			.title = view_title(view), .app_id = view_app_id(view) });
+	if (view->ext_foreign) {
+		view->ext_foreign->data = view;
+	}
 	view_update_title(view);
 }
 
 static void finish_foreign(struct ul_view *view) {
+	/* Capture sources die with the handle they were made from. */
+	capture_view_destroy(view);
+	if (view->ext_foreign) {
+		wlr_ext_foreign_toplevel_handle_v1_destroy(view->ext_foreign);
+		view->ext_foreign = NULL;
+	}
 	if (!view->foreign) {
 		return;
 	}

@@ -92,6 +92,10 @@ static void output_frame(struct wl_listener *listener, void *data) {
 		wlr_output_state_finish(&state);
 	}
 
+	/* Subsurface and popup commits don't pass through the view's own commit
+	 * handler; window capture notices them here. */
+	capture_output_frame(output->server);
+
 	struct timespec now;
 	clock_gettime(CLOCK_MONOTONIC, &now);
 	wlr_scene_output_send_frame_done(scene_output, &now);

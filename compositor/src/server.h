@@ -10,6 +10,7 @@
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_cursor.h>
+#include <wlr/types/wlr_ext_foreign_toplevel_list_v1.h>
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_output_layout.h>
@@ -145,6 +146,7 @@ struct ul_server {
 	struct wl_list kde_decorations; /* ul_kde_decoration.link */
 
 	struct wlr_foreign_toplevel_manager_v1 *foreign_toplevels;
+	struct wlr_ext_foreign_toplevel_list_v1 *ext_toplevel_list; /* what capture sources are made from */
 	struct wlr_tearing_control_manager_v1 *tearing_control;
 
 	struct wlr_xdg_activation_v1 *activation;
@@ -295,6 +297,7 @@ enum ul_titlebar_hit {
 };
 
 struct ul_ghost;
+struct ul_capture_source;
 
 struct ul_view {
 	struct wl_list link;
@@ -339,6 +342,8 @@ struct ul_view {
 	struct wl_listener foreign_maximize;
 	struct wl_listener foreign_fullscreen;
 	struct wl_listener foreign_set_rectangle;
+	struct wlr_ext_foreign_toplevel_handle_v1 *ext_foreign; /* ext-foreign-toplevel-list handle; data = view */
+	struct ul_capture_source *capture; /* window capture source, made on demand (capture.c) */
 	struct wl_listener set_override_redirect; /* xwayland.c */
 
 	struct wl_listener map;
@@ -473,6 +478,12 @@ void anim_finish_all(struct ul_server *server);
 void decoration_create(struct ul_view *view);
 void decoration_update(struct ul_view *view);
 enum ul_titlebar_hit decoration_hit(struct ul_view *view, double lx, double ly);
+
+/* capture.c */
+void capture_init(struct ul_server *server);
+void capture_view_commit(struct ul_view *view);
+void capture_view_destroy(struct ul_view *view);
+void capture_output_frame(struct ul_server *server);
 
 /* xdg.c */
 void xdg_init(struct ul_server *server);
