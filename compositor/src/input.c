@@ -417,12 +417,15 @@ static void cursor_button(struct wl_listener *listener, void *data) {
 	}
 
 	if (event->state == WL_POINTER_BUTTON_STATE_RELEASED) {
-		if (server->cursor_mode != UL_CURSOR_PASSTHROUGH) {
-			finish_grab(server);
-			return;
-		}
+		/* Always pass the release on. A client that asked to be moved or
+		 * resized on press (xdg move/resize, Qt drag areas) got that press;
+		 * if it never sees the release, the seat keeps the button "held"
+		 * and every later click stays stuck on that surface. */
 		wlr_seat_pointer_notify_button(server->seat, event->time_msec,
 			event->button, event->state);
+		if (server->cursor_mode != UL_CURSOR_PASSTHROUGH) {
+			finish_grab(server);
+		}
 		return;
 	}
 
