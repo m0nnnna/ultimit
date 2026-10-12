@@ -22,7 +22,7 @@ class Settings(context: Context) {
     var bootOnStart by mutableStateOf(sp.getBoolean("ultimit.bootOnStart", true))
         private set
     // Push the skin's palette into Android's system colors (QS, notifications, settings) with root.
-    var rootSync by mutableStateOf(sp.getBoolean("ultimit.rootSync", false))
+    var rootSync by mutableStateOf(sp.getBoolean("ultimit.rootSync", true))
         private set
     // Set the system's dark/light mode to match the skin when rootSync is on.
     var syncNight by mutableStateOf(sp.getBoolean("ultimit.syncNight", true))
@@ -48,7 +48,7 @@ class Settings(context: Context) {
         fun peekSkin(context: Context): String =
             context.getSharedPreferences("ultimit", Context.MODE_PRIVATE).getString("ultimit.skin", "mine") ?: "mine"
         fun peekRootSync(context: Context): Boolean =
-            context.getSharedPreferences("ultimit", Context.MODE_PRIVATE).getBoolean("ultimit.rootSync", false)
+            context.getSharedPreferences("ultimit", Context.MODE_PRIVATE).getBoolean("ultimit.rootSync", true)
         fun peekSyncNight(context: Context): Boolean =
             context.getSharedPreferences("ultimit", Context.MODE_PRIVATE).getBoolean("ultimit.syncNight", true)
     }

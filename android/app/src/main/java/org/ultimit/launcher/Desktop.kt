@@ -462,11 +462,15 @@ private fun rememberSys(ctx: Context): Sys {
         while (true) {
             val now = Date()
             val cal = java.util.Calendar.getInstance()
-            val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+            // Every system read is guarded: a status readout must never take the home screen down.
+            val max = runCatching { am.getStreamMaxVolume(AudioManager.STREAM_MUSIC) }.getOrDefault(1).coerceAtLeast(1)
             value = Sys(
                 tf.format(now), "${df.format(now)} ${days[cal.get(java.util.Calendar.DAY_OF_WEEK) - 1]}",
-                bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY), bm.isCharging,
-                cm.activeNetwork != null, am.getStreamVolume(AudioManager.STREAM_MUSIC) * 100 / max, Build.MODEL ?: "phone",
+                runCatching { bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) }.getOrDefault(0),
+                runCatching { bm.isCharging }.getOrDefault(false),
+                runCatching { cm.activeNetwork != null }.getOrDefault(false),
+                runCatching { am.getStreamVolume(AudioManager.STREAM_MUSIC) }.getOrDefault(0) * 100 / max,
+                Build.MODEL ?: "phone",
             )
             delay(1000L - System.currentTimeMillis() % 1000L)
         }

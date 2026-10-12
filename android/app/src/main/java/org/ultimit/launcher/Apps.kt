@@ -77,18 +77,18 @@ class AppRepository(private val context: Context, private val settings: Settings
     }
 
     fun start() {
-        la.registerCallback(callback, Handler(Looper.getMainLooper()))
+        runCatching { la.registerCallback(callback, Handler(Looper.getMainLooper())) }
         refresh()
     }
 
-    fun stop() = la.unregisterCallback(callback)
+    fun stop() { runCatching { la.unregisterCallback(callback) } }
 
     fun refresh() {
         job?.cancel()
         job = scope.launch {
-            val list = withContext(Dispatchers.IO) { load() }
-            _apps.value = list
-            _usage.value = withContext(Dispatchers.IO) { loadUsage() }
+            val list = withContext(Dispatchers.IO) { runCatching { load() }.getOrNull() }
+            if (list != null) _apps.value = list
+            _usage.value = withContext(Dispatchers.IO) { runCatching { loadUsage() }.getOrDefault(emptyMap()) }
         }
     }
 
@@ -97,8 +97,9 @@ class AppRepository(private val context: Context, private val settings: Settings
         val me = Process.myUserHandle()
         val out = ArrayList<AppEntry>()
         for (user in la.profiles) {
-            if (um.isQuietModeEnabled(user)) continue
-            for (info in la.getActivityList(null, user)) {
+            if (runCatching { um.isQuietModeEnabled(user) }.getOrDefault(false)) continue
+            val activities = runCatching { la.getActivityList(null, user) }.getOrNull() ?: continue
+            for (info in activities) {
                 val pkg = info.applicationInfo.packageName
                 if (pkg == context.packageName) continue
                 val auto = classify(info, hints)
@@ -115,7 +116,9 @@ class AppRepository(private val context: Context, private val settings: Settings
     private fun icon(info: LauncherActivityInfo): ImageBitmap {
         val key = "${info.componentName.packageName}/${info.componentName.className}#${info.user.hashCode()}"
         return iconCache.getOrPut(key) {
-            info.getBadgedIcon(0).toBitmap(iconPx, iconPx).asImageBitmap()
+            runCatching { info.getBadgedIcon(0).toBitmap(iconPx, iconPx) }
+                .getOrElse { android.graphics.Bitmap.createBitmap(iconPx, iconPx, android.graphics.Bitmap.Config.ARGB_8888) }
+                .asImageBitmap()
         }
     }
 
@@ -123,7 +126,7 @@ class AppRepository(private val context: Context, private val settings: Settings
     private data class Hints(val mail: Set<String>, val music: Set<String>, val files: Set<String>, val browser: Set<String>, val tools: Set<String>)
 
     private fun pkgsFor(i: Intent): Set<String> =
-        pm.queryIntentActivities(i, PackageManager.MATCH_ALL).map { it.activityInfo.packageName }.toSet()
+        runCatching { pm.queryIntentActivities(i, PackageManager.MATCH_ALL).map { it.activityInfo.packageName }.toSet() }.getOrDefault(emptySet())
 
     private fun categoryIntent(cat: String) = Intent(Intent.ACTION_MAIN).addCategory(cat)
 

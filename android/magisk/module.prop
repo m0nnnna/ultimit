@@ -3,4 +3,4 @@ name=Ultimit Shell
 version=0.1-mine
 versionCode=1
 author=m0nnnna
-description=Ultimit, the Altimit-style desktop, as your Android home screen. Installs the launcher as a system app, makes it the default home, grants its notification and usage access. Skin colors reach quick settings via the launcher's root color sync.
+description=Ultimit, the Altimit-style desktop, as your Android home screen. Installs the launcher as a system app, makes it the default home, grants its access, and switches Android's system colors to the Mine skin on first boot.

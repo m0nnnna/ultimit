@@ -6,3 +6,4 @@ cmd notification disallow_listener "$PKG/$PKG.TickerListener" 2>/dev/null
 case "$(settings get secure theme_customization_overlay_packages)" in
   *_applied_timestamp*) settings delete secure theme_customization_overlay_packages ;;
 esac
+rm -rf /data/adb/ultimit

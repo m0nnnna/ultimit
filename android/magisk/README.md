@@ -7,7 +7,8 @@ What it does:
 - Installs the launcher as a system app (`/system/app/UltimitLauncher`). It is a plain
   system app, not priv-app, so no privileged-permission allowlist can block boot.
 - On every boot (`service.sh`): makes Ultimit the default home once, grants its
-  notification listener and usage access. Log: `/data/adb/modules/ultimit/ultimit.log`.
+  notification listener and usage access. Log: `/data/adb/ultimit/ultimit.log`.
+- On first boot: switches the system palette to the Mine skin and turns on dark mode.
 - Your stock launcher stays installed. If Ultimit ever breaks, pick the stock one in
   Settings → Apps → Default apps → Home app, or disable the module in Magisk.
 
