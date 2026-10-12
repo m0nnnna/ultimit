@@ -71,6 +71,20 @@ void view_focus(struct ul_view *view) {
 	}
 
 	struct ul_view *prev = server->focused_view;
+	/* Fullscreen stays on top only while focused (like Windows): when a
+	 * game's own sign-in window or anything else gets focus, the
+	 * fullscreen window steps back into the normal window layer, and
+	 * returns above the panels when it is focused again. */
+	struct ul_view *other;
+	wl_list_for_each(other, &server->views, link) {
+		if (other != view && other->fullscreen &&
+				other->tree->node.parent == server->layers[UL_LAYER_FULLSCREEN]) {
+			wlr_scene_node_reparent(&other->tree->node, server->layers[UL_LAYER_VIEWS]);
+		}
+	}
+	if (view->fullscreen && view->tree->node.parent != server->layers[UL_LAYER_FULLSCREEN]) {
+		wlr_scene_node_reparent(&view->tree->node, server->layers[UL_LAYER_FULLSCREEN]);
+	}
 	wlr_scene_node_raise_to_top(&view->tree->node);
 	wl_list_remove(&view->link);
 	wl_list_insert(&server->views, &view->link);
