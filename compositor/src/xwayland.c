@@ -20,8 +20,17 @@ struct ul_unmanaged {
 	struct wl_listener unmap;
 	struct wl_listener request_configure;
 	struct wl_listener set_geometry;
+	struct wl_listener set_override_redirect;
 	struct wl_listener destroy;
 };
+
+static struct ul_view *create_view(struct ul_server *server, struct wlr_xwayland_surface *xsurface);
+static struct ul_unmanaged *create_unmanaged(struct ul_server *server, struct wlr_xwayland_surface *xsurface);
+static void x_associate(struct wl_listener *listener, void *data);
+static void x_dissociate(struct wl_listener *listener, void *data);
+static void x_map(struct wl_listener *listener, void *data);
+static void x_unmap(struct wl_listener *listener, void *data);
+static void x_destroy(struct wl_listener *listener, void *data);
 
 /* ---- override-redirect --------------------------------------------------- */
 
@@ -85,6 +94,7 @@ bool xwayland_focus_unmanaged(struct ul_server *server, struct wlr_surface *surf
 
 static void unmanaged_map(struct wl_listener *listener, void *data) {
 	struct ul_unmanaged *u = wl_container_of(listener, u, map);
+	if (u->tree) return;
 	u->tree = wlr_scene_subsurface_tree_create(u->server->layers[UL_LAYER_OVERLAY],
 		u->xsurface->surface);
 	wlr_scene_node_set_position(&u->tree->node, u->xsurface->x, u->xsurface->y);
@@ -163,11 +173,32 @@ static void unmanaged_destroy(struct wl_listener *listener, void *data) {
 	wl_list_remove(&u->dissociate.link);
 	wl_list_remove(&u->request_configure.link);
 	wl_list_remove(&u->set_geometry.link);
+	wl_list_remove(&u->set_override_redirect.link);
 	wl_list_remove(&u->destroy.link);
 	free(u);
 }
 
-static void create_unmanaged(struct ul_server *server, struct wlr_xwayland_surface *xsurface) {
+/* Wine creates some windows override-redirect and turns them into normal
+ * managed windows before showing them (NTE's sign-in dialog), or the other
+ * way round. Rebuild them as the right kind, or a managed dialog stays an
+ * unmanaged overlay: never focused, never offered WM_TAKE_FOCUS. */
+static void unmanaged_set_override_redirect(struct wl_listener *listener, void *data) {
+	struct ul_unmanaged *u = wl_container_of(listener, u, set_override_redirect);
+	struct wlr_xwayland_surface *xs = u->xsurface;
+	struct ul_server *server = u->server;
+	if (xs->override_redirect) return;
+	bool assoc = xs->surface != NULL;
+	if (u->tree) unmanaged_unmap(&u->unmap, NULL);
+	if (assoc) unmanaged_dissociate(&u->dissociate, NULL);
+	unmanaged_destroy(&u->destroy, NULL);
+	struct ul_view *view = create_view(server, xs);
+	if (assoc) {
+		x_associate(&view->associate, NULL);
+		if (xs->surface->mapped && !view->mapped) x_map(&view->map, NULL);
+	}
+}
+
+static struct ul_unmanaged *create_unmanaged(struct ul_server *server, struct wlr_xwayland_surface *xsurface) {
 	struct ul_unmanaged *u = calloc(1, sizeof(*u));
 	u->server = server;
 	u->xsurface = xsurface;
@@ -181,6 +212,9 @@ static void create_unmanaged(struct ul_server *server, struct wlr_xwayland_surfa
 	wl_signal_add(&xsurface->events.set_geometry, &u->set_geometry);
 	u->destroy.notify = unmanaged_destroy;
 	wl_signal_add(&xsurface->events.destroy, &u->destroy);
+	u->set_override_redirect.notify = unmanaged_set_override_redirect;
+	wl_signal_add(&xsurface->events.set_override_redirect, &u->set_override_redirect);
+	return u;
 }
 
 /* ---- managed windows ----------------------------------------------------- */
@@ -193,6 +227,7 @@ static bool wants_ssd(struct wlr_xwayland_surface *xsurface) {
 
 static void x_map(struct wl_listener *listener, void *data) {
 	struct ul_view *view = wl_container_of(listener, view, map);
+	if (view->mapped) return;
 	struct wlr_xwayland_surface *xsurface = view->xwayland_surface;
 	view->content = wlr_scene_subsurface_tree_create(view->tree, xsurface->surface);
 	view->width = xsurface->width;
@@ -361,10 +396,27 @@ static void x_destroy(struct wl_listener *listener, void *data) {
 	wl_list_remove(&view->set_title.link);
 	wl_list_remove(&view->set_app_id.link);
 	wl_list_remove(&view->set_decorations.link);
+	wl_list_remove(&view->set_override_redirect.link);
 	view_destroy(view);
 }
 
-static void create_view(struct ul_server *server, struct wlr_xwayland_surface *xsurface) {
+static void x_set_override_redirect(struct wl_listener *listener, void *data) {
+	struct ul_view *view = wl_container_of(listener, view, set_override_redirect);
+	struct wlr_xwayland_surface *xs = view->xwayland_surface;
+	struct ul_server *server = view->server;
+	if (!xs->override_redirect) return;
+	bool assoc = xs->surface != NULL;
+	if (view->mapped) x_unmap(&view->unmap, NULL);
+	if (assoc) x_dissociate(&view->dissociate, NULL);
+	x_destroy(&view->destroy, NULL);
+	struct ul_unmanaged *u = create_unmanaged(server, xs);
+	if (assoc) {
+		unmanaged_associate(&u->associate, NULL);
+		if (xs->surface->mapped) unmanaged_map(&u->map, NULL);
+	}
+}
+
+static struct ul_view *create_view(struct ul_server *server, struct wlr_xwayland_surface *xsurface) {
 	struct ul_view *view = calloc(1, sizeof(*view));
 	view->server = server;
 	view->type = UL_VIEW_XWAYLAND;
@@ -403,6 +455,9 @@ static void create_view(struct ul_server *server, struct wlr_xwayland_surface *x
 	wl_signal_add(&xsurface->events.set_class, &view->set_app_id);
 	view->set_decorations.notify = x_set_decorations;
 	wl_signal_add(&xsurface->events.set_decorations, &view->set_decorations);
+	view->set_override_redirect.notify = x_set_override_redirect;
+	wl_signal_add(&xsurface->events.set_override_redirect, &view->set_override_redirect);
+	return view;
 }
 
 static void new_surface(struct wl_listener *listener, void *data) {

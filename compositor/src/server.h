@@ -338,6 +338,7 @@ struct ul_view {
 	struct wl_listener foreign_maximize;
 	struct wl_listener foreign_fullscreen;
 	struct wl_listener foreign_set_rectangle;
+	struct wl_listener set_override_redirect; /* xwayland.c */
 
 	struct wl_listener map;
 	struct wl_listener unmap;
