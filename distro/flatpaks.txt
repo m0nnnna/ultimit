@@ -2,3 +2,6 @@
 io.github.ungoogled_software.ungoogled_chromium
 # Installs Proton builds (GE-Proton, DW-Proton...) into Steam
 com.vysp3r.ProtonPlus
+# Streaming; the plugin replaces NVIDIA Broadcast's background blur/replace
+com.obsproject.Studio
+com.obsproject.Studio.Plugin.BackgroundRemoval
