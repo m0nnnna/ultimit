@@ -1,7 +1,8 @@
 #!/bin/bash
 # Install what an Ultimit system ships, from the lists in distro/: apt
-# packages (with 32-bit support for Wine and Steam), Flatpak with the Flathub
-# remote and its apps (Ungoogled Chromium, ProtonPlus), and DXVK.
+# packages (with 32-bit support for Wine and Steam), pinned .debs from outside
+# the archive (umu-launcher), Flatpak with the Flathub remote and its apps
+# (Ungoogled Chromium, ProtonPlus), and DXVK.
 #
 #   scripts/install-apps.sh          dry run: list what is missing
 #   scripts/install-apps.sh --yes    install it (sudo)
@@ -24,6 +25,11 @@ for p in $(list "$ROOT/distro/packages-install.txt"); do
 	installed "$p" || missing_apt+=("$p")
 done
 
+missing_debs=()
+while read -r pkg url sum; do
+	installed "$pkg" || missing_debs+=("$pkg $url $sum")
+done < <(sed -e 's/#.*//' "$ROOT/distro/debs.txt" | grep -v '^[[:space:]]*$')
+
 have_flathub=false
 command -v flatpak >/dev/null && flatpak remotes --system --columns=name | grep -qx flathub && have_flathub=true
 missing_flatpak=()
@@ -36,6 +42,7 @@ have_dxvk=false
 
 echo "== 32-bit (i386) architecture: $($need_i386 && echo "to enable" || echo enabled)"
 echo "== apt packages missing (${#missing_apt[@]}): ${missing_apt[*]:-none}"
+echo "== pinned .debs missing (${#missing_debs[@]}): $(for d in "${missing_debs[@]}"; do printf "%s " "${d%% *}"; done; [ ${#missing_debs[@]} -gt 0 ] || echo none)"
 echo "== Flathub remote: $($have_flathub && echo present || echo "to add")"
 echo "== Flatpaks missing (${#missing_flatpak[@]}): ${missing_flatpak[*]:-none}"
 echo "== DXVK in /opt/ultimit/dxvk: $($have_dxvk && echo present || echo "to install")"
@@ -55,6 +62,20 @@ if [ ${#missing_apt[@]} -gt 0 ]; then
 	# Interactive on purpose: steam-installer asks you to accept Steam's
 	# license.
 	sudo apt-get install -y "${missing_apt[@]}"
+fi
+
+if [ ${#missing_debs[@]} -gt 0 ]; then
+	dl=$(mktemp -d)
+	debs=()
+	for d in "${missing_debs[@]}"; do
+		read -r pkg url sum <<<"$d"
+		f="$dl/${url##*/}"
+		curl -fsSL -o "$f" "$url"
+		echo "$sum  $f" | sha256sum -c --quiet || { echo "Checksum mismatch for $pkg; stopping."; exit 1; }
+		debs+=("$f")
+	done
+	sudo apt-get install -y "${debs[@]}"
+	rm -rf "$dl"
 fi
 
 if ! $have_flathub; then

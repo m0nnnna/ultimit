@@ -6,6 +6,8 @@ top of Ubuntu 26.04 LTS. Keep them in step with what this dev machine runs.
 - `packages-install.txt`: apt packages Ultimit needs or ships
 - `packages-remove.txt`: apt packages removed (GNOME; see scripts/purge-gnome.sh
   for the autoremove protection)
+- `debs.txt`: .debs from outside Ubuntu's archive (umu-launcher), pinned by
+  sha256
 - `flatpaks.txt`: Flathub apps installed system-wide
 - `snaps-remove.txt`: snaps Ubuntu preinstalls that Ultimit removes
 
@@ -15,7 +17,7 @@ the ISO, or ~/.local/share/ultimit/dxvk per user.
 
 Install everything in these lists (dry run first, then --yes):
 scripts/install-apps.sh. It enables 32-bit packages, installs the apt list,
-adds Flathub system-wide and installs the Flatpaks (Ungoogled Chromium,
+installs the pinned .debs, adds Flathub system-wide and installs the Flatpaks (Ungoogled Chromium,
 ProtonPlus), and puts DXVK in /opt/ultimit/dxvk. Steam comes from the
 steam-installer package; its client downloads on each user's first launch.
 ProtonPlus installs Proton builds (GE-Proton, DW-Proton) into that Steam.

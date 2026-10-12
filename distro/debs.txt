@@ -1,0 +1,5 @@
+# .deb packages not in Ubuntu's archive, pinned by sha256.
+# Format: package  url  sha256
+# umu-launcher: runs Proton outside Steam (Battle.net and other launchers)
+python3-umu-launcher https://github.com/Open-Wine-Components/umu-launcher/releases/download/1.4.4/python3-umu-launcher_1.4.4-1_amd64_ubuntu-resolute.deb 5ec92ee8b2f3066d927d573cb485759dd96c3bdf73d25b0a39ec110fb974b502
+umu-launcher https://github.com/Open-Wine-Components/umu-launcher/releases/download/1.4.4/umu-launcher_1.4.4-1_all_ubuntu-resolute.deb 8d11aa5bf0edaa988a4cbb04a1414a3d2249128913e6130e6a2a8528c9ef31b1
