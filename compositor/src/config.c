@@ -20,6 +20,7 @@
 #include <string.h>
 #include <wlr/backend/libinput.h>
 #include <wlr/types/wlr_keyboard.h>
+#include <wlr/interfaces/wlr_keyboard.h>
 #include <xkbcommon/xkbcommon.h>
 #include "server.h"
 
@@ -43,6 +44,7 @@ static void set_defaults(struct ul_config *c) {
 		.left_handed = false,
 		.repeat_rate = 25,
 		.repeat_delay = 600,
+		.numlock = true,
 	};
 	snprintf(c->layout, sizeof(c->layout), "us");
 }
@@ -96,6 +98,7 @@ void config_load(struct ul_server *server) {
 			else if (strcmp(key, "options") == 0) snprintf(c->options, sizeof(c->options), "%s", val);
 			else if (strcmp(key, "repeat_rate") == 0) c->repeat_rate = atoi(val);
 			else if (strcmp(key, "repeat_delay") == 0) c->repeat_delay = atoi(val);
+			else if (strcmp(key, "numlock") == 0) c->numlock = parse_bool(val);
 		}
 	}
 	fclose(f);
@@ -143,7 +146,22 @@ void config_apply_keyboard(struct ul_server *server, struct wlr_keyboard *keyboa
 			c->layout, c->variant);
 		keymap = xkb_keymap_new_from_names(context, NULL, XKB_KEYMAP_COMPILE_NO_FLAGS);
 	}
+	/* A new keymap resets the lock state: keep Caps/Num Lock across a
+	 * reload, and start a new keyboard with Num Lock on (configurable). */
+	bool fresh = keyboard->keymap == NULL;
+	xkb_mod_mask_t locked = keyboard->modifiers.locked;
 	wlr_keyboard_set_keymap(keyboard, keymap);
+	xkb_mod_index_t num = xkb_keymap_mod_get_index(keymap, XKB_MOD_NAME_NUM);
+	if (fresh) {
+		locked = 0;
+		if (c->numlock && num != XKB_MOD_INVALID) {
+			locked |= 1u << num;
+		}
+	}
+	if (locked) {
+		wlr_keyboard_notify_modifiers(keyboard, keyboard->modifiers.depressed,
+			keyboard->modifiers.latched, locked, keyboard->modifiers.group);
+	}
 	xkb_keymap_unref(keymap);
 	xkb_context_unref(context);
 	wlr_keyboard_set_repeat_info(keyboard, c->repeat_rate, c->repeat_delay);

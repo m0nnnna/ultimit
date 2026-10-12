@@ -81,6 +81,7 @@ struct ul_config {
 	char options[128];
 	int repeat_rate;
 	int repeat_delay;
+	bool numlock; /* Num Lock on when a keyboard is plugged in or at login */
 };
 
 /* One [connector] section of ~/.config/ultimit/displays.conf (config.c),
