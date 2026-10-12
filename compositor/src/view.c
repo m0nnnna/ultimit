@@ -86,6 +86,9 @@ void view_focus(struct ul_view *view) {
 		wlr_scene_node_reparent(&view->tree->node, server->layers[UL_LAYER_FULLSCREEN]);
 	}
 	wlr_scene_node_raise_to_top(&view->tree->node);
+	server->focused_view = view; /* for the restack below; also set further down */
+	xwayland_restack_unmanaged(server);
+	server->focused_view = prev;
 	wl_list_remove(&view->link);
 	wl_list_insert(&server->views, &view->link);
 

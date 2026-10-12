@@ -112,6 +112,7 @@ int main(int argc, char *argv[]) {
 	struct ul_server server = {0};
 	wl_list_init(&server.views);
 	wl_list_init(&server.ghosts);
+	wl_list_init(&server.unmanaged);
 	server.display = wl_display_create();
 	server.backend = wlr_backend_autocreate(wl_display_get_event_loop(server.display),
 		&server.session);

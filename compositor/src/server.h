@@ -155,6 +155,7 @@ struct ul_server {
 
 	struct wl_list views; /* ul_view.link, most recently focused first */
 	struct wl_list ghosts; /* ul_ghost.link: close/minimize animations (anim.c) */
+	struct wl_list unmanaged; /* ul_unmanaged.link: mapped override-redirect X11 windows */
 	bool super_tap; /* Super pressed with nothing else since (input.c) */
 	struct ul_view *focused_view;
 	struct wlr_layer_surface_v1 *focused_layer;
@@ -360,6 +361,8 @@ struct ul_view {
 };
 
 /* config.c */
+void xwayland_restack_unmanaged(struct ul_server *server);
+bool xwayland_focus_unmanaged(struct ul_server *server, struct wlr_surface *surface);
 bool input_set_cursor_theme(struct ul_server *server, const char *name, int size);
 void config_load(struct ul_server *server);
 void config_reload(struct ul_server *server);

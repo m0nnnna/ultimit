@@ -434,6 +434,14 @@ static void cursor_button(struct wl_listener *listener, void *data) {
 	struct wlr_surface *surface = surface_at(server, server->cursor->x, server->cursor->y,
 		&sx, &sy, &view, NULL);
 
+	/* Clicking an override-redirect X11 window (a game's sign-in overlay)
+	 * gives it the keyboard; the window under it keeps its stacking. */
+	if (surface && xwayland_focus_unmanaged(server, surface)) {
+		wlr_seat_pointer_notify_button(server->seat, event->time_msec,
+			event->button, event->state);
+		return;
+	}
+
 	/* Clicking a layer surface that takes keyboard input focuses it. */
 	if (surface) {
 		struct wlr_layer_surface_v1 *layer =

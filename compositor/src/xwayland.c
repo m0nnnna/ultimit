@@ -10,6 +10,7 @@
 #include "theme.h"
 
 struct ul_unmanaged {
+	struct wl_list link; /* ul_server.unmanaged, while mapped */
 	struct ul_server *server;
 	struct wlr_xwayland_surface *xsurface;
 	struct wlr_scene_tree *tree;
@@ -24,11 +25,71 @@ struct ul_unmanaged {
 
 /* ---- override-redirect --------------------------------------------------- */
 
+/* A screen-sized override-redirect window is part of a fullscreen app (NTE's
+ * sign-in overlay over its game), not a menu: it lives with fullscreen
+ * windows and steps back with them when something else is focused. */
+static bool unmanaged_is_big(struct ul_unmanaged *u) {
+	struct ul_output *output = output_at(u->server, u->xsurface->x + u->xsurface->width / 2.0,
+		u->xsurface->y + u->xsurface->height / 2.0);
+	if (!output) return false;
+	return u->xsurface->width * 10 >= output->full_area.width * 9 &&
+		u->xsurface->height * 10 >= output->full_area.height * 9;
+}
+
+static void unmanaged_place(struct ul_unmanaged *u) {
+	struct ul_server *server = u->server;
+	enum ul_layer layer = UL_LAYER_OVERLAY;
+	if (unmanaged_is_big(u)) {
+		layer = server->focused_view && !server->focused_view->fullscreen ?
+			UL_LAYER_VIEWS : UL_LAYER_FULLSCREEN;
+	}
+	if (u->tree->node.parent != server->layers[layer]) {
+		wlr_scene_node_reparent(&u->tree->node, server->layers[layer]);
+	}
+	if (layer == UL_LAYER_VIEWS && server->focused_view) {
+		/* Just below the focused window. */
+		wlr_scene_node_place_below(&u->tree->node, &server->focused_view->tree->node);
+	} else {
+		wlr_scene_node_raise_to_top(&u->tree->node);
+	}
+}
+
+/* view_focus() calls this after restacking: big override-redirect windows
+ * follow the fullscreen windows up or down. */
+void xwayland_restack_unmanaged(struct ul_server *server) {
+	struct ul_unmanaged *u;
+	wl_list_for_each(u, &server->unmanaged, link) {
+		if (u->tree && unmanaged_is_big(u)) unmanaged_place(u);
+	}
+}
+
+/* Override-redirect windows never get X input focus from the window
+ * manager. Clicking one drops X focus to PointerRoot (keys then go to the
+ * X window under the pointer) and points the Wayland keyboard at it, so a
+ * game's sign-in overlay can be typed into. */
+bool xwayland_focus_unmanaged(struct ul_server *server, struct wlr_surface *surface) {
+	struct wlr_xwayland_surface *xs = wlr_xwayland_surface_try_from_wlr_surface(surface);
+	if (!xs || !xs->override_redirect) {
+		return false;
+	}
+	struct ul_view *fv = server->focused_view;
+	if (fv && fv->type == UL_VIEW_XWAYLAND) {
+		wlr_xwayland_surface_activate(fv->xwayland_surface, false);
+	}
+	struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(server->seat);
+	wlr_seat_keyboard_notify_enter(server->seat, surface,
+		keyboard ? keyboard->keycodes : NULL, keyboard ? keyboard->num_keycodes : 0,
+		keyboard ? &keyboard->modifiers : NULL);
+	return true;
+}
+
 static void unmanaged_map(struct wl_listener *listener, void *data) {
 	struct ul_unmanaged *u = wl_container_of(listener, u, map);
 	u->tree = wlr_scene_subsurface_tree_create(u->server->layers[UL_LAYER_OVERLAY],
 		u->xsurface->surface);
 	wlr_scene_node_set_position(&u->tree->node, u->xsurface->x, u->xsurface->y);
+	wl_list_insert(&u->server->unmanaged, &u->link);
+	unmanaged_place(u);
 	if (wlr_xwayland_surface_override_redirect_wants_focus(u->xsurface)) {
 		struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(u->server->seat);
 		wlr_seat_keyboard_notify_enter(u->server->seat, u->xsurface->surface,
@@ -42,6 +103,7 @@ static void unmanaged_unmap(struct wl_listener *listener, void *data) {
 	if (u->tree) {
 		wlr_scene_node_destroy(&u->tree->node);
 		u->tree = NULL;
+		wl_list_remove(&u->link);
 	}
 	struct ul_server *server = u->server;
 	if (server->seat->keyboard_state.focused_surface == u->xsurface->surface) {
@@ -59,6 +121,7 @@ static void unmanaged_set_geometry(struct wl_listener *listener, void *data) {
 	struct ul_unmanaged *u = wl_container_of(listener, u, set_geometry);
 	if (u->tree) {
 		wlr_scene_node_set_position(&u->tree->node, u->xsurface->x, u->xsurface->y);
+		unmanaged_place(u);
 	}
 }
 
