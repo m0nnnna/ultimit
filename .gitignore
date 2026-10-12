@@ -7,3 +7,6 @@ subprojects/*/
 *.so
 compile_commands.json
 test-results/
+.gradle/
+local.properties
+*.apk

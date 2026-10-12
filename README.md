@@ -27,6 +27,7 @@ desktop shell, not a theme on top of another desktop.
 |---|---|
 | `docs/design/` | The interactive design mockup |
 | `docs/architecture.md` | Stack choices and why |
+| `android/` | Ultimit as an Android home screen (launcher + Magisk module) |
 
 ## Credits
 

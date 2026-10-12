@@ -1,0 +1,63 @@
+name: Android launcher
+
+on:
+  push:
+    paths: ["android/**", ".github/workflows/android.yml"]
+  pull_request:
+    paths: ["android/**", ".github/workflows/android.yml"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      # Optional: add ULTIMIT_KEYSTORE_B64 (base64 keystore), ULTIMIT_KEYSTORE_PASSWORD,
+      # ULTIMIT_KEY_ALIAS and ULTIMIT_KEY_PASSWORD as repo secrets to sign with a stable key.
+      # Without them the APK is signed with the runner's debug key.
+      - name: Signing key
+        env:
+          KS: ${{ secrets.ULTIMIT_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KS" ]; then
+            echo "$KS" | base64 -d > "$RUNNER_TEMP/ultimit.jks"
+            echo "ULTIMIT_KEYSTORE=$RUNNER_TEMP/ultimit.jks" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build APK
+        env:
+          ULTIMIT_KEYSTORE_PASSWORD: ${{ secrets.ULTIMIT_KEYSTORE_PASSWORD }}
+          ULTIMIT_KEY_ALIAS: ${{ secrets.ULTIMIT_KEY_ALIAS }}
+          ULTIMIT_KEY_PASSWORD: ${{ secrets.ULTIMIT_KEY_PASSWORD }}
+        run: gradle -p android assembleRelease --no-daemon --stacktrace
+
+      - name: Package Magisk module
+        run: |
+          set -e
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          mkdir -p out
+          cp "$APK" "out/UltimitLauncher-${GITHUB_RUN_NUMBER}.apk"
+          STAGE="$RUNNER_TEMP/magisk"
+          cp -r android/magisk "$STAGE"
+          rm -f "$STAGE/system/app/UltimitLauncher/.gitkeep" "$STAGE/README.md"
+          cp "$APK" "$STAGE/system/app/UltimitLauncher/UltimitLauncher.apk"
+          sed -i "s/^versionCode=.*/versionCode=${GITHUB_RUN_NUMBER}/" "$STAGE/module.prop"
+          (cd "$STAGE" && zip -r9 "$GITHUB_WORKSPACE/out/Ultimit-magisk-${GITHUB_RUN_NUMBER}.zip" .)
+          ls -la out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ultimit-android-${{ github.run_number }}
+          path: out/*

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ultimit</string>
+    <string name="listener_label">Ultimit news ticker</string>
+    <color name="ultimit_bg">#050607</color>
+    <color name="ultimit_fg">#EEF1F4</color>
+</resources>
