@@ -68,8 +68,8 @@ free_gb() { df -Pk "$1" | awk 'NR==2 {print int($4 / 1048576)}'; }
 curl -fsS --max-time 15 -o /dev/null https://github.com || die "no internet connection (github.com unreachable)"
 mem_gb=$(awk '/MemTotal/ {print int($2 / 1048576)}' /proc/meminfo)
 cores=$(nproc)
-if [ -z "$JOBS" ]; then   # Quickshell needs ~1.5 GB per compile job
-	JOBS=$(( mem_gb * 2 / 3 )); [ "$JOBS" -lt 1 ] && JOBS=1; [ "$JOBS" -gt "$cores" ] && JOBS=$cores
+if [ -z "$JOBS" ]; then   # a Quickshell compile job peaks around 0.6 GB; leave headroom
+	JOBS=$mem_gb; [ "$JOBS" -lt 1 ] && JOBS=1; [ "$JOBS" -gt "$cores" ] && JOBS=$cores
 fi
 note "Ubuntu $VERSION_ID, $cores cores, ${mem_gb} GB memory -> $JOBS build jobs"
 note "Installing to $PREFIX; building in $WORK; log: $LOG"
