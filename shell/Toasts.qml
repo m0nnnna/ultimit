@@ -4,10 +4,11 @@ pragma Singleton
 // component (components/NotifCard.qml, hosted by ToastOverlay).
 //   Toasts.show("Title", "message")                    // plain
 //   Toasts.show("Mailer", "No mail app — try:", "sudo apt install thunderbird")  // + selectable command
+//   Toasts.show("Battery", "5% left", "", 0, 2)           // sticky (timeout 0), critical (urgency 2); returns an id
 import QtQuick
 import Quickshell
 
 Singleton {
-    function show(title, message, command, timeoutMs) { Notifs.toast(title, message, command, timeoutMs); }
+    function show(title, message, command, timeoutMs, urgency) { return Notifs.toast(title, message, command, timeoutMs, urgency); }
     function dismiss(id) { Notifs.closePopup(id); }
 }

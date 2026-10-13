@@ -194,16 +194,18 @@ Singleton {
     function toggleDnd() { dnd = !dnd; }
 
     // Toasts.show() lands here.
-    function toast(title, message, command, timeoutMs) {
+    // urgency 2 = critical (red card). Returns the toast's nid, for release(nid).
+    function toast(title, message, command, timeoutMs, urgency) {
         const nid = -(++_toastSeq);
         popupModel.append({
             nid: nid, kind: "toast", app: title || "", title: "",
-            body: esc(message || ""), icon: "", image: "", urgency: 1,
-            timeout: timeoutMs || (command ? 12000 : 4200),
+            body: esc(message || ""), icon: "", image: "", urgency: urgency === undefined ? 1 : urgency,
+            timeout: timeoutMs === 0 ? 0 : (timeoutMs || (command ? 12000 : 4200)),   // 0 = sticky
             actions: "[]", hasDefault: false, command: command || "",
             time: Date.now(), rev: 0
         });
         while (popupModel.count > maxPopups) release(popupModel.get(0).nid, false);
+        return nid;
     }
 
     IpcHandler {

@@ -28,4 +28,5 @@ PopupMenu 1.0 PopupMenu.qml
 RailMenu 1.0 RailMenu.qml
 singleton FlyoutState 1.0 FlyoutState.qml
 Flyout 1.0 Flyout.qml
+BatteryWatch 1.0 BatteryWatch.qml
 AltTab 1.0 AltTab.qml
