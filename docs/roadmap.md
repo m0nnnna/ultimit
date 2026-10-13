@@ -99,7 +99,7 @@ Done:
   - [ ] Keyring unlock with autologin (no password at login, so oo7 asks once)
 
 ### 5b: what Windows users expect, part 1 (the desktop)
-- [ ] Workspaces
+- [ ] ~~Workspaces~~ (dropped, 2026-10-13: not wanted)
 - [x] Clipboard history (Super+V); emoji picker dropped (2026-10-13)
 - [x] Cheat sheet overlay (Super+/)
   - [ ] Configurable bindings (still edited in keys.c)

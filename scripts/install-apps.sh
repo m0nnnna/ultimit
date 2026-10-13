@@ -87,7 +87,7 @@ fi
 
 # System config files (distro/system mirrors /), e.g. the virtual camera and the
 # FIREWALL helper (executables keep their x bit; everything is root-owned).
-for f in $(cd "$ROOT/distro/system" && find . -type f); do
+for f in $(cd "$ROOT/distro/system" && find . -name __pycache__ -prune -o -type f -print); do
 	mode=644; [ -x "$ROOT/distro/system/$f" ] && mode=755
 	cmp -s "$ROOT/distro/system/$f" "/$f" || sudo install -D -m $mode "$ROOT/distro/system/$f" "/$f"
 done
