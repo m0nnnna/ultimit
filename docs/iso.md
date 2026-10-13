@@ -23,6 +23,10 @@ scripts/install.sh --no-apps --keep-login-screen   # builds /opt/ultimit from th
 scripts/build-release.sh                           # -> ultimit-<version>-amd64.tar.gz
 ```
 
+The release also lists the Ubuntu packages its binaries link to (`distro/packages-runtime.txt`,
+made by `scripts/release-deps.sh`), so the target machine gets those libraries without the build
+packages.
+
 Then, anywhere with `xorriso` (`sudo apt install xorriso`) and Ubuntu's server ISO from
 releases.ubuntu.com (check it against their SHA256SUMS):
 
