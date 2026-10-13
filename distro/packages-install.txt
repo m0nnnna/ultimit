@@ -24,6 +24,10 @@ grim
 slurp
 wl-clipboard
 wtype
+# Screen recording (ultimit-screenshot record-*) with H.264 on the Intel GPU; the VA-API driver
+# also gives mpv and browsers hardware video decoding
+wf-recorder
+intel-media-va-driver-non-free
 # File sharing (SHARES app: Samba usershares)
 samba
 smbclient

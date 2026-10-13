@@ -45,6 +45,8 @@ documentation only; their behaviour is implemented elsewhere (input.c, alttab.c)
 |---|---|
 | Super+L | Lock the screen |
 | Super+Shift+S | Screenshot a region |
+| Super+Shift+R | Record a region (press again to stop and save) |
+| Super+Alt+R | Record the screen (press again to stop and save) |
 | PrtSc | Screenshot the screen |
 | Ctrl+Alt+Backspace | Quit Ultimit (log out) |
 | Ctrl+Alt+F1..F12 | Switch virtual terminal |

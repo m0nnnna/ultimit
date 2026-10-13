@@ -1,11 +1,128 @@
 #!/bin/sh
-# Ultimit screenshots. Bound in the compositor:
-#   Super+Shift+S  -> ultimit-screenshot area    (drag to pick a region)
+# Ultimit screenshots and screen recordings. Bound in the compositor:
+#   Super+Shift+S  -> ultimit-screenshot area          (drag to pick a region)
 #   Print          -> ultimit-screenshot full
-# Saves to ~/Pictures/Screenshots, copies the image to the clipboard and
-# shows a toast.
+#   Super+Shift+R  -> ultimit-screenshot record-area   (drag a region; press again to stop)
+#   Super+Alt+R    -> ultimit-screenshot record-full   (the screen with the focused window; again stops)
+#   ultimit-screenshot stop | status
+# Screenshots go to ~/Pictures/Screenshots and the clipboard. Recordings (MP4, H.264 on the Intel/AMD
+# GPU when it can, with the sound the PC plays) go to ~/Videos/Recordings; while one runs the shell
+# shows a red REC marker in the bottom bar (click it to stop). Toasts say where things went.
 mode=${1:-area}
 SHELL_DIR=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
+STATE="${XDG_RUNTIME_DIR:-/tmp}/ultimit-recording.json"
+WFR=${ULTIMIT_WF_RECORDER:-wf-recorder}
+
+toast() { qs -p "$SHELL_DIR" ipc call toasts notify "$1" "$2" >/dev/null 2>&1 || true; }
+
+# ---- recording ----------------------------------------------------------------------------
+recording_pid() {
+	pid=$(sed -n 's/.*"pid": *\([0-9]*\).*/\1/p' "$STATE" 2>/dev/null)
+	[ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && echo "$pid"
+}
+
+stop_recording() {
+	pid=$(recording_pid) || { rm -f "$STATE"; return 1; }
+	file=$(sed -n 's/.*"file": *"\([^"]*\)".*/\1/p' "$STATE")
+	kill -INT "$pid" # wf-recorder finishes the file on SIGINT
+	i=0
+	while kill -0 "$pid" 2>/dev/null && [ $i -lt 50 ]; do sleep 0.1; i=$((i + 1)); done
+	rm -f "$STATE"
+	if [ -s "$file" ]; then
+		toast "Recording saved" "${file#$HOME/}"
+	else
+		toast "Recording" "Nothing was recorded."
+	fi
+	return 0
+}
+
+# The output showing the focused window (else the first one).
+focused_output() {
+	"$SHELL_DIR/bin/ultimitctl" state 2>/dev/null | python3 -I -c '
+import json, sys
+d = json.load(sys.stdin)
+outs = d.get("outputs", [])
+w = next((w for w in d.get("windows", []) if w.get("focused")), None)
+if w:
+    f = w["frame"]; cx, cy = f["x"] + f["width"] // 2, f["y"] + f["height"] // 2
+    for o in outs:
+        b = o["full"]
+        if b["x"] <= cx < b["x"] + b["width"] and b["y"] <= cy < b["y"] + b["height"]:
+            print(o["name"]); sys.exit()
+print(outs[0]["name"] if outs else "")'
+}
+
+start_recording() {
+	command -v "$WFR" >/dev/null || {
+		toast "Recording" "Screen recording needs wf-recorder: run scripts/install-apps.sh (or sudo apt install wf-recorder)."
+		exit 1
+	}
+	vdir="$(xdg-user-dir VIDEOS 2>/dev/null || echo "$HOME/Videos")/Recordings"
+	mkdir -p "$vdir"
+	file="$vdir/Ultimit_$(date +%Y-%m-%d_%H-%M-%S).mp4"
+	set -- -f "$file"
+	if [ "$what" = area ]; then
+		geom=$(slurp -d -b '#05060799' -c '#ff8a8aff' -s '#ff8a8a22' -w 2) || exit 0 # Esc cancels
+		set -- "$@" -g "$geom"
+	else
+		out=$(focused_output)
+		[ -n "$out" ] && set -- "$@" -o "$out"
+	fi
+	# The sound the PC plays (the default output's monitor), like Windows' Game Bar.
+	sink=$(wpctl inspect @DEFAULT_AUDIO_SINK@ 2>/dev/null | sed -n 's/.*node\.name = "\(.*\)"/\1/p' | head -n1)
+	[ -n "$sink" ] && [ "${ULTIMIT_RECORD_AUDIO:-1}" = 1 ] && set -- "$@" "--audio=$sink.monitor"
+	log="${XDG_RUNTIME_DIR:-/tmp}/ultimit-recording.log"
+	# H.264 on the GPU that drives the desktop (VA-API); if that can't start, the CPU encoder.
+	vaapi=""
+	for r in /dev/dri/renderD*; do
+		drv=$(basename "$(readlink -f "/sys/class/drm/$(basename "$r")/device/driver")" 2>/dev/null)
+		case "$drv" in i915 | xe | amdgpu) vaapi=$r; break ;; esac
+	done
+	started=""
+	if [ -n "$vaapi" ]; then
+		setsid "$WFR" "$@" -c h264_vaapi -d "$vaapi" </dev/null >"$log" 2>&1 &
+		pid=$!
+		sleep 1
+		kill -0 "$pid" 2>/dev/null && started=$pid
+	fi
+	if [ -z "$started" ]; then
+		rm -f "$file"
+		setsid "$WFR" "$@" -c libx264 -x yuv420p -p preset=veryfast -p crf=23 </dev/null >"$log" 2>&1 &
+		pid=$!
+		sleep 1
+		kill -0 "$pid" 2>/dev/null && started=$pid
+	fi
+	if [ -z "$started" ]; then
+		toast "Recording" "Couldn't start recording: $(tail -n1 "$log")"
+		exit 1
+	fi
+	printf '{"pid": %s, "file": "%s", "started": %s, "what": "%s"}\n' "$started" "$file" "$(date +%s)" "$what" >"$STATE"
+}
+
+case "$mode" in
+area | full) ;;
+record-area | record-full)
+	# The same key stops a recording that is running.
+	stop_recording && exit 0
+	what=${mode#record-}
+	start_recording
+	exit 0
+	;;
+stop)
+	stop_recording || echo "not recording" >&2
+	exit 0
+	;;
+status)
+	if recording_pid >/dev/null; then cat "$STATE"; else echo '{"recording": false}'; fi
+	exit 0
+	;;
+*)
+	echo "usage: ultimit-screenshot [area|full|record-area|record-full|stop|status]" >&2
+	exit 2
+	;;
+esac
+
+# ---- screenshot ----------------------------------------------------------------------------
 dir="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")/Screenshots"
 mkdir -p "$dir"
 file="$dir/Ultimit_$(date +%Y-%m-%d_%H-%M-%S).png"
@@ -18,11 +135,7 @@ area)
 full)
 	grim "$file" || exit 1
 	;;
-*)
-	echo "usage: ultimit-screenshot [area|full]" >&2
-	exit 2
-	;;
 esac
 
 wl-copy --type image/png <"$file"
-qs -p "$SHELL_DIR" ipc call toasts notify "Screenshot" "Copied to clipboard · saved to ${file#$HOME/}" >/dev/null 2>&1 || true
+toast "Screenshot" "Copied to clipboard · saved to ${file#$HOME/}"

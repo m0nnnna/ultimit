@@ -27,6 +27,7 @@ LockSurface 1.0 LockSurface.qml
 PopupMenu 1.0 PopupMenu.qml
 RailMenu 1.0 RailMenu.qml
 singleton FlyoutState 1.0 FlyoutState.qml
+singleton Privacy 1.0 Privacy.qml
 Flyout 1.0 Flyout.qml
 BatteryWatch 1.0 BatteryWatch.qml
 CrashNotice 1.0 CrashNotice.qml

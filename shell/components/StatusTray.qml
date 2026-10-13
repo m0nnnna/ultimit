@@ -141,6 +141,49 @@ Item {
                 Rectangle { anchors.centerIn: parent; width: 1; height: 14; color: Theme.line }
             }
 
+            // ---- privacy: what is using the mic, camera or screen; a running recording ----
+            Repeater {
+                model: [
+                    { id: "rec", label: "REC " + Privacy.recTime, apps: Privacy.rec ? ["Screen recording (click to stop)"] : [], tone: Theme.bad },
+                    { id: "screen", label: "SCREEN", apps: Privacy.screenApps, tone: Theme.warn },
+                    { id: "cam", label: "CAM", apps: Privacy.cameraApps, tone: Theme.warn },
+                    { id: "mic", label: "MIC", apps: Privacy.micApps, tone: Theme.warn }
+                ].filter(m => m.apps.length > 0)
+                delegate: StatusButton {
+                    id: pb
+                    required property var modelData
+                    name: modelData.id === "rec" ? "Screen recording, " + Privacy.recTime + ", click to stop"
+                        : ({ screen: "Screen shared by: ", cam: "Camera in use by: ", mic: "Microphone in use by: " })[modelData.id] + modelData.apps.join(", ")
+                    tip: modelData.id === "rec" ? "RECORDING " + Privacy.recTime + "\nCLICK TO STOP AND SAVE"
+                        : ({ screen: "SCREEN SHARED", cam: "CAMERA IN USE", mic: "MICROPHONE IN USE" })[modelData.id] + "\n" + modelData.apps.join("\n").toUpperCase()
+                    width: chip.width + 10
+                    onClicked: if (modelData.id === "rec") Privacy.stopRecording()
+                    Rectangle {
+                        id: chip
+                        anchors.centerIn: parent
+                        width: lbl.implicitWidth + 16; height: 18
+                        color: "transparent"; border.color: pb.modelData.tone
+                        Rectangle {   // the dot blinks while recording
+                            id: dot
+                            x: 5; anchors.verticalCenter: parent.verticalCenter
+                            width: 5; height: 5; radius: 2.5; color: pb.modelData.tone
+                            SequentialAnimation on opacity {
+                                running: pb.modelData.id === "rec" && Config.motion
+                                loops: Animation.Infinite
+                                NumberAnimation { to: 0.2; duration: 600 }
+                                NumberAnimation { to: 1; duration: 600 }
+                            }
+                        }
+                        Text {
+                            id: lbl
+                            anchors { left: dot.right; leftMargin: 4; verticalCenter: parent.verticalCenter }
+                            text: pb.modelData.label; color: pb.modelData.tone
+                            font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1.2
+                        }
+                    }
+                }
+            }
+
             // ---- network ----
             StatusButton {
                 id: net
