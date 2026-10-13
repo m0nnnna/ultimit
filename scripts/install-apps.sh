@@ -16,6 +16,19 @@ FLATHUB=https://dl.flathub.org/repo/flathub.flatpakrepo
 # ULTIMIT_SKIP_PACKAGES="a b": leave those out (test machines; scripts/install.sh passes it on).
 list() { sed -e 's/#.*//' -e 's/[[:space:]]//g' "$1" | grep -v '^$' | grep -vxF -f <(printf '%s\n' ${ULTIMIT_SKIP_PACKAGES:-} "") || true; }
 
+# Ubuntu's own apt jobs (the daily update check, unattended-upgrades) often run right after boot,
+# when the first-boot install runs too: wait for them rather than fail on apt's lock.
+wait_apt() {
+	local i
+	for i in $(seq 360); do
+		# (unattended-upgrade-shutdown idles all the time; only the updater itself counts)
+		pgrep -x 'apt|apt-get|aptd|dpkg' >/dev/null || pgrep -f '^/usr/bin/python3 /usr/bin/unattended-upgrade( |$)' >/dev/null || return 0
+		[ "$i" = 1 ] && echo "== Waiting for another package install to finish..."
+		sleep 5
+	done
+}
+APT_WAIT=(-o DPkg::Lock::Timeout=600)
+
 installed() { dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q "install ok installed"; }
 
 need_i386=false
@@ -57,7 +70,7 @@ if $need_i386; then
 	sudo dpkg --add-architecture i386
 fi
 if $need_i386 || [ ${#missing_apt[@]} -gt 0 ]; then
-	sudo apt-get update
+	wait_apt; sudo apt-get "${APT_WAIT[@]}" update
 fi
 # Steam's package asks you to accept Valve's licence: it gets the terminal to itself (output may be
 # going through a log), everything else installs without questions.
@@ -71,12 +84,12 @@ if printf '%s\n' "${quiet[@]}" | grep -q -- '-dkms$' && ! installed "linux-heade
 	quiet+=("linux-headers-$(uname -r)")
 fi
 if [ ${#quiet[@]} -gt 0 ]; then
-	sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "${quiet[@]}"
+	wait_apt; sudo DEBIAN_FRONTEND=noninteractive apt-get "${APT_WAIT[@]}" install -y "${quiet[@]}"
 fi
 if [ ${#interactive[@]} -gt 0 ]; then
 	if [ -r /dev/tty ] && [ -w /dev/tty ] && (exec </dev/tty) 2>/dev/null; then
 		echo "== Steam: accept Valve's licence in the dialog to install it"
-		sudo apt-get install -y "${interactive[@]}" </dev/tty >/dev/tty 2>&1 \
+		wait_apt; sudo apt-get "${APT_WAIT[@]}" install -y "${interactive[@]}" </dev/tty >/dev/tty 2>&1 \
 			|| echo "!! Steam wasn't installed (licence not accepted?). Later: sudo apt install steam-installer"
 	else
 		echo "!! No terminal for Steam's licence question; install it later: sudo apt install steam-installer"
@@ -93,7 +106,7 @@ if [ ${#missing_debs[@]} -gt 0 ]; then
 		echo "$sum  $f" | sha256sum -c --quiet || { echo "Checksum mismatch for $pkg; stopping."; exit 1; }
 		debs+=("$f")
 	done
-	sudo apt-get install -y "${debs[@]}"
+	wait_apt; sudo apt-get "${APT_WAIT[@]}" install -y "${debs[@]}"
 	rm -rf "$dl"
 fi
 

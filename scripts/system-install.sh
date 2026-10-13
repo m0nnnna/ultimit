@@ -167,6 +167,9 @@ Type=oneshot
 Environment=DEBIAN_FRONTEND=noninteractive
 ExecStart=/bin/sh -c '$P/scripts/install-apps.sh --yes >>/var/log/ultimit-firstboot.log 2>&1 && mkdir -p /var/lib/ultimit && touch /var/lib/ultimit/firstboot-done'
 TimeoutStartSec=3h
+# A failed try (network not there yet, a mirror hiccup) tries again; the log has each attempt
+Restart=on-failure
+RestartSec=2min
 
 [Install]
 WantedBy=multi-user.target
