@@ -1,11 +1,32 @@
-// Appearance: skins, wallpaper, boot sequence (migrated from the old Accessory window).
+// Appearance: skins, wallpaper (shards or a picture), rail icons, animations, boot sequence.
 import QtQuick
 import QtQuick.Layouts
 import "../.."
 import "../accessory"
 
 Page {
+    id: pg
     title: "Appearance"
+
+    // Picture mode chosen but no picture picked yet (Config.wallpaper still "").
+    property bool pictureMode: false
+    // Candidate pictures: Pictures/Wallpapers, Pictures (two levels down), the system backgrounds.
+    property var pictures: []
+    Cmd {
+        id: scan
+        argv: ["sh", "-c", 'p=$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures"); '
+            + 'for d in "$p/Wallpapers" "$p" /usr/share/backgrounds; do [ -d "$d" ] && find "$d" -maxdepth 2 -type f '
+            + '\\( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" \\) -size +40k '
+            + '-not -path "*/Screenshots/*" 2>/dev/null | sort; done | awk "!seen[\\$0]++" | head -n 48']
+        onDone: out => pg.pictures = out.split("\n").filter(l => l.startsWith("/"))
+    }
+    Cmd {
+        id: browse
+        argv: ["zenity", "--file-selection", "--title=Choose a wallpaper",
+               "--file-filter=Pictures | *.jpg *.jpeg *.png *.webp *.JPG *.JPEG *.PNG *.WEBP"]
+        onDone: (out, code) => { const f = out.trim(); if (code === 0 && f.startsWith("/")) Config.wallpaper = f; }
+    }
+    Component.onCompleted: scan.go()
 
     SectionLabel { text: "Skin" }
     GridLayout {
@@ -31,12 +52,74 @@ Page {
     }
 
     SectionLabel { text: "Wallpaper" }
+    Chips {
+        Layout.fillWidth: true
+        options: [{ id: "shards", label: "Shards" }, { id: "picture", label: "Picture" }]
+        current: Config.wallpaper === "" && !pg.pictureMode ? "shards" : "picture"
+        onPicked: id => {
+            pg.pictureMode = id === "picture";
+            if (id === "shards") Config.wallpaper = "";
+            else if (Config.wallpaper === "" && pg.pictures.length) Config.wallpaper = pg.pictures[0];
+        }
+    }
     SliderField {
+        visible: Config.wallpaper === "" && !pg.pictureMode
         Layout.fillWidth: true
         label: "Shard count"
         from: 16; to: 60
         value: Config.shardDensity
         onMoved: v => Config.shardDensity = v
+    }
+    // ---- picture: thumbnails from the usual picture folders, Browse…, how it fills the screen ----
+    GridLayout {
+        visible: Config.wallpaper !== "" || pg.pictureMode
+        Layout.fillWidth: true
+        columnSpacing: 8; rowSpacing: 8
+        columns: Math.max(1, Math.floor((width + 8) / 150))
+        Repeater {
+            model: pg.pictures
+            delegate: Rectangle {
+                required property string modelData
+                readonly property bool sel: Config.wallpaper === modelData
+                Layout.fillWidth: true
+                Layout.preferredHeight: width * 9 / 16
+                color: Theme.panel2
+                border.color: sel ? Theme.accent : (th.hovered ? Theme.lineStrong : Theme.line)
+                border.width: sel ? 2 : 1
+                Image {
+                    anchors.fill: parent; anchors.margins: parent.border.width
+                    source: "file://" + parent.modelData
+                    sourceSize: Qt.size(300, 170)
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                }
+                HoverHandler { id: th; cursorShape: Qt.PointingHandCursor }
+                TapHandler { onTapped: Config.wallpaper = parent.modelData }
+            }
+        }
+    }
+    Text {
+        visible: (Config.wallpaper !== "" || pg.pictureMode) && pg.pictures.length === 0
+        Layout.fillWidth: true; wrapMode: Text.WordWrap
+        text: "No pictures found in Pictures or Pictures/Wallpapers. Use Browse… or right-click an image in DATA › Set as wallpaper."
+        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+    }
+    RowLayout {
+        visible: Config.wallpaper !== "" || pg.pictureMode
+        Layout.fillWidth: true
+        spacing: 12
+        ChamferButton { text: "Browse…"; onClicked: browse.go() }
+        Chips {
+            Layout.fillWidth: true
+            options: [{ id: "fill", label: "Fill" }, { id: "fit", label: "Fit" }, { id: "stretch", label: "Stretch" }, { id: "center", label: "Center" }]
+            current: Config.wallpaperFit
+            onPicked: id => Config.wallpaperFit = id
+        }
+    }
+    Text {
+        visible: Config.wallpaper !== "" && pg.pictures.indexOf(Config.wallpaper) < 0
+        Layout.fillWidth: true; elide: Text.ElideMiddle
+        text: Config.wallpaper; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10
     }
 
     SectionLabel { text: "Rail icons" }

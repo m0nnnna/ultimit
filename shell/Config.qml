@@ -18,6 +18,11 @@ Singleton {
     property int wallpaperFps: 20
     // Number of main shards in the wing (mockup slider: 16..60).
     property int shardDensity: 34
+    // Desktop picture: "" = the generative shards, else an image file; wallpaperFit is how it
+    // fills the screen: fill (crop) | fit | stretch | center.
+    property string wallpaper: ""
+    property string wallpaperFit: "fill"
+    readonly property var wallpaperFits: ["fill", "fit", "stretch", "center"]
 
     // Play the boot sequence overlay once at shell startup.
     property bool bootOnStart: Quickshell.env("ULTIMIT_BOOT") !== "0"

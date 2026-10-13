@@ -1,4 +1,4 @@
-// Persist.qml - loads/saves user settings (skin, motion, shard density, boot-on-start, rail pins, news feeds)
+// Persist.qml - loads/saves user settings (skin, motion, shard density, wallpaper, boot-on-start, rail pins, news feeds)
 // to ~/.config/ultimit/shell.json using FileView + JsonAdapter, and syncs them
 // with the Theme / Config singletons in both directions.
 // Env overrides (ULTIMIT_SKIN, ULTIMIT_MOTION, ULTIMIT_BOOT) win over the file for that run.
@@ -35,6 +35,8 @@ Scope {
         Config.railSpin = a.railSpin;
         if (!root.envBoot) Config.bootOnStart = a.bootOnStart;
         Config.shardDensity = clampDensity(a.shardDensity);
+        Config.wallpaper = typeof a.wallpaper === "string" ? a.wallpaper : "";
+        Config.wallpaperFit = Config.wallpaperFits.indexOf(a.wallpaperFit) >= 0 ? a.wallpaperFit : "fill";
         if (!root.envDim) Config.dimAfter = a.dimAfter;
         if (!root.envLock) Config.lockAfter = a.lockAfter;
         if (!root.envSuspend) Config.suspendAfter = a.suspendAfter;
@@ -63,6 +65,8 @@ Scope {
         if (!root.envMotion && a.motion !== Config.motion) { a.motion = Config.motion; changed = true; }
         if (a.railSpin !== Config.railSpin) { a.railSpin = Config.railSpin; changed = true; }
         if (a.shardDensity !== Config.shardDensity) { a.shardDensity = Config.shardDensity; changed = true; }
+        if (a.wallpaper !== Config.wallpaper) { a.wallpaper = Config.wallpaper; changed = true; }
+        if (a.wallpaperFit !== Config.wallpaperFit) { a.wallpaperFit = Config.wallpaperFit; changed = true; }
         if (!root.envBoot && a.bootOnStart !== Config.bootOnStart) { a.bootOnStart = Config.bootOnStart; changed = true; }
         if (!root.envDim && a.dimAfter !== Config.dimAfter) { a.dimAfter = Config.dimAfter; changed = true; }
         if (!root.envLock && a.lockAfter !== Config.lockAfter) { a.lockAfter = Config.lockAfter; changed = true; }
@@ -108,6 +112,8 @@ Scope {
         function onMotionChanged() { root.push(); Quickshell.execDetached(["ultimitctl", "motion", Config.motion ? "on" : "off"]); }
         function onRailSpinChanged() { root.push(); }
         function onShardDensityChanged() { root.push(); }
+        function onWallpaperChanged() { root.push(); }
+        function onWallpaperFitChanged() { root.push(); }
         function onBootOnStartChanged() { root.push(); }
         function onDimAfterChanged() { root.push(); }
         function onLockAfterChanged() { root.push(); }
@@ -146,6 +152,8 @@ Scope {
             property bool motion: true
             property string railSpin: "always"
             property int shardDensity: 34
+            property string wallpaper: ""
+            property string wallpaperFit: "fill"
             property bool bootOnStart: true
             property real dimAfter: 300
             property real lockAfter: 360

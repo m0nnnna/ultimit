@@ -33,6 +33,18 @@ ShellRoot {
         function close(): void { Config.closeLauncher(); }
     }
 
+    IpcHandler {   // desktop picture: qs ipc call wallpaper set <file> [fill|fit|stretch|center] | shards | get
+        target: "wallpaper"
+        function set(path: string, fit: string): string {
+            if (!path.startsWith("/")) return "error: give an absolute path";
+            Config.wallpaper = path;
+            if (Config.wallpaperFits.indexOf(fit) >= 0) Config.wallpaperFit = fit;
+            return "ok";
+        }
+        function shards(): void { Config.wallpaper = ""; }
+        function get(): string { return JSON.stringify({ wallpaper: Config.wallpaper, fit: Config.wallpaperFit }); }
+    }
+
     IpcHandler {   // keyboard shortcut sheet: qs ipc call shortcuts toggle | open | close
         target: "shortcuts"
         function toggle(): void { Config.shortcutsOpen = !Config.shortcutsOpen; }

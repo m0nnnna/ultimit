@@ -1383,6 +1383,15 @@ Singleton {
             + (isArc && arcListing && arcListing.truncated ? " · LISTING CAPPED AT " + arcListing.cap.toLocaleString(Qt.locale("en_US"), "f", 0) : "");
     }
 
+    // The one selected image becomes the desktop picture (context menu "Set as wallpaper").
+    function setWallpaper() {
+        const t = targets();
+        if (t.length !== 1 || t[0].d || !/\.(jpe?g|png|webp)$/i.test(t[0].n)) return false;
+        Config.wallpaper = t[0].p;
+        toast("Wallpaper", "“" + t[0].n + "” is the desktop picture now.");
+        return true;
+    }
+
     // ---------------------------------------------------------------- scripted control (IPC "data run")
     function act(name, arg) {
         switch (name) {
@@ -1409,6 +1418,7 @@ Singleton {
         case "trashview": goTo(trashUri); return "ok";
         case "props": showProps(); return "ok";
         case "openwith": showOpenWith(); return "ok";
+        case "wallpaper": return setWallpaper() ? "ok" : "not one image";
         case "confirm": acceptDialog(); return "ok";
         case "cancel": closeDialog(); return "ok";
         case "conflict": answerConflict(arg, false); return "ok";

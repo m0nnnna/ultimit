@@ -1,0 +1,10 @@
+#!/bin/sh
+# ultimit-wallpaper FILE [fill|fit|stretch|center] | --shards - set the desktop picture (or go back to
+# the generative shards). DATA's "Set as wallpaper" runs this.
+shell="${ULTIMIT_SHELL_DIR:-$(dirname "$(dirname "$(readlink -f "$0")")")}"
+case "$1" in
+    "" | -h | --help) sed -n '2,3p' "$0" | sed 's/^# //'; exit 2 ;;
+    --shards) exec qs -p "$shell" ipc call wallpaper shards ;;
+esac
+file=$(readlink -f "$1") && [ -f "$file" ] || { echo "ultimit-wallpaper: no such file: $1" >&2; exit 1; }
+exec qs -p "$shell" ipc call wallpaper set "$file" "${2:-}"
