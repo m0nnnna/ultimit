@@ -1,0 +1,152 @@
+#!/usr/bin/python3 -I
+"""users-helper - the only part of Settings > Users that runs as root (through pkexec).
+
+  users-helper create USER FULLNAME admin|standard     password on stdin (one line)
+  users-helper password USER                          new password on stdin (one line)
+  users-helper admin USER on|off                      Administrator (sudo group) or Standard
+  users-helper fullname USER FULLNAME
+  users-helper delete USER keep|remove                remove = also delete the home folder
+
+Only people accounts (UID 1000-59999) are touched. It refuses to delete, or take admin away from,
+the person running it (PKEXEC_UID) and to leave the computer without an administrator.
+Polkit action org.ultimit.users (auth_admin_keep). Every command prints one JSON object.
+"""
+import json
+import os
+import pwd
+import grp
+import re
+import subprocess
+import sys
+
+_dev = os.getuid() != 0
+# Test hooks (normal user only): run fake programs instead of the real ones.
+BIN = {n: (_dev and os.environ.get("USERS_" + n.upper())) or "/usr/sbin/" + n
+       for n in ("useradd", "usermod", "userdel", "chpasswd", "gpasswd")}
+ADMIN_GROUP = "sudo"
+USER_RE = re.compile(r"^[a-z_][a-z0-9_-]{0,31}$")
+NAME_RE = re.compile(r"^[^:\n\r,=]{0,80}$")
+
+
+def out(o, rc=0):
+    sys.stdout.write(json.dumps(o))
+    sys.stdout.flush()
+    return rc
+
+
+def fail(msg):
+    return out({"ok": False, "error": msg}, 1)
+
+
+def run(argv, data=None):
+    try:
+        p = subprocess.run(argv, input=data, capture_output=True, text=True, timeout=60)
+    except FileNotFoundError:
+        return False, argv[0] + " not found"
+    except subprocess.TimeoutExpired:
+        return False, argv[0] + " timed out"
+    msg = (p.stderr or p.stdout).strip().splitlines()
+    return p.returncode == 0, (msg[-1] if msg else "%s failed (exit %d)" % (os.path.basename(argv[0]), p.returncode))
+
+
+def person(name):
+    try:
+        pw = pwd.getpwnam(name)
+    except KeyError:
+        return None
+    return pw if 1000 <= pw.pw_uid <= 59999 else None
+
+
+def admins():
+    try:
+        g = grp.getgrnam(ADMIN_GROUP)
+    except KeyError:
+        return set()
+    names = set(g.gr_mem)
+    names |= {p.pw_name for p in pwd.getpwall() if p.pw_gid == g.gr_gid}
+    return {n for n in names if person(n)}
+
+
+def caller():
+    try:
+        return pwd.getpwuid(int(os.environ.get("PKEXEC_UID", "-1"))).pw_name
+    except (KeyError, ValueError):
+        return ""
+
+
+def read_password():
+    pw = sys.stdin.readline().rstrip("\n")
+    if not pw or "\n" in pw or ":" in pw:
+        return None
+    return pw
+
+
+def main(argv):
+    cmd = argv[1] if len(argv) > 1 else ""
+    args = argv[2:]
+    if cmd == "create" and len(args) == 3:
+        user, full, kind = args
+        if not USER_RE.match(user):
+            return fail("User names are lowercase letters, digits, - and _, starting with a letter.")
+        if not NAME_RE.match(full):
+            return fail("The full name can't contain : , = or line breaks.")
+        if kind not in ("admin", "standard"):
+            return fail("account type must be admin or standard")
+        try:
+            pwd.getpwnam(user)
+            return fail("There is already an account called %s." % user)
+        except KeyError:
+            pass
+        pw = read_password()
+        if pw is None:
+            return fail("Give a password (no line breaks or colons).")
+        ok, msg = run([BIN["useradd"], "--create-home", "--shell", "/bin/bash", "--comment", full, user])
+        if not ok:
+            return fail(msg)
+        ok, msg = run([BIN["chpasswd"]], user + ":" + pw + "\n")
+        if not ok:
+            run([BIN["userdel"], "--remove", user])
+            return fail(msg)
+        if kind == "admin":
+            ok, msg = run([BIN["usermod"], "--append", "--groups", ADMIN_GROUP, user])
+            if not ok:
+                return fail(msg)
+        return out({"ok": True})
+
+    user = args[0] if args else ""
+    if cmd in ("password", "admin", "fullname", "delete") and not person(user):
+        return fail("%s isn't a person's account on this computer." % (user or "(nobody)"))
+    if cmd == "password" and len(args) == 1:
+        pw = read_password()
+        if pw is None:
+            return fail("Give a password (no line breaks or colons).")
+        ok, msg = run([BIN["chpasswd"]], user + ":" + pw + "\n")
+        return out({"ok": True}) if ok else fail(msg)
+    if cmd == "admin" and len(args) == 2 and args[1] in ("on", "off"):
+        if args[1] == "off":
+            if user == caller():
+                return fail("You can't take away your own administrator rights here.")
+            if admins() <= {user}:
+                return fail("This is the only administrator; make someone else one first.")
+            ok, msg = run([BIN["gpasswd"], "--delete", user, ADMIN_GROUP])
+        else:
+            ok, msg = run([BIN["usermod"], "--append", "--groups", ADMIN_GROUP, user])
+        return out({"ok": True}) if ok else fail(msg)
+    if cmd == "fullname" and len(args) == 2:
+        if not NAME_RE.match(args[1]):
+            return fail("The full name can't contain : , = or line breaks.")
+        ok, msg = run([BIN["usermod"], "--comment", args[1], user])
+        return out({"ok": True}) if ok else fail(msg)
+    if cmd == "delete" and len(args) == 2 and args[1] in ("keep", "remove"):
+        if user == caller():
+            return fail("You can't delete the account you are using.")
+        if admins() <= {user}:
+            return fail("This is the only administrator; make someone else one first.")
+        ok, msg = run([BIN["userdel"]] + (["--remove"] if args[1] == "remove" else []) + [user])
+        return out({"ok": True}) if ok else fail(msg)
+    return fail("usage: users-helper create USER FULLNAME admin|standard | password USER | "
+                "admin USER on|off | fullname USER NAME | delete USER keep|remove")
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

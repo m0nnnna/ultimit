@@ -1,0 +1,9 @@
+#!/bin/sh
+# fake passwd for test_users.py: the real one's prompts; the current password is "old1"
+printf 'Changing password for test.\nCurrent password: '; read c
+printf 'New password: '; read n
+printf 'Retype new password: '; read r
+[ "$c" = old1 ] || { echo 'passwd: Authentication token manipulation error'; echo 'passwd: password unchanged'; exit 10; }
+[ "$n" = "$r" ] || { echo 'Sorry, passwords do not match.'; exit 10; }
+[ ${#n} -ge 8 ] || { echo 'BAD PASSWORD: The password is shorter than 8 characters'; exit 10; }
+echo 'passwd: password updated successfully'

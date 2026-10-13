@@ -1,0 +1,4 @@
+#!/bin/sh
+# fake useradd/usermod/userdel/chpasswd/gpasswd for test_users.py: logs the call (and stdin)
+echo "$(basename "$0") $*" >> "$USERS_TEST_LOG"
+cat >> "$USERS_TEST_LOG"
