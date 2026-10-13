@@ -112,14 +112,17 @@ Done:
 - [ ] ~~Keyboard layouts and input methods~~ (not now, 2026-10-13: left for someone else)
 - [ ] ~~Accessibility~~ (not now, 2026-10-13)
 - [x] Users page (create user, change password, administrator, delete)
-  - [ ] New accounts can't start Ultimit until it is installed system-wide (phase 6): the session runs from /home/mino
+  - [x] New accounts start Ultimit once it is installed with scripts/install.sh
 - [x] Multiple displays: arrangement canvas, main display, Duplicate, rotation, scale 100-300 %, highest refresh by default, settings follow the monitor, windows follow their screen on hotplug
 - [x] VPN: WireGuard / OpenVPN import, sign-in with keyring, bar marker (PIA app or OpenVPN files)
   - [ ] Hotspot, captive portal
 - [x] Consistent window titles (GAMES, SETTINGS; rail/Alt+Tab match on them)
 
 ## Phase 6: installable (ISO blockers, see the audit)
-- [ ] Install compositor, shell, session, deps (wlroots/scenefx/qs/oo7) system-wide under /opt/ultimit; no $HOME/.local/ultimit-deps or checkout paths
-- [ ] Session runs installed shell (no git-archive fallback); theme/icon/cursor install at package time, not per login
-- [ ] greetd config and autologin for the installing user, not "mino"; NekoMail packaged
-- [ ] distro/ manifest complete (ufw, unattended-upgrades, VPN plugins, fonts, players); snap removal list complete
+- [x] Install compositor, shell, session, deps (wlroots/scenefx/qs/oo7) system-wide under /opt/ultimit; no $HOME/.local/ultimit-deps or checkout paths (scripts/install.sh, docs/install.md; tested 2026-10-13 on a fresh Ubuntu 26.04 VM: install, apps, login as a new user)
+- [x] Session runs the installed shell (fallback is the last good copy, no git needed)
+  - [ ] Themes, icons and cursors still generated per user at each login (works, a little slow)
+- [x] greetd config for any user, no autologin (keyring unlocks with the typed password)
+  - [ ] NekoMail packaged (MAILER falls back to STORE until then)
+- [x] distro/ manifest: packages-build.txt, packages-core.txt, packages-install.txt; fonts vendored
+  - [ ] snap removal list complete (cups, snap-store, firmware-updater...)
