@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=SHARES
+GenericName=File Share Maker
+Comment=Share folders on your home network
+Exec=ultimit-shares
+Icon=ultimit-shares
+Terminal=false
+Categories=Utility;Network;FileTransfer;

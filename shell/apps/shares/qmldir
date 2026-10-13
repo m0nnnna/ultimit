@@ -1,0 +1,8 @@
+singleton Shares 1.0 Shares.qml
+SharesApp 1.0 SharesApp.qml
+SharesWindow 1.0 SharesWindow.qml
+SetupPanel 1.0 SetupPanel.qml
+ShareRow 1.0 ShareRow.qml
+NewShareDialog 1.0 NewShareDialog.qml
+PasswordDialog 1.0 PasswordDialog.qml
+SharesPrompt 1.0 SharesPrompt.qml

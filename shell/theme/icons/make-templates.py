@@ -269,6 +269,9 @@ add("apps", "ultimit-settings",
     P("M17 14H21V20H17Z", A, "fill"), P("M28 21H32V27H28Z", A, "fill"), P("M21 28H25V34H21Z", A, "fill"))
 add("apps", "ultimit-games",
     pad(1.2, 1.2, 1.9))
+add("apps", "ultimit-shares",
+    P("M6 14V9H18L22 14H42V39H6Z", A, "fill"), S("M6 18H42", A),
+    S("M24 29H31M31 29L36 25M31 29L36 33", F), SOL("M20 27h4v4h-4z", A), SOL("M35 23h4v4h-4zM35 31h4v4h-4z", F))
 add("apps", "ultimit-terminal",
     P(cp(5, 8, 38, 32, 4, ("tr", "bl")), A, "fill"), S("M5 16H43", A),
     S("M12 22L18 27L12 32", F), S("M22 33H32", A), SOL("M8 11h3v2H8z", F))

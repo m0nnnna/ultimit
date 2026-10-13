@@ -89,6 +89,7 @@ FloatingWindow {
             }
             if (one && !one.d) items.push({ id: "openwith", label: "Open with…" });
             if (one && one.d) items.push({ id: "openterm", label: "Open terminal here" });
+            if (one && one.d && !Data.onMtp && one.p.startsWith("/")) items.push({ id: "sharenet", label: "Share on network\u2026" });
             items.push({ kind: "sep" });
             items.push({ id: "cut", label: "Cut", hint: "Ctrl+X" });
             items.push({ id: "copy", label: "Copy", hint: "Ctrl+C" });
@@ -182,6 +183,7 @@ FloatingWindow {
             if (menu.kind === "item" && t.length === 1 && t[0].d) { Data.goTo(t[0].p); }
             Data.openTerminalHere(); break;
         }
+        case "sharenet": { const t = Data.targets(); if (t.length === 1 && t[0].d) Quickshell.execDetached([Quickshell.shellPath("bin/ultimit-shares"), "--new", t[0].p]); break; }
         case "cut": Data.cutSel(); break;
         case "copy": Data.copySel(); break;
         case "paste": Data.paste(); break;
