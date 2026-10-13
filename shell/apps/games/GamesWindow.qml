@@ -13,7 +13,7 @@ import "../../components"
 
 FloatingWindow {
     id: win
-    title: "Games"
+    title: Config.gamesTitle
     visible: Games.open
     implicitWidth: 900
     implicitHeight: 620

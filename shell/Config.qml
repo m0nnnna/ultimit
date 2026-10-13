@@ -36,7 +36,10 @@ Singleton {
     // ---- shared UI state / requests (see apps/accessory, Boot.qml, Rail.qml) ----
     // Accessory window visibility; the window writes back here when closed via its frame.
     property bool accessoryOpen: false
-    readonly property string accessoryTitle: "Settings"   // the Settings window (apps/settings) replaces Accessory
+    // Window titles of Ultimit's own windows: what the titlebar shows and how the rail, Alt+Tab and
+    // pins recognise them (they all report appId "org.quickshell").
+    readonly property string accessoryTitle: "SETTINGS"   // the Settings window (apps/settings) replaces Accessory
+    readonly property string gamesTitle: "GAMES"
     // Ask the Settings window to open on a page (id from SettingsWindow.pages), e.g. "rail", "news".
     property string settingsPage: ""
     property int settingsRequest: 0

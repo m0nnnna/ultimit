@@ -32,7 +32,7 @@ PanelWindow {
                 continue;
             }
             if (app && app.id === "data" && own && list[i].title === "DATA") return list[i];
-            if (app && app.id === "games" && own && list[i].title === "Games") return list[i];
+            if (app && app.id === "games" && own && list[i].title === Config.gamesTitle) return list[i];
             const id = (list[i].appId || "").toLowerCase();
             if (ids.indexOf(id) >= 0) return list[i];
         }
@@ -92,7 +92,7 @@ PanelWindow {
             // Ultimit's own library window; Steam is launched from inside it.
             if (Games.open) {
                 for (const t of ToplevelManager.toplevels.values) {
-                    if (t.appId === "org.quickshell" && t.title === "Games") {
+                    if (t.appId === "org.quickshell" && t.title === Config.gamesTitle) {
                         t.minimized = false; t.activate(); return;
                     }
                 }
