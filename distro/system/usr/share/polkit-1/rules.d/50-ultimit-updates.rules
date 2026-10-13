@@ -1,0 +1,10 @@
+// Ultimit Settings > Updates: fetching the package lists (updates-helper refresh) needs no password
+// for an admin sitting at this computer, so "Check now" just works. Installing still asks
+// (org.ultimit.updates is auth_admin_keep).
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.ultimit.updates" && subject.local && subject.active &&
+        (subject.isInGroup("sudo") || subject.isInGroup("admin")) &&
+        action.lookup("command_line") == "/usr/libexec/ultimit/updates-helper refresh") {
+        return polkit.Result.YES;
+    }
+});

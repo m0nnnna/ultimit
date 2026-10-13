@@ -3,7 +3,7 @@
 // Visibility is driven by Config.accessoryOpen (the rail ACCESSORY button and the desktop menu set
 // it; closing via the frame writes it back). IPC:
 //   qs ipc call settings open <page> | toggle | close
-// Pages: appearance rail news display sound network bluetooth power input defaults datetime about
+// Pages: appearance rail news display sound network bluetooth power input defaults datetime updates about
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -27,6 +27,7 @@ Scope {
         { id: "input",      n: "Input",        file: "InputPage.qml" },
         { id: "defaults",   n: "Default apps", file: "DefaultAppsPage.qml" },
         { id: "datetime",   n: "Date & time",  file: "DateTimePage.qml" },
+        { id: "updates",    n: "Updates",      file: "UpdatesPage.qml" },
         { id: "about",      n: "About",        file: "AboutPage.qml" }
     ]
     function fileFor(id) { for (const p of pages) if (p.id === id) return p.file; return "AppearancePage.qml"; }

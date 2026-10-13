@@ -1,0 +1,77 @@
+#!/usr/bin/python3 -I
+"""updates-helper - the only part of Settings > Updates that runs as root (through pkexec).
+
+  updates-helper refresh    apt-get update (fetch the package lists)
+  updates-helper upgrade    install every pending system update: apt-get --with-new-pkgs upgrade,
+                            never removes packages, keeps changed config files
+
+Prints JSON lines while it works: {"stage": "...", "pct": 0..100, "msg": "..."}, then one final
+{"ok": true} or {"ok": false, "error": "..."}. Waits up to 5 minutes for apt's lock (the
+automatic updates may be running).
+
+Polkit action org.ultimit.updates (auth_admin_keep); `refresh` alone is allowed without a
+password for local, active admins (rules.d/50-ultimit-updates.rules).
+"""
+import json
+import os
+import subprocess
+import sys
+
+_dev = os.getuid() != 0
+APT_GET = (_dev and os.environ.get("UPDATES_APT_GET")) or "/usr/bin/apt-get"
+
+COMMON = ["-q", "-o", "APT::Status-Fd=1", "-o", "DPkg::Lock::Timeout=300"]
+UPGRADE = ["-y", "--with-new-pkgs", "-o", "Dpkg::Options::=--force-confdef",
+           "-o", "Dpkg::Options::=--force-confold", "upgrade"]
+
+
+def emit(o):
+    sys.stdout.write(json.dumps(o) + "\n")
+    sys.stdout.flush()
+
+
+def apt(args, stage):
+    env = dict(os.environ, LC_ALL="C", DEBIAN_FRONTEND="noninteractive", APT_LISTCHANGES_FRONTEND="none")
+    try:
+        p = subprocess.Popen([APT_GET] + COMMON + args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                             stdin=subprocess.DEVNULL, text=True, env=env)
+    except FileNotFoundError:
+        return False, "apt-get not found"
+    last = ""   # apt's last error line ("E: ..."), or its last plain line
+    for line in p.stdout:
+        line = line.rstrip("\n")
+        # Status-Fd lines: dlstatus:N:PCT:TEXT / pmstatus:PKG:PCT:TEXT / pmerror:PKG:PCT:TEXT
+        kind, _, rest = line.partition(":")
+        if kind in ("dlstatus", "pmstatus", "pmerror", "pmconffile"):
+            f = rest.split(":", 2)
+            try:
+                pct = float(f[1]) if len(f) > 1 else 0.0
+            except ValueError:
+                pct = 0.0
+            msg = f[2] if len(f) > 2 else ""
+            if kind == "pmerror":
+                last = msg
+            emit({"stage": "download" if kind == "dlstatus" else stage, "pct": round(pct, 1), "msg": msg})
+        elif line.strip() and (line.startswith("E:") or not last.startswith("E:")):
+            last = line.strip()
+    rc = p.wait()
+    if rc != 0:
+        return False, last or "apt-get failed (exit %d)" % rc
+    return True, ""
+
+
+def main(argv):
+    cmd = argv[1] if len(argv) == 2 else ""
+    if cmd == "refresh":
+        ok, e = apt(["update"], "refresh")
+    elif cmd == "upgrade":
+        ok, e = apt(UPGRADE, "install")
+    else:
+        emit({"ok": False, "error": "usage: updates-helper refresh|upgrade"})
+        return 2
+    emit({"ok": True} if ok else {"ok": False, "error": e})
+    return 0 if ok else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
