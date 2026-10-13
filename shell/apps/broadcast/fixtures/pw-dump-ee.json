@@ -1,0 +1,41 @@
+[
+ {
+  "id": 91,
+  "type": "PipeWire:Interface:Node",
+  "info": {
+   "state": "suspended",
+   "props": {
+    "media.class": "Audio/Source/Virtual",
+    "node.name": "easyeffects_source",
+    "node.description": "Easy Effects Source",
+    "node.nick": "Easy Effects Source"
+   }
+  }
+ },
+ {
+  "id": 103,
+  "type": "PipeWire:Interface:Node",
+  "info": {
+   "state": "suspended",
+   "props": {
+    "media.class": "Audio/Sink",
+    "node.name": "easyeffects_sink",
+    "node.description": "Easy Effects Sink",
+    "node.nick": "Easy Effects Sink"
+   }
+  }
+ },
+ {
+  "id": 80,
+  "type": "PipeWire:Interface:Node",
+  "info": {
+   "state": "suspended",
+   "props": {
+    "media.class": "",
+    "node.name": "ee_sie_output_level",
+    "node.description": "Output Level Meter",
+    "node.nick": "Output Level Meter"
+   }
+  }
+ }
+]

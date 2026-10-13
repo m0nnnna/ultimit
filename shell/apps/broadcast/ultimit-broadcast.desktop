@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=BROADCAST
+GenericName=Broadcast effects
+Comment=Clean mic, speaker noise removal and camera effects
+Exec=ultimit-broadcast
+Icon=ultimit-broadcast
+Terminal=false
+Categories=AudioVideo;Audio;Video;Utility;

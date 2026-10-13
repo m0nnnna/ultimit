@@ -1,0 +1,30 @@
+PipeWire 'pipewire-0' [1.6.2, user@box, cookie:2313810765]
+ └─ Clients:
+        33. WirePlumber                         [1.6.2, user@box, pid:2115]
+        96. easyeffects                         [1.4.9, user@box, pid:2]
+
+Audio
+ ├─ Devices:
+ │      48. HDA NVidia                          [alsa]
+ │      53. Built-in Audio                      [alsa]
+ │  
+ ├─ Sinks:
+ │  *   67. Built-in Audio Analog Stereo        [vol: 0.40]
+ │      72. Studio Headset Analog Stereo        [vol: 0.55]
+ │  
+ ├─ Sources:
+ │  *   55. Built-in Audio Analog Stereo        [vol: 1.00]
+ │      73. Studio Headset Mono                 [vol: 1.00]
+ │  
+ ├─ Filters:
+ │    - ee_source_group                                             
+ │      80. ee_sie_output_level                                          [(null)]
+ │      91. easyeffects_source                                           [Audio/Source/Virtual]
+ │    - ee_sink_group                                               
+ │     103. easyeffects_sink                                             [Audio/Sink]
+ │  
+ └─ Streams:
+
+Video
+ ├─ Devices:
+ │      44. HD User Facing                      [v4l2]

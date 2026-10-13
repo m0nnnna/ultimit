@@ -1,0 +1,10 @@
+singleton Broadcast 1.0 Broadcast.qml
+BroadcastApp 1.0 BroadcastApp.qml
+BroadcastWindow 1.0 BroadcastWindow.qml
+MicPage 1.0 MicPage.qml
+SpeakersPage 1.0 SpeakersPage.qml
+CameraPage 1.0 CameraPage.qml
+EffectCard 1.0 EffectCard.qml
+DeviceList 1.0 DeviceList.qml
+LevelMeter 1.0 LevelMeter.qml
+BSlider 1.0 BSlider.qml

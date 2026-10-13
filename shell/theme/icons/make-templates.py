@@ -272,6 +272,12 @@ add("apps", "ultimit-games",
 add("apps", "ultimit-shares",
     P("M6 14V9H18L22 14H42V39H6Z", A, "fill"), S("M6 18H42", A),
     S("M24 29H31M31 29L36 25M31 29L36 33", F), SOL("M20 27h4v4h-4z", A), SOL("M35 23h4v4h-4zM35 31h4v4h-4z", F))
+add("apps", "ultimit-broadcast",
+    P(cp(18, 6, 12, 20, 4, ("tl", "br")), A, "fill"), S("M12 21V27L18 33H30L36 27V21"),
+    S("M24 33V40M17 40H31"), S("M21 12H27M21 16H27M21 20H27", F), SOL("M38 8h4v4h-4z", A), SOL("M6 8h4v4H6z", F))
+add("apps", "ultimit-firewall",
+    P("M24 5L40 11V24L24 43L8 24V11Z", A, "fill"), S("M8 24H40M16 15V24M32 15V24M24 24V34", F),
+    S("M8 15H40", A))
 add("apps", "ultimit-terminal",
     P(cp(5, 8, 38, 32, 4, ("tr", "bl")), A, "fill"), S("M5 16H43", A),
     S("M12 22L18 27L12 32", F), S("M22 33H32", A), SOL("M8 11h3v2H8z", F))
