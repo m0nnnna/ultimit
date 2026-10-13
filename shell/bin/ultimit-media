@@ -6,7 +6,7 @@
 # shell's "media" IPC target (MPRIS), falling back to playerctl. Each change flashes the OSD.
 # ULTIMIT_DRY=1 prints the brightness D-Bus call instead of making it.
 SHELL_DIR=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
-PATH="$PATH:$HOME/.local/ultimit-deps/bin"
+PATH="$PATH:$SHELL_DIR/../bin:${ULTIMIT_DEPS:-$HOME/.local/ultimit-deps}/bin"   # qs: installed or development
 SINK=@DEFAULT_AUDIO_SINK@
 SRC=@DEFAULT_AUDIO_SOURCE@
 

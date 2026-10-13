@@ -1,0 +1,67 @@
+# What a working Ultimit desktop needs at runtime, installed by scripts/install.sh before anything
+# else. Apps and extras (games, streaming, media...) are in packages-install.txt.
+# Graphics: Mesa's EGL/GBM and drivers (NVIDIA's driver brings its own; harmless next to it)
+libegl-mesa0
+libgbm1
+libgl1-mesa-dri
+mesa-vulkan-drivers
+# Login screen and session
+greetd
+xwayland
+dbus-user-session
+polkitd
+pkexec
+# Quickshell's Qt pieces (the shell imports QtQuick, Controls, Layouts, Shapes, Window, Effects)
+qt6-wayland
+qt6-svg-plugins
+qml6-module-qtqml
+qml6-module-qtqml-workerscript
+qml6-module-qtquick
+qml6-module-qtquick-controls
+qml6-module-qtquick-templates
+qml6-module-qtquick-layouts
+qml6-module-qtquick-shapes
+qml6-module-qtquick-window
+qml6-module-qtquick-effects
+qml6-module-qtcore
+# The shell's helpers (Python) and the keyring library the VPN agent uses
+python3
+python3-gi
+gir1.2-secret-1
+gir1.2-glib-2.0
+# Network, sound, Bluetooth, power, drives
+network-manager
+pipewire
+pipewire-audio
+pipewire-pulse
+wireplumber
+bluez
+upower
+power-profiles-daemon
+udisks2
+# Portals (file pickers, screen sharing) and desktop plumbing
+xdg-desktop-portal
+xdg-desktop-portal-gtk
+xdg-desktop-portal-wlr
+xdg-utils
+xdg-user-dirs
+libglib2.0-bin
+dconf-gsettings-backend
+zenity
+wlr-randr
+# Fonts and icons the look falls back on
+fontconfig
+fonts-noto-core
+fonts-noto-color-emoji
+adwaita-icon-theme
+librsvg2-common
+# Everyday tools the shell calls
+foot
+grim
+slurp
+wl-clipboard
+wtype
+flatpak
+fwupd
+ufw
+7zip

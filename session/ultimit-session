@@ -1,8 +1,17 @@
 #!/bin/sh
-# Login-screen entry point for Ultimit. Started by GDM (or any display
-# manager) from /usr/share/wayland-sessions/ultimit.desktop.
+# Login-screen entry point for Ultimit. Started by the login screen (the Ultimit greeter on greetd,
+# or GDM) from /usr/share/wayland-sessions/ultimit.desktop.
 ROOT=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
-DEPS=${ULTIMIT_DEPS:-$HOME/.local/ultimit-deps}
+# Installed (scripts/install.sh: /opt/ultimit, with bin/ and lib/ beside session/ and shell/) or
+# a development checkout (compositor/build/, deps in ~/.local/ultimit-deps from build-deps.sh).
+if [ -x "$ROOT/bin/ultimit" ]; then
+	DEPS=${ULTIMIT_DEPS:-$ROOT}
+	COMPOSITOR=$ROOT/bin/ultimit
+else
+	DEPS=${ULTIMIT_DEPS:-$HOME/.local/ultimit-deps}
+	COMPOSITOR=$ROOT/compositor/build/ultimit
+fi
+export ULTIMIT_DEPS=$DEPS
 
 export XDG_CURRENT_DESKTOP=Ultimit
 export XDG_SESSION_DESKTOP=ultimit
@@ -110,4 +119,4 @@ if [ -z "${WLR_DRM_DEVICES:-}" ] && [ ! -e "$HOME/.config/ultimit/no-igpu-first"
 fi
 
 # Runs the compositor, keeps crash reports and restarts it after a crash (see that script).
-exec "$ROOT/session/ultimit-run-compositor" "$ROOT/compositor/build/ultimit" "$STARTUP" "$LOG_DIR"
+exec "$ROOT/session/ultimit-run-compositor" "$COMPOSITOR" "$STARTUP" "$LOG_DIR"
