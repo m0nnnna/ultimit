@@ -100,12 +100,13 @@ Done:
 
 ### 5b: what Windows users expect, part 1 (the desktop)
 - [ ] Workspaces
-- [ ] Clipboard history (Super+V) and emoji picker (Super+.)
-- [ ] Configurable bindings and a cheat sheet overlay (Super+Space)
-- [ ] Wallpaper picker (images alongside the shard wallpaper)
-- [ ] Screen recording, and camera/mic/screencast privacy indicators
-- [ ] Night light
-- [ ] Compositor honours the shell's motion setting (open animation, focus sweep)
+- [x] Clipboard history (Super+V); emoji picker dropped (2026-10-13)
+- [x] Cheat sheet overlay (Super+/)
+  - [ ] Configurable bindings (still edited in keys.c)
+- [x] Wallpaper picker (images alongside the shard wallpaper)
+- [x] Screen recording (in ultimit-screenshot), and camera/mic/screencast privacy indicators
+- [ ] ~~Night light~~ (skipped, 2026-10-13)
+- [x] Compositor honours the shell's motion setting (open animation, focus sweep)
 
 ### 5c: what Windows users expect, part 2 (the system)
 - [ ] Keyboard layouts (several, switch shortcut) and input methods (text-input-v3 / input-method-v2; IBus/Fcitx)
