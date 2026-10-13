@@ -6,7 +6,7 @@
   state.py save   FILE            write the state JSON to FILE
   state.py popup BEFORE AFTER     bounding box of a popup between two screenshots
 
-Names available in EXPR: s (whole state), out (first output), usable, full,
+Names available in EXPR: s (whole state), out (first output), O(name) (an output), usable, full,
 wins (windows, front-most first), W(id), apps(substr) -> windows whose app_id
 contains substr (case-insensitive), layer(namespace), E (os.environ), I(name)
 (an int from the environment), box(d) -> (x, y, w, h).
@@ -85,6 +85,7 @@ def main(argv):
         "usable": s["outputs"][0]["usable"] if s["outputs"] else {},
         "full": s["outputs"][0]["full"] if s["outputs"] else {},
         "W": lambda i: next((w for w in wins if w["id"] == int(i)), None),
+        "O": lambda n: next((o for o in s["outputs"] if o["name"] == n), None),
         "apps": lambda a: [w for w in wins if a.lower() in w["app_id"].lower()],
         "layer": lambda n: next((l for l in s["layers"] if l["namespace"] == n), None),
         "E": os.environ, "I": lambda n: int(os.environ[n]),

@@ -36,6 +36,7 @@ Scope {
         if (!root.envBoot) Config.bootOnStart = a.bootOnStart;
         Config.shardDensity = clampDensity(a.shardDensity);
         Config.wallpaper = typeof a.wallpaper === "string" ? a.wallpaper : "";
+        Config.barsOn = a.barsOn === "main" ? "main" : "all";
         Config.wallpaperFit = Config.wallpaperFits.indexOf(a.wallpaperFit) >= 0 ? a.wallpaperFit : "fill";
         if (!root.envDim) Config.dimAfter = a.dimAfter;
         if (!root.envLock) Config.lockAfter = a.lockAfter;
@@ -66,6 +67,7 @@ Scope {
         if (a.railSpin !== Config.railSpin) { a.railSpin = Config.railSpin; changed = true; }
         if (a.shardDensity !== Config.shardDensity) { a.shardDensity = Config.shardDensity; changed = true; }
         if (a.wallpaper !== Config.wallpaper) { a.wallpaper = Config.wallpaper; changed = true; }
+        if (a.barsOn !== Config.barsOn) { a.barsOn = Config.barsOn; changed = true; }
         if (a.wallpaperFit !== Config.wallpaperFit) { a.wallpaperFit = Config.wallpaperFit; changed = true; }
         if (!root.envBoot && a.bootOnStart !== Config.bootOnStart) { a.bootOnStart = Config.bootOnStart; changed = true; }
         if (!root.envDim && a.dimAfter !== Config.dimAfter) { a.dimAfter = Config.dimAfter; changed = true; }
@@ -114,6 +116,7 @@ Scope {
         function onShardDensityChanged() { root.push(); }
         function onWallpaperChanged() { root.push(); }
         function onWallpaperFitChanged() { root.push(); }
+        function onBarsOnChanged() { root.push(); }
         function onBootOnStartChanged() { root.push(); }
         function onDimAfterChanged() { root.push(); }
         function onLockAfterChanged() { root.push(); }
@@ -154,6 +157,7 @@ Scope {
             property int shardDensity: 34
             property string wallpaper: ""
             property string wallpaperFit: "fill"
+            property string barsOn: "all"
             property bool bootOnStart: true
             property real dimAfter: 300
             property real lockAfter: 360

@@ -14,8 +14,7 @@ WlSessionLockSurface {
     required property var ctl
     color: Theme.bg1
 
-    readonly property bool primary: screen !== null && Quickshell.screens.length > 0
-                                    && screen.name === Quickshell.screens[0].name
+    readonly property bool primary: screen !== null && Config.isMainScreen(screen.name)
     readonly property real u: Math.max(.7, Math.min(width, height) / 800)
 
     SystemClock { id: clock; precision: SystemClock.Seconds }

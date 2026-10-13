@@ -93,16 +93,43 @@ Singleton {
     function closeMenu() { menuOpen = false; }
     function isUiScreen(name) {
         if (uiScreen !== "") return uiScreen === name;
+        return isMainScreen(name);
+    }
+
+    // ---- the main display (Settings > Display; the compositor keeps it in displays.conf) ----
+    // primaryScreen is its output name as the compositor reports it; asked again whenever screens
+    // come and go. Until known (or if it's gone), the first screen is the main one.
+    property string primaryScreen: ""
+    function isMainScreen(name) {
         const s = Quickshell.screens;
+        if (primaryScreen !== "" && s.some(x => x.name === primaryScreen)) return name === primaryScreen;
         return s.length > 0 && s[0].name === name;
     }
+    function refreshPrimary() { primaryProc.running = false; primaryProc.running = true; }
+    Process {
+        id: primaryProc
+        running: true
+        command: [Quickshell.shellPath("bin/ultimitctl"), "state"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const p = JSON.parse(text).outputs.find(o => o.primary);
+                    root.primaryScreen = p ? p.name : "";
+                } catch (e) {}
+            }
+        }
+    }
+    Connections { target: Quickshell; function onScreensChanged() { primaryDelay.restart(); } }
+    Timer { id: primaryDelay; interval: 500; onTriggered: root.refreshPrimary() }   // after the compositor settles
+    // Rail and bottom bar on every display ("all", like Windows' taskbar) or on the main one only.
+    property string barsOn: "all"
+    function showsBars(name) { return barsOn === "all" || isMainScreen(name); }
 
     // The screen that carries the bottom-bar tray cluster. Deliberately NOT isUiScreen(): that one
     // follows the launcher/menu (uiScreen), so the tray would hop screens whenever the launcher
     // opens elsewhere. The tray stays on the first (primary) screen, like the OSD default.
     function isTrayScreen(name) {
-        const s = Quickshell.screens;
-        return s.length > 0 && s[0].name === name;
+        return isMainScreen(name);
     }
 
     // Rail buttons, in display order.
