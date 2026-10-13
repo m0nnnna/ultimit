@@ -12,6 +12,8 @@ else
 	COMPOSITOR=$ROOT/compositor/build/ultimit
 fi
 export ULTIMIT_DEPS=$DEPS
+# The version this session started with (Settings > Updates: "log out to finish" after an update)
+[ -f "$ROOT/VERSION" ] && ULTIMIT_VERSION=$(cat "$ROOT/VERSION") && export ULTIMIT_VERSION
 
 export XDG_CURRENT_DESKTOP=Ultimit
 export XDG_SESSION_DESKTOP=ultimit

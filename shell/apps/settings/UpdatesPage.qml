@@ -1,8 +1,9 @@
-// Updates: system packages (apt), Flatpak apps and firmware (fwupd), restart-needed, the last
-// automatic update. Reading needs nothing (updates.py); "Check now" and installing system updates go
+// Updates: Ultimit itself (releases on GitHub), system packages (apt), Flatpak apps and firmware
+// (fwupd), restart-needed, the last automatic update. Reading needs nothing (updates.py); "Check now" and installing system updates go
 // through the root helper /usr/libexec/ultimit/updates-helper via pkexec (polkit: checking is free for
 // admins, installing asks). Flatpak and firmware updates use flatpak / fwupdmgr, which ask polkit
-// themselves. With ULTIMIT_DRY_RUN=1 nothing is installed.
+// themselves. An Ultimit update is downloaded and installed by the same root helper
+// (`updates-helper ultimit TAG`) and takes effect at the next login. With ULTIMIT_DRY_RUN=1 nothing is installed.
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -21,9 +22,11 @@ Page {
 
     property var st: ({})            // updates.py status
     property var fp: ({})            // updates.py flatpak
+    property var ul: ({})            // updates.py ultimit
+    property bool ulLoading: false
     property bool loading: false
     property bool fpLoading: false
-    property string busy: ""         // "", "refresh", "install", "flatpak", "firmware", "setup"
+    property string busy: ""         // "", "refresh", "install", "ultimit", "flatpak", "firmware", "setup"
     property real pct: -1            // progress of the running job, -1 = unknown
     property string msg: ""          // what the running job is doing
     property string result: ""       // last outcome line
@@ -35,13 +38,16 @@ Page {
     readonly property int security: apt.filter(p => p.security).length
     readonly property var fwList: st.firmware || []
     readonly property var fpList: fp.flatpak || []
-    readonly property int total: apt.length + fwList.length + fpList.length
+    readonly property int total: apt.length + fwList.length + fpList.length + (ul.newer ? 1 : 0)
+    // Ultimit was updated since this session started: the new version runs after logging out and in
+    readonly property bool relogin: !!ul.running && !!ul.installed && ul.running !== ul.installed
 
     function reload() {
         if (loading) return;
         loading = true;
         statusProc.running = true;
         if (!fpLoading) { fpLoading = true; fpProc.running = true; }
+        if (!ulLoading) { ulLoading = true; ulProc.running = true; }
     }
     Component.onCompleted: { reload(); setupProc.running = true; }
 
@@ -72,6 +78,16 @@ Page {
             onStreamFinished: {
                 try { pg.fp = JSON.parse(text); } catch (e) { pg.fp = { flatpakError: "Could not ask Flathub." }; }
                 pg.fpLoading = false;
+            }
+        }
+    }
+    Process {
+        id: ulProc
+        command: ["python3", pg.script, "ultimit"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { pg.ul = JSON.parse(text); } catch (e) { pg.ul = { error: "Could not check for Ultimit updates." }; }
+                pg.ulLoading = false;
             }
         }
     }
@@ -124,6 +140,11 @@ Page {
 
     function checkNow() { start("refresh", ["pkexec", helper, "refresh"], "Checked for updates."); }
     function installSystem() { start("install", ["pkexec", helper, "upgrade"], "System updates installed."); }
+    function installUltimit() {
+        if (ul.latest)
+            start("ultimit", ["pkexec", helper, "ultimit", ul.latest.tag],
+                  "Ultimit " + ul.latest.version + " installed. Log out and back in to start it.");
+    }
     function updateFlatpaks() { start("flatpak", ["flatpak", "update", "-y", "--noninteractive"], "Apps updated."); }
     function updateFirmware() { start("firmware", ["fwupdmgr", "update", "-y", "--no-reboot-check"], "Firmware updated. Restart to finish."); }
     function setupHelper() { if (setupCmd) start("setup", ["pkexec"].concat(setupCmd.argv), "Updates are set up."); }
@@ -149,6 +170,7 @@ Page {
                     Layout.fillWidth: true
                     text: pg.loading && st.apt === undefined ? "Checking…"
                         : st.reboot ? "Restart to finish updating"
+                        : pg.relogin && pg.total === 0 ? "Log out to finish updating Ultimit"
                         : pg.total === 0 ? "Up to date"
                         : pg.total + (pg.total === 1 ? " update" : " updates") + (pg.security > 0 ? " · " + pg.security + " security" : "")
                     color: Theme.fg
@@ -231,6 +253,55 @@ Page {
                 color: Theme.dim; font.family: Theme.mono; font.pixelSize: 9
             }
         }
+    }
+
+    // ================= Ultimit =================
+    RowLayout {
+        Layout.fillWidth: true
+        SectionLabel { text: "Ultimit"; Layout.fillWidth: true }
+        ChamferButton {
+            visible: ul.newer === true && st.helper === true
+            primary: true
+            text: pg.busy === "ultimit" || ul.updating ? "Installing…" : "Install " + (ul.latest ? ul.latest.version : "")
+            enabled: pg.busy === "" && !ul.updating
+            onClicked: pg.installUltimit()
+        }
+        PowerButton {
+            visible: pg.relogin
+            text: "Log out"; confirm: true
+            onActivated: Quickshell.execDetached(["sh", "-c", "loginctl terminate-session \"$XDG_SESSION_ID\""])
+        }
+    }
+    Text {
+        Layout.fillWidth: true; wrapMode: Text.WordWrap
+        color: ul.newer ? Theme.fg : Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+        text: {
+            const inst = ul.installed ? "Installed: " + ul.installed : "";
+            if (pg.ulLoading && ul.installed === undefined) return "Asking GitHub…";
+            if (ul.updating && pg.busy !== "ultimit") return "Ultimit is being updated (log: /var/log/ultimit-update.log). Check again in a minute.";
+            if (pg.relogin) return "Ultimit " + ul.installed + " is installed; this session is still running " + ul.running + ". Log out and back in to start it.";
+            if (ul.error) return ul.error + (inst ? "  " + inst + "." : "");
+            if (!ul.latest) return inst;
+            if (ul.newer) return "Ultimit " + ul.latest.version + " is available"
+                + (ul.latest.published ? " (" + ul.latest.published + ")" : "")
+                + (ul.latest.size ? ", " + Math.max(1, Math.round(ul.latest.size / 1048576)) + " MB" : "")
+                + ".  " + inst + ".";
+            return "Up to date: Ultimit " + (ul.installed || ul.latest.version) + ".";
+        }
+    }
+    Text {
+        visible: ul.newer === true && !!ul.latest && ul.latest.notes !== ""
+        Layout.fillWidth: true; wrapMode: Text.WordWrap
+        maximumLineCount: 10; elide: Text.ElideRight
+        textFormat: Text.MarkdownText
+        text: ul.latest ? ul.latest.notes : ""
+        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+    }
+    Text {
+        visible: !!ul.latest && ul.newer === true
+        text: "Release notes on GitHub"
+        color: Theme.accent; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.2
+        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Qt.openUrlExternally(pg.ul.latest.url) }
     }
 
     // ================= system =================

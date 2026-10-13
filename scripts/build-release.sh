@@ -13,7 +13,7 @@ OUT=${1:-.}
 [ -f /usr/lib/x86_64-linux-gnu/security/pam_oo7.so ] || { echo "pam_oo7.so missing" >&2; exit 1; }
 ver=$(cat "$PREFIX/VERSION")
 case "$ver" in *-dirty) echo "warning: $PREFIX was installed from a checkout with uncommitted changes ($ver)" >&2 ;; esac
-out="$OUT/ultimit-$ver-amd64.tar.gz"
+out="$OUT/ultimit-${ver#v}-amd64.tar.gz"   # (tag v0.2.0 -> ultimit-0.2.0-amd64.tar.gz)
 # The Ubuntu packages its binaries link to (a from-source install gets them from packages-build.txt)
 echo "Listing the runtime packages..."
 extra=$(mktemp -d); trap 'rm -rf "$extra"' EXIT

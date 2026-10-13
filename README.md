@@ -33,6 +33,8 @@ Everything goes to `/opt/ultimit` for every user; see [`docs/install.md`](docs/i
 | `docs/design/` | The interactive design mockup |
 | `docs/architecture.md` | Stack choices and why |
 | `docs/install.md` | Installing on another computer, updating, removing |
+| `docs/iso.md` | The Ultimit ISO: Ubuntu's server installer, patched to set up Ultimit |
+| `docs/updates.md` | Updates: Ubuntu's packages the Ubuntu way, Ultimit from GitHub releases; publishing one |
 | `scripts/install.sh` | The installer (builds the libraries, installs to `/opt/ultimit`, sets up the login screen) |
 | `assets/fonts/` | Michroma, Chakra Petch, Share Tech Mono (SIL Open Font License, licences beside them) |
 

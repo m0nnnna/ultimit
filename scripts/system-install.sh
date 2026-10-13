@@ -47,14 +47,18 @@ if [ -n "$RELEASE" ]; then
 	rm -rf "$PREFIX.new" && mkdir -p "$PREFIX.new"
 	tar -C "$PREFIX.new" -xf "$RELEASE"
 	[ -x "$PREFIX.new/opt/ultimit/bin/ultimit" ] || die "$RELEASE isn't an Ultimit release"
-	rm -rf "$PREFIX.old"; [ -e "$PREFIX" ] && mv "$PREFIX" "$PREFIX.old"
+	# The previous version stays as $PREFIX.previous until this install has passed its checks
+	# (Settings > Updates puts it back if not)
+	rm -rf "$PREFIX.previous"; [ -e "$PREFIX" ] && mv "$PREFIX" "$PREFIX.previous"
 	mv "$PREFIX.new/opt/ultimit" "$PREFIX"
+	# DXVK (install-apps.sh) lives in /opt/ultimit but isn't part of a release
+	if [ -d "$PREFIX.previous/dxvk" ] && [ ! -e "$PREFIX/dxvk" ]; then cp -a "$PREFIX.previous/dxvk" "$PREFIX/dxvk"; fi
 	install -D -m644 "$PREFIX.new/usr/lib/x86_64-linux-gnu/security/pam_oo7.so" /usr/lib/x86_64-linux-gnu/security/pam_oo7.so
-	rm -rf "$PREFIX.new" "$PREFIX.old"
+	rm -rf "$PREFIX.new"
 	note "Ultimit $(cat "$PREFIX/VERSION")"
 elif [ -n "$TREE" ]; then
 	step "Installing the shell, session and login screen to $PREFIX"
-	rev=$(git -C "$TREE" describe --always --dirty 2>/dev/null || echo unknown)
+	rev=$(git -C "$TREE" describe --tags --always --dirty 2>/dev/null || echo unknown)
 	stage=$(mktemp -d)
 	tar -C "$TREE" --exclude=__pycache__ --exclude=test-results --exclude='*.pyc' \
 		-cf - shell session greeter distro assets scripts docs/keybindings.md docs/install.md LICENSE | tar -C "$stage" -xf -
@@ -185,6 +189,7 @@ for f in bin/ultimit bin/qs bin/oo7-daemon libexec/oo7-daemon-login session/ulti
 	[ -e "$PREFIX/$f" ] || { warn "missing $PREFIX/$f"; fail=1; }
 done
 for b in ultimit qs; do
+	[ -e "$PREFIX/bin/$b" ] || continue   # (reported as missing above)
 	gone=$(ldd "$PREFIX/bin/$b" | awk '/not found/ {print $1}' | tr '\n' ' ')
 	[ -z "$gone" ] || { warn "$b is missing libraries: $gone"; fail=1; }
 done
@@ -194,4 +199,5 @@ done
 [ -f /usr/share/wayland-sessions/ultimit.desktop ] || { warn "session file missing"; fail=1; }
 [ -f /usr/lib/x86_64-linux-gnu/security/pam_oo7.so ] || { warn "keyring unlock module missing"; fail=1; }
 [ "$fail" = 0 ] || die "the install is incomplete (see the warnings above)"
+rm -rf "$PREFIX.previous"
 note "Ultimit $(cat "$PREFIX/VERSION") is in place"

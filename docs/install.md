@@ -57,6 +57,9 @@ highest refresh rate.
 
 ## Updating
 
+Settings › Updates installs new Ultimit releases from GitHub, and Ubuntu's updates as usual
+([`updates.md`](updates.md)). To run the latest code from the repository instead:
+
 ```bash
 cd ultimit && git pull && scripts/install.sh
 ```

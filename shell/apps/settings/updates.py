@@ -4,6 +4,8 @@
   updates.py status     system packages (apt), Flatpak apps, firmware (fwupd), restart needed,
                         the last automatic update
   updates.py flatpak    flatpak only (slow: asks the remotes)
+  updates.py ultimit    Ultimit itself: the installed version and the latest GitHub release
+                        (distro/update-source names the repository)
   updates.py setup      the argv that installs the root helper and its polkit files (run with pkexec)
 
 System packages come from a dry run of the same upgrade the root helper performs
@@ -12,7 +14,8 @@ install. Upgrades apt holds back (phased rollout, kept back) are reported separa
 not installable yet and are not counted as pending.
 
 Test hooks (normal user only): UPDATES_FAKE_DIR=<dir> reads apt-sim.txt, flatpak.txt, fwupd.json,
-reboot-required(.pkgs) and unattended.log from there instead of running anything.
+reboot-required(.pkgs), unattended.log, github.json (the releases/latest answer) and
+VERSION from there instead of running anything.
 """
 import json
 import os
@@ -21,6 +24,8 @@ import shlex
 import subprocess
 import sys
 import time
+import urllib.error
+import urllib.request
 
 FAKE = os.environ.get("UPDATES_FAKE_DIR") if os.getuid() != 0 else None
 
@@ -35,6 +40,13 @@ SYSTEM = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)
 SYSTEM_FILES = [(HELPER, "755"),
                 ("/usr/share/polkit-1/actions/org.ultimit.updates.policy", "644"),
                 ("/usr/share/polkit-1/rules.d/50-ultimit-updates.rules", "644")]
+
+PREFIX = "/opt/ultimit"
+SOURCE_FILES = [os.path.join(PREFIX, "distro/update-source"), os.path.join(os.path.dirname(SYSTEM), "update-source")]
+UPDATE_RUNNING = "/run/ultimit-update.running"
+GITHUB_API = "https://api.github.com/repos/%s/releases/latest"
+# v0.2.0, 0.2.0, v0.2.0-3-gabc1234 (git describe: 3 commits after v0.2.0), any of them -dirty
+VERSION_RE = re.compile(r"^v?(\d+(?:\.\d+)*)(?:-(\d+)-g[0-9a-f]+)?(?:-dirty)?$")
 
 # Inst NAME[:ARCH] [OLD] (NEW ORIGIN [ARCH]) ...   (OLD missing for a new package)
 INST_RE = re.compile(r"^Inst (\S+?)(?::(\S+))? (?:\[([^\]]*)\] )?\((\S+) (\S+) \[([^\]]+)\]\)")
@@ -181,6 +193,82 @@ def status():
     return o
 
 
+def parse_version(v):
+    """-> a comparable tuple, or None for something that isn't a release version (a bare commit)."""
+    m = VERSION_RE.match((v or "").strip())
+    if not m:
+        return None
+    nums = [int(x) for x in m.group(1).split(".")]
+    nums += [0] * (4 - len(nums))
+    return tuple(nums[:4]) + (int(m.group(2) or 0),)
+
+
+def is_newer(latest, installed):
+    """A release is newer than an install that isn't a release (built from some commit)."""
+    lv, iv = parse_version(latest), parse_version(installed)
+    if lv is None:
+        return False
+    return iv is None or lv > iv
+
+
+def update_source():
+    for f in SOURCE_FILES:
+        text = read(f)
+        if text is None:
+            continue
+        if text:
+            for line in text.splitlines():
+                line = line.split("#")[0].strip()
+                if re.match(r"^[\w.-]+/[\w.-]+$", line):
+                    return line
+        return ""
+    return "m0nnnna/ultimit"   # installs older than distro/update-source
+
+
+def parse_release(d, repo):
+    tag = d.get("tag_name") or ""
+    ver = tag[1:] if tag.startswith("v") else tag
+    want = "ultimit-%s-amd64.tar.gz" % ver
+    asset = next((a for a in d.get("assets") or [] if a.get("name") == want), None)
+    return {"tag": tag, "version": ver, "name": d.get("name") or tag, "notes": (d.get("body") or "").strip(),
+            "published": (d.get("published_at") or "")[:10], "url": d.get("html_url") or "https://github.com/%s/releases" % repo,
+            "size": asset.get("size", 0) if asset else 0, "asset": bool(asset)}
+
+
+def ultimit():
+    o = {"installed": "", "running": os.environ.get("ULTIMIT_VERSION", ""), "repo": update_source(),
+         "latest": None, "newer": False, "error": ""}
+    o["installed"] = ((fake("VERSION") if FAKE else read(os.path.join(PREFIX, "VERSION"))) or "").strip()
+    pid = ((fake("update-running") if FAKE else read(UPDATE_RUNNING)) or "").strip()
+    o["updating"] = pid.isdigit() and (FAKE is not None or os.path.exists("/proc/" + pid))
+    if not o["repo"]:
+        o["error"] = "No update source (distro/update-source)."
+        return o
+    text = fake("github.json") if FAKE else None
+    if text is None and not FAKE:
+        req = urllib.request.Request(GITHUB_API % o["repo"], headers={
+            "Accept": "application/vnd.github+json", "User-Agent": "ultimit-updates"})
+        try:
+            with urllib.request.urlopen(req, timeout=20) as r:
+                text = r.read().decode()
+        except urllib.error.HTTPError as e:
+            o["error"] = ("No Ultimit releases published yet." if e.code == 404
+                          else "GitHub is limiting requests; try again later." if e.code in (403, 429)
+                          else "GitHub answered %d." % e.code)
+            return o
+        except (urllib.error.URLError, OSError) as e:
+            o["error"] = "Could not reach GitHub (%s)." % getattr(e, "reason", e)
+            return o
+    try:
+        rel = parse_release(json.loads(text or ""), o["repo"])
+    except (ValueError, AttributeError):
+        o["error"] = "GitHub's answer didn't make sense."
+        return o
+    o["latest"] = rel
+    o["newer"] = rel["asset"] and is_newer(rel["tag"], o["installed"])
+    return o
+
+
 def setup():
     install = " && ".join("install -D -m %s %s %s" % (mode, shlex.quote(os.path.join(SYSTEM, p.lstrip("/"))), p)
                           for p, mode in SYSTEM_FILES)
@@ -205,10 +293,12 @@ def main(argv):
         print(json.dumps(status()))
     elif cmd == "flatpak":
         print(json.dumps(flatpak()))
+    elif cmd == "ultimit":
+        print(json.dumps(ultimit()))
     elif cmd == "setup":
         print(json.dumps(setup()))
     else:
-        print(json.dumps({"error": "usage: updates.py status|flatpak|setup"}))
+        print(json.dumps({"error": "usage: updates.py status|flatpak|ultimit|setup"}))
         return 2
     return 0
 

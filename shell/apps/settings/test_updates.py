@@ -64,7 +64,58 @@ class Parsers(unittest.TestCase):
         self.assertIsNone(updates.parse_uu_log(""))
 
 
+RELEASE = {"tag_name": "v0.2.0", "name": "Ultimit 0.2.0", "body": "Faster blur.\n", "published_at": "2026-10-14T09:00:00Z",
+           "html_url": "https://github.com/m0nnnna/ultimit/releases/tag/v0.2.0",
+           "assets": [{"name": "ultimit-0.2.0-amd64.tar.gz", "size": 98540165},
+                      {"name": "ultimit-0.2.0-amd64.tar.gz.sha256", "size": 92}]}
+
+
+class Versions(unittest.TestCase):
+    def test_parse(self):
+        self.assertEqual(updates.parse_version("v0.2.0"), (0, 2, 0, 0, 0))
+        self.assertEqual(updates.parse_version("0.2"), (0, 2, 0, 0, 0))
+        self.assertEqual(updates.parse_version("v0.2.0-3-gabc1234-dirty"), (0, 2, 0, 0, 3))
+        self.assertIsNone(updates.parse_version("79ead95"))
+        self.assertIsNone(updates.parse_version(""))
+
+    def test_newer(self):
+        self.assertTrue(updates.is_newer("v0.2.0", "v0.1.0"))
+        self.assertTrue(updates.is_newer("v0.10.0", "v0.9.0"))
+        self.assertTrue(updates.is_newer("v0.2.0", "79ead95"))          # built from a commit, not a release
+        self.assertFalse(updates.is_newer("v0.2.0", "v0.2.0"))
+        self.assertFalse(updates.is_newer("v0.2.0", "v0.2.0-3-gabc1234"))  # ahead of the release
+        self.assertFalse(updates.is_newer("v0.1.0", "v0.2.0"))
+        self.assertFalse(updates.is_newer("nightly", "v0.1.0"))
+
+    def test_release(self):
+        r = updates.parse_release(RELEASE, "m0nnnna/ultimit")
+        self.assertEqual((r["tag"], r["version"], r["published"], r["size"], r["asset"]),
+                         ("v0.2.0", "0.2.0", "2026-10-14", 98540165, True))
+        self.assertEqual(r["notes"], "Faster blur.")
+        r = updates.parse_release(dict(RELEASE, assets=[]), "m0nnnna/ultimit")
+        self.assertFalse(r["asset"])   # published without the tarball: nothing to install
+
+
 class FakeMode(unittest.TestCase):
+    def ultimit(self, files):
+        with tempfile.TemporaryDirectory() as d:
+            for name, text in files.items():
+                with open(os.path.join(d, name), "w") as f:
+                    f.write(text)
+            p = subprocess.run([sys.executable, "-I", updates.__file__, "ultimit"], capture_output=True, text=True,
+                               env=dict(os.environ, UPDATES_FAKE_DIR=d, ULTIMIT_VERSION="v0.1.0"))
+            return json.loads(p.stdout)
+
+    def test_ultimit(self):
+        o = self.ultimit({"github.json": json.dumps(RELEASE), "VERSION": "v0.1.0\n"})
+        self.assertTrue(o["newer"])
+        self.assertFalse(o["updating"])
+        self.assertEqual((o["installed"], o["running"], o["latest"]["version"]), ("v0.1.0", "v0.1.0", "0.2.0"))
+        o = self.ultimit({"github.json": json.dumps(RELEASE), "VERSION": "v0.2.0", "update-running": "123"})
+        self.assertFalse(o["newer"])
+        self.assertTrue(o["updating"])
+        self.assertEqual(o["running"], "v0.1.0")   # updated since login: the page offers "Log out"
+
     def test_status(self):
         with tempfile.TemporaryDirectory() as d:
             for name, text in (("apt-sim.txt", SIM), ("unattended.log", UU), ("reboot-required", ""),
