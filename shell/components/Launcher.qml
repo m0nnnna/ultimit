@@ -294,26 +294,35 @@ PanelWindow {
             id: powerRow
             anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
             anchors.margins: 14
-            height: 28
-            function disarmAll() { lockB.disarm(); outB.disarm(); rebB.disarm(); offB.disarm(); }
+            height: pflow.height
+            function disarmAll() { lockB.disarm(); outB.disarm(); hibB.disarm(); rebB.disarm(); offB.disarm(); }
             Rectangle { x: 0; y: -8; width: parent.width; height: 1; color: Theme.line }
-            Row {
+            Flow {
+                id: pflow
+                width: parent.width
                 spacing: 8
                 PowerButton { id: lockB; text: "Lock"; onActivated: { Config.closeLauncher(); Config.lock(); } }
                 PowerButton {
                     id: outB; text: "Log out"; confirm: true
                     onActivated: win.power("loginctl terminate-session \"$XDG_SESSION_ID\"")
-                    onArmedChanged: if (armed) { rebB.disarm(); offB.disarm(); }
+                    onArmedChanged: if (armed) { hibB.disarm(); rebB.disarm(); offB.disarm(); }
+                }
+                PowerButton { id: susB; text: "Sleep"; onActivated: win.power("systemctl suspend") }
+                PowerButton {
+                    id: hibB; text: "Hibernate"; confirm: true
+                    visible: SysState.canHibernate
+                    onActivated: win.power("systemctl hibernate")
+                    onArmedChanged: if (armed) { outB.disarm(); rebB.disarm(); offB.disarm(); }
                 }
                 PowerButton {
                     id: rebB; text: "Restart"; confirm: true
                     onActivated: win.power("systemctl reboot")
-                    onArmedChanged: if (armed) { outB.disarm(); offB.disarm(); }
+                    onArmedChanged: if (armed) { outB.disarm(); hibB.disarm(); offB.disarm(); }
                 }
                 PowerButton {
                     id: offB; text: "Shut down"; confirm: true
                     onActivated: win.power("systemctl poweroff")
-                    onArmedChanged: if (armed) { outB.disarm(); rebB.disarm(); }
+                    onArmedChanged: if (armed) { outB.disarm(); hibB.disarm(); rebB.disarm(); }
                 }
             }
         }

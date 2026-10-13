@@ -520,7 +520,7 @@ PanelWindow {
                     id: powerRow
                     width: parent.width
                     height: pflow.height
-                    function disarmAll() { outB.disarm(); susB.disarm(); rebB.disarm(); offB.disarm(); }
+                    function disarmAll() { outB.disarm(); susB.disarm(); hibB.disarm(); rebB.disarm(); offB.disarm(); }
                     Flow {
                         id: pflow
                         width: parent.width
@@ -537,21 +537,27 @@ PanelWindow {
                         PowerButton {
                             id: outB; text: "Log out"; confirm: true
                             onActivated: { SysState.closeQs(); SysState.exec(["sh", "-c", "loginctl terminate-session \"$XDG_SESSION_ID\""]); }
-                            onArmedChanged: if (armed) { susB.disarm(); rebB.disarm(); offB.disarm(); }
+                            onArmedChanged: if (armed) { hibB.disarm(); rebB.disarm(); offB.disarm(); }
                         }
                         PowerButton {
                             id: susB; text: "Suspend"
                             onActivated: { SysState.closeQs(); SysState.exec(["systemctl", "suspend"]); }
                         }
                         PowerButton {
+                            id: hibB; text: "Hibernate"; confirm: true
+                            visible: SysState.canHibernate
+                            onActivated: { SysState.closeQs(); SysState.exec(["systemctl", "hibernate"]); }
+                            onArmedChanged: if (armed) { outB.disarm(); rebB.disarm(); offB.disarm(); }
+                        }
+                        PowerButton {
                             id: rebB; text: "Restart"; confirm: true
                             onActivated: { SysState.closeQs(); SysState.exec(["systemctl", "reboot"]); }
-                            onArmedChanged: if (armed) { outB.disarm(); offB.disarm(); }
+                            onArmedChanged: if (armed) { outB.disarm(); hibB.disarm(); offB.disarm(); }
                         }
                         PowerButton {
                             id: offB; text: "Shut down"; confirm: true
                             onActivated: { SysState.closeQs(); SysState.exec(["systemctl", "poweroff"]); }
-                            onArmedChanged: if (armed) { outB.disarm(); rebB.disarm(); }
+                            onArmedChanged: if (armed) { outB.disarm(); hibB.disarm(); rebB.disarm(); }
                         }
                     }
                 }

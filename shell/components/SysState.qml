@@ -434,6 +434,16 @@ Singleton {
     readonly property bool lockAvailable: true
     function lock() { Config.lock(); }
 
+    // Hibernate is offered only when logind says it can (swap big enough, resume set up);
+    // "challenge" means polkit will ask, which is fine too.
+    property bool canHibernate: false
+    Process {
+        running: true
+        command: ["busctl", "--system", "call", "org.freedesktop.login1", "/org/freedesktop/login1",
+                  "org.freedesktop.login1.Manager", "CanHibernate"]
+        stdout: StdioCollector { onStreamFinished: root.canHibernate = /"(yes|challenge)"/.test(text) }
+    }
+
     // ---------------- refresh while the panel is open ----------------
     onQsOpenChanged: {
         if (qsOpen) { _netKey = ""; refreshNets(); refreshBrightness(); refreshProfiles(); }
