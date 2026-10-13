@@ -16,12 +16,18 @@ works for every user on the computer. The Ultimit login screen replaces Ubuntu's
 
 ## Install
 
+The repository is private, so the new computer needs your GitHub login to get it:
+
 ```bash
-sudo apt install -y git
-git clone https://github.com/m0nnnna/ultimit
+sudo apt install -y git gh
+gh auth login
+gh repo clone m0nnnna/ultimit
 cd ultimit
 scripts/install.sh
 ```
+
+Without GitHub on that machine, copy the `ultimit` folder over instead (USB stick, network share).
+The installer runs from any copy; keep the hidden `.git` folder so updates work.
 
 It asks once before starting, then runs on its own. Steam's licence is the one exception: you
 accept it when the apps are installed near the end. When it says **Ultimit … is installed**,

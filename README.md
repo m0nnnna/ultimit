@@ -23,7 +23,7 @@ desktop shell, not a theme on top of another desktop.
 
 ## Install
 
-On Ubuntu 26.04: `git clone https://github.com/m0nnnna/ultimit && cd ultimit && scripts/install.sh`.
+On Ubuntu 26.04: clone (or copy) this repository, then run `scripts/install.sh`.
 Everything goes to `/opt/ultimit` for every user; see [`docs/install.md`](docs/install.md).
 
 ## Layout

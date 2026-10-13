@@ -4,7 +4,7 @@
 # distro/ are installed. Run it from a clone of the repository, as your normal user (it asks
 # for your password through sudo when it needs it):
 #
-#   git clone https://github.com/m0nnnna/ultimit && cd ultimit && scripts/install.sh
+#   gh repo clone m0nnnna/ultimit && cd ultimit && scripts/install.sh      (see docs/install.md)
 #
 # Options:
 #   --yes                 don't ask before starting
