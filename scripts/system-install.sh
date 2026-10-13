@@ -1,0 +1,189 @@
+#!/bin/bash
+# The system half of installing Ultimit; runs as root. scripts/install.sh calls it after building
+# from source; the Ultimit ISO calls it while installing (on the new system, in a chroot).
+#
+#   system-install.sh --tree DIR     shell, session, greeter... come from the checkout DIR
+#                                    (the libraries and binaries are already in /opt/ultimit)
+#   system-install.sh --release F    unpack a release (scripts/build-release.sh) first: no building
+#   system-install.sh                /opt/ultimit is complete already (unpacked by the ISO installer)
+# Options:
+#   --no-apps              skip distro/packages-install.txt, the Flatpaks and DXVK
+#   --apps-at-first-boot   install those on the first boot instead (installer chroots: Flatpak
+#                          needs a running system)
+#   --keep-login-screen    don't make greetd/the Ultimit login screen the display manager
+#   --desktop-network      let NetworkManager run all networking (systems installed from Ubuntu's
+#                          server image use systemd-networkd, which NetworkManager can't manage)
+#
+# Every step is safe to repeat.
+set -euo pipefail
+PREFIX=/opt/ultimit
+TREE="" RELEASE="" APPS=now SWITCH_DM=true DESKTOP_NET=false
+while [ $# -gt 0 ]; do
+	case "$1" in
+	--tree) TREE=$2; shift ;;
+	--release) RELEASE=$2; shift ;;
+	--no-apps) APPS=no ;;
+	--apps-at-first-boot) APPS=firstboot ;;
+	--keep-login-screen) SWITCH_DM=false ;;
+	--desktop-network) DESKTOP_NET=true ;;
+	-h | --help) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+	*) echo "unknown option: $1" >&2; exit 2 ;;
+	esac
+	shift
+done
+[ "$(id -u)" = 0 ] || { echo "system-install.sh runs as root (scripts/install.sh calls it with sudo)" >&2; exit 1; }
+
+step() { printf '\n\033[1;36m== %s\033[0m\n' "$*"; }
+note() { printf '   %s\n' "$*"; }
+warn() { printf '\033[1;33m   ! %s\033[0m\n' "$*"; }
+die() { printf '\n\033[1;31mInstall stopped: %s\033[0m\n' "$*"; exit 1; }
+trap 'die "a command failed (system-install.sh line $LINENO)"' ERR
+list() { sed -e 's/#.*//' -e 's/[[:space:]]//g' "$1" | grep -v '^$' | grep -vxF -f <(printf '%s\n' ${ULTIMIT_SKIP_PACKAGES:-} "") || true; }
+export DEBIAN_FRONTEND=noninteractive
+
+# ------------------------------------------------------------------------------------ the files
+if [ -n "$RELEASE" ]; then
+	step "Unpacking $(basename "$RELEASE")"
+	rm -rf "$PREFIX.new" && mkdir -p "$PREFIX.new"
+	tar -C "$PREFIX.new" -xf "$RELEASE"
+	[ -x "$PREFIX.new/opt/ultimit/bin/ultimit" ] || die "$RELEASE isn't an Ultimit release"
+	rm -rf "$PREFIX.old"; [ -e "$PREFIX" ] && mv "$PREFIX" "$PREFIX.old"
+	mv "$PREFIX.new/opt/ultimit" "$PREFIX"
+	install -D -m644 "$PREFIX.new/usr/lib/x86_64-linux-gnu/security/pam_oo7.so" /usr/lib/x86_64-linux-gnu/security/pam_oo7.so
+	rm -rf "$PREFIX.new" "$PREFIX.old"
+	note "Ultimit $(cat "$PREFIX/VERSION")"
+elif [ -n "$TREE" ]; then
+	step "Installing the shell, session and login screen to $PREFIX"
+	rev=$(git -C "$TREE" describe --always --dirty 2>/dev/null || echo unknown)
+	stage=$(mktemp -d)
+	tar -C "$TREE" --exclude=__pycache__ --exclude=test-results --exclude='*.pyc' \
+		-cf - shell session greeter distro assets scripts docs/keybindings.md docs/install.md LICENSE | tar -C "$stage" -xf -
+	echo "$rev" >"$stage/VERSION"
+	for d in shell session greeter distro assets scripts docs; do
+		rm -rf "$PREFIX/$d.new"; cp -a "$stage/$d" "$PREFIX/$d.new"
+		rm -rf "$PREFIX/$d.old"; [ -e "$PREFIX/$d" ] && mv "$PREFIX/$d" "$PREFIX/$d.old"
+		mv "$PREFIX/$d.new" "$PREFIX/$d"; rm -rf "$PREFIX/$d.old"
+	done
+	cp "$stage/VERSION" "$stage/LICENSE" "$PREFIX/"
+	rm -rf "$stage"
+	note "Ultimit $rev"
+fi
+[ -x "$PREFIX/bin/ultimit" ] && [ -d "$PREFIX/shell" ] || die "$PREFIX is incomplete (build with scripts/install.sh, or give --release)"
+chown -R root:root "$PREFIX"; chmod -R go-w,a+rX "$PREFIX"
+
+# ------------------------------------------------------------------------------------ packages
+step "Installing the packages the desktop needs (apt)"
+dpkg --configure -a   # finish anything an earlier run left half-done
+apt-get update -q
+mapfile -t pkgs < <(list "$PREFIX/distro/packages-core.txt")
+apt-get install -y -q "${pkgs[@]}"
+
+# ------------------------------------------------------------------------------------ system
+step "Setting up the system (fonts, session, keyring unlock, helpers, commands)"
+P=$PREFIX
+# Fonts the look uses (SIL Open Font License, see assets/fonts)
+install -D -m644 -t /usr/share/fonts/truetype/ultimit "$P"/assets/fonts/*.ttf "$P"/assets/fonts/OFL-*.txt
+fc-cache -f /usr/share/fonts/truetype/ultimit >/dev/null
+# The session the login screen offers
+mkdir -p /usr/share/wayland-sessions /usr/share/applications /etc/X11
+sed "s|@SESSION@|$P/session/ultimit-session|g" "$P/session/ultimit.desktop" >/usr/share/wayland-sessions/ultimit.desktop
+# Root helpers and polkit policies (FIREWALL, Updates, Users) and the virtual camera
+( cd "$P/distro/system" && find . -name __pycache__ -prune -o -type f -print | while read -r f; do
+	mode=644; [ -x "$f" ] && mode=755
+	install -D -m $mode "$f" "/$f"
+done )
+# Ultimit commands on everyone's PATH (other apps open folders with ultimit-data, ...)
+for b in "$P"/shell/bin/*; do ln -sfn "$b" "/usr/local/bin/$(basename "$b")"; done
+# Ultimit apps in every app menu
+for d in "$P"/shell/apps/*/ultimit-*.desktop; do
+	sed "s|^Exec=ultimit-|Exec=$P/shell/bin/ultimit-|" "$d" >"/usr/share/applications/$(basename "$d")"
+done
+# Unlock the keyring (oo7) with the password typed at the login screen
+if ! grep -q pam_oo7 /etc/pam.d/greetd 2>/dev/null; then
+	printf "\n# Ultimit: unlock the oo7 keyring with the login password.\nauth     optional pam_oo7.so\nsession  optional pam_oo7.so auto_start\n" >>/etc/pam.d/greetd
+fi
+# Where the login screen remembers the last user and session
+GU=$(getent passwd _greetd >/dev/null && echo _greetd || echo greeter)
+mkdir -p /var/lib/ultimit-greeter && chown "$GU" /var/lib/ultimit-greeter
+
+if $DESKTOP_NET; then
+	step "Handing networking to NetworkManager (as on Ubuntu Desktop)"
+	mkdir -p /etc/netplan/ultimit-disabled
+	for f in /etc/netplan/*.yaml; do
+		[ -e "$f" ] && [ "$(basename "$f")" != 01-network-manager-all.yaml ] && mv "$f" /etc/netplan/ultimit-disabled/
+	done
+	printf '# Written by Ultimit: NetworkManager runs every network device (as on Ubuntu Desktop).\nnetwork:\n  version: 2\n  renderer: NetworkManager\n' \
+		>/etc/netplan/01-network-manager-all.yaml
+	chmod 600 /etc/netplan/01-network-manager-all.yaml
+	# cloud-init must not write its own network config over it on later boots
+	mkdir -p /etc/cloud/cloud.cfg.d
+	echo "network: {config: disabled}" >/etc/cloud/cloud.cfg.d/99-ultimit-network.cfg
+	systemctl disable systemd-networkd-wait-online.service systemd-networkd.service 2>/dev/null || true
+	systemctl enable NetworkManager.service
+fi
+
+if $SWITCH_DM; then
+	step "Making the Ultimit login screen the one this PC starts with"
+	[ -f /etc/greetd/config.toml ] && cp --update=none /etc/greetd/config.toml /etc/greetd/config.toml.before-ultimit
+	cat >/etc/greetd/config.toml <<CONF
+# Written by Ultimit scripts/system-install.sh
+[terminal]
+# Ubuntu's greetd.service owns tty7 (Conflicts=getty@tty7).
+vt = 7
+
+[default_session]
+command = "$P/session/ultimit-greeter-session"
+user = "$GU"
+CONF
+	systemctl disable gdm3 sddm lightdm 2>/dev/null || true
+	systemctl enable --force greetd
+	echo /usr/sbin/greetd >/etc/X11/default-display-manager
+	systemctl set-default graphical.target
+	[ "$(readlink -f /etc/systemd/system/display-manager.service)" = "$(readlink -f /usr/lib/systemd/system/greetd.service)" ] \
+		|| die "greetd didn't become the login screen"
+fi
+
+# ------------------------------------------------------------------------------------ apps
+case "$APPS" in
+now)
+	step "Installing the apps (distro/packages-install.txt, Flatpaks, DXVK)"
+	"$P/scripts/install-apps.sh" --yes
+	;;
+firstboot)
+	step "Apps (Flatpaks, Steam, Wine, DXVK...) install on the first boot"
+	cat >/etc/systemd/system/ultimit-firstboot.service <<UNIT
+[Unit]
+Description=Ultimit: install the apps (first boot)
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=!/var/lib/ultimit/firstboot-done
+
+[Service]
+Type=oneshot
+Environment=DEBIAN_FRONTEND=noninteractive
+ExecStart=/bin/sh -c '$P/scripts/install-apps.sh --yes >>/var/log/ultimit-firstboot.log 2>&1 && mkdir -p /var/lib/ultimit && touch /var/lib/ultimit/firstboot-done'
+TimeoutStartSec=3h
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+	systemctl enable ultimit-firstboot.service
+	;;
+esac
+
+# ------------------------------------------------------------------------------------ check
+step "Checking the install"
+fail=0
+for f in bin/ultimit bin/qs bin/oo7-daemon libexec/oo7-daemon-login session/ultimit-session session/ultimit-greeter-session greeter/shell.qml shell/shell.qml; do
+	[ -e "$PREFIX/$f" ] || { warn "missing $PREFIX/$f"; fail=1; }
+done
+for b in ultimit qs; do
+	[ "$(ldd "$PREFIX/bin/$b" | grep -c "not found")" = 0 ] || { warn "$b is missing a library"; fail=1; }
+done
+"$PREFIX/bin/qs" --version >/dev/null 2>&1 || { warn "Quickshell doesn't start"; fail=1; }
+# (no "fc-list | grep -q": with pipefail, grep quitting early makes fc-list fail with SIGPIPE)
+[ "$(fc-list : family | grep -c -E 'Michroma|Chakra Petch|Share Tech Mono')" -ge 3 ] || { warn "fonts not found by fontconfig"; fail=1; }
+[ -f /usr/share/wayland-sessions/ultimit.desktop ] || { warn "session file missing"; fail=1; }
+[ -f /usr/lib/x86_64-linux-gnu/security/pam_oo7.so ] || { warn "keyring unlock module missing"; fail=1; }
+[ "$fail" = 0 ] || die "the install is incomplete (see the warnings above)"
+note "Ultimit $(cat "$PREFIX/VERSION") is in place"

@@ -29,6 +29,15 @@ python3
 python3-gi
 gir1.2-secret-1
 gir1.2-glib-2.0
+# Hardware support a desktop expects (Ubuntu's server image leaves some out): firmware for GPUs,
+# Wi-Fi and laptop sound, Wi-Fi tools, the driver picker (NVIDIA)
+linux-firmware
+firmware-sof-signed
+alsa-ucm-conf
+wpasupplicant
+iw
+wireless-regdb
+ubuntu-drivers-common
 # Network, sound, Bluetooth, power, drives
 network-manager
 pipewire

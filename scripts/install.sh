@@ -171,109 +171,19 @@ if built oo7 "$OO7_REF"; then note "already installed"; else
 fi
 
 step "Building the Ultimit compositor"
-rev=$(git -C "$ROOT" describe --always --dirty 2>/dev/null || echo unknown)
 setup "$WORK/compositor" "$ROOT/compositor" --buildtype=release >/dev/null
 ninja -C "$WORK/compositor" -j "$JOBS"
 sudo install -D -m755 "$WORK/compositor/ultimit" "$PREFIX/bin/ultimit"
 [ "$(ldd "$PREFIX/bin/ultimit" | grep -c "not found")" = 0 ] || die "the compositor can't find a library: $(ldd "$PREFIX/bin/ultimit" | grep 'not found')"
 
 # ------------------------------------------------------------------------------------ the desktop
-step "Installing the shell, session and login screen to $PREFIX"
-stage="$WORK/stage"
-rm -rf "$stage" && mkdir -p "$stage"
-tar -C "$ROOT" --exclude=__pycache__ --exclude=test-results --exclude='*.pyc' \
-	-cf - shell session greeter distro assets scripts docs/keybindings.md LICENSE | tar -C "$stage" -xf -
-echo "$rev" >"$stage/VERSION"
-sudo sh -e -c '
-	cd "$1"
-	for d in shell session greeter distro assets scripts docs; do
-		rm -rf "$2/$d.new"; cp -a "$d" "$2/$d.new"
-		rm -rf "$2/$d.old"; [ -e "$2/$d" ] && mv "$2/$d" "$2/$d.old"
-		mv "$2/$d.new" "$2/$d"; rm -rf "$2/$d.old"
-	done
-	cp VERSION LICENSE "$2/"
-	chown -R root:root "$2"; chmod -R go-w,a+rX "$2"
-' sh "$stage" "$PREFIX"
-note "Ultimit $rev"
-
-step "Setting up the system (fonts, session, keyring unlock, helpers, commands)"
-sudo sh -e -c '
-	P=$1
-	# Fonts the look uses (SIL Open Font License, see assets/fonts)
-	install -D -m644 -t /usr/share/fonts/truetype/ultimit "$P"/assets/fonts/*.ttf "$P"/assets/fonts/OFL-*.txt
-	fc-cache -f /usr/share/fonts/truetype/ultimit >/dev/null
-	# The session the login screen offers
-	mkdir -p /usr/share/wayland-sessions /usr/share/applications /etc/X11
-	sed "s|@SESSION@|$P/session/ultimit-session|g" "$P/session/ultimit.desktop" >/usr/share/wayland-sessions/ultimit.desktop
-	# Root helpers and polkit policies (FIREWALL, Updates, Users) and the virtual camera
-	cd "$P/distro/system"
-	find . -name __pycache__ -prune -o -type f -print | while read -r f; do
-		mode=644; [ -x "$f" ] && mode=755
-		install -D -m $mode "$f" "/$f"
-	done
-	# Ultimit commands on everyone'"'"'s PATH (other apps open folders with ultimit-data, ...)
-	for b in "$P"/shell/bin/*; do ln -sfn "$b" "/usr/local/bin/$(basename "$b")"; done
-	# Ultimit apps in every app menu
-	for d in "$P"/shell/apps/*/ultimit-*.desktop; do
-		sed "s|^Exec=ultimit-|Exec=$P/shell/bin/ultimit-|" "$d" >"/usr/share/applications/$(basename "$d")"
-	done
-	# Unlock the keyring (oo7) with the password typed at the login screen
-	if ! grep -q pam_oo7 /etc/pam.d/greetd 2>/dev/null; then
-		printf "\n# Ultimit: unlock the oo7 keyring with the login password.\nauth     optional pam_oo7.so\nsession  optional pam_oo7.so auto_start\n" >>/etc/pam.d/greetd
-	fi
-	# Where the login screen remembers the last user and session
-	GU=$(getent passwd _greetd >/dev/null && echo _greetd || echo greeter)
-	mkdir -p /var/lib/ultimit-greeter && chown "$GU" /var/lib/ultimit-greeter
-' sh "$PREFIX"
-
-if $SWITCH_DM; then
-	step "Making the Ultimit login screen the one this PC starts with"
-	sudo sh -e -c '
-		P=$1
-		GU=$(getent passwd _greetd >/dev/null && echo _greetd || echo greeter)
-		[ -f /etc/greetd/config.toml ] && cp --update=none /etc/greetd/config.toml /etc/greetd/config.toml.before-ultimit
-		cat >/etc/greetd/config.toml <<CONF
-# Written by Ultimit scripts/install.sh
-[terminal]
-# Ubuntu'"'"'s greetd.service owns tty7 (Conflicts=getty@tty7).
-vt = 7
-
-[default_session]
-command = "$P/session/ultimit-greeter-session"
-user = "$GU"
-CONF
-		systemctl disable gdm3 2>/dev/null || true
-		systemctl disable sddm lightdm 2>/dev/null || true
-		systemctl enable --force greetd
-		echo /usr/sbin/greetd >/etc/X11/default-display-manager
-		systemctl set-default graphical.target
-	' sh "$PREFIX"
-	[ "$(readlink -f /etc/systemd/system/display-manager.service)" = "$(readlink -f /usr/lib/systemd/system/greetd.service)" ] \
-		|| die "greetd didn't become the login screen; nothing else changed on reboot"
-else
-	note "keeping the current login screen; Ultimit is in its session list"
-fi
-
-# ------------------------------------------------------------------------------------ apps
-if $APPS; then
-	step "Installing the apps (distro/packages-install.txt, Flatpaks, DXVK)"
-	ULTIMIT_SKIP_PACKAGES="$SKIP_PACKAGES" "$ROOT/scripts/install-apps.sh" --yes
-fi
-
-# ------------------------------------------------------------------------------------ check
-step "Checking the install"
-fail=0
-for f in bin/ultimit bin/qs bin/oo7-daemon libexec/oo7-daemon-login session/ultimit-session session/ultimit-greeter-session greeter/shell.qml shell/shell.qml; do
-	[ -e "$PREFIX/$f" ] || { warn "missing $PREFIX/$f"; fail=1; }
-done
-for b in ultimit qs; do
-	[ "$(ldd "$PREFIX/bin/$b" | grep -c "not found")" = 0 ] || { warn "$b is missing a library"; fail=1; }
-done
-"$PREFIX/bin/qs" --version >/dev/null 2>&1 || { warn "Quickshell doesn't start"; fail=1; }
-# (no "fc-list | grep -q": with pipefail, grep quitting early makes fc-list fail with SIGPIPE)
-[ "$(fc-list : family | grep -c -E 'Michroma|Chakra Petch|Share Tech Mono')" -ge 3 ] || { warn "fonts not found by fontconfig"; fail=1; }
-[ -f /usr/share/wayland-sessions/ultimit.desktop ] || { warn "session file missing"; fail=1; }
-[ "$fail" = 0 ] || die "the install is incomplete (see the warnings above)"
+# Everything that needs root from here on (shared with the ISO installer): scripts/system-install.sh
+flags=(--tree "$ROOT")
+$APPS || flags+=(--no-apps)
+$SWITCH_DM || flags+=(--keep-login-screen)
+sudo ULTIMIT_SKIP_PACKAGES="$SKIP_PACKAGES" "$ROOT/scripts/system-install.sh" "${flags[@]}" \
+	|| die "the system part of the install failed (see above)"
+rev=$(cat "$PREFIX/VERSION")
 
 # ------------------------------------------------------------------------------------ GNOME
 # Last, and only once Ultimit is installed and checked: GNOME, GDM and GNOME's apps go; GTK, GLib and
