@@ -7,6 +7,9 @@
   ultimitctl move ID X Y | resize ID W H
   ultimitctl snap ID left|right|restore|maximize
                                    tile a window (repeat left/right: 1/2, 1/3, 2/3)
+  ultimitctl primary OUTPUT          make OUTPUT the main display
+  ultimitctl test-output add W H | remove NAME
+                                   test hook: plug / unplug a virtual monitor (headless)
   ultimitctl motion on|off         window animations on/off (the shell sends its motion setting)
   ultimitctl skin PANEL FG DIM LINE LINE_STRONG ACCENT BAD
                                    window chrome colors (#rrggbb[aa]); the shell sends these

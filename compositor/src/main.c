@@ -170,9 +170,10 @@ int main(int argc, char *argv[]) {
 	/* Plain Mine black until the shell draws its wallpaper on top. */
 	static const float backdrop[4] = UL_COLOR_BG;
 	server.backdrop = wlr_scene_rect_create(server.layers[UL_LAYER_BG], 0, 0, backdrop);
-	/* Everything below this node is what glass blurs. */
-	server.blur = wlr_scene_optimized_blur_create(&server.scene->tree, 0, 0);
-	wlr_scene_node_place_above(&server.blur->node, &server.layers[UL_LAYER_BOTTOM]->node);
+	/* What glass blurs is everything below the per-output blur nodes (output.c), which go
+	 * right above this marker. */
+	server.blur_layer = wlr_scene_tree_create(&server.scene->tree);
+	wlr_scene_node_place_above(&server.blur_layer->node, &server.layers[UL_LAYER_BOTTOM]->node);
 
 	/* Buffer sharing and timing: the GPU path games and video players use. */
 	if (wlr_renderer_get_texture_formats(server.renderer, WLR_BUFFER_CAP_DMABUF)) {

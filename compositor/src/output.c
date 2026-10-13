@@ -77,11 +77,12 @@ void output_relocate_views(struct ul_server *server, struct ul_output *gone) {
 	wl_list_for_each(view, &server->views, link) {
 		if (!view->mapped && !view->minimized) continue;
 		double cx = view->x + view->width / 2.0, cy = view->y + view->height / 2.0;
+		/* Duplicated (mirrored) monitors overlap: then the window belongs to the main one. */
 		struct ul_output *from = NULL, *o;
 		wl_list_for_each(o, &server->outputs, link) {
-			if (!wlr_box_empty(&o->prev_area) && wlr_box_contains_point(&o->prev_area, cx, cy)) {
+			if (!wlr_box_empty(&o->prev_area) && wlr_box_contains_point(&o->prev_area, cx, cy) &&
+					(!from || o == primary)) {
 				from = o;
-				break;
 			}
 		}
 		struct ul_output *to = from && from != gone && in_layout(from) ? from : primary;
@@ -111,7 +112,15 @@ void server_update_backdrop(struct ul_server *server) {
 	wlr_output_layout_get_box(server->output_layout, NULL, &box);
 	wlr_scene_node_set_position(&server->backdrop->node, box.x, box.y);
 	wlr_scene_rect_set_size(server->backdrop, box.width, box.height);
-	wlr_scene_optimized_blur_set_size(server->blur, box.width, box.height);
+	struct ul_output *output;
+	wl_list_for_each(output, &server->outputs, link) {   /* each screen's own blur cache */
+		if (!output->blur) continue;
+		/* A screen that is off must not leave its node over another one's area. (Duplicated
+		 * screens overlap, so one of them still blurs the slow way.) */
+		wlr_scene_node_set_enabled(&output->blur->node, in_layout(output));
+		wlr_scene_node_set_position(&output->blur->node, output->full_area.x, output->full_area.y);
+		wlr_scene_optimized_blur_set_size(output->blur, output->full_area.width, output->full_area.height);
+	}
 	lock_arrange(server);
 }
 
@@ -215,6 +224,7 @@ static void output_destroy(struct wl_listener *listener, void *data) {
 	wl_list_remove(&output->request_state.link);
 	wl_list_remove(&output->destroy.link);
 	wl_list_remove(&output->link);
+	wlr_scene_node_destroy(&output->blur->node);
 	output->wlr_output->data = NULL;
 	free(output);
 	server_update_backdrop(server);
@@ -317,6 +327,7 @@ static void new_output(struct wl_listener *listener, void *data) {
 	output->vrr_always = have_conf && conf.adaptive_sync;
 	output->primary = have_conf && conf.primary;
 	output->scene_output = wlr_scene_output_create(server->scene, wlr_output);
+	output->blur = wlr_scene_optimized_blur_create(server->blur_layer, 0, 0);
 	if (!enabled) {
 		wlr_log(WLR_INFO, "Output %s: disabled (displays.conf)", wlr_output->name);
 		return;

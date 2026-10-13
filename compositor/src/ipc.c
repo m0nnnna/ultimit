@@ -189,6 +189,25 @@ static void run_command(struct ul_server *server, char *line, struct out *o) {
 			"{\"ok\":true}" : "{\"error\":\"cannot load cursor theme\"}");
 		return;
 	}
+	if (strcmp(cmd, "primary") == 0) {
+		/* primary NAME: make that output the main display (Settings > Display saves it too). */
+		char name[64] = {0};
+		struct ul_output *out, *hit = NULL;
+		if (sscanf(line, "%*s %63s", name) == 1) {
+			wl_list_for_each(out, &server->outputs, link) {
+				if (strcmp(out->wlr_output->name, name) == 0) hit = out;
+			}
+		}
+		if (!hit) {
+			put(o, "{\"error\":\"usage: primary OUTPUT\"}");
+			return;
+		}
+		wl_list_for_each(out, &server->outputs, link) {
+			out->primary = out == hit;
+		}
+		put(o, "{\"ok\":true}");
+		return;
+	}
 	if (strcmp(cmd, "test-output") == 0) {
 		/* test-output add W H | remove NAME: plug / unplug a virtual monitor (headless only). */
 		char what[16] = {0}, arg[64] = {0};

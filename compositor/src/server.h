@@ -128,7 +128,7 @@ struct ul_server {
 	struct wlr_scene_output_layout *scene_layout;
 	struct wlr_scene_tree *layers[UL_LAYER_COUNT];
 	struct wlr_scene_rect *backdrop;
-	struct wlr_scene_optimized_blur *blur;
+	struct wlr_scene_tree *blur_layer; /* holds each output's optimized blur node (ul_output.blur) */
 
 	struct wlr_output_layout *output_layout;
 	struct wl_list outputs; /* ul_output.link */
@@ -258,6 +258,10 @@ struct ul_output {
 	bool vrr_always; /* user turned adaptive sync on; else only for fullscreen */
 	bool primary;    /* the main display (displays.conf primary = true) */
 	struct wlr_box prev_area; /* full_area before a layout change (output_relocate_views) */
+	/* Cached blur of what lies under the windows, for this screen only. SceneFX keeps one
+	 * "needs redrawing" flag per blur node and the first screen to draw clears it, so a node
+	 * shared by several screens leaves the others without a cache (slow blur every frame). */
+	struct wlr_scene_optimized_blur *blur;
 	struct wl_list layer_surfaces[4]; /* ul_layer_surface.link, per zwlr layer */
 
 	struct wl_listener frame;
