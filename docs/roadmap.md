@@ -89,12 +89,14 @@ Done:
 - [x] Window capture for sharing (ext-image-copy-capture)
 
 ### 5a: gaps (daily use on the laptop)
-- [ ] Low-battery warning and critical action
-- [ ] Power menu: log out, hibernate (when the system can), confirmation
-- [ ] Updates page in Settings (apt, flatpak, fwupd; reboot-needed; apply via pkexec)
-- [ ] App store over Flathub (install/remove/update flatpaks); "not installed" hints lead there
-- [ ] Crash recovery: a compositor crash leaves a trace and a way back; shell fallback without a git checkout
-- [ ] Session hygiene: stale oo7-daemon processes and logind sessions after restarts; keyring unlock with autologin
+- [x] Low-battery warning and critical action (warnings at 20/10/5%; UPower's own action at 2%)
+- [x] Power menu: log out, hibernate (when the system can), confirmation
+  - [ ] Make hibernate possible here (resume setup, NVIDIA video memory preservation): logind says no today
+- [x] Updates page in Settings (apt, flatpak, fwupd; reboot-needed; apply via pkexec)
+- [x] App store over Flathub (STORE: install/remove; updates in Settings); "not installed" hints lead there
+- [x] Crash recovery: a compositor crash leaves a trace and a way back; shell fallback without a git checkout
+- [x] Session hygiene: stale oo7-daemon processes and logind sessions after restarts
+  - [ ] Keyring unlock with autologin (no password at login, so oo7 asks once)
 
 ### 5b: what Windows users expect, part 1 (the desktop)
 - [ ] Workspaces
