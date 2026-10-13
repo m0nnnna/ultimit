@@ -24,6 +24,9 @@ grim
 slurp
 wl-clipboard
 wtype
+# File sharing (SHARES app: Samba usershares)
+samba
+smbclient
 # Media and archives
 mpv
 ffmpeg
