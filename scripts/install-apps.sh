@@ -59,10 +59,28 @@ fi
 if $need_i386 || [ ${#missing_apt[@]} -gt 0 ]; then
 	sudo apt-get update
 fi
-if [ ${#missing_apt[@]} -gt 0 ]; then
-	# Interactive on purpose: steam-installer asks you to accept Steam's
-	# license.
-	sudo apt-get install -y "${missing_apt[@]}"
+# Steam's package asks you to accept Valve's licence: it gets the terminal to itself (output may be
+# going through a log), everything else installs without questions.
+interactive=() quiet=()
+for p in "${missing_apt[@]}"; do
+	case "$p" in steam-installer) interactive+=("$p") ;; *) quiet+=("$p") ;; esac
+done
+# DKMS modules (the virtual camera) are built for the running kernel: its headers must be there.
+if printf '%s\n' "${quiet[@]}" | grep -q -- '-dkms$' && ! installed "linux-headers-$(uname -r)" \
+		&& apt-cache show "linux-headers-$(uname -r)" >/dev/null 2>&1; then
+	quiet+=("linux-headers-$(uname -r)")
+fi
+if [ ${#quiet[@]} -gt 0 ]; then
+	sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "${quiet[@]}"
+fi
+if [ ${#interactive[@]} -gt 0 ]; then
+	if [ -r /dev/tty ] && [ -w /dev/tty ] && (exec </dev/tty) 2>/dev/null; then
+		echo "== Steam: accept Valve's licence in the dialog to install it"
+		sudo apt-get install -y "${interactive[@]}" </dev/tty >/dev/tty 2>&1 \
+			|| echo "!! Steam wasn't installed (licence not accepted?). Later: sudo apt install steam-installer"
+	else
+		echo "!! No terminal for Steam's licence question; install it later: sudo apt install steam-installer"
+	fi
 fi
 
 if [ ${#missing_debs[@]} -gt 0 ]; then
