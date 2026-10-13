@@ -28,6 +28,8 @@ sudo sh -e -c '
 	fi
 	[ -f /etc/greetd/config.toml.before-ultimit ] && mv /etc/greetd/config.toml.before-ultimit /etc/greetd/config.toml
 	sed -i "/# Ultimit: unlock the oo7 keyring/,+2d" /etc/pam.d/greetd 2>/dev/null || true
+	systemctl disable ultimit-firstboot.service 2>/dev/null || true
+	rm -f /etc/systemd/system/ultimit-firstboot.service
 	rm -f /usr/lib/x86_64-linux-gnu/security/pam_oo7.so /usr/share/wayland-sessions/ultimit.desktop
 	rm -rf /usr/share/fonts/truetype/ultimit /var/lib/ultimit-greeter
 	for l in /usr/local/bin/ultimit*; do [ "$(readlink "$l" 2>/dev/null | cut -c1-${#P})" = "$P" ] && rm -f "$l"; done

@@ -1,12 +1,15 @@
 # Installing Ultimit on another computer
 
+Two ways in: the **Ultimit ISO** for a computer you're setting up from scratch (no building, no GNOME
+ever; see [iso.md](iso.md)), or **this installer** on a computer that already runs Ubuntu 26.04.
+
 Ultimit installs on top of **Ubuntu 26.04 LTS** (64-bit). Everything goes to `/opt/ultimit` and
 works for every user on the computer. The Ultimit login screen replaces Ubuntu's.
 
 ## Before you start
 
-- A fresh or existing **Ubuntu 26.04** install. The normal desktop install is fine; GNOME stays as a
-  fallback until you remove it.
+- A fresh or existing **Ubuntu 26.04** install. The normal desktop install is fine: at the end the
+  installer removes GNOME, GDM and GNOME's apps (`--keep-gnome` keeps them).
 - **NVIDIA card:** install the NVIDIA driver first. Run `sudo ubuntu-drivers install`, then
   reboot. The installer warns you if the driver isn't running.
 - Internet, about **20 GB free** and **30–60 minutes**. wlroots, SceneFX, Quickshell and oo7 are
@@ -38,7 +41,8 @@ Options:
 | | |
 |---|---|
 | `--no-apps` | only the desktop; skip Steam, Wine, Flatpaks (Chromium, OBS, EasyEffects, ProtonPlus), DXVK… |
-| `--keep-login-screen` | leave GDM as the login screen; Ultimit is in its session list (gear icon) |
+| `--keep-gnome` | don't remove GNOME at the end |
+| `--keep-login-screen` | leave GDM as the login screen; Ultimit is in its session list (gear icon); keeps GNOME |
 | `--yes` | don't ask before starting |
 | `--jobs N` | build jobs (default comes from cores and memory) |
 
@@ -62,8 +66,6 @@ Steps that are already done (the library builds) are skipped, so an update takes
 ## After installing
 
 - **Other people:** add them in Settings › Users. They log in at the Ultimit login screen.
-- **Removing GNOME** (optional, once you're happy): `scripts/purge-gnome.sh` shows what would go;
-  `scripts/purge-gnome.sh --yes` does it.
 - **VPN:** Settings › Network › VPN (WireGuard and OpenVPN files). Private Internet Access's own
   app also works, and its icon shows in the tray.
 
@@ -80,5 +82,5 @@ Steps that are already done (the library builds) are skipped, so an update takes
 
 ## Removing Ultimit
 
-`scripts/uninstall.sh --yes` removes `/opt/ultimit` and the system pieces, and gives the login
-back to GDM. Users' own settings and the installed apps are left alone.
+`scripts/uninstall.sh --yes` removes `/opt/ultimit` and the system pieces, puts Ubuntu's desktop
+(GNOME, GDM) back if the install removed it, and gives the login back to GDM. Users' own settings and the installed apps are left alone.
