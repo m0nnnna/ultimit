@@ -136,9 +136,9 @@ static void write_state(struct ul_server *server, struct out *o) {
 			}
 		}
 	}
-	put(o, "],\"focused_layer\":%s,\"locked\":%s,\"idle_inhibitors\":%d}",
+	put(o, "],\"focused_layer\":%s,\"locked\":%s,\"idle_inhibitors\":%d,\"motion\":%s}",
 		server->focused_layer ? "true" : "false", server->locked ? "true" : "false",
-		server->idle_inhibitors);
+		server->idle_inhibitors, anim_motion() ? "true" : "false");
 }
 
 /* ---- commands ------------------------------------------------------------ */
@@ -168,6 +168,17 @@ static void run_command(struct ul_server *server, char *line, struct out *o) {
 		}
 		put(o, input_set_cursor_theme(server, name, size) ?
 			"{\"ok\":true}" : "{\"error\":\"cannot load cursor theme\"}");
+		return;
+	}
+	if (strcmp(cmd, "motion") == 0) {
+		/* motion on|off: window animations follow the shell's motion setting. */
+		char what[8] = {0};
+		if (sscanf(line, "%*s %7s", what) != 1 || (strcmp(what, "on") && strcmp(what, "off"))) {
+			put(o, "{\"error\":\"usage: motion on|off\"}");
+			return;
+		}
+		anim_set_motion(strcmp(what, "on") == 0);
+		put(o, "{\"ok\":true}");
 		return;
 	}
 	if (strcmp(cmd, "skin") == 0) {

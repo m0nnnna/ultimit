@@ -31,12 +31,6 @@ Page {
     }
 
     SectionLabel { text: "Wallpaper" }
-    ToggleRow {
-        Layout.fillWidth: true
-        text: "Animate shards"
-        checked: Config.motion
-        onToggled: value => Config.motion = value
-    }
     SliderField {
         Layout.fillWidth: true
         label: "Shard count"
@@ -54,6 +48,14 @@ Page {
     }
 
     SectionLabel { text: "System" }
+    // Reduced motion when off: window open/close/minimize, the focus sweep, panel transitions,
+    // shard and rail-icon motion, the boot and lock animations.
+    ToggleRow {
+        Layout.fillWidth: true
+        text: "Animations (windows, panels, wallpaper)"
+        checked: Config.motion
+        onToggled: value => Config.motion = value
+    }
     ToggleRow {
         Layout.fillWidth: true
         text: "Play boot sequence at startup"

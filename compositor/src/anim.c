@@ -109,8 +109,7 @@ static int tick(void *data) {
 }
 
 void anim_open(struct ul_view *view) {
-	const char *env = getenv("ULTIMIT_ANIMATIONS");
-	if ((env && strcmp(env, "0") == 0) || view->fullscreen || !view->content) {
+	if (!anim_motion() || view->fullscreen || !view->content) {
 		return;
 	}
 	anim_cancel(view);
@@ -187,9 +186,23 @@ static void place_ghost(struct ul_ghost *g, struct ul_view *view) {
 	wlr_scene_node_raise_to_top(&g->tree->node);
 }
 
+/* Motion on/off: ULTIMIT_ANIMATIONS=0 at start, then whatever the shell says (ipc "motion"). */
+static int motion = -1; /* -1: not decided yet (read the environment) */
+
+void anim_set_motion(bool on) {
+	motion = on;
+}
+
+bool anim_motion(void) {
+	if (motion < 0) {
+		const char *env = getenv("ULTIMIT_ANIMATIONS");
+		motion = !(env && strcmp(env, "0") == 0);
+	}
+	return motion;
+}
+
 static bool animations_enabled(void) {
-	const char *env = getenv("ULTIMIT_ANIMATIONS");
-	return !(env && strcmp(env, "0") == 0);
+	return anim_motion();
 }
 
 static bool no_input(struct wlr_scene_buffer *buffer, double *sx, double *sy) {

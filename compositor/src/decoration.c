@@ -411,7 +411,7 @@ static int sweep_tick(void *data) {
 
 void decoration_focus_sweep(struct ul_view *view) {
 	struct ul_decoration *deco = &view->deco;
-	if (!deco->sweep || !view->ssd || !view->mapped || view->fullscreen || anim_running(view)) {
+	if (!deco->sweep || !anim_motion() || !view->ssd || !view->mapped || view->fullscreen || anim_running(view)) {
 		return;
 	}
 	struct timespec now;

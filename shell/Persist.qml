@@ -73,8 +73,12 @@ Scope {
         if (changed) save.restart();
     }
 
-    // Window chrome is drawn by the compositor; give it the skin's colors.
-    function pushChrome() { Quickshell.execDetached(["ultimitctl", "skin"].concat(Theme.chromeArgs)); }
+    // Window chrome and its animations are the compositor's: give it the skin's colors and the
+    // motion setting.
+    function pushChrome() {
+        Quickshell.execDetached(["ultimitctl", "skin"].concat(Theme.chromeArgs));
+        Quickshell.execDetached(["ultimitctl", "motion", Config.motion ? "on" : "off"]);
+    }
 
     Component.onCompleted: {
         root.pushChrome();
@@ -101,7 +105,7 @@ Scope {
     }
     Connections {
         target: Config
-        function onMotionChanged() { root.push(); }
+        function onMotionChanged() { root.push(); Quickshell.execDetached(["ultimitctl", "motion", Config.motion ? "on" : "off"]); }
         function onRailSpinChanged() { root.push(); }
         function onShardDensityChanged() { root.push(); }
         function onBootOnStartChanged() { root.push(); }
