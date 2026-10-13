@@ -96,6 +96,8 @@ trap 'kill $SUDO_KEEPALIVE 2>/dev/null' EXIT
 
 # ------------------------------------------------------------------------------------ packages
 step "Installing the packages Ultimit needs (apt)"
+# An earlier run (or anything else) may have been cut off half-way through installing packages.
+sudo DEBIAN_FRONTEND=noninteractive dpkg --configure -a
 sudo apt-get update -q
 mapfile -t pkgs < <(list "$ROOT/distro/packages-build.txt"; list "$ROOT/distro/packages-core.txt")
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q "${pkgs[@]}"
