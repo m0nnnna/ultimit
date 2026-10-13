@@ -21,12 +21,20 @@ desktop shell, not a theme on top of another desktop.
 3. **It installs on plain Ubuntu.** Ultimit ships as packages first and as an
    ISO later, so it stays a thin layer over a well-supported base.
 
+## Install
+
+On Ubuntu 26.04: `git clone https://github.com/m0nnnna/ultimit && cd ultimit && scripts/install.sh`.
+Everything goes to `/opt/ultimit` for every user; see [`docs/install.md`](docs/install.md).
+
 ## Layout
 
 | Path | What lives there |
 |---|---|
 | `docs/design/` | The interactive design mockup |
 | `docs/architecture.md` | Stack choices and why |
+| `docs/install.md` | Installing on another computer, updating, removing |
+| `scripts/install.sh` | The installer (builds the libraries, installs to `/opt/ultimit`, sets up the login screen) |
+| `assets/fonts/` | Michroma, Chakra Petch, Share Tech Mono (SIL Open Font License, licences beside them) |
 
 ## Credits
 
