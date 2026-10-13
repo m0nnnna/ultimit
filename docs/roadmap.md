@@ -109,12 +109,14 @@ Done:
 - [x] Compositor honours the shell's motion setting (open animation, focus sweep)
 
 ### 5c: what Windows users expect, part 2 (the system)
-- [ ] Keyboard layouts (several, switch shortcut) and input methods (text-input-v3 / input-method-v2; IBus/Fcitx)
-- [ ] Accessibility: screen reader toggle, magnifier, text size, cursor size, high contrast
-- [ ] Users page (create user, change password)
-- [ ] Display: mirroring ("Duplicate"), rotation, more scale steps
-- [ ] Network extras: VPN/WireGuard import, hotspot, captive portal
-- [ ] Consistent window titles (GAMES, SETTINGS; rail/Alt+Tab match on them)
+- [ ] ~~Keyboard layouts and input methods~~ (not now, 2026-10-13: left for someone else)
+- [ ] ~~Accessibility~~ (not now, 2026-10-13)
+- [x] Users page (create user, change password, administrator, delete)
+  - [ ] New accounts can't start Ultimit until it is installed system-wide (phase 6): the session runs from /home/mino
+- [x] Multiple displays: arrangement canvas, main display, Duplicate, rotation, scale 100-300 %, highest refresh by default, settings follow the monitor, windows follow their screen on hotplug
+- [x] VPN: WireGuard / OpenVPN import, sign-in with keyring, bar marker (PIA app or OpenVPN files)
+  - [ ] Hotspot, captive portal
+- [x] Consistent window titles (GAMES, SETTINGS; rail/Alt+Tab match on them)
 
 ## Phase 6: installable (ISO blockers, see the audit)
 - [ ] Install compositor, shell, session, deps (wlroots/scenefx/qs/oo7) system-wide under /opt/ultimit; no $HOME/.local/ultimit-deps or checkout paths
