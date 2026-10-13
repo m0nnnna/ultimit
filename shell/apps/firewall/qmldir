@@ -1,0 +1,8 @@
+singleton Firewall 1.0 Firewall.qml
+FirewallApp 1.0 FirewallApp.qml
+FirewallWindow 1.0 FirewallWindow.qml
+PresetRow 1.0 PresetRow.qml
+BlockedRow 1.0 BlockedRow.qml
+RuleRow 1.0 RuleRow.qml
+AddRuleDialog 1.0 AddRuleDialog.qml
+SetupBanner 1.0 SetupBanner.qml

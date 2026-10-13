@@ -1,0 +1,23 @@
+#!/bin/sh
+# ultimit-firewall [--blocked] - open FIREWALL, the firewall manager (ufw). --blocked opens it on the list of
+# connections the firewall recently turned away. FIREWALL is its own quickshell process (firewall-shell.qml),
+# started here when not yet running; it exits when its window closes.
+shell="${ULTIMIT_SHELL_DIR:-$(dirname "$(dirname "$(readlink -f "$0")")")}"
+cfg="$shell/firewall-shell.qml"
+
+firewall() { qs -p "$cfg" ipc call firewall "$@" >/dev/null 2>&1; }
+
+if ! firewall state; then
+    qs -p "$cfg" -n -d >/dev/null 2>&1
+    i=0
+    until firewall state; do
+        i=$((i + 1)); [ $i -gt 50 ] && { echo "ultimit-firewall: FIREWALL did not start" >&2; exit 1; }
+        sleep 0.2
+    done
+fi
+
+if [ "$1" = "--blocked" ]; then
+    firewall blocked
+else
+    firewall open
+fi

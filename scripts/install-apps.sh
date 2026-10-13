@@ -85,9 +85,11 @@ if [ ${#missing_flatpak[@]} -gt 0 ]; then
 	sudo flatpak install -y --noninteractive flathub "${missing_flatpak[@]}"
 fi
 
-# System config files (distro/system mirrors /), e.g. the virtual camera.
+# System config files (distro/system mirrors /), e.g. the virtual camera and the
+# FIREWALL helper (executables keep their x bit; everything is root-owned).
 for f in $(cd "$ROOT/distro/system" && find . -type f); do
-	cmp -s "$ROOT/distro/system/$f" "/$f" || sudo install -D -m 644 "$ROOT/distro/system/$f" "/$f"
+	mode=644; [ -x "$ROOT/distro/system/$f" ] && mode=755
+	cmp -s "$ROOT/distro/system/$f" "/$f" || sudo install -D -m $mode "$ROOT/distro/system/$f" "/$f"
 done
 
 if ! $have_dxvk; then

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=FIREWALL
+GenericName=Firewall
+Comment=Choose which devices and apps can reach this computer
+Exec=ultimit-firewall
+Icon=ultimit-firewall
+Terminal=false
+Categories=Settings;Network;Security;
+Keywords=ufw;ports;vtuber;vtube studio;vbridger;remote play;
