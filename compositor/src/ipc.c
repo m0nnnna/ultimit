@@ -32,6 +32,8 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <wlr/backend/headless.h>
+#include <wlr/backend/multi.h>
 #include "server.h"
 #include "json.h"
 #include "theme.h"
@@ -55,8 +57,19 @@ static void write_state(struct ul_server *server, struct out *o) {
 	struct ul_output *output;
 	bool first = true;
 	wl_list_for_each(output, &server->outputs, link) {
+		struct wlr_output *wo = output->wlr_output;
+		char id[256];
+		output_identity(wo, id, sizeof(id));
 		put(o, "%s{\"name\":", first ? "" : ",");
-		put_str(o, output->wlr_output->name);
+		put_str(o, wo->name);
+		put(o, ",\"id\":");
+		put_str(o, id);
+		put(o, ",\"description\":");
+		put_str(o, wo->description ? wo->description : "");
+		put(o, ",\"enabled\":%s,\"primary\":%s,\"scale\":%.3f,\"transform\":%d,\"mode\":{\"width\":%d,\"height\":%d}",
+			wlr_output_layout_get(server->output_layout, wo) ? "true" : "false",
+			output_primary(server) == output ? "true" : "false",
+			wo->scale, wo->transform, wo->width, wo->height);
 		put(o, ",\"full\":");
 		put_box(o, output->full_area);
 		put(o, ",\"usable\":");
@@ -143,6 +156,12 @@ static void write_state(struct ul_server *server, struct out *o) {
 
 /* ---- commands ------------------------------------------------------------ */
 
+static void find_headless(struct wlr_backend *backend, void *data) {
+	if (wlr_backend_is_headless(backend)) {
+		*(struct wlr_backend **)data = backend;
+	}
+}
+
 #define find_view view_by_id
 
 static void run_command(struct ul_server *server, char *line, struct out *o) {
@@ -168,6 +187,41 @@ static void run_command(struct ul_server *server, char *line, struct out *o) {
 		}
 		put(o, input_set_cursor_theme(server, name, size) ?
 			"{\"ok\":true}" : "{\"error\":\"cannot load cursor theme\"}");
+		return;
+	}
+	if (strcmp(cmd, "test-output") == 0) {
+		/* test-output add W H | remove NAME: plug / unplug a virtual monitor (headless only). */
+		char what[16] = {0}, arg[64] = {0};
+		int w = 0, h = 0;
+		sscanf(line, "%*s %15s %63s %d", what, arg, &h);
+		if (strcmp(what, "add") == 0 && (w = atoi(arg)) > 0 && h > 0) {
+			struct wlr_backend *hb = wlr_backend_is_headless(server->backend) ? server->backend : NULL;
+			if (!hb && wlr_backend_is_multi(server->backend)) {
+				wlr_multi_for_each_backend(server->backend, find_headless, &hb);
+			}
+			struct wlr_output *wo = hb ? wlr_headless_add_output(hb, w, h) : NULL;
+			if (!wo) {
+				put(o, "{\"error\":\"no headless backend\"}");
+				return;
+			}
+			put(o, "{\"ok\":true,\"name\":");
+			put_str(o, wo->name);
+			put(o, "}");
+			return;
+		}
+		if (strcmp(what, "remove") == 0) {
+			struct ul_output *out;
+			wl_list_for_each(out, &server->outputs, link) {
+				if (strcmp(out->wlr_output->name, arg) == 0) {
+					wlr_output_destroy(out->wlr_output);
+					put(o, "{\"ok\":true}");
+					return;
+				}
+			}
+			put(o, "{\"error\":\"no such output\"}");
+			return;
+		}
+		put(o, "{\"error\":\"usage: test-output add W H | remove NAME\"}");
 		return;
 	}
 	if (strcmp(cmd, "motion") == 0) {

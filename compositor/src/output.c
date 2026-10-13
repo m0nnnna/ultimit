@@ -27,6 +27,85 @@ struct ul_output *output_for_view(struct ul_view *view) {
 	return output;
 }
 
+/* "make|model|serial" from the EDID: how displays.conf recognises a monitor on any connector. */
+void output_identity(struct wlr_output *wlr_output, char *buf, size_t len) {
+	snprintf(buf, len, "%s|%s|%s", wlr_output->make ? wlr_output->make : "",
+		wlr_output->model ? wlr_output->model : "", wlr_output->serial ? wlr_output->serial : "");
+}
+
+static bool in_layout(struct ul_output *output) {
+	return output->wlr_output->enabled &&
+		wlr_output_layout_get(output->server->output_layout, output->wlr_output) != NULL;
+}
+
+/* The main display: the one marked primary, else the first in the layout. */
+struct ul_output *output_primary(struct ul_server *server) {
+	struct ul_output *output, *first = NULL;
+	wl_list_for_each_reverse(output, &server->outputs, link) {
+		if (!in_layout(output)) continue;
+		if (output->primary) return output;
+		if (!first) first = output;
+	}
+	return first;
+}
+
+/* Call before changing the layout: remember where every output was. */
+void output_remember_layout(struct ul_server *server) {
+	server->relayout = true;
+	struct ul_output *output;
+	wl_list_for_each(output, &server->outputs, link) {
+		output->prev_area = in_layout(output) ? output->full_area : (struct wlr_box){ 0 };
+	}
+}
+
+/* After a layout change (monitors moved, resized, rotated, turned off or unplugged; `gone` is
+ * one about to disappear): windows follow their monitor. Each window was on the output whose old
+ * box held its centre; it moves by that output's offset and is kept inside the new box. Windows
+ * of a monitor that is gone, and any that were off every screen, go to the main display.
+ * Maximized, snapped and fullscreen windows are fitted again. */
+void output_relocate_views(struct ul_server *server, struct ul_output *gone) {
+	struct ul_output *primary = output_primary(server);
+	if (primary == gone) {
+		primary = NULL;
+		struct ul_output *o;
+		wl_list_for_each(o, &server->outputs, link) {
+			if (o != gone && in_layout(o)) { primary = o; break; }
+		}
+	}
+	server->relayout = false;   /* from here on, re-fitting below is wanted */
+	struct ul_view *view;
+	wl_list_for_each(view, &server->views, link) {
+		if (!view->mapped && !view->minimized) continue;
+		double cx = view->x + view->width / 2.0, cy = view->y + view->height / 2.0;
+		struct ul_output *from = NULL, *o;
+		wl_list_for_each(o, &server->outputs, link) {
+			if (!wlr_box_empty(&o->prev_area) && wlr_box_contains_point(&o->prev_area, cx, cy)) {
+				from = o;
+				break;
+			}
+		}
+		struct ul_output *to = from && from != gone && in_layout(from) ? from : primary;
+		struct wlr_box src = from ? from->prev_area : to->full_area, dst = to->full_area;
+		if (to == from && memcmp(&src, &dst, sizeof(src)) == 0) continue;   /* didn't move */
+		/* Same place relative to the monitor's top-left, then inside its free area. */
+		view_set_position(view, dst.x + (view->x - src.x), dst.y + (view->y - src.y));
+		if (view->fullscreen) {
+			view_set_position(view, dst.x, dst.y);
+			view_request_size(view, dst.width, dst.height);
+		} else if (view->maximized || view->snapped) {
+			view_refit(view);
+		} else {
+			view_clamp_into(view, to->usable_area);
+		}
+		if (view->snapped || view->maximized) {
+			/* What Restore returns to moves along too. */
+			view->saved.x = dst.x + (view->saved.x - src.x);
+			view->saved.y = dst.y + (view->saved.y - src.y);
+		}
+	}
+	server->relayout = false;
+}
+
 void server_update_backdrop(struct ul_server *server) {
 	struct wlr_box box;
 	wlr_output_layout_get_box(server->output_layout, NULL, &box);
@@ -43,6 +122,7 @@ void output_arrange(struct ul_output *output) {
 
 	struct ul_view *view;
 	wl_list_for_each(view, &output->server->views, link) {
+		if (output->server->relayout) break;   /* output_relocate_views takes care of them */
 		if (view->fullscreen && output_for_view(view) == output) {
 			view_set_position(view, output->full_area.x, output->full_area.y);
 			view_request_size(view, output->full_area.width, output->full_area.height);
@@ -112,6 +192,16 @@ static void output_request_state(struct wl_listener *listener, void *data) {
 
 static void output_destroy(struct wl_listener *listener, void *data) {
 	struct ul_output *output = wl_container_of(listener, output, destroy);
+	struct ul_server *server = output->server;
+	/* Unplugged: its windows go to the main display (the layout still has it here). */
+	output_remember_layout(server);
+	wlr_output_layout_remove(server->output_layout, output->wlr_output);
+	struct ul_output *other;
+	wl_list_for_each(other, &server->outputs, link) {   /* auto-placed ones may have shifted */
+		if (other != output && in_layout(other)) output_arrange(other);
+	}
+	output_relocate_views(server, output);
+	output->prev_area = (struct wlr_box){ 0 };
 	for (int i = 0; i < 4; i++) {
 		struct ul_layer_surface *l, *tmp;
 		wl_list_for_each_safe(l, tmp, &output->layer_surfaces[i], link) {
@@ -126,7 +216,6 @@ static void output_destroy(struct wl_listener *listener, void *data) {
 	wl_list_remove(&output->destroy.link);
 	wl_list_remove(&output->link);
 	output->wlr_output->data = NULL;
-	struct ul_server *server = output->server;
 	free(output);
 	server_update_backdrop(server);
 }
@@ -140,7 +229,9 @@ static void new_output(struct wl_listener *listener, void *data) {
 	/* The user's saved setup (Settings > Display), else the preferred mode:
 	 * normally the native resolution at its highest refresh rate. */
 	struct ul_output_conf conf;
-	bool have_conf = config_output_lookup(wlr_output->name, &conf);
+	char id[256];
+	output_identity(wlr_output, id, sizeof(id));
+	bool have_conf = config_output_lookup(wlr_output->name, id, &conf);
 	if (have_conf && !conf.enabled && wl_list_empty(&server->outputs)) {
 		/* Never start with every screen off; the next one may never come. */
 		wlr_log(WLR_INFO, "Output %s is disabled in displays.conf but is the only one; enabling",
@@ -152,7 +243,17 @@ static void new_output(struct wl_listener *listener, void *data) {
 	struct wlr_output_state state;
 	wlr_output_state_init(&state);
 	wlr_output_state_set_enabled(&state, enabled);
+	/* Default: the native (preferred) resolution at its highest refresh rate. Many high-refresh
+	 * monitors mark their 60 Hz timing as preferred. */
 	struct wlr_output_mode *mode = wlr_output_preferred_mode(wlr_output);
+	if (mode) {
+		struct wlr_output_mode *m;
+		wl_list_for_each(m, &wlr_output->modes, link) {
+			if (m->width == mode->width && m->height == mode->height && m->refresh > mode->refresh) {
+				mode = m;
+			}
+		}
+	}
 	if (enabled && have_conf && conf.width > 0) {
 		struct wlr_output_mode *m, *best = NULL;
 		wl_list_for_each(m, &wlr_output->modes, link) {
@@ -214,6 +315,7 @@ static void new_output(struct wl_listener *listener, void *data) {
 	wl_list_insert(&server->outputs, &output->link);
 
 	output->vrr_always = have_conf && conf.adaptive_sync;
+	output->primary = have_conf && conf.primary;
 	output->scene_output = wlr_scene_output_create(server->scene, wlr_output);
 	if (!enabled) {
 		wlr_log(WLR_INFO, "Output %s: disabled (displays.conf)", wlr_output->name);
@@ -262,6 +364,7 @@ static void apply_output_config(struct ul_server *server,
 			wlr_backend_commit(server->backend, states, len);
 	}
 	if (ok && !test_only) {
+		output_remember_layout(server);
 		struct wlr_output_configuration_head_v1 *head;
 		wl_list_for_each(head, &config->heads, link) {
 			struct wlr_output *wlr_output = head->state.output;
@@ -283,6 +386,7 @@ static void apply_output_config(struct ul_server *server,
 				output_arrange(output);
 			}
 		}
+		output_relocate_views(server, NULL);
 	}
 	for (size_t i = 0; i < len; i++) {
 		wlr_output_state_finish(&states[i].base);

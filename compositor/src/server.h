@@ -96,6 +96,7 @@ struct ul_output_conf {
 	int x, y;
 	int transform;        /* enum wl_output_transform */
 	bool adaptive_sync;
+	bool primary;         /* the main display (windows of an unplugged screen go here) */
 };
 
 struct ul_pointer {
@@ -244,6 +245,7 @@ struct ul_server {
 
 	struct ul_skin skin;
 	struct ul_view *hover_view; /* view whose titlebar button is under the cursor */
+	bool relayout;              /* outputs are changing: output_relocate_views moves the windows */
 };
 
 struct ul_output {
@@ -254,6 +256,8 @@ struct ul_output {
 	struct wlr_box full_area;   /* layout coordinates */
 	struct wlr_box usable_area; /* full_area minus exclusive zones */
 	bool vrr_always; /* user turned adaptive sync on; else only for fullscreen */
+	bool primary;    /* the main display (displays.conf primary = true) */
+	struct wlr_box prev_area; /* full_area before a layout change (output_relocate_views) */
 	struct wl_list layer_surfaces[4]; /* ul_layer_surface.link, per zwlr layer */
 
 	struct wl_listener frame;
@@ -390,7 +394,11 @@ void config_load(struct ul_server *server);
 void config_reload(struct ul_server *server);
 void config_apply_pointer(struct ul_server *server, struct wlr_input_device *device);
 void config_apply_keyboard(struct ul_server *server, struct wlr_keyboard *keyboard);
-bool config_output_lookup(const char *name, struct ul_output_conf *out);
+bool config_output_lookup(const char *name, const char *id, struct ul_output_conf *out);
+void output_identity(struct wlr_output *wlr_output, char *buf, size_t len);
+struct ul_output *output_primary(struct ul_server *server);
+void output_remember_layout(struct ul_server *server);
+void output_relocate_views(struct ul_server *server, struct ul_output *gone);
 
 /* lock.c */
 void lock_init(struct ul_server *server);

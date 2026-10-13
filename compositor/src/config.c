@@ -180,9 +180,10 @@ void config_reload(struct ul_server *server) {
 }
 
 /*
- * ~/.config/ultimit/displays.conf, one section per connector:
+ * ~/.config/ultimit/displays.conf, one section per monitor:
  *
  *   [eDP-1]
+ *   id = BOE|0x0A1C|           (make|model|serial from the EDID; optional)
  *   enabled = true
  *   mode = 1920x1080@144.000    (the @Hz part is optional)
  *   scale = 1.00
@@ -190,8 +191,11 @@ void config_reload(struct ul_server *server) {
  *   y = 0
  *   transform = normal          (90, 180, 270, flipped, flipped-90, ...)
  *   adaptive_sync = false
+ *   primary = true              (the main display)
  *
- * Read when an output connects. Returns false if it has no section.
+ * Read when an output connects. A section whose id is this monitor wins wherever it is plugged
+ * in (connector names move between cables, GPUs and boots); a section named after the connector
+ * is used only if it has no id. Returns false if nothing matches.
  */
 static int parse_transform(const char *v) {
 	static const char *names[] = {
@@ -204,27 +208,36 @@ static int parse_transform(const char *v) {
 	return 0;
 }
 
-bool config_output_lookup(const char *name, struct ul_output_conf *out) {
+bool config_output_lookup(const char *name, const char *id, struct ul_output_conf *out) {
 	char path[512];
 	config_path(path, sizeof(path), "displays.conf");
 	FILE *f = fopen(path, "r");
 	if (!f) {
 		return false;
 	}
-	*out = (struct ul_output_conf){ .enabled = true };
-	bool found = false, in_section = false;
+	struct ul_output_conf cur = { .enabled = true }, by_name = { 0 };
+	char cur_name[128] = "", cur_id[256] = "";
+	bool in_section = false, have_id_match = false, have_name_match = false;
 	char line[512];
-	while (fgets(line, sizeof(line), f)) {
+	/* Decide about the section just read: is it this monitor? */
+	#define SECTION_DONE() do { \
+		if (in_section && id[0] && strcmp(cur_id, id) == 0) { *out = cur; have_id_match = true; } \
+		else if (in_section && !cur_id[0] && strcmp(cur_name, name) == 0) { by_name = cur; have_name_match = true; } \
+	} while (0)
+	while (!have_id_match && fgets(line, sizeof(line), f)) {
 		char *s = trim(line);
 		char *comment = strpbrk(s, "#;");
 		if (comment && comment != s) *comment = '\0';
 		s = trim(s);
 		if (*s == '\0' || *s == '#' || *s == ';') continue;
 		if (*s == '[') {
+			SECTION_DONE();
 			char *end = strchr(s, ']');
 			if (end) *end = '\0';
-			in_section = strcmp(s + 1, name) == 0;
-			found |= in_section;
+			snprintf(cur_name, sizeof(cur_name), "%s", s + 1);
+			cur_id[0] = '\0';
+			cur = (struct ul_output_conf){ .enabled = true };
+			in_section = true;
 			continue;
 		}
 		if (!in_section) continue;
@@ -232,20 +245,26 @@ bool config_output_lookup(const char *name, struct ul_output_conf *out) {
 		if (!eq) continue;
 		*eq = '\0';
 		char *key = trim(s), *val = trim(eq + 1);
-		if (strcmp(key, "enabled") == 0) out->enabled = parse_bool(val);
+		if (strcmp(key, "id") == 0) snprintf(cur_id, sizeof(cur_id), "%s", val);
+		else if (strcmp(key, "enabled") == 0) cur.enabled = parse_bool(val);
 		else if (strcmp(key, "mode") == 0) {
-			out->refresh_hz = 0;
-			if (sscanf(val, "%dx%d@%lf", &out->width, &out->height, &out->refresh_hz) < 2) {
-				out->width = out->height = 0;
+			cur.refresh_hz = 0;
+			if (sscanf(val, "%dx%d@%lf", &cur.width, &cur.height, &cur.refresh_hz) < 2) {
+				cur.width = cur.height = 0;
 			}
 		}
-		else if (strcmp(key, "scale") == 0) out->scale = atof(val);
-		else if (strcmp(key, "x") == 0) { out->x = atoi(val); out->has_pos = true; }
-		else if (strcmp(key, "y") == 0) { out->y = atoi(val); out->has_pos = true; }
-		else if (strcmp(key, "transform") == 0) out->transform = parse_transform(val);
-		else if (strcmp(key, "adaptive_sync") == 0) out->adaptive_sync = parse_bool(val);
+		else if (strcmp(key, "scale") == 0) cur.scale = atof(val);
+		else if (strcmp(key, "x") == 0) { cur.x = atoi(val); cur.has_pos = true; }
+		else if (strcmp(key, "y") == 0) { cur.y = atoi(val); cur.has_pos = true; }
+		else if (strcmp(key, "transform") == 0) cur.transform = parse_transform(val);
+		else if (strcmp(key, "adaptive_sync") == 0) cur.adaptive_sync = parse_bool(val);
+		else if (strcmp(key, "primary") == 0) cur.primary = parse_bool(val);
 	}
+	if (!have_id_match) SECTION_DONE();
+	#undef SECTION_DONE
 	fclose(f);
+	if (!have_id_match && have_name_match) *out = by_name;
+	if (!have_id_match && !have_name_match) return false;
 	if (out->scale < 0.25 || out->scale > 4) out->scale = 0;
-	return found;
+	return true;
 }

@@ -71,7 +71,7 @@ void layer_arrange(struct ul_output *output) {
 
 	bool changed = memcmp(&usable, &output->usable_area, sizeof(usable)) != 0;
 	output->usable_area = usable;
-	if (changed) {
+	if (changed && !output->server->relayout) {
 		/* Re-fit maximized and snapped windows on this output to the new free area. */
 		struct ul_view *view;
 		wl_list_for_each(view, &output->server->views, link) {
