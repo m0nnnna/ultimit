@@ -2,6 +2,7 @@
 // VPNs (VpnSection.qml).
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import Quickshell.Networking
 import "../.."
 import "../accessory"
@@ -140,4 +141,17 @@ Page {
     }
 
     VpnSection {}
+
+    // The firewall has its own app (apps/firewall): which devices and apps can reach this PC
+    SectionLabel { text: "Firewall" }
+    RowLayout {
+        Layout.fillWidth: true
+        spacing: 12
+        Text {
+            Layout.fillWidth: true; wrapMode: Text.WordWrap
+            text: "Choose which devices and apps can reach this computer (game hosting, Remote Play, VTube Studio...), and see what was blocked."
+            color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+        }
+        ChamferButton { text: "Open FIREWALL"; onClicked: Quickshell.execDetached([Quickshell.shellPath("bin/ultimit-firewall")]) }
+    }
 }
