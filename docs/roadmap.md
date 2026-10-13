@@ -69,36 +69,49 @@ yaru-theme-gnome-shell. Follow with `apt autoremove` (review its list).
       Bluetooth pairing (phone, via ultimit-agents), suspend/resume, lock,
       screenshots, USB phone over MTP (DATA + go-mtpfs), portal file picker.
       Printing untested (no printer; CUPS + system-config-printer installed)
-- [ ] Then: gaming (Steam, Proton, NVIDIA offload, VRR, direct scanout)
+- [x] Then: gaming (Steam, Proton, NVIDIA offload, VRR, direct scanout) (done 2026-10-13)
   - [x] Wine games: i386 + wine32 + 32-bit Vulkan, pinned DXVK (scripts/get-dxvk.sh),
         X11 placement/fullscreen fixes; WoW 3.3.5a via NekoCoreLauncher runs well (2026-10-11)
   - [x] GAMES app lists non-Steam games (desktop entries, manual .exe/commands) with per-game launch options
-  - [ ] Steam (deb), Proton, MangoHud, gamescope
+  - [x] Steam (deb), Proton (umu + version picker in GAMES), MangoHud, gamescope
 - [x] Bug: X11 windows that commit their only frame before Xwayland's
       surface pairing never mapped (~1 in 25 launches under load). Fixed in
       xwayland.c (map on associate when a buffer is already there).
 
 ## Phase 5: everyday completeness (from docs/audit-2026-10-11.md)
-Windows-parity gaps found by the read-only audit, in priority order.
+Done:
 - [x] Tray flyouts: network, sound, Bluetooth, battery, clock/notifications
 - [x] Video/music player + codecs + video thumbnails (mpv, ffmpeg, ffmpegthumbnailer); MIME defaults (mailto -> NekoMail still open)
-- [x] Firewall on by default (ufw deny incoming)
-- [ ] Low-battery warning and critical action
-- [ ] Updates page in Settings (apt, flatpak, fwupd; reboot-needed; apply via pkexec)
-- [ ] App store over Flathub (install/remove/update flatpaks)
+- [x] Firewall on by default (ufw deny incoming) and the FIREWALL app
 - [x] Window snapping (Super+Left/Right/Up/Down, drag to edges) and Alt+Tab overlay
-- [ ] Workspaces
 - [x] Shortcuts: Super+D/E/R/Tab, one key table (keys.c, `ultimitctl keys`, docs/keybindings.md)
-- [ ] Super+V/Space, configurable bindings, cheat sheet overlay
-- [ ] Wallpaper picker (images alongside the shard wallpaper)
 - [x] Archives in DATA (extract here/to, browse inside, compress zip/7z/tar.gz, passwords, zip-slip safe)
-- [ ] Users page (create user, change password)
-- [ ] Privacy indicators (camera/mic/screencast), screen recording, window capture for sharing
-- [ ] Clipboard history (Super+V) and emoji picker
-- [ ] Input methods (text-input-v3 / input-method-v2 in the compositor; IBus/Fcitx) and layout switching
-- [ ] Network extras: VPN/WireGuard import, hotspot, captive portal
-- [ ] Night light, accessibility toggles, logout/hibernate in the power menu
+- [x] Window capture for sharing (ext-image-copy-capture)
+
+### 5a: gaps (daily use on the laptop)
+- [ ] Low-battery warning and critical action
+- [ ] Power menu: log out, hibernate (when the system can), confirmation
+- [ ] Updates page in Settings (apt, flatpak, fwupd; reboot-needed; apply via pkexec)
+- [ ] App store over Flathub (install/remove/update flatpaks); "not installed" hints lead there
+- [ ] Crash recovery: a compositor crash leaves a trace and a way back; shell fallback without a git checkout
 - [ ] Session hygiene: stale oo7-daemon processes and logind sessions after restarts; keyring unlock with autologin
+
+### 5b: what Windows users expect, part 1 (the desktop)
+- [ ] Workspaces
+- [ ] Clipboard history (Super+V) and emoji picker (Super+.)
+- [ ] Configurable bindings and a cheat sheet overlay (Super+Space)
+- [ ] Wallpaper picker (images alongside the shard wallpaper)
+- [ ] Screen recording, and camera/mic/screencast privacy indicators
+- [ ] Night light
+- [ ] Compositor honours the shell's motion setting (open animation, focus sweep)
+
+### 5c: what Windows users expect, part 2 (the system)
+- [ ] Keyboard layouts (several, switch shortcut) and input methods (text-input-v3 / input-method-v2; IBus/Fcitx)
+- [ ] Accessibility: screen reader toggle, magnifier, text size, cursor size, high contrast
+- [ ] Users page (create user, change password)
+- [ ] Display: mirroring ("Duplicate"), rotation, more scale steps
+- [ ] Network extras: VPN/WireGuard import, hotspot, captive portal
+- [ ] Consistent window titles (GAMES, SETTINGS; rail/Alt+Tab match on them)
 
 ## Phase 6: installable (ISO blockers, see the audit)
 - [ ] Install compositor, shell, session, deps (wlroots/scenefx/qs/oo7) system-wide under /opt/ultimit; no $HOME/.local/ultimit-deps or checkout paths
