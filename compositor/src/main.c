@@ -84,7 +84,9 @@ static void usage(const char *argv0) {
  * report), then die of the same signal so a core dump still happens. Only async-signal-safe calls. */
 static void handle_crash(int sig) {
 	static const char msg[] = "\nultimit: crashed, backtrace follows (addr2line -e ultimit -f <addr>)\n";
-	write(STDERR_FILENO, msg, sizeof(msg) - 1);
+	if (write(STDERR_FILENO, msg, sizeof(msg) - 1) < 0) {
+		/* nothing to do: the log is gone too */
+	}
 	void *frames[64];
 	int n = backtrace(frames, 64);
 	backtrace_symbols_fd(frames, n, STDERR_FILENO);
