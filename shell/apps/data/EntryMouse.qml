@@ -9,7 +9,7 @@ MouseArea {
     required property var host
     required property var entry
     required property int idx
-    acceptedButtons: Qt.LeftButton | Qt.RightButton
+    acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
     hoverEnabled: true
     property real px: 0
     property real py: 0
@@ -17,6 +17,7 @@ MouseArea {
 
     onPressed: mouse => {
         host.forceActiveFocus();
+        if (mouse.button === Qt.MiddleButton) { Data.openInTabs([entry]); return; }   // folders / archives: background tab
         if (mouse.button === Qt.RightButton) {
             if (!Data.isSel(entry.p)) Data.selectOnly(idx);
             const pt = mapToItem(host.ui, mouse.x, mouse.y);

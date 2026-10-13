@@ -25,6 +25,7 @@ FloatingWindow {
     IpcHandler {
         target: "data"
         function open(path: string): void { Data.show(path); }
+        function newtab(path: string): void { Data.show(""); Data.newTab(path, false); }
         function toggle(): void { Data.toggle(); }
         function close(): void { Data.hide(); }
         function run(action: string, arg: string): string { return Data.act(action, arg); }
@@ -38,6 +39,7 @@ FloatingWindow {
     readonly property var lv: grid ? gridView : listView
     readonly property int sideW: 196
     readonly property int arcBarH: Data.isArc ? 34 : 0     // archive strip under the toolbar
+    readonly property int tabBarH: 34                       // tab strip above the toolbar
     readonly property int cols: Math.max(1, Math.floor(gridView.width / gridView.cellWidth))
 
     // -------- drag ghost (internal drag and drop inside DATA)
@@ -55,7 +57,8 @@ FloatingWindow {
             else listView.positionViewAtIndex(Data.cur, ListView.Contain);
         }
         function onViewChanged() {
-            if (Data.keepScroll) { const y = win.lv.contentY; Qt.callLater(() => { win.lv.contentY = y; }); }
+            if (Data.restoreScroll >= 0) { const y = Data.restoreScroll; Data.restoreScroll = -1; Qt.callLater(() => { win.lv.contentY = Math.min(y, Math.max(0, win.lv.contentHeight - win.lv.height)); }); }
+            else if (Data.keepScroll) { const y = win.lv.contentY; Qt.callLater(() => { win.lv.contentY = y; }); }
             else win.lv.contentY = 0;
         }
         function onRenamePathChanged() {
@@ -76,12 +79,14 @@ FloatingWindow {
             items = [{ id: "restore", label: "Restore" }, { id: "delete", label: "Delete permanently", hint: "Del" },
                      { kind: "sep" }, { id: "props", label: "Properties" }];
         } else if (Data.isArc) {
-            items = [{ id: "open", label: "Open", hint: "Enter" },
-                     { kind: "sep" },
+            items = [{ id: "open", label: "Open", hint: "Enter" }];
+            if (Data.tabbable(t)) items.push({ id: "opentab", label: t.length > 1 ? "Open in new tabs" : "Open in new tab", hint: "Middle" });
+            items = items.concat([{ kind: "sep" },
                      { id: "extractsel", label: "Extract selected…" }, { id: "extractall", label: "Extract all…" },
-                     { kind: "sep" }, { id: "props", label: "Archive properties" }];
+                     { kind: "sep" }, { id: "props", label: "Archive properties" }]);
         } else {
             items = [{ id: "open", label: one && one.d ? "Open" : "Open", hint: "Enter" }];
+            if (Data.tabbable(t)) items.push({ id: "opentab", label: t.length > 1 ? "Open in new tabs" : "Open in new tab", hint: "Middle" });
             if (arcs.length) {
                 items.push({ id: "extracthere", label: "Extract here" });
                 if (arcs.length === 1) items.push({ id: "extractfolder", label: "Extract to “" + shorten(Data.archiveStem(arcs[0].n)) + "/”" });
@@ -152,21 +157,57 @@ FloatingWindow {
                 { id: "sort:type", label: "Sort by type", check: Data.sortKey === "type" },
                 { id: "sortdir", label: Data.sortDesc ? "Order: descending" : "Order: ascending" }];
     }
+    function openTabMenu(i, x, y) {
+        const n = Data.tabs.length;
+        menu.items = [{ id: "t-new", label: "New tab", hint: "Ctrl+T" },
+                      { id: "t-dup", label: "Duplicate tab" },
+                      { kind: "sep" },
+                      { id: "t-close", label: "Close tab", hint: "Ctrl+W" },
+                      { id: "t-others", label: "Close other tabs", disabled: n < 2 },
+                      { id: "t-right", label: "Close tabs to the right", disabled: i >= n - 1 },
+                      { kind: "sep" },
+                      { id: "t-reopen", label: "Reopen closed tab", disabled: Data.closedTabs.length === 0 }];
+        menu.kind = "tab"; menu.tab = i;
+        menu.popup(x, y);
+    }
+    function openStripMenu(x, y) {
+        menu.items = [{ id: "t-new", label: "New tab", hint: "Ctrl+T" },
+                      { id: "t-reopen", label: "Reopen closed tab", disabled: Data.closedTabs.length === 0 }];
+        menu.kind = "strip"; menu.tab = Data.tabIndex;
+        menu.popup(x, y);
+    }
+    function openPlaceMenu(path, x, y) {
+        menu.items = [{ id: "pl-open", label: "Open" }, { id: "pl-tab", label: "Open in new tab", hint: "Middle" }];
+        menu.kind = "place"; menu.place = path;
+        menu.popup(x, y);
+    }
     function openDriveMenu(drv, x, y) {
         menu.items = [{ id: "d-open", label: drv.mount ? "Open" : "Mount" },
+                      { id: "d-tab", label: "Open in new tab", disabled: !drv.mount },
                       { id: "d-unmount", label: "Unmount", disabled: !drv.mount },
                       { id: "d-power", label: "Power off", disabled: !!drv.mount }];
         menu.kind = "drive"; menu.drive = drv;
         menu.popup(x, y);
     }
     function openPhoneMenu(ph, x, y) {
-        menu.items = [{ id: "p-open", label: "Open" }, { id: "p-eject", label: "Eject", disabled: !ph.mount }];
+        menu.items = [{ id: "p-open", label: "Open" }, { id: "p-tab", label: "Open in new tab", disabled: !ph.mount }, { id: "p-eject", label: "Eject", disabled: !ph.mount }];
         menu.kind = "phone"; menu.drive = ph;
         menu.popup(x, y);
     }
     function onMenuPicked(id) {
         switch (id) {
         case "open": Data.openSelected(); break;
+        case "opentab": Data.openInTabs(Data.targets()); break;
+        case "t-new": Data.newTab("", false); break;
+        case "t-dup": Data.duplicateTab(menu.tab); break;
+        case "t-close": Data.closeTab(menu.tab); break;
+        case "t-others": Data.closeOtherTabs(menu.tab); break;
+        case "t-right": Data.closeTabsRight(menu.tab); break;
+        case "t-reopen": Data.reopenTab(); break;
+        case "pl-open": Data.goTo(menu.place); break;
+        case "pl-tab": Data.newTab(menu.place, true); break;
+        case "d-tab": if (menu.drive.mount) Data.newTab(menu.drive.mount, true); break;
+        case "p-tab": if (menu.drive.mount) Data.newTab(menu.drive.mount, true); break;
         case "addr-copy": Data.copyAddress(); break;
         case "addr-paste": Data.pasteAddress(); break;
         case "addr-edit": crumb.beginEdit(); break;
@@ -261,6 +302,7 @@ FloatingWindow {
         signal clicked()
         signal ejectClicked()
         signal menuRequested(real x, real y)
+        signal middleClicked()
         width: parent ? parent.width : 100; height: sr.stacked ? 40 : 30
         Rectangle {
             anchors.fill: parent
@@ -290,9 +332,10 @@ FloatingWindow {
         MouseArea {
             id: sm
             anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
             onClicked: mouse => {
                 if (mouse.button === Qt.RightButton) { const p = mapToItem(ui, mouse.x, mouse.y); sr.menuRequested(p.x, p.y); }
+                else if (mouse.button === Qt.MiddleButton) sr.middleClicked();
                 else sr.clicked();
             }
         }
@@ -354,6 +397,19 @@ FloatingWindow {
                 return;
             }
             if (ctrl) {
+                // tabs: Ctrl+T / Ctrl+W / Ctrl+Shift+T, Ctrl+(Shift+)Tab, Ctrl+PgUp/PgDn, Ctrl+1..8, Ctrl+9 = last
+                if (event.key >= Qt.Key_1 && event.key <= Qt.Key_9) {
+                    Data.switchTab(event.key === Qt.Key_9 ? Data.tabs.length - 1 : event.key - Qt.Key_1);
+                    return;
+                }
+                switch (event.key) {
+                case Qt.Key_T: if (shift) Data.reopenTab(); else Data.newTab("", false); return;
+                case Qt.Key_W: Data.closeTab(); return;
+                case Qt.Key_Tab: Data.nextTab(shift ? -1 : 1); return;
+                case Qt.Key_Backtab: Data.nextTab(-1); return;
+                case Qt.Key_PageDown: if (shift) Data.moveTab(Data.tabIndex, Data.tabIndex + 1); else Data.nextTab(1); return;
+                case Qt.Key_PageUp: if (shift) Data.moveTab(Data.tabIndex, Data.tabIndex - 1); else Data.nextTab(-1); return;
+                }
                 switch (event.key) {
                 case Qt.Key_A: Data.selectAll(); break;
                 case Qt.Key_C: Data.copySel(); break;
@@ -420,12 +476,16 @@ FloatingWindow {
                             current: !Data.isTrash && Data.path === modelData.path
                             dropPath: modelData.path
                             onClicked: Data.goTo(modelData.path)
+                            onMiddleClicked: Data.newTab(modelData.path, true)
+                            onMenuRequested: (x, y) => win.openPlaceMenu(modelData.path, x, y)
                         }
                     }
                     SideRow {
                         label: "Trash"; icon: Data.placeIcon("trash")
                         current: Data.isTrash
                         onClicked: Data.goTo(Data.trashUri)
+                        onMiddleClicked: Data.newTab(Data.trashUri, true)
+                        onMenuRequested: (x, y) => win.openPlaceMenu(Data.trashUri, x, y)
                     }
                     Item { width: 1; height: 10 }
                     Lbl { x: 14; width: parent.width - 28; text: "DRIVES"; rtext: Data.drives.length || Data.phones.length ? "" : "NONE" }
@@ -439,6 +499,7 @@ FloatingWindow {
                             current: !Data.isTrash && modelData.mount !== "" && Data.path === modelData.mount
                             dropPath: modelData.mount
                             onClicked: Data.openDrive(modelData)
+                            onMiddleClicked: if (modelData.mount !== "") Data.newTab(modelData.mount, true)
                             onEjectClicked: Data.driveAction(modelData, "unmount")
                             onMenuRequested: (x, y) => win.openDriveMenu(modelData, x, y)
                         }
@@ -454,6 +515,7 @@ FloatingWindow {
                             current: !Data.isTrash && modelData.mount !== "" && (Data.path === modelData.mount || Data.path.startsWith(modelData.mount + "/"))
                             dropPath: modelData.mount
                             onClicked: Data.openPhone(modelData)
+                            onMiddleClicked: if (modelData.mount !== "") Data.newTab(modelData.mount, true)
                             onEjectClicked: Data.ejectPhone(modelData)
                             onMenuRequested: (x, y) => win.openPhoneMenu(modelData, x, y)
                         }
@@ -473,6 +535,8 @@ FloatingWindow {
                             current: !Data.isTrash && modelData.path !== "" && (Data.path === modelData.path || Data.path.startsWith(modelData.path + "/"))
                             dropPath: modelData.path
                             onClicked: if (modelData.path !== "") Data.goTo(modelData.path)
+                            onMiddleClicked: if (modelData.path !== "") Data.newTab(modelData.path, true)
+                            onMenuRequested: (x, y) => { if (modelData.path !== "") win.openPlaceMenu(modelData.path, x, y); }
                             onEjectClicked: Data.disconnectNetwork(modelData)
                         }
                     }
@@ -488,6 +552,8 @@ FloatingWindow {
                         current: !Data.isTrash && Data.path === "/"
                         dropPath: "/"
                         onClicked: Data.goTo("/")
+                        onMiddleClicked: Data.newTab("/", true)
+                        onMenuRequested: (x, y) => win.openPlaceMenu("/", x, y)
                     }
                 }
             }
@@ -530,10 +596,143 @@ FloatingWindow {
             x: win.sideW + 1; y: 0
             width: parent.width - x; height: parent.height
 
+            // ---- tab strip: click switches, middle-click / × closes, drag reorders, right-click menu,
+            //      double-click on empty space or + opens a tab, files dropped on a tab go into its folder
+            Item {
+                id: tabStrip
+                x: 0; y: 0; width: parent.width; height: win.tabBarH
+                readonly property int plusW: 34
+                readonly property real tabW: Math.max(96, Math.min(200, (width - plusW - 8) / Math.max(1, Data.tabs.length)))
+                Rectangle { anchors.fill: parent; color: Qt.rgba(0, 0, 0, 0.18) }
+                Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
+                MouseArea {   // empty space
+                    anchors.fill: parent
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    onDoubleClicked: mouse => { if (mouse.button === Qt.LeftButton) Data.newTab("", false); }
+                    onClicked: mouse => { if (mouse.button === Qt.RightButton) { const p = mapToItem(ui, mouse.x, mouse.y); win.openStripMenu(p.x, p.y); } }
+                }
+                Flickable {
+                    id: tabFlick
+                    x: 0; width: Math.min(tabRow.width, parent.width - tabStrip.plusW - 4); height: parent.height
+                    contentWidth: tabRow.width; contentHeight: height
+                    clip: true; interactive: false
+                    boundsBehavior: Flickable.StopAtBounds
+                    function ensureVisible(i) {
+                        const l = i * tabStrip.tabW, r = l + tabStrip.tabW;
+                        if (l < contentX) contentX = l;
+                        else if (r > contentX + width) contentX = r - width;
+                    }
+                    Connections {
+                        target: Data
+                        function onTabIndexChanged() { Qt.callLater(() => tabFlick.ensureVisible(Data.tabIndex)); }
+                        function onTabsChanged() { Qt.callLater(() => { tabFlick.contentX = Math.max(0, Math.min(tabFlick.contentX, tabRow.width - tabFlick.width)); tabFlick.ensureVisible(Data.tabIndex); }); }
+                    }
+                    WheelHandler {   // wheel over the strip scrolls it when tabs overflow
+                        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                        onWheel: event => {
+                            const d = event.angleDelta.y !== 0 ? event.angleDelta.y : event.angleDelta.x;
+                            tabFlick.contentX = Math.max(0, Math.min(tabRow.width - tabFlick.width, tabFlick.contentX - d / 2));
+                        }
+                    }
+                    Row {
+                        id: tabRow
+                        height: parent.height
+                        Repeater {
+                            model: Data.tabs.length   // a count, so delegates survive reordering (drag keeps its grab)
+                            delegate: Item {
+                                id: tabItem
+                                required property int index
+                                readonly property bool active: index === Data.tabIndex
+                                readonly property string tpath: Data.tabPath(index)
+                                width: tabStrip.tabW; height: tabStrip.height
+                                Rectangle {
+                                    anchors.fill: parent
+                                    anchors.bottomMargin: tabItem.active ? 0 : 1
+                                    color: tabItem.active ? Theme.panel : (tabMa.containsMouse || tabDrop.containsDrag ? Theme.panel2 : "transparent")
+                                    border.width: tabDrop.containsDrag ? 1 : 0; border.color: Theme.accent
+                                    Rectangle { visible: tabItem.active; width: parent.width; height: 2; color: Theme.accent }
+                                    Rectangle { visible: tabItem.active || tabItem.index === 0; width: 1; height: parent.height; color: Theme.line }
+                                    Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Theme.line }
+                                }
+                                Image {
+                                    id: tabIcon
+                                    x: 10; anchors.verticalCenter: parent.verticalCenter; width: 14; height: 14
+                                    sourceSize: Qt.size(28, 28)
+                                    source: tabItem.tpath === Data.trashUri ? Data.placeIcon("trash")
+                                          : (tabItem.tpath.startsWith("arc:") ? Data.iconName({ d: false, t: "application/zip", x: false })
+                                          : Data.placeIcon(tabItem.tpath === Data.home ? "home" : "folder"))
+                                    opacity: tabItem.active ? 1 : 0.7
+                                }
+                                Text {
+                                    anchors { left: tabIcon.right; leftMargin: 8; right: closeBtn.left; rightMargin: 4; verticalCenter: parent.verticalCenter }
+                                    text: Data.titleOf(tabItem.tpath).toUpperCase()
+                                    elide: Text.ElideRight
+                                    color: tabItem.active ? Theme.accent : (tabMa.containsMouse ? Theme.fg : Theme.dim)
+                                    font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.4
+                                }
+                                MouseArea {
+                                    id: tabMa
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+                                    property real px: 0
+                                    property bool dragging: false
+                                    onPressed: mouse => {
+                                        if (mouse.button === Qt.LeftButton) { px = mouse.x; dragging = false; Data.switchTab(tabItem.index); ui.forceActiveFocus(); }
+                                    }
+                                    onPositionChanged: mouse => {
+                                        if (!(pressedButtons & Qt.LeftButton) || Data.tabs.length < 2) return;
+                                        if (!dragging && Math.abs(mouse.x - px) > 8) dragging = true;
+                                        if (!dragging) return;
+                                        const rx = mapToItem(tabRow, mouse.x, 0).x;
+                                        const to = Math.max(0, Math.min(Data.tabs.length - 1, Math.floor(rx / tabStrip.tabW)));
+                                        if (to !== Data.tabIndex) Data.moveTab(Data.tabIndex, to);   // the pressed tab became the active one
+                                    }
+                                    onReleased: dragging = false
+                                    onClicked: mouse => {
+                                        if (mouse.button === Qt.MiddleButton) Data.closeTab(tabItem.index);
+                                        else if (mouse.button === Qt.RightButton) { const p = mapToItem(ui, mouse.x, mouse.y); win.openTabMenu(tabItem.index, p.x, p.y); }
+                                    }
+                                }
+                                Item {
+                                    id: closeBtn
+                                    visible: tabItem.active || tabMa.containsMouse || closeMa.containsMouse
+                                    anchors { right: parent.right; rightMargin: 4; verticalCenter: parent.verticalCenter }
+                                    width: visible ? 20 : 0; height: 20
+                                    Rectangle { anchors.fill: parent; color: closeMa.containsMouse ? Theme.panel2 : "transparent" }
+                                    Text {
+                                        anchors.centerIn: parent; text: "×"
+                                        color: closeMa.containsMouse ? Theme.accent : Theme.dim
+                                        font.family: Theme.mono; font.pixelSize: 14
+                                    }
+                                    MouseArea { id: closeMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Data.closeTab(tabItem.index) }
+                                }
+                                DropArea {
+                                    id: tabDrop
+                                    anchors.fill: parent; keys: ["data-file"]
+                                    enabled: !tabItem.active && tabItem.tpath !== Data.trashUri && !tabItem.tpath.startsWith("arc:") && !Data.isTrash && !Data.isArc
+                                    onDropped: drop => { drop.accept(); Data.dropOn(tabItem.tpath, ghost.paths, ghost.copy); }
+                                }
+                            }
+                        }
+                    }
+                }
+                Item {   // new tab
+                    x: tabFlick.width + 4; width: tabStrip.plusW - 4; height: parent.height - 1
+                    Rectangle { anchors.centerIn: parent; width: 24; height: 24; color: plusMa.containsMouse ? Theme.panel2 : "transparent"; border.width: plusMa.containsMouse ? 1 : 0; border.color: Theme.line }
+                    Text {
+                        anchors.centerIn: parent; text: "+"
+                        color: plusMa.containsMouse ? Theme.accent : Theme.dim
+                        font.family: Theme.mono; font.pixelSize: 15
+                    }
+                    MouseArea { id: plusMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Data.newTab("", false) }
+                }
+            }
+
             // ---- toolbar
             Item {
                 id: bar
-                x: 12; y: 10; width: parent.width - 24; height: 28
+                x: 12; y: win.tabBarH + 10; width: parent.width - 24; height: 28
 
                 Row {
                     id: navBtns
@@ -672,7 +871,8 @@ FloatingWindow {
                                             color: segMa.containsMouse || segDrop.containsDrag ? Theme.accent : (index === crumb.segs.length - 1 ? Theme.fg : Theme.dim)
                                             font.family: Theme.mono; font.pixelSize: 12; font.letterSpacing: 0.7
                                         }
-                                        MouseArea { id: segMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Data.goTo(modelData.path) }
+                                        MouseArea { id: segMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+                                            onClicked: mouse => { if (mouse.button === Qt.MiddleButton) Data.newTab(modelData.path, true); else Data.goTo(modelData.path); } }
                                         DropArea { id: segDrop; anchors.fill: parent; keys: ["data-file"]; enabled: !Data.isTrash && !Data.isArc && modelData.path !== Data.trashUri
                                             onDropped: drop => { drop.accept(); Data.dropOn(modelData.path, ghost.paths, ghost.copy); } }
                                     }
@@ -698,7 +898,7 @@ FloatingWindow {
             Item {
                 id: arcBar
                 visible: Data.isArc
-                x: 12; y: 44; width: parent.width - 24; height: win.arcBarH
+                x: 12; y: win.tabBarH + 44; width: parent.width - 24; height: win.arcBarH
                 Row {
                     id: arcBtns
                     anchors { right: parent.right; verticalCenter: parent.verticalCenter }
@@ -721,7 +921,7 @@ FloatingWindow {
             Item {
                 id: header
                 visible: !win.grid
-                x: 12; y: 48 + win.arcBarH; width: parent.width - 24; height: 24
+                x: 12; y: win.tabBarH + 48 + win.arcBarH; width: parent.width - 24; height: 24
                 readonly property int sizeW: 84
                 readonly property int modW: 128
                 readonly property int typeW: width > 620 ? 150 : 0
@@ -752,7 +952,7 @@ FloatingWindow {
             // ---- listing area
             Item {
                 id: area
-                x: 12; y: (win.grid ? 48 : 73) + win.arcBarH
+                x: 12; y: win.tabBarH + (win.grid ? 48 : 73) + win.arcBarH
                 width: parent.width - 24
                 height: parent.height - y - statusBar.height - (progress.visible ? progress.height : 0)
                 clip: true
@@ -762,6 +962,7 @@ FloatingWindow {
                     anchors.fill: parent
                     visible: !win.grid
                     model: win.grid ? [] : Data.view
+                    onContentYChanged: if (visible) Data.scrollY = contentY
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
                     cacheBuffer: 320
@@ -852,6 +1053,7 @@ FloatingWindow {
                     anchors.fill: parent
                     visible: win.grid
                     model: win.grid ? Data.view : []
+                    onContentYChanged: if (visible) Data.scrollY = contentY
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
                     cellWidth: 112; cellHeight: 116
@@ -1010,6 +1212,8 @@ FloatingWindow {
             id: menu
             property string kind: ""
             property var drive: null
+            property int tab: 0
+            property string place: ""
             onPicked: id => win.onMenuPicked(id)
             onDismissed: ui.forceActiveFocus()
         }
@@ -1042,7 +1246,7 @@ FloatingWindow {
     function openSortMenu() {
         menu.items = sortItems();
         menu.kind = "sort";
-        menu.popup(win.width - 250, 44);
+        menu.popup(win.width - 250, win.tabBarH + 44);
     }
 
     // inline rename editor; selects the base name (not the extension)

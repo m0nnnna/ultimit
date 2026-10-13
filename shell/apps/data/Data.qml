@@ -36,8 +36,10 @@ Singleton {
     function hide() { open = false; }
     function show(p) {
         if (!started) { started = true; init(); }
+        const wasOpen = open;
         open = true;
-        if (p && p !== "") goTo(p);
+        // Already showing something: a folder opened from elsewhere gets its own tab.
+        if (p && p !== "") { if (wasOpen && path !== "") newTab(p, false); else goTo(p); }
         else if (path === "") goTo(Quickshell.env("ULTIMIT_DATA_START") || home);
         raise++;
     }
@@ -75,11 +77,148 @@ Singleton {
         if (p.length > 1 && p.endsWith("/")) p = p.replace(/\/+$/, "");
         return p === "" ? "/" : p;
     }
-    function title() {
-        if (isTrash) return "Trash";
-        if (isArc) return basename(arcFile);
-        return path === "/" ? "/" : basename(path);
+    function title() { return titleOf(path); }
+    function titleOf(p) {
+        if (p === trashUri) return "Trash";
+        if (p.startsWith("arc:")) { const f = p.slice(4, p.indexOf(arcSep)), i = p.slice(p.indexOf(arcSep) + 1); return i === "" ? basename(f) : basename(i); }
+        if (p === home) return "Home";
+        return p === "/" ? "/" : basename(p);
     }
+
+    // ---------------------------------------------------------------- tabs
+    // The live properties (path, history, entries, selection...) always belong to the active tab;
+    // tabs[] holds snapshots, and tabs[tabIndex] is only refreshed when the tab is left.  A tab that
+    // was never shown ({path} only) lists its folder when first switched to.  View mode, sort and
+    // hidden files are window-wide.
+    property var tabs: [{ path: "" }]
+    property int tabIndex: 0
+    property var closedTabs: []      // most recent last, for Ctrl+Shift+T
+    property real scrollY: 0         // kept up to date by DataWindow (saved with the tab)
+    property real restoreScroll: -1  // DataWindow applies it to the next view change
+    function tabPath(i) { return i === tabIndex ? path : (i < tabs.length ? tabs[i].path : ""); }
+    function snapTab() {
+        return { path: path, back: backStack, fwd: fwdStack, filter: filter, entries: entries, error: error,
+                 selected: selected, selCount: selCount, curPath: curPath, anchor: anchor, arc: arcListing, scrollY: scrollY };
+    }
+    function saveTab() { const t = tabs.slice(); t[tabIndex] = snapTab(); tabs = t; }
+    function restoreTab(t) {
+        renamePath = ""; pendingSelect = ""; pendingRename = "";
+        backStack = t.back || []; fwdStack = t.fwd || [];
+        if (t.entries === undefined) {   // never shown: list it now
+            path = "";
+            goTo(t.path, true);
+            return;
+        }
+        arcListing = t.arc;
+        path = t.path;
+        lastStat = "";
+        filter = t.filter;
+        error = t.error; entries = t.entries;
+        selected = t.selected; selCount = t.selCount; curPath = t.curPath; anchor = t.anchor;
+        restoreScroll = t.scrollY;
+        loading = false;
+        rebuild();
+        refresh(true);   // pick up changes made while the tab was in the background
+    }
+    function switchTab(i) {
+        if (i < 0 || i >= tabs.length || i === tabIndex) return;
+        saveTab();
+        tabIndex = i;
+        restoreTab(tabs[i]);
+    }
+    function nextTab(d) { if (tabs.length > 1) switchTab((tabIndex + d + tabs.length) % tabs.length); }
+    // background = open behind the current tab (middle-click), placed right after it
+    function newTab(p, background) {
+        p = p || (isTrash || isArc ? fsPath : path) || home;
+        const at = tabIndex + 1 + (background ? backgroundRun : 0);
+        const t = tabs.slice();
+        if (background) {
+            t.splice(at, 0, { path: p });
+            tabs = t;
+            backgroundRun++;
+            return;
+        }
+        t[tabIndex] = snapTab();
+        t.splice(at, 0, { path: p });
+        tabs = t;
+        tabIndex = at;
+        restoreTab(tabs[at]);
+    }
+    // consecutive background tabs open in order (1, 2, 3 after the current one), like browsers
+    property int backgroundRun: 0
+    onTabIndexChanged: backgroundRun = 0
+    function duplicateTab(i) {
+        if (i === undefined) i = tabIndex;
+        const src = i === tabIndex ? snapTab() : tabs[i];
+        const t = tabs.slice();
+        if (i === tabIndex) t[tabIndex] = src;
+        t.splice(i + 1, 0, Object.assign({}, src, { back: (src.back || []).slice(), fwd: (src.fwd || []).slice() }));
+        tabs = t;
+        if (tabIndex > i) tabIndex++;
+        switchTab(i + 1);
+    }
+    function closeTab(i) {
+        if (i === undefined) i = tabIndex;
+        if (i < 0 || i >= tabs.length) return;
+        if (tabs.length === 1) { hide(); return; }   // closing the last tab closes the window
+        const snap = Object.assign({}, i === tabIndex ? snapTab() : tabs[i], { idx: i });
+        const c = closedTabs.slice(); c.push(snap); if (c.length > 20) c.shift(); closedTabs = c;
+        const t = tabs.slice(); t.splice(i, 1);
+        if (i !== tabIndex) {
+            tabs = t;
+            if (i < tabIndex) tabIndex--;
+            return;
+        }
+        tabs = t;
+        tabIndex = Math.min(i, t.length - 1);
+        restoreTab(tabs[tabIndex]);
+    }
+    function closeOtherTabs(i) {
+        if (i === undefined) i = tabIndex;
+        if (tabs.length < 2) return;
+        if (i !== tabIndex) switchTab(i);
+        const c = closedTabs.slice();
+        tabs.forEach((x, k) => { if (k !== tabIndex) c.push(Object.assign({}, x, { idx: k })); });
+        closedTabs = c.slice(-20);
+        tabs = [tabs[tabIndex]];
+        tabIndex = 0;
+    }
+    function closeTabsRight(i) {
+        if (i === undefined) i = tabIndex;
+        if (i >= tabs.length - 1) return;
+        if (tabIndex > i) switchTab(i);
+        closedTabs = closedTabs.concat(tabs.slice(i + 1).map((x, k) => Object.assign({}, x, { idx: i + 1 + k }))).slice(-20);
+        tabs = tabs.slice(0, i + 1);
+    }
+    function reopenTab() {
+        if (!closedTabs.length) return;
+        const c = closedTabs.slice(); const snap = c.pop(); closedTabs = c;
+        const at = snap.idx !== undefined ? Math.min(snap.idx, tabs.length) : tabIndex + 1;   // back where it was
+        const t = tabs.slice();
+        t[tabIndex] = snapTab();
+        t.splice(at, 0, snap);
+        tabs = t;
+        tabIndex = at;
+        restoreTab(snap);
+    }
+    function moveTab(from, to) {
+        to = Math.max(0, Math.min(tabs.length - 1, to));
+        if (from === to || from < 0 || from >= tabs.length) return;
+        const t = tabs.slice(); const x = t.splice(from, 1)[0]; t.splice(to, 0, x);
+        tabs = t;
+        if (tabIndex === from) tabIndex = to;
+        else if (from < tabIndex && to >= tabIndex) tabIndex--;
+        else if (from > tabIndex && to <= tabIndex) tabIndex++;
+    }
+    // open these entries (folders / archives) in background tabs
+    function openInTabs(list) {
+        for (const e of list) {
+            if (isTrash) continue;
+            if (e.d) newTab(e.p, true);
+            else if (!isArc && isArchive(e)) newTab(arcLoc(e.p, ""), true);
+        }
+    }
+    function tabbable(list) { return !isTrash && list.length > 0 && list.every(e => e.d || (!isArc && isArchive(e))); }
 
     function goTo(p, noHistory) {
         const toArc = p.startsWith("arc:");
@@ -1284,6 +1423,18 @@ Singleton {
         case "eject": { const p = phones.find(x => x.id === arg); if (!p) return "no such phone"; ejectPhone(p); return "ok"; }
         case "scanphones": scanPhones(); return "ok";
         case "terminal": openTerminalHere(); return "ok";
+        // tabs
+        case "newtab": newTab(arg, false); return "ok";
+        case "bgtab": newTab(arg, true); return "ok";
+        case "tab": switchTab(parseInt(arg)); return "ok";
+        case "nexttab": nextTab(arg === "-1" ? -1 : 1); return "ok";
+        case "closetab": closeTab(arg === "" ? tabIndex : parseInt(arg)); return "ok";
+        case "closeothers": closeOtherTabs(); return "ok";
+        case "closeright": closeTabsRight(); return "ok";
+        case "duptab": duplicateTab(); return "ok";
+        case "reopentab": reopenTab(); return "ok";
+        case "movetab": { const a = arg.split("|"); moveTab(parseInt(a[0]), parseInt(a[1])); return "ok"; }
+        case "opentabs": openInTabs(targets()); return "ok";
         // archives (test hooks; passwords are read from a file given as "@/path", never from argv)
         case "extract": {   // here | folder | into:<dir>  -- applies to the selected archive(s)
             const t = archiveTargets(); if (!t.length) return "no archive selected";
@@ -1316,7 +1467,7 @@ Singleton {
         return (secretFile.text() || "").split("\n")[0];
     }
     function stateJson() {
-        return JSON.stringify({ path: path, count: view.length, total: entries.length, sel: selectedEntries().map(e => e.n),
+        return JSON.stringify({ path: path, tabs: tabs.map((t, i) => tabPath(i)), tab: tabIndex, closedTabs: closedTabs.length, count: view.length, total: entries.length, sel: selectedEntries().map(e => e.n),
             cur: cur, job: jobActive, queue: jobQueue.length, dialog: dialog ? dialog.kind : "", rename: renamePath, filter: filter,
             hidden: showHidden, sort: sortKey, desc: sortDesc, view: viewMode, clip: clipPaths.length, cut: clipCut,
             first: view.slice(0, 5).map(e => e.n), drives: drives.length, phones: phones.map(p => ({ id: p.id, label: p.label, mount: p.mount })), mtpBusy: mtpOp.running,
