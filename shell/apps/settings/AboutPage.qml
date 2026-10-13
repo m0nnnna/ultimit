@@ -1,13 +1,21 @@
 // About: Ultimit version, OS, kernel, CPU, GPUs, memory, disk. One read-only shell probe.
+// "Save a report" runs ultimit-report (logs, monitors, driver... in one file to send when
+// something goes wrong) and shows the file.
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
+import Quickshell.Io
 import "../.."
+import "../accessory"
+import "../../components"
 
 Page {
     id: pg
     title: "About"
     property var info: ({})
     property var gpus: []
+    property string report: ""      // path of the last report saved
+    property bool reporting: false
 
     Cmd {
         id: probe
@@ -53,4 +61,37 @@ Page {
     }
     InfoRow { Layout.fillWidth: true; label: "Memory"; value: info.mem || "…" }
     InfoRow { Layout.fillWidth: true; label: "Disk (/)"; value: info.disk || "…" }
+
+    // ---- problem report ----
+    SectionLabel { text: "Something wrong?" }
+    RowLayout {
+        Layout.fillWidth: true
+        spacing: 12
+        Text {
+            Layout.fillWidth: true; wrapMode: Text.WordWrap
+            text: pg.report !== "" ? "Saved: " + pg.report
+                : "Saves the logs, monitor setup, graphics driver and recent crashes in one file you can send to whoever helps you. No passwords or personal files go in it."
+            color: pg.report !== "" ? Theme.ok : Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+        }
+        ChamferButton {
+            text: pg.reporting ? "Saving…" : pg.report !== "" ? "Show file" : "Save a report"
+            enabled: !pg.reporting
+            onClicked: {
+                if (pg.report !== "") Quickshell.execDetached([Quickshell.shellPath("bin/ultimit-data"), pg.report.replace(/\/[^\/]*$/, "")]);
+                else { pg.reporting = true; reportProc.running = true; }
+            }
+        }
+    }
+    Process {
+        id: reportProc
+        command: [Quickshell.shellPath("bin/ultimit-report")]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const lines = text.trim().split("\n");
+                pg.report = lines[lines.length - 1].endsWith(".tar.gz") ? lines[lines.length - 1] : "";
+                pg.reporting = false;
+                if (pg.report === "") Toasts.show("Report", "The report could not be saved.");
+            }
+        }
+    }
 }

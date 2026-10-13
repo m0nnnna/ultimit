@@ -152,7 +152,7 @@ def ultimit(tag):
                 t.extract(t.getmember(script), work, filter="data")
         except (KeyError, tarfile.TarError, OSError):
             return False, "%s isn't an Ultimit release" % name
-        args = [os.path.join(work, script), "--release", os.path.join(work, name), "--no-apps"]
+        args = [os.path.join(work, script), "--release", os.path.join(work, name), "--apps-new"]
         dm = os.path.realpath("/etc/systemd/system/display-manager.service")
         if os.path.basename(dm) != "greetd.service":
             args.append("--keep-login-screen")   # this PC uses another login screen: leave it

@@ -21,8 +21,11 @@ Ultimit updates in two halves:
 3. If anything fails, the previous `/opt/ultimit` is put back. The log is
    `/var/log/ultimit-update.log`.
 
-It keeps going if Settings closes or reloads halfway (it is replacing Settings' own files). The
-apps in `distro/` (Steam, Flatpaks, ...) aren't touched; Flatpaks update in the Apps section.
+It keeps going if Settings closes or reloads halfway (it is replacing Settings' own files).
+
+Apps (`distro/packages-install.txt`, `flatpaks.txt`, `debs.txt`): an update installs the ones
+the new release **added** to those lists, nothing else, so an app you removed stays removed.
+Flatpaks update in the Apps section.
 
 The repository it asks is in `/opt/ultimit/distro/update-source` (`m0nnnna/ultimit`). A fork
 points it at its own.

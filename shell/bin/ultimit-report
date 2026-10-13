@@ -1,0 +1,78 @@
+#!/bin/sh
+# ultimit-report [OUT_DIR] - collect what's needed to look into a problem into one file,
+# ~/ultimit-report-<host>-<date>.tar.gz (or in OUT_DIR), and print its path. Runs as you, no
+# password: logs, the monitors and graphics driver, audio, network devices, the session journal,
+# crash reports and the Ultimit install/update logs. No passwords, keys or files of yours; Wi-Fi
+# network names and the IP addresses are in it.
+# Settings > About > "Save a report" runs it.
+STATE=${XDG_STATE_HOME:-$HOME/.local/state}/ultimit
+OUT=${1:-$HOME}
+stamp=$(date +%Y%m%d-%H%M%S)
+name="ultimit-report-$(hostname)-$stamp"
+w=$(mktemp -d) || exit 1
+d="$w/$name"
+mkdir -p "$d"
+trap 'rm -rf "$w"' EXIT
+
+# run FILE CMD...: the command's output (and errors) into FILE, never more than 20 s
+run() { f=$1; shift; { echo "\$ $*"; timeout 20 "$@" 2>&1; echo "(exit $?)"; echo; } >>"$d/$f"; }
+copy() { [ -r "$1" ] && cp "$1" "$d/${2:-$(basename "$1")}" 2>/dev/null; }
+
+# ---- what this is
+{
+	echo "Ultimit report, $(date -R)"
+	echo "Ultimit: $(cat /opt/ultimit/VERSION 2>/dev/null || echo "not installed in /opt/ultimit") (session started as ${ULTIMIT_VERSION:-?})"
+	. /etc/os-release 2>/dev/null; echo "OS: ${PRETTY_NAME:-?}"
+	echo "Kernel: $(uname -r)   Boot: $(cat /proc/cmdline)"
+	echo "Up: $(uptime -p 2>/dev/null)   Session: ${XDG_SESSION_TYPE:-?} ${XDG_CURRENT_DESKTOP:-?} on ${WAYLAND_DISPLAY:-no display}"
+	echo "CPU: $(sed -n 's/^model name\t*: //p' /proc/cpuinfo | head -n1) ($(nproc) threads)"
+	echo "Memory: $(free -h | awk '/^Mem/ {print $2 " total, " $7 " available"}')"
+} >"$d/summary.txt"
+
+# ---- graphics and monitors
+run graphics.txt lspci -nnk -d ::0300
+run graphics.txt lspci -nnk -d ::0302
+run graphics.txt lspci -nnk -d ::0380
+[ -r /proc/driver/nvidia/version ] && run graphics.txt cat /proc/driver/nvidia/version
+command -v nvidia-smi >/dev/null && run graphics.txt nvidia-smi
+run graphics.txt sh -c 'ls -l /dev/dri/; for c in /sys/class/drm/card*-*; do [ -e "$c/status" ] && echo "$(basename "$c"): $(cat "$c/status") $(cat "$c/enabled" 2>/dev/null)"; done'
+run graphics.txt sh -c 'cat /sys/module/nvidia_drm/parameters/modeset /sys/module/nvidia_drm/parameters/fbdev 2>/dev/null'
+command -v ubuntu-drivers >/dev/null && run graphics.txt ubuntu-drivers list
+command -v ultimitctl >/dev/null && run monitors.json ultimitctl state
+copy "$HOME/.config/ultimit/displays.conf"
+copy "$HOME/.config/ultimit/shell.json"
+
+# ---- logs
+copy "$STATE/session.log"
+copy "$STATE/session.log.old"
+copy "$STATE/last-crash"
+copy "$STATE/last-crash.seen"
+if [ -d "$STATE/crashes" ]; then
+	mkdir -p "$d/crashes"
+	ls -t "$STATE/crashes" | head -n 3 | while read -r f; do cp "$STATE/crashes/$f" "$d/crashes/" 2>/dev/null; done
+fi
+latest=$(ls -t "$STATE"/install-*.log 2>/dev/null | head -n1)
+[ -n "$latest" ] && copy "$latest"
+copy /var/log/ultimit-update.log
+copy /var/log/ultimit-firstboot.log
+run journal-user.txt journalctl --user -b --no-pager -n 3000
+run journal-system.txt journalctl -b --no-pager -p warning -n 2000
+run journal-system.txt journalctl -b --no-pager -u greetd -n 200
+run services.txt systemctl --failed --no-pager
+run services.txt systemctl --user --failed --no-pager
+run services.txt systemctl status --no-pager -n 0 greetd NetworkManager ultimit-firstboot
+
+# ---- sound, network, input, power
+command -v wpctl >/dev/null && run sound.txt wpctl status
+command -v pactl >/dev/null && run sound.txt pactl info
+command -v nmcli >/dev/null && run network.txt nmcli general
+command -v nmcli >/dev/null && run network.txt nmcli device
+command -v nmcli >/dev/null && run network.txt nmcli -f NAME,TYPE,DEVICE,AUTOCONNECT connection show
+run network.txt ip -brief address
+command -v libinput >/dev/null && run input.txt libinput list-devices
+run power.txt sh -c 'cat /sys/power/state /sys/power/mem_sleep 2>/dev/null; for b in /sys/class/power_supply/*; do [ -e "$b/type" ] && echo "$(basename "$b"): $(cat "$b/type") $(cat "$b/capacity" 2>/dev/null)%"; done'
+run disks.txt df -h -x tmpfs -x devtmpfs -x squashfs
+run disks.txt lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINTS
+
+tar -C "$w" -czf "$OUT/$name.tar.gz" "$name" || exit 1
+echo "$OUT/$name.tar.gz"

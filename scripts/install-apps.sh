@@ -14,7 +14,10 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 FLATHUB=https://dl.flathub.org/repo/flathub.flatpakrepo
 
 # ULTIMIT_SKIP_PACKAGES="a b": leave those out (test machines; scripts/install.sh passes it on).
-list() { sed -e 's/#.*//' -e 's/[[:space:]]//g' "$1" | grep -v '^$' | grep -vxF -f <(printf '%s\n' ${ULTIMIT_SKIP_PACKAGES:-} "") || true; }
+# ULTIMIT_APPS_ONLY="a b": only these (an update installs what its release added to the lists,
+# scripts/system-install.sh --apps-new); DXVK is then left alone.
+only() { if [ -n "${ULTIMIT_APPS_ONLY:-}" ]; then grep -xF -f <(printf '%s\n' $ULTIMIT_APPS_ONLY) || true; else cat; fi; }
+list() { sed -e 's/#.*//' -e 's/[[:space:]]//g' "$1" | grep -v '^$' | grep -vxF -f <(printf '%s\n' ${ULTIMIT_SKIP_PACKAGES:-} "") | only || true; }
 
 # Ubuntu's own apt jobs (the daily update check, unattended-upgrades) often run right after boot,
 # when the first-boot install runs too: wait for them rather than fail on apt's lock.
@@ -41,6 +44,7 @@ done
 
 missing_debs=()
 while read -r pkg url sum; do
+	[ -z "$(echo "$pkg" | only)" ] && continue
 	installed "$pkg" || missing_debs+=("$pkg $url $sum")
 done < <(sed -e 's/#.*//' "$ROOT/distro/debs.txt" | grep -v '^[[:space:]]*$')
 
@@ -52,7 +56,7 @@ for app in $(list "$ROOT/distro/flatpaks.txt"); do
 done
 
 have_dxvk=false
-[ -e /opt/ultimit/dxvk/current/x32/d3d9.dll ] && have_dxvk=true
+[ -e /opt/ultimit/dxvk/current/x32/d3d9.dll ] || [ -n "${ULTIMIT_APPS_ONLY:-}" ] && have_dxvk=true
 
 echo "== 32-bit (i386) architecture: $($need_i386 && echo "to enable" || echo enabled)"
 echo "== apt packages missing (${#missing_apt[@]}): ${missing_apt[*]:-none}"

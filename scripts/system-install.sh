@@ -10,6 +10,8 @@
 #   --no-apps              skip distro/packages-install.txt, the Flatpaks and DXVK
 #   --apps-at-first-boot   install those on the first boot instead (installer chroots: Flatpak
 #                          needs a running system)
+#   --apps-new             only the apps this release added to the lists since the version it
+#                          replaces (updates: an app you removed stays removed)
 #   --keep-login-screen    don't make greetd/the Ultimit login screen the display manager
 #   --desktop-network      let NetworkManager run all networking (systems installed from Ubuntu's
 #                          server image use systemd-networkd, which NetworkManager can't manage)
@@ -160,6 +162,22 @@ fi
 
 # ------------------------------------------------------------------------------------ apps
 case "$APPS" in
+new)
+	# What the lists gained since the version this replaces (still in $PREFIX.previous)
+	added=""
+	if [ -d "$PREFIX.previous/distro" ]; then
+		for l in packages-install.txt flatpaks.txt; do
+			added="$added $(comm -13 <(list "$PREFIX.previous/distro/$l" 2>/dev/null | sort -u) <(list "$P/distro/$l" | sort -u) | tr '\n' ' ')"
+		done
+		added="$added $(comm -13 <(sed -e 's/#.*//' "$PREFIX.previous/distro/debs.txt" 2>/dev/null | awk 'NF {print $1}' | sort -u) \
+			<(sed -e 's/#.*//' "$P/distro/debs.txt" | awk 'NF {print $1}' | sort -u) | tr '\n' ' ')"
+	fi
+	added=$(echo $added)
+	if [ -n "$added" ]; then
+		step "New apps in this version: $added"
+		ULTIMIT_APPS_ONLY="$added" "$P/scripts/install-apps.sh" --yes || warn "some new apps didn't install (they can be installed later with $P/scripts/install-apps.sh --yes)"
+	fi
+	;;
 now)
 	step "Installing the apps (distro/packages-install.txt, Flatpaks, DXVK)"
 	"$P/scripts/install-apps.sh" --yes
