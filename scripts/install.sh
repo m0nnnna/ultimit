@@ -173,7 +173,7 @@ rev=$(git -C "$ROOT" describe --always --dirty 2>/dev/null || echo unknown)
 setup "$WORK/compositor" "$ROOT/compositor" --buildtype=release >/dev/null
 ninja -C "$WORK/compositor" -j "$JOBS"
 sudo install -D -m755 "$WORK/compositor/ultimit" "$PREFIX/bin/ultimit"
-ldd "$PREFIX/bin/ultimit" | grep -q "not found" && die "the compositor can't find a library: $(ldd "$PREFIX/bin/ultimit" | grep 'not found')"
+[ "$(ldd "$PREFIX/bin/ultimit" | grep -c "not found")" = 0 ] || die "the compositor can't find a library: $(ldd "$PREFIX/bin/ultimit" | grep 'not found')"
 
 # ------------------------------------------------------------------------------------ the desktop
 step "Installing the shell, session and login screen to $PREFIX"
@@ -229,7 +229,7 @@ if $SWITCH_DM; then
 	sudo sh -e -c '
 		P=$1
 		GU=$(getent passwd _greetd >/dev/null && echo _greetd || echo greeter)
-		[ -f /etc/greetd/config.toml ] && cp -n /etc/greetd/config.toml /etc/greetd/config.toml.before-ultimit
+		[ -f /etc/greetd/config.toml ] && cp --update=none /etc/greetd/config.toml /etc/greetd/config.toml.before-ultimit
 		cat >/etc/greetd/config.toml <<CONF
 # Written by Ultimit scripts/install.sh
 [terminal]
@@ -265,10 +265,11 @@ for f in bin/ultimit bin/qs bin/oo7-daemon libexec/oo7-daemon-login session/ulti
 	[ -e "$PREFIX/$f" ] || { warn "missing $PREFIX/$f"; fail=1; }
 done
 for b in ultimit qs; do
-	ldd "$PREFIX/bin/$b" | grep -q "not found" && { warn "$b is missing a library"; fail=1; }
+	[ "$(ldd "$PREFIX/bin/$b" | grep -c "not found")" = 0 ] || { warn "$b is missing a library"; fail=1; }
 done
 "$PREFIX/bin/qs" --version >/dev/null 2>&1 || { warn "Quickshell doesn't start"; fail=1; }
-fc-list | grep -q Michroma || { warn "fonts not found by fontconfig"; fail=1; }
+# (no "fc-list | grep -q": with pipefail, grep quitting early makes fc-list fail with SIGPIPE)
+[ "$(fc-list : family | grep -c -E 'Michroma|Chakra Petch|Share Tech Mono')" -ge 3 ] || { warn "fonts not found by fontconfig"; fail=1; }
 [ -f /usr/share/wayland-sessions/ultimit.desktop ] || { warn "session file missing"; fail=1; }
 [ "$fail" = 0 ] || die "the install is incomplete (see the warnings above)"
 
