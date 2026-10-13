@@ -210,6 +210,26 @@ Singleton {
         if (!dryRun) vpnRefresh.restart();
     }
     Timer { id: vpnRefresh; interval: 1800; onTriggered: root.refreshVpn() }
+    // the bar's VPN marker follows connections made anywhere (Settings, nmcli, PIA's app...)
+    Timer { interval: 6000; running: true; repeat: true; triggeredOnStart: true; onTriggered: root.refreshVpn() }
+    // ...plus tunnels NetworkManager doesn't know: PIA's app runs its own (wgpia0, or tun0 for OpenVPN)
+    property var vpnTunnels: []
+    readonly property var vpnActive: vpnList.filter(v => v.active).map(v => v.name).concat(vpnTunnels)
+    Process {
+        id: tunProc
+        command: ["sh", "-c", "ip -o link show up 2>/dev/null | awk -F': ' '{print $2}' | cut -d@ -f1"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const names = text.split("\n").map(s => s.trim());
+                const known = root.vpnList.filter(v => v.active).length > 0;
+                const t = [];
+                if (names.some(n => /^wgpia/.test(n))) t.push("Private Internet Access");
+                else if (!known && names.some(n => /^tun\d/.test(n))) t.push("VPN tunnel");
+                if (JSON.stringify(t) !== JSON.stringify(root.vpnTunnels)) root.vpnTunnels = t;
+            }
+        }
+    }
+    Timer { interval: 6000; running: true; repeat: true; triggeredOnStart: true; onTriggered: if (!tunProc.running) tunProc.running = true }
     Process {
         id: vpnProc
         command: ["nmcli", "-t", "-f", "NAME,TYPE,ACTIVE", "connection", "show"]

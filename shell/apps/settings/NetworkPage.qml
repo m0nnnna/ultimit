@@ -1,4 +1,5 @@
-// Network: Wi-Fi on/off, networks (connect with password prompt / forget), connection details, wired.
+// Network: Wi-Fi on/off, networks (connect with password prompt / forget), connection details, wired,
+// VPNs (VpnSection.qml).
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Networking
@@ -137,4 +138,6 @@ Page {
             InfoRow { visible: dv.modelData.hw !== ""; Layout.fillWidth: true; label: "MAC address"; value: dv.modelData.hw }
         }
     }
+
+    VpnSection {}
 }

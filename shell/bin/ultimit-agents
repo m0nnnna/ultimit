@@ -25,8 +25,10 @@ leap-password), 802-1x (password, private-key-password, ... plus identity when t
 connection has none), vpn (secrets named by NM's hints or by "<name>-flags" = agent-owned /
 not-saved; plain string fields only; the plugin's own auth-dialog is NOT spawned, so exotic
 plugins that need it get NoSecrets), and any other setting whose hints are plain secret
-names (pppoe, gsm, ...).  SaveSecrets / DeleteSecrets are no-ops (NM stores system-owned
-secrets itself).
+names (pppoe, gsm, ...).  VPN secrets marked agent-owned ("<name>-flags" = 1) live in the
+keyring (Secret Service, NetworkManager's own schema, like GNOME's applet): answered from there
+without a prompt, saved there after a prompt and on SaveSecrets, removed on DeleteSecrets.
+(Ubuntu's netplan-backed NetworkManager can't keep VPN passwords itself.)
 """
 import json
 import os
@@ -57,6 +59,68 @@ NM_MGR_PATH = "/org/freedesktop/NetworkManager/AgentManager"
 NM_ERR = "org.freedesktop.NetworkManager.SecretAgent."
 
 FLAG_INTERACT, FLAG_NEW, FLAG_USER, FLAG_ONLY_SYSTEM = 0x1, 0x2, 0x4, 0x80000000
+
+
+# ---- keyring for agent-owned VPN secrets (schema shared with nm-applet / vpn.py) ----
+_secret = {}
+
+
+def keyring():
+    """(Secret module, schema), or (None, None) without libsecret."""
+    if "mod" not in _secret:
+        try:
+            gi.require_version("Secret", "1")
+            from gi.repository import Secret
+            _secret["mod"] = Secret
+            _secret["schema"] = Secret.Schema.new(
+                "org.freedesktop.NetworkManager.Connection", Secret.SchemaFlags.DONT_MATCH_NAME,
+                {"connection-uuid": Secret.SchemaAttributeType.STRING,
+                 "setting-name": Secret.SchemaAttributeType.STRING,
+                 "setting-key": Secret.SchemaAttributeType.STRING})
+        except (ValueError, ImportError):
+            _secret["mod"] = _secret["schema"] = None
+    return _secret["mod"], _secret["schema"]
+
+
+def keyring_get(uuid, setting, key):
+    Secret, schema = keyring()
+    if not Secret or not uuid:
+        return None
+    try:
+        return Secret.password_lookup_sync(schema, {"connection-uuid": uuid, "setting-name": setting,
+                                                    "setting-key": key}, None)
+    except GLib.Error as e:
+        log("keyring lookup failed:", e.message)
+        return None
+
+
+def keyring_put(uuid, setting, key, value, label):
+    Secret, schema = keyring()
+    if not Secret or not uuid:
+        return
+    try:
+        Secret.password_store_sync(schema, {"connection-uuid": uuid, "setting-name": setting, "setting-key": key},
+                                   Secret.COLLECTION_DEFAULT, label, value, None)
+    except GLib.Error as e:
+        log("keyring store failed:", e.message)
+
+
+def keyring_forget(uuid):
+    Secret, schema = keyring()
+    if not Secret or not uuid:
+        return
+    try:
+        Secret.password_clear_sync(schema, {"connection-uuid": uuid}, None)
+    except GLib.Error as e:
+        log("keyring clear failed:", e.message)
+
+
+def agent_owned(cd, setting):
+    """Secret names the agent keeps for this setting (VPN "<name>-flags" = 1)."""
+    if setting != "vpn":
+        return []
+    data = cd.get("vpn", {}).get("data", {})
+    return [k[:-len("-flags")] for k, v in data.items() if k.endswith("-flags") and str(v) == "1"]
 
 loop = GLib.MainLoop()
 exit_code = [0]
@@ -511,8 +575,24 @@ class NM:
             path, setting = params.unpack()
             finish("nm:%s:%s" % (path, setting), "cancelled")
             inv.return_value(None)
-        else:                                  # SaveSecrets / DeleteSecrets: no-ops
+        elif method == "SaveSecrets":
+            cd, _path = params.unpack()
+            self.save_secrets(cd)
             inv.return_value(None)
+        elif method == "DeleteSecrets":
+            cd, _path = params.unpack()
+            keyring_forget(cd.get("connection", {}).get("uuid", ""))
+            inv.return_value(None)
+        else:
+            inv.return_value(None)
+
+    def save_secrets(self, cd):
+        uuid = cd.get("connection", {}).get("uuid", "")
+        name = cd.get("connection", {}).get("id", "") or "VPN"
+        secrets = cd.get("vpn", {}).get("secrets", {})
+        for k in agent_owned(cd, "vpn"):
+            if secrets.get(k):
+                keyring_put(uuid, "vpn", k, secrets[k], "VPN %s for “%s”" % (k, name))
 
     # --- building the prompt for a setting
     def plan(self, cd, setting, hints, flags):
@@ -573,6 +653,14 @@ class NM:
             inv.return_dbus_error(NM_ERR + "NoSecrets", msg)
         if flags & FLAG_ONLY_SYSTEM:
             return nosecrets("agent stores no secrets")
+        uuid = cd.get("connection", {}).get("uuid", "")
+        owned = agent_owned(cd, setting)
+        # Agent-owned VPN secrets from the keyring, unless NM says the last ones were wrong.
+        if owned and not flags & FLAG_NEW:
+            found = {k: keyring_get(uuid, setting, k) for k in owned}
+            if all(found.values()):
+                inv.return_value(GLib.Variant("(a{sa{sv}})", ({setting: {"secrets": GLib.Variant("a{ss}", found)}},)))
+                return
         if not flags & FLAG_INTERACT:
             return nosecrets("interaction not allowed")
         plan = self.plan(cd, setting, list(hints), flags)
@@ -586,7 +674,12 @@ class NM:
         def done(status, values):
             if status == "ok":
                 try:
-                    out = build({f["key"]: str(values[f["key"]]) for f in data["fields"]})
+                    answers = {f["key"]: str(values[f["key"]]) for f in data["fields"]}
+                    name = cd.get("connection", {}).get("id", "") or "VPN"
+                    for k in owned:   # remember agent-owned ones for next time
+                        if answers.get(k):
+                            keyring_put(uuid, setting, k, answers[k], "VPN %s for “%s”" % (k, name))
+                    out = build(answers)
                     inv.return_value(GLib.Variant("(a{sa{sv}})", (out,)))
                 except Exception as e:
                     log("bad answer:", type(e).__name__)

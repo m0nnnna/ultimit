@@ -147,17 +147,18 @@ Item {
                     { id: "rec", label: "REC " + Privacy.recTime, apps: Privacy.rec ? ["Screen recording (click to stop)"] : [], tone: Theme.bad },
                     { id: "screen", label: "SCREEN", apps: Privacy.screenApps, tone: Theme.warn },
                     { id: "cam", label: "CAM", apps: Privacy.cameraApps, tone: Theme.warn },
-                    { id: "mic", label: "MIC", apps: Privacy.micApps, tone: Theme.warn }
+                    { id: "mic", label: "MIC", apps: Privacy.micApps, tone: Theme.warn },
+                    { id: "vpn", label: "VPN", apps: SysState.vpnActive, tone: Theme.accent }
                 ].filter(m => m.apps.length > 0)
                 delegate: StatusButton {
                     id: pb
                     required property var modelData
                     name: modelData.id === "rec" ? "Screen recording, " + Privacy.recTime + ", click to stop"
-                        : ({ screen: "Screen shared by: ", cam: "Camera in use by: ", mic: "Microphone in use by: " })[modelData.id] + modelData.apps.join(", ")
+                        : ({ screen: "Screen shared by: ", cam: "Camera in use by: ", mic: "Microphone in use by: ", vpn: "VPN connected: " })[modelData.id] + modelData.apps.join(", ")
                     tip: modelData.id === "rec" ? "RECORDING " + Privacy.recTime + "\nCLICK TO STOP AND SAVE"
-                        : ({ screen: "SCREEN SHARED", cam: "CAMERA IN USE", mic: "MICROPHONE IN USE" })[modelData.id] + "\n" + modelData.apps.join("\n").toUpperCase()
+                        : ({ screen: "SCREEN SHARED", cam: "CAMERA IN USE", mic: "MICROPHONE IN USE", vpn: "VPN CONNECTED" })[modelData.id] + "\n" + modelData.apps.join("\n").toUpperCase()
                     width: chip.width + 10
-                    onClicked: if (modelData.id === "rec") Privacy.stopRecording()
+                    onClicked: if (modelData.id === "rec") Privacy.stopRecording(); else if (modelData.id === "vpn") root.openFly("network")
                     Rectangle {
                         id: chip
                         anchors.centerIn: parent
