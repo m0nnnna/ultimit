@@ -684,7 +684,12 @@ void view_map(struct ul_view *view) {
 	 * the shell's panels leave free. Windows that would land exactly on top
 	 * of another one step down-right so nothing hides behind a twin. */
 	struct ul_output *output = output_at(server, server->cursor->x, server->cursor->y);
-	if (output) {
+	if (!output) {
+		/* The pointer is off every screen (no pointer device yet, or the screens were away on
+		 * another VT when the window opened): the main display. */
+		output = output_primary(server);
+	}
+	if (output && !wlr_box_empty(&output->usable_area)) {
 		struct wlr_box area = output->usable_area;
 		int bar = view->ssd ? UL_TITLEBAR_H : 0;
 		int max_w = area.width - 2 * UL_BORDER;
