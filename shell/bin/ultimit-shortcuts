@@ -1,0 +1,3 @@
+#!/bin/sh
+# ultimit-shortcuts - show / hide the keyboard shortcut sheet (Super+/).
+exec qs -p "${ULTIMIT_SHELL_DIR:-$(dirname "$(dirname "$(readlink -f "$0")")")}" ipc call shortcuts toggle

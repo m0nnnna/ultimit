@@ -104,6 +104,8 @@ static const struct binding bindings[] = {
 	{ SUPER, XKB_KEY_r, 0, ACT_LAUNCHER, NULL, NULL, "Apps", "launcher", "Open the launcher", 0 },
 	{ SUPER, XKB_KEY_v, 0, ACT_SPAWN, "ultimit-clipboard", NULL, "Apps", "clipboard",
 		"Clipboard history (Enter pastes, P pins)", 0 },
+	{ SUPER, XKB_KEY_slash, 0, ACT_SPAWN, "ultimit-shortcuts", NULL, "Apps", "shortcuts",
+		"Show these keyboard shortcuts", 0 },
 	{ SUPER, XKB_KEY_Super_L, 0, ACT_NONE, NULL, "Super (tap)", "Apps", "launcher-tap",
 		"Open the launcher when Super is tapped on its own", KB_DOC },
 	{ SUPER, XKB_KEY_l, 0, ACT_LOCK, NULL, NULL, "Session", "lock", "Lock the screen", 0 },
@@ -256,6 +258,22 @@ bool keys_handle(struct ul_server *server, uint32_t mods, xkb_keysym_t sym) {
 
 /* ---- `ultimitctl keys` --------------------------------------------------------- */
 
+/* What the key says on a keyboard, for keysym names that don't. */
+static const char *friendly_key(const char *name) {
+	static const struct { const char *sym, *label; } names[] = {
+		{ "slash", "/" }, { "BackSpace", "Backspace" }, { "Print", "PrtSc" },
+		{ "AudioRaiseVolume", "Volume up key" }, { "AudioLowerVolume", "Volume down key" },
+		{ "AudioMute", "Mute key" }, { "AudioMicMute", "Mic mute key" },
+		{ "MonBrightnessUp", "Brightness up key" }, { "MonBrightnessDown", "Brightness down key" },
+		{ "AudioPlay", "Play key" }, { "AudioPause", "Pause key" },
+		{ "AudioNext", "Next track key" }, { "AudioPrev", "Previous track key" },
+	};
+	for (size_t i = 0; i < sizeof(names) / sizeof(names[0]); i++) {
+		if (strcmp(name, names[i].sym) == 0) return names[i].label;
+	}
+	return name;
+}
+
 static void combo_name(const struct binding *b, char *buf, size_t len) {
 	if (b->label) {
 		snprintf(buf, len, "%s", b->label);
@@ -270,7 +288,7 @@ static void combo_name(const struct binding *b, char *buf, size_t len) {
 	xkb_keysym_get_name(b->sym, key, sizeof(key));
 	if (key[0] && !key[1]) key[0] = toupper((unsigned char)key[0]);
 	if (strncmp(key, "XF86", 4) == 0) memmove(key, key + 4, strlen(key + 4) + 1);
-	strncat(buf, key, len - strlen(buf) - 1);
+	strncat(buf, friendly_key(key), len - strlen(buf) - 1);
 }
 
 void keys_write_json(struct out *o) {

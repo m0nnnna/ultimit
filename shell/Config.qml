@@ -72,6 +72,7 @@ Singleton {
 
     // ---- launcher / context menu state (see components/Launcher.qml, ContextMenu.qml) ----
     property bool launcherOpen: false
+    property bool shortcutsOpen: false   // the keyboard shortcut sheet (Super+/)
     property bool menuOpen: false
     // Screen name the open launcher/menu belongs to ("" = first screen).
     property string uiScreen: ""

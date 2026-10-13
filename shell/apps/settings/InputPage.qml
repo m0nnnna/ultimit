@@ -115,6 +115,10 @@ Page {
     ToggleRow { Layout.fillWidth: true; text: "Left-handed (swap buttons)"; checked: pg.leftHanded; onToggled: v => pg.leftHanded = v }
 
     SectionLabel { text: "Keyboard" }
+    Flow {
+        Layout.fillWidth: true
+        ChamferButton { text: "Keyboard shortcuts  (Super+/)"; onClicked: Config.shortcutsOpen = true }
+    }
     Dropdown {
         label: "Layout"
         options: pg.layouts

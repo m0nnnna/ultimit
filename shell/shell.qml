@@ -33,6 +33,13 @@ ShellRoot {
         function close(): void { Config.closeLauncher(); }
     }
 
+    IpcHandler {   // keyboard shortcut sheet: qs ipc call shortcuts toggle | open | close
+        target: "shortcuts"
+        function toggle(): void { Config.shortcutsOpen = !Config.shortcutsOpen; }
+        function open(): void { Config.shortcutsOpen = true; }
+        function close(): void { Config.shortcutsOpen = false; }
+    }
+
     IpcHandler {
         target: "toasts"
         function show(title: string, message: string): void { Toasts.show(title, message); }
@@ -75,6 +82,7 @@ ShellRoot {
             AltTab      { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, Alt+Tab window switcher (compositor-driven)
             QuickSettings { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, status-block popover
             ClipboardPanel { screen: scope.modelData; screenName: scope.modelData.name }  // overlay, Super+V clipboard history
+            ShortcutSheet { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, Super+/ keyboard shortcuts
         }
     }
 }

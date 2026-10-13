@@ -36,6 +36,7 @@ documentation only; their behaviour is implemented elsewhere (input.c, alttab.c)
 | Super+E | Open DATA (files) |
 | Super+R | Open the launcher |
 | Super+V | Clipboard history (Enter pastes, P pins) |
+| Super+/ | Show these keyboard shortcuts |
 | Super (tap) | Open the launcher when Super is tapped on its own |
 
 ## Session
@@ -44,21 +45,21 @@ documentation only; their behaviour is implemented elsewhere (input.c, alttab.c)
 |---|---|
 | Super+L | Lock the screen |
 | Super+Shift+S | Screenshot a region |
-| Print | Screenshot the screen |
-| Ctrl+Alt+BackSpace | Quit Ultimit (log out) |
+| PrtSc | Screenshot the screen |
+| Ctrl+Alt+Backspace | Quit Ultimit (log out) |
 | Ctrl+Alt+F1..F12 | Switch virtual terminal |
 
 ## Media
 
 | Keys | Action |
 |---|---|
-| AudioRaiseVolume | Volume up |
-| AudioLowerVolume | Volume down |
-| AudioMute | Mute |
-| AudioMicMute | Mute microphone |
-| MonBrightnessUp | Brightness up |
-| MonBrightnessDown | Brightness down |
-| AudioPlay | Play / pause |
-| AudioPause | Play / pause |
-| AudioNext | Next track |
-| AudioPrev | Previous track |
+| Volume up key | Volume up |
+| Volume down key | Volume down |
+| Mute key | Mute |
+| Mic mute key | Mute microphone |
+| Brightness up key | Brightness up |
+| Brightness down key | Brightness down |
+| Play key | Play / pause |
+| Pause key | Play / pause |
+| Next track key | Next track |
+| Previous track key | Previous track |

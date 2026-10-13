@@ -30,4 +30,5 @@ singleton FlyoutState 1.0 FlyoutState.qml
 Flyout 1.0 Flyout.qml
 BatteryWatch 1.0 BatteryWatch.qml
 CrashNotice 1.0 CrashNotice.qml
+ShortcutSheet 1.0 ShortcutSheet.qml
 AltTab 1.0 AltTab.qml
