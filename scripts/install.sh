@@ -9,7 +9,8 @@
 # Options:
 #   --yes                 don't ask before starting
 #   --no-apps             only the desktop itself (skip distro/packages-install.txt, Flatpaks, DXVK)
-#   --keep-login-screen   install, but leave the current login screen (GDM) in charge
+#   --keep-login-screen   install, but leave the current login screen (GDM) in charge (keeps GNOME)
+#   --keep-gnome          don't remove the GNOME desktop at the end
 #   --jobs N              parallel build jobs (default: from CPU cores and memory)
 #
 # Re-running it updates an existing install (git pull first). Takes 20-40 minutes the first
@@ -30,12 +31,13 @@ QUICKSHELL_URL=https://github.com/quickshell-mirror/quickshell QUICKSHELL_REF=v0
 OO7_URL=https://github.com/linux-credentials/oo7 OO7_REF=0.7.0.beta
 RUST_TOOLCHAIN=1.99.0
 
-YES=false APPS=true SWITCH_DM=true JOBS=""
+YES=false APPS=true SWITCH_DM=true PURGE_GNOME=true JOBS=""
 while [ $# -gt 0 ]; do
 	case "$1" in
 	--yes) YES=true ;;
 	--no-apps) APPS=false ;;
-	--keep-login-screen) SWITCH_DM=false ;;
+	--keep-login-screen) SWITCH_DM=false PURGE_GNOME=false ;;
+	--keep-gnome) PURGE_GNOME=false ;;
 	--jobs) JOBS=$2; shift ;;
 	-h | --help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
 	*) echo "unknown option: $1 (see --help)" >&2; exit 2 ;;
@@ -84,7 +86,7 @@ if lspci 2>/dev/null | grep -qi 'vga.*nvidia\|3d.*nvidia'; then
 fi
 if ! $YES; then
 	echo
-	echo "This will build and install Ultimit$($APPS && echo " and its apps")$($SWITCH_DM && echo ", and make the Ultimit login screen the one this PC starts with")."
+	echo "This will build and install Ultimit$($APPS && echo " and its apps")$($SWITCH_DM && echo ", and make the Ultimit login screen the one this PC starts with")$($PURGE_GNOME && echo ", then remove the GNOME desktop")."
 	read -r -p "Go ahead? [Y/n] " a
 	case "$a" in n | N) exit 1 ;; esac
 fi
@@ -273,11 +275,25 @@ done
 [ -f /usr/share/wayland-sessions/ultimit.desktop ] || { warn "session file missing"; fail=1; }
 [ "$fail" = 0 ] || die "the install is incomplete (see the warnings above)"
 
+# ------------------------------------------------------------------------------------ GNOME
+# Last, and only once Ultimit is installed and checked: GNOME, GDM and GNOME's apps go; GTK, GLib and
+# everything Ultimit or games use stay (scripts/purge-gnome.sh checks apt's plan before removing).
+gnome_note=""
+if $PURGE_GNOME; then
+	step "Removing the GNOME desktop"
+	if "$ROOT/scripts/purge-gnome.sh" --yes; then
+		gnome_note="GNOME is removed."
+	else
+		warn "GNOME was left installed: apt wanted to remove something unexpected (see above)."
+		gnome_note="GNOME is still installed (see the log); scripts/purge-gnome.sh shows why."
+	fi
+fi
+
 cat <<DONE
 
 $(printf '\033[1;32m')Ultimit $rev is installed.$(printf '\033[0m')
 $($SWITCH_DM && echo "Reboot and log in at the Ultimit login screen." || echo "Log out and pick Ultimit in your login screen's session list.")
 Every user on this PC can use it. To update later: git pull && scripts/install.sh
-To remove GNOME once you're happy:  scripts/purge-gnome.sh  (dry run first)
+${gnome_note:-To remove GNOME later: scripts/purge-gnome.sh (dry run first)}
 Log: $LOG
 DONE

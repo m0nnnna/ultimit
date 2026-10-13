@@ -71,7 +71,7 @@ if [ -s "$out/unexpected.txt" ]; then
 	exit 1
 fi
 echo "Removing $(wc -l <"$out/final.txt") packages ($(comm -13 "$out/final.txt" "$out/expected.txt" | wc -l) leftovers stay as dependencies of kept packages)."
-sudo apt-get purge --autoremove -y "${installed[@]}" 2>&1 | tee "$out/apt.log"
+sudo DEBIAN_FRONTEND=noninteractive apt-get purge --autoremove -y "${installed[@]}" 2>&1 | tee "$out/apt.log"
 # greetd starts only through the display-manager.service alias, which
 # purging gdm3 leaves broken: recreate it, or the next boot has no login.
 sudo systemctl enable --force greetd

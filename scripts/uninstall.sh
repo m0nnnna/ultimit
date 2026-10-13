@@ -13,8 +13,12 @@ P=/opt/ultimit
 echo "Would remove: $P, /usr/share/wayland-sessions/ultimit.desktop, /usr/share/fonts/truetype/ultimit,"
 echo "  the ultimit-* commands in /usr/local/bin, Ultimit's entries in /usr/share/applications,"
 echo "  pam_oo7 from /etc/pam.d/greetd, the Ultimit helpers and polkit policies,"
-echo "  and switch the login screen back to GDM$(command -v gdm3 >/dev/null || echo ' (not installed: no login screen until you install one)')."
+echo "  and switch the login screen back to GDM$(command -v gdm3 >/dev/null || echo ', reinstalling Ubuntu'"'"'s desktop (GNOME, GDM) first since it was removed: needs internet')."
 [ "${1:-}" = --yes ] || { echo "Dry run. Run with --yes to do it."; exit 0; }
+# GNOME was removed by the install: bring Ubuntu's desktop back so there is a login screen.
+if ! command -v gdm3 >/dev/null; then
+	sudo apt-get update -q && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ubuntu-desktop-minimal gdm3
+fi
 sudo sh -e -c '
 	P=$1
 	if command -v gdm3 >/dev/null; then
