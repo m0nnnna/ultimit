@@ -52,6 +52,21 @@ for f in foot/foot.ini zathura/zathurarc imv/config; do
 	fi
 done
 
+# Clean mic (stands in for NVIDIA Broadcast's noise removal): EasyEffects
+# (Flatpak; Ubuntu's build lacks RNNoise) runs in the background at login
+# with RNNoise on every app's mic input. Set up once; after that,
+# EasyEffects' own settings decide.
+ee_app=com.github.wwmm.easyeffects
+ee_mark="$HOME/.local/state/ultimit/easyeffects-setup"
+if [ ! -e "$ee_mark" ] && flatpak info "$ee_app" >/dev/null 2>&1; then
+	ee_presets="$HOME/.var/app/$ee_app/data/easyeffects/input"
+	mkdir -p "$ee_presets" "$HOME/.config/autostart" "$(dirname "$ee_mark")"
+	cp --update=none "$ROOT"/session/defaults/easyeffects/*.json "$ee_presets/"
+	cp --update=none "$ROOT/session/defaults/easyeffects/easyeffects-service.desktop" "$HOME/.config/autostart/"
+	(sleep 8; flatpak run "$ee_app" -l "Clean Mic" >/dev/null 2>&1) &
+	touch "$ee_mark"
+fi
+
 # Ultimit's own apps (DATA, ...) as desktop entries, so xdg-open and other
 # apps' "open folder" find them. Exec gets this checkout's absolute path.
 mkdir -p "$HOME/.local/share/applications"

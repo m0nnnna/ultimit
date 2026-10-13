@@ -5,3 +5,5 @@ com.vysp3r.ProtonPlus
 # Streaming; the plugin replaces NVIDIA Broadcast's background blur/replace
 com.obsproject.Studio
 com.obsproject.Studio.Plugin.BackgroundRemoval
+# Clean mic (RNNoise, Deep Noise Remover)
+com.github.wwmm.easyeffects

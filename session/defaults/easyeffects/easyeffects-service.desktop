@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Easy Effects
+Comment=Clean mic: noise removal for every app (Ultimit)
+Exec=flatpak run com.github.wwmm.easyeffects -w
+Icon=com.github.wwmm.easyeffects
+Type=Application
+TryExec=flatpak
+X-GNOME-Autostart-enabled=true

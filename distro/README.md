@@ -8,6 +8,7 @@ top of Ubuntu 26.04 LTS. Keep them in step with what this dev machine runs.
   for the autoremove protection)
 - `debs.txt`: .debs from outside Ubuntu's archive (umu-launcher), pinned by
   sha256
+- `system/`: config files installed as-is under / (mirrors the tree)
 - `flatpaks.txt`: Flathub apps installed system-wide
 - `snaps-remove.txt`: snaps Ubuntu preinstalls that Ultimit removes
 

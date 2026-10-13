@@ -85,6 +85,11 @@ if [ ${#missing_flatpak[@]} -gt 0 ]; then
 	sudo flatpak install -y --noninteractive flathub "${missing_flatpak[@]}"
 fi
 
+# System config files (distro/system mirrors /), e.g. the virtual camera.
+for f in $(cd "$ROOT/distro/system" && find . -type f); do
+	cmp -s "$ROOT/distro/system/$f" "/$f" || sudo install -D -m 644 "$ROOT/distro/system/$f" "/$f"
+done
+
 if ! $have_dxvk; then
 	sudo "$ROOT/scripts/get-dxvk.sh" /opt/ultimit/dxvk
 fi

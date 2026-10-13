@@ -36,8 +36,7 @@ unattended-upgrades
 deluge-gtk
 python3-libtorrent
 fastfetch
-# Streaming: clean-mic filters (RNNoise, echo cancel) and the virtual camera
-easyeffects
+# Streaming: the virtual camera (EasyEffects is the Flatpak: Ubuntu's lacks RNNoise)
 v4l2loopback-dkms
 # Gaming (needs: dpkg --add-architecture i386)
 wine
