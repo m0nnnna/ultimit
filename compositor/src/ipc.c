@@ -83,6 +83,13 @@ static void write_state(struct ul_server *server, struct out *o) {
 		put_box(o, (struct wlr_box){ view->x - UL_BORDER, view->y - bar - UL_BORDER,
 			view->width + 2 * UL_BORDER, view->height + bar + 2 * UL_BORDER });
 		put(o, ",\"tree\":{\"x\":%d,\"y\":%d}", view->tree->node.x, view->tree->node.y);
+		/* Where the shell's rail shows this window (null until the shell said). */
+		put(o, ",\"rail\":");
+		if (view->has_rail_rect) {
+			put_box(o, view->rail_rect);
+		} else {
+			put(o, "null");
+		}
 		/* Titlebar buttons (minimize, maximize, close) as layout boxes. */
 		put(o, ",\"buttons\":[");
 		for (int i = 0; view->ssd && i < 3; i++) {

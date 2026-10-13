@@ -25,20 +25,19 @@ scenario_popup_on_screen() {
 	keys -k Escape
 }
 
-# The rail's WINDOWS list: one 44px entry per toplevel, oldest first, below the
-# six app buttons (GAMES..ACCESSORY end ~y=460, the "WINDOWS" heading sits at
-# y~485, so the first entry's centre is at about x=41,y=518 on a 720px-high
-# output). Only ~1 entry fits above the vertical version text; the rest scroll.
-RAIL_FIRST_ENTRY_X=41
-RAIL_FIRST_ENTRY_Y=518
-
+# The rail's WINDOWS list: one entry per toplevel, oldest first. The shell reports where each
+# entry is (windows[].rail in ultimitctl state), so the click doesn't depend on how many apps
+# are pinned above the list.
 scenario_rail_window_list() {
 	open_app gtk Probe $PROBE || return; local a=$WID
 	open_app gtk Probe $PROBE || return; local b=$WID
 	sleep 1 # rail entry add-transition
 	grim -g "0,0 84x720" "$OUTDIR/rail_window_list__rail.png"
 	assert_json "W($b)['focused']" "newest window focused before the click"
-	click "$RAIL_FIRST_ENTRY_X" "$RAIL_FIRST_ENTRY_Y"
+	assert_soon "W($a)['rail'] is not None" "the shell reported the oldest window's rail entry"
+	local rx ry
+	read -r rx ry < <(sj "(lambda r: '%d %d' % (r['x'] + r['width'] // 2, r['y'] + r['height'] // 2))(W($a)['rail'])")
+	click "$rx" "$ry"
 	assert_soon "W($a)['focused'] and not W($b)['focused']" "clicking the first WINDOWS entry focuses the oldest window"
 	ptr_to 600 300
 	snap
