@@ -69,17 +69,7 @@ Item {
             property string appId: modelData.appId || ""
             property string title: modelData.title || ""
             readonly property var de: appId !== "" ? DesktopEntries.heuristicLookup(appId) : null
-            // Ultimit's own windows all report appId "org.quickshell"; tell them apart by title.
-            readonly property string ownIcon: {
-                if (appId !== "org.quickshell") return "";
-                const t = title;
-                if (t === "DATA") return "ultimit-data";
-                if (t === "CALC") return "ultimit-calc";
-                if (t === Config.accessoryTitle) return "ultimit-settings";
-                if (t === "Games") return "ultimit-games";
-                if (t.endsWith("\u2014 MEMO")) return "ultimit-memo";   // "<name> - MEMO" (em dash)
-                return "";
-            }
+            readonly property string ownIcon: Icons.windowIcon(appId, title)
             readonly property string iconName: ownIcon !== "" ? ownIcon : (de && de.icon ? de.icon : appId)
             // Skin-aware (Icons.qml): follows the current skin live, falls back to the startup icon theme.
             readonly property string iconSrc: iconName !== "" ? Icons.path(iconName) : ""

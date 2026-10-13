@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<components version="0.8" origin="flathub">
+  <component type="desktop-application">
+    <id>org.gimp.GIMP</id>
+    <name>GNU Image Manipulation Program</name>
+    <name xml:lang="de">GIMP</name>
+    <summary>High-end image creation and manipulation</summary>
+    <description><p>GIMP is a photo retouching program.</p><ul><li>Layers</li><li>Brushes</li></ul></description>
+    <developer><name xml:lang="be">Каманда GIMP</name><name>The GIMP team</name></developer>
+    <project_license>GPL-3.0+</project_license>
+    <categories><category>Graphics</category></categories>
+    <keywords><keyword>paint</keyword><keyword xml:lang="de">malen</keyword></keywords>
+    <icon type="cached" width="128" height="128">org.gimp.GIMP.png</icon>
+    <url type="homepage">https://www.gimp.org/</url>
+    <screenshots><screenshot><image type="source">https://example.org/gimp.png</image></screenshot></screenshots>
+    <custom><value key="flathub::verification::verified">true</value></custom>
+    <releases><release version="3.2.6"/></releases>
+    <bundle type="flatpak">app/org.gimp.GIMP/x86_64/stable</bundle>
+  </component>
+  <component type="desktop-application">
+    <id>com.discordapp.Discord.desktop</id>
+    <name>Discord</name>
+    <summary>Talk, play, hang out</summary>
+    <developer_name>Discord Inc.</developer_name>
+    <categories><category>Network</category><category>Chat</category></categories>
+    <keywords><keyword>voice</keyword><keyword>chat</keyword></keywords>
+  </component>
+  <component type="desktop-application">
+    <id>org.example.Old</id>
+    <name>Old Thing</name>
+    <summary>End of life</summary>
+    <custom><value key="flathub::build::eol">replaced</value></custom>
+  </component>
+  <component type="runtime">
+    <id>org.freedesktop.Platform</id>
+    <name>Freedesktop Platform</name>
+  </component>
+</components>

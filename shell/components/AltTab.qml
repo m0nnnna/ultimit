@@ -35,17 +35,6 @@ PanelWindow {
     implicitWidth: cols * tileW + (cols - 1) * gap + 2 * pad
     implicitHeight: 34 + rows * tileH + (rows - 1) * gap + 2 * pad + 30
 
-    // Ultimit's own windows all report appId "org.quickshell"; tell them apart by title.
-    function ownIcon(appId, title) {
-        if (appId !== "org.quickshell") return "";
-        if (title === "DATA") return "ultimit-data";
-        if (title === "CALC") return "ultimit-calc";
-        if (title === Config.accessoryTitle) return "ultimit-settings";
-        if (title === "Games") return "ultimit-games";
-        if (title.endsWith("— MEMO")) return "ultimit-memo";
-        return "";
-    }
-
     Rectangle {
         id: box
         anchors.fill: parent
@@ -85,7 +74,7 @@ PanelWindow {
                     readonly property string appId: modelData.app_id || ""
                     readonly property string title: modelData.title || ""
                     readonly property var de: appId !== "" ? DesktopEntries.heuristicLookup(appId) : null
-                    readonly property string own: win.ownIcon(appId, title)
+                    readonly property string own: Icons.windowIcon(appId, title)
                     readonly property string iconName: own !== "" ? own : (de && de.icon ? de.icon : appId)
                     readonly property string iconSrc: iconName !== "" ? Icons.path(iconName) : ""
 

@@ -35,6 +35,18 @@ Singleton {
         const rel = name ? root.table[name] : undefined;
         return rel ? "file://" + root.base + "/" + rel : "";
     }
+    // Ultimit's own windows all report appId "org.quickshell"; tell them apart by title.
+    // Returns the icon name, or "" for any other window.
+    function windowIcon(appId, title) {
+        if (appId !== "org.quickshell") return "";
+        if (title === Config.accessoryTitle) return "ultimit-settings";
+        if (title === "Games") return "ultimit-games";
+        if (title.endsWith("\u2014 MEMO")) return "ultimit-memo";   // "<name> - MEMO" (em dash)
+        const own = { DATA: "ultimit-data", CALC: "ultimit-calc", SHARES: "ultimit-shares", FIREWALL: "ultimit-firewall",
+                      BROADCAST: "ultimit-broadcast", STORE: "ultimit-store" };
+        return own[title] || "";
+    }
+
     // Skin-aware lookup with fallback to the startup icon theme. "" when nothing resolves.
     function path(name) {
         if (!name) return "";

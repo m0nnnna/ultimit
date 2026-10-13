@@ -153,7 +153,11 @@ Singleton {
     }
     function launch(pin) {
         const e = entryFor(pin);
-        if (!e) { Toasts.show(pin.label, "Application not installed"); return false; }
+        if (!e) {   // uninstalled since it was pinned: offer it again in STORE
+            Toasts.show(pin.label, "Not installed any more. Opening STORE…");
+            Quickshell.execDetached([Quickshell.shellPath("bin/ultimit-store"), "--search", pin.name || pin.label]);
+            return false;
+        }
         e.execute();
         return true;
     }

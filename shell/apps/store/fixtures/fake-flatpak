@@ -1,0 +1,3 @@
+#!/bin/sh
+# fake `flatpak list --app --columns=...` for test_store.py: Discord is installed
+printf 'com.discordapp.Discord\tDiscord\t0.0.70\tflathub\t312.4 MB\n'

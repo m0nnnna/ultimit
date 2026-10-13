@@ -101,7 +101,8 @@ Singleton {
     //  label    - text under the icon
     //  tryCmds  - ordered candidates { bin, cmd, check? }; the first whose check passes
     //             (default: `command -v bin`) is used. Detected once at startup.
-    //  hint     - shown in the "not installed" toast: { what, install }
+    //  hint     - when nothing is installed: { what, store } toasts `what` and opens STORE on a
+    //             search for `store`
     //  appIds   - Wayland app_ids that count as "this app is open"
     //             (compared case-insensitively)
     //  own      - opens one of Ultimit's own windows (no external command needed)
@@ -116,16 +117,18 @@ Singleton {
               { bin: "nekomail", cmd: "$(command -v nekomail || echo \"$HOME/.local/bin/nekomail\")",
                 check: "command -v nekomail >/dev/null 2>&1 || [ -x \"$HOME/.local/bin/nekomail\" ]" },
               { bin: "thunderbird", cmd: "thunderbird" },
+              { bin: "flatpak", cmd: "flatpak run org.mozilla.thunderbird",
+                check: "flatpak info org.mozilla.thunderbird >/dev/null 2>&1" },
               { bin: "evolution",   cmd: "evolution" },
               { bin: "geary",       cmd: "geary" },
               { bin: "xdg-open", cmd: "xdg-open mailto:",
                 check: "command -v xdg-open >/dev/null && [ -n \"$(xdg-mime query default x-scheme-handler/mailto 2>/dev/null)\" ]" }
           ],
-          hint: { what: "No mail app installed", install: "sudo apt install thunderbird" },
+          hint: { what: "No mail app installed", store: "mail" },
           appIds: ["nekomail", "thunderbird", "org.mozilla.thunderbird", "org.gnome.evolution", "evolution", "geary", "org.gnome.geary"] },
         { id: "news",      label: "NEWS",
           tryCmds: [ { bin: "xdg-open", cmd: "xdg-open https://news.ycombinator.com" } ],
-          hint: { what: "No default browser launcher", install: "sudo apt install xdg-utils firefox" },
+          hint: { what: "No web browser installed", store: "web browser" },
           appIds: ["firefox", "org.mozilla.firefox", "google-chrome", "chromium", "brave-browser"] },
         { id: "audio",     label: "AUDIO",
           tryCmds: [
@@ -133,10 +136,13 @@ Singleton {
               { bin: "lollypop",   cmd: "lollypop" },
               { bin: "amberol",    cmd: "amberol" },
               { bin: "gnome-music", cmd: "gnome-music" },
+              { bin: "flatpak", cmd: "flatpak run io.bassi.Amberol", check: "flatpak info io.bassi.Amberol >/dev/null 2>&1" },
+              { bin: "flatpak", cmd: "flatpak run org.gnome.Rhythmbox3", check: "flatpak info org.gnome.Rhythmbox3 >/dev/null 2>&1" },
+              { bin: "flatpak", cmd: "flatpak run com.spotify.Client", check: "flatpak info com.spotify.Client >/dev/null 2>&1" },
               { bin: "gtk-launch", cmd: "gtk-launch \"$(xdg-mime query default audio/mpeg)\"",
                 check: "command -v gtk-launch >/dev/null && [ -n \"$(xdg-mime query default audio/mpeg 2>/dev/null)\" ]" }
           ],
-          hint: { what: "No music app installed", install: "sudo apt install rhythmbox" },
+          hint: { what: "No music app installed", store: "music player" },
           appIds: ["rhythmbox", "org.gnome.rhythmbox3", "spotify", "lollypop", "io.bassi.amberol", "org.gnome.music"] },
         { id: "data",      label: "DATA", own: true, appIds: [] },   // apps/data
         { id: "accessory", label: "ACCESSORY", own: true,
@@ -183,13 +189,21 @@ Singleton {
     function available(app) { return !detected || !!app.own || !!resolved[app.id]; }
     function appById(id) { for (const a of apps) if (a.id === id) return a; return null; }
 
-    // Run an app's resolved command, or toast the install hint.
+    // Run an app's resolved command, or say nothing is installed and open STORE on a search for one.
     function launchApp(app) {
         const cmd = commandFor(app.id);
         if (cmd) { Quickshell.execDetached(["sh", "-c", cmd]); return true; }
-        if (app.hint) Toasts.show(app.label, app.hint.what + " — try:", app.hint.install);
+        if (app.hint) {
+            Toasts.show(app.label, app.hint.what + ". Opening STORE…");
+            Quickshell.execDetached([Quickshell.shellPath("bin/ultimit-store"), "--search", app.hint.store]);
+        }
+        redetect();
         return false;
     }
+    // Probe again: something may have been installed since (STORE, apt). Also every minute, so the
+    // rail's NOT INSTALLED goes away on its own.
+    function redetect() { probe.running = false; probe.running = true; }
+    Timer { interval: 60000; repeat: true; running: true; onTriggered: root.redetect() }
     function openTerminal() {
         if (terminalCmd) Quickshell.execDetached(["sh", "-c", terminalCmd]);
         else Toasts.show("Terminal", "No terminal installed — try:", "sudo apt install foot");
@@ -197,6 +211,7 @@ Singleton {
 
     // One shell run probes every candidate; output lines are "<id> <index>" / "term <index>".
     Process {
+        id: probe
         running: true
         command: ["sh", "-c", root.probeScript()]
         stdout: StdioCollector {

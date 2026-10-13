@@ -275,6 +275,10 @@ add("apps", "ultimit-shares",
 add("apps", "ultimit-broadcast",
     P(cp(18, 6, 12, 20, 4, ("tl", "br")), A, "fill"), S("M12 21V27L18 33H30L36 27V21"),
     S("M24 33V40M17 40H31"), S("M21 12H27M21 16H27M21 20H27", F), SOL("M38 8h4v4h-4z", A), SOL("M6 8h4v4H6z", F))
+add("apps", "ultimit-store",
+    # a shopping bag with chamfered corners, a download arrow on it
+    P("M9 15H39L37 41H11Z", A, "fill"), S("M17 15V11L20 8H28L31 11V15", A),
+    S("M24 21V33M19 28L24 33L29 28", F), SOL("M6 8h4v4H6z", A))
 add("apps", "ultimit-firewall",
     P("M24 5L40 11V24L24 43L8 24V11Z", A, "fill"), S("M8 24H40M16 15V24M32 15V24M24 24V34", F),
     S("M8 15H40", A))

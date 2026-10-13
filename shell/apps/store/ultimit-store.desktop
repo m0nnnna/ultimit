@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=STORE
+GenericName=App Store
+Comment=Find and install apps from Flathub
+Exec=ultimit-store
+Icon=ultimit-store
+Terminal=false
+Categories=System;PackageManager;
+Keywords=apps;install;software;flathub;flatpak;store;

@@ -1,0 +1,7 @@
+singleton Store 1.0 Store.qml
+StoreApp 1.0 StoreApp.qml
+StoreWindow 1.0 StoreWindow.qml
+AppCard 1.0 AppCard.qml
+AppIcon 1.0 AppIcon.qml
+AppPage 1.0 AppPage.qml
+InstalledPage 1.0 InstalledPage.qml
