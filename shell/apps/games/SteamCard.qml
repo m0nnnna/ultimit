@@ -1,5 +1,5 @@
 // SteamCard.qml - Steam status / tip card.
-//   mode "missing": steam-installer not installed -> install hint
+//   mode "missing": steam-installer not installed -> "Install Steam" (a terminal: licence) + the command
 //   mode "setup":   installed, never run          -> "Set up Steam" (runs `steam`)
 //   mode "tip":     recommended Steam settings (text only)
 import QtQuick
@@ -34,16 +34,17 @@ Rectangle {
             color: Theme.dim
             font.family: Theme.ui; font.pixelSize: 12
             text: root.mode === "missing"
-                ? "Steam isn't installed. Ultimit lists its games here once it is. Install it from a terminal, then rescan."
+                ? "Steam isn't installed. Install it here: a terminal opens for your password and Valve's licence. Ultimit lists its games once it is."
                 : root.mode === "setup"
                 ? "Steam is installed but has never been run. The first start downloads its client and asks you to sign in."
                 : "Recommended: enable Proton Experimental for all titles. Steam > Settings > Compatibility > Enable Steam Play for all other titles, then pick Proton Experimental."
         }
         CopyText { visible: root.mode === "missing"; width: parent.width; text: Games.installCommand }
         Row {
-            visible: root.mode === "setup" || (root.mode === "missing" && !root.compact)
+            visible: root.mode === "setup" || root.mode === "missing"
             spacing: 10
             GButton { visible: root.mode === "setup"; primary: true; text: "Set up Steam"; onClicked: Games.setupSteam() }
+            GButton { visible: root.mode === "missing"; primary: true; text: "Install Steam"; onClicked: Games.installSteam() }
             GButton { visible: !root.compact; text: "Rescan"; onClicked: Games.rescan() }
         }
     }
