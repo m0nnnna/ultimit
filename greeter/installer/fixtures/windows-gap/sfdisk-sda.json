@@ -1,0 +1,1 @@
+{"partitiontable": {"label": "gpt", "sectorsize": 512, "firstlba": 2048, "lastlba": 3907029134, "partitions": [{"start": 2048, "size": 3907026944}]}}

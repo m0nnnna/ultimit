@@ -1,0 +1,31 @@
+# What the Ultimit installer screen (installer/) needs in the ISO's live system on top of what
+# Ubuntu's server installer already has. scripts/build-iso.sh adds these (and what they depend
+# on) to the ISO, plus the libraries the Ultimit release's binaries link to
+# (distro/packages-runtime.txt).
+# Graphics: Mesa's EGL/GBM and its drivers (also software rendering for any screen)
+libegl-mesa0
+libgbm1
+libgl1-mesa-dri
+# The screen runs the Ultimit compositor as root: seatd hands it the display and input
+seatd
+libinput-bin
+# Quickshell's Qt pieces
+qt6-wayland
+qt6-svg-plugins
+qml6-module-qtqml
+qml6-module-qtqml-workerscript
+qml6-module-qtquick
+qml6-module-qtquick-controls
+qml6-module-qtquick-templates
+qml6-module-qtquick-layouts
+qml6-module-qtquick-shapes
+qml6-module-qtquick-window
+qml6-module-qtquick-effects
+qml6-module-qtcore
+# Text (the Ultimit fonts come with the release; this is the fallback for everything else)
+fontconfig
+fonts-dejavu-core
+# Wi-Fi when there is no cable
+wpasupplicant
+iw
+wireless-regdb

@@ -1,0 +1,12 @@
+{"blockdevices": [
+ {"name": "nvme0n1", "path": "/dev/nvme0n1", "size": 1000204886016, "model": "Samsung SSD 980 PRO 1TB", "type": "disk", "tran": "nvme", "rm": false, "ro": false,
+  "children": [
+   {"name": "nvme0n1p1", "path": "/dev/nvme0n1p1", "size": 104857600, "fstype": "vfat", "parttypename": "EFI System", "type": "part"},
+   {"name": "nvme0n1p2", "path": "/dev/nvme0n1p2", "size": 16777216, "fstype": null, "parttypename": "Microsoft reserved", "type": "part"},
+   {"name": "nvme0n1p3", "path": "/dev/nvme0n1p3", "size": 850000000000, "fstype": "ntfs", "parttypename": "Microsoft basic data", "label": "Windows", "type": "part"},
+   {"name": "nvme0n1p4", "path": "/dev/nvme0n1p4", "size": 681574400, "fstype": "ntfs", "parttypename": "Windows recovery environment", "type": "part"}]},
+ {"name": "sda", "path": "/dev/sda", "size": 2000398934016, "model": "WDC WD20EZBX", "type": "disk", "tran": "sata", "rm": false, "ro": false,
+  "children": [{"name": "sda1", "path": "/dev/sda1", "size": 2000397795328, "fstype": "ntfs", "parttypename": "Microsoft basic data", "label": "Games", "type": "part"}]},
+ {"name": "sdb", "path": "/dev/sdb", "size": 30752636928, "model": "SanDisk Ultra", "type": "disk", "tran": "usb", "rm": true, "ro": false,
+  "children": [{"name": "sdb1", "path": "/dev/sdb1", "size": 3025797120, "fstype": "iso9660", "type": "part"}]}
+]}

@@ -32,10 +32,17 @@ desktop shell, not a theme on top of another desktop.
 
 ## Install
 
-- **A new PC:** the Ultimit ISO is Ubuntu 26.04's server installer set up to install Ultimit
-  (no desktop to remove, the NVIDIA driver when needed). Build it with
+- **A new PC:** the Ultimit ISO. Boot it from a USB stick, and the Ultimit installer asks a few
+  plain questions (Wi-Fi, which drive, your name and password) and installs Ubuntu 26.04 with
+  Ultimit: no desktop to remove, the NVIDIA driver when needed. Build it with
   `scripts/build-iso.sh` from a [release](https://github.com/m0nnnna/ultimit/releases); see
   [`docs/iso.md`](docs/iso.md).
+
+> **Keeping Windows? Shrink it in Windows first.** The installer puts Ultimit in free space
+> next to Windows and never resizes Windows itself. Before booting the USB stick: Windows' Disk
+> Management › right-click **(C:)** › **Shrink Volume** by 50 GB or more, leave the space
+> unallocated, and turn off Fast Startup. Details: [`docs/iso.md`](docs/iso.md#keeping-windows-dual-boot-shrink-windows-first).
+
 - **An existing Ubuntu 26.04:** clone this repository and run `scripts/install.sh`. It builds
   Ultimit into `/opt/ultimit` for every user and replaces GNOME (`--keep-gnome` keeps it); see
   [`docs/install.md`](docs/install.md).

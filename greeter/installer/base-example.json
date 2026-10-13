@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "source": {"id": "ubuntu-server-minimal"},
+  "drivers": {"install": true},
+  "codecs": {"install": true},
+  "updates": "security",
+  "shutdown": "reboot",
+  "late-commands": ["echo (scripts/build-iso.sh writes the real base.json on the ISO)"]
+}
