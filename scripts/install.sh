@@ -88,7 +88,7 @@ if ! $YES; then
 	read -r -p "Go ahead? [Y/n] " a
 	case "$a" in n | N) exit 1 ;; esac
 fi
-sudo -v || die "sudo is needed"
+sudo true || die "sudo is needed"
 # keep sudo alive for the long builds
 ( while true; do sudo -n true 2>/dev/null; sleep 50; kill -0 $$ 2>/dev/null || exit; done ) &
 SUDO_KEEPALIVE=$!
