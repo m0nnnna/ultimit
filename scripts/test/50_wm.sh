@@ -282,7 +282,7 @@ import json, sys
 k = json.load(open(sys.argv[1]))["bindings"]
 by = {b["keys"]: b for b in k}
 need = ["Alt+Tab", "Super+Tab", "Super+Left", "Super+Right", "Super+Up", "Super+Down", "Super+D", "Super+E",
-        "Super+R", "Super+L", "Super+Shift+S", "Print", "Ctrl+Alt+T", "Alt+F4", "AudioRaiseVolume"]
+        "Super+R", "Super+L", "Super+Shift+S", "PrtSc", "Ctrl+Alt+T", "Alt+F4", "Volume up key", "Super+V", "Super+/", "Super+Shift+R", "Super+Alt+R"]
 missing = [n for n in need if n not in by]
 print(missing)
 sys.exit(1 if missing else 0)
