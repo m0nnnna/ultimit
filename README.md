@@ -8,7 +8,16 @@ console line drawing itself.
 Ultimit is built on Ubuntu 26.04 LTS. It is its own Wayland compositor and
 desktop shell, not a theme on top of another desktop.
 
-> Status: early development. Nothing here is usable as a daily desktop yet.
+> Status: 0.1, early. It runs as a daily desktop on the developer's machines; expect rough
+> edges, and send a report (Settings › About › Save a report) when you hit one.
+
+![The Ultimit desktop: the icon rail, crystal-shard wallpaper, clock and status tray](docs/screenshots/desktop.jpg)
+
+| | |
+|---|---|
+| ![Games: the library, with Steam and Proton titles](docs/screenshots/games.jpg) | ![Store: Flathub apps, with a calculator beside it](docs/screenshots/windows.jpg) |
+| ![Settings › Appearance: skins, wallpaper, rail icons](docs/screenshots/settings.jpg) | ![Quick settings: Wi-Fi, Bluetooth, sound, brightness, power](docs/screenshots/quicksettings.jpg) |
+| ![The launcher](docs/screenshots/launcher.jpg) | ![The login screen](docs/screenshots/login.jpg) |
 
 ## Goals
 
@@ -18,13 +27,24 @@ desktop shell, not a theme on top of another desktop.
 2. **It looks like nothing else.** The approved design lives in
    [`docs/design/mockup.html`](docs/design/mockup.html). Open it in a browser
    and click around; it is the reference for every screen.
-3. **It installs on plain Ubuntu.** Ultimit ships as packages first and as an
-   ISO later, so it stays a thin layer over a well-supported base.
+3. **It installs on plain Ubuntu.** Ultimit is a thin layer over a well-supported
+   base: Ubuntu's own packages and updates, plus Ultimit in `/opt/ultimit`.
 
 ## Install
 
-On Ubuntu 26.04: clone (or copy) this repository, then run `scripts/install.sh`.
-Everything goes to `/opt/ultimit` for every user; see [`docs/install.md`](docs/install.md).
+- **A new PC:** the Ultimit ISO is Ubuntu 26.04's server installer set up to install Ultimit
+  (no desktop to remove, the NVIDIA driver when needed). Build it with
+  `scripts/build-iso.sh` from a [release](https://github.com/m0nnnna/ultimit/releases); see
+  [`docs/iso.md`](docs/iso.md).
+- **An existing Ubuntu 26.04:** clone this repository and run `scripts/install.sh`. It builds
+  Ultimit into `/opt/ultimit` for every user and replaces GNOME (`--keep-gnome` keeps it); see
+  [`docs/install.md`](docs/install.md).
+
+## Updates
+
+Ubuntu's packages update the Ubuntu way. Ultimit updates from this repository's
+[releases](https://github.com/m0nnnna/ultimit/releases): the desktop says when a new one is
+out, and Settings › Updates installs it. See [`docs/updates.md`](docs/updates.md).
 
 ## Layout
 
