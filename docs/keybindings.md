@@ -2,8 +2,8 @@
 
 All compositor keybindings live in one table: `compositor/src/keys.c` (`bindings[]`).
 Edit it to add or change a shortcut; `ultimitctl keys` prints it as JSON (for a cheat sheet),
-and this page is generated from that output. "Gesture" rows are documentation only; their
-behaviour is implemented elsewhere (input.c, alttab.c).
+and this page is generated from that output (`scripts/gen-keybindings.py`). "Gesture" rows are
+documentation only; their behaviour is implemented elsewhere (input.c, alttab.c).
 
 
 ## Windows
@@ -35,6 +35,7 @@ behaviour is implemented elsewhere (input.c, alttab.c).
 | Ctrl+Alt+T | Open a terminal |
 | Super+E | Open DATA (files) |
 | Super+R | Open the launcher |
+| Super+V | Clipboard history (Enter pastes, P pins) |
 | Super (tap) | Open the launcher when Super is tapped on its own |
 
 ## Session

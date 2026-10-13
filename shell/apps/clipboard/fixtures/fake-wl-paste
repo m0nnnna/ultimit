@@ -1,0 +1,6 @@
+#!/bin/sh
+# fake wl-paste for test_clip.py: offers what $CLIP_FAKE_TYPES / $CLIP_FAKE_DATA say
+case "$1" in
+--list-types) printf '%s\n' $CLIP_FAKE_TYPES ;;
+*) printf '%s' "$CLIP_FAKE_DATA" ;;
+esac

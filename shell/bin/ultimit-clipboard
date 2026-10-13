@@ -1,0 +1,3 @@
+#!/bin/sh
+# ultimit-clipboard - show / hide the clipboard history panel (Super+V).
+exec qs -p "${ULTIMIT_SHELL_DIR:-$(dirname "$(dirname "$(readlink -f "$0")")")}" ipc call clipboard toggle

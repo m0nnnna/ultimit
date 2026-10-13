@@ -11,6 +11,7 @@ import "apps/data"
 import "apps/calc"
 import "apps/polkit"
 import "apps/agents"
+import "apps/clipboard"
 
 ShellRoot {
     Persist { id: persist }                              // ~/.config/ultimit/shell.json
@@ -73,6 +74,7 @@ ShellRoot {
             Flyout      { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, tray icon flyouts
             AltTab      { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, Alt+Tab window switcher (compositor-driven)
             QuickSettings { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, status-block popover
+            ClipboardPanel { screen: scope.modelData; screenName: scope.modelData.name }  // overlay, Super+V clipboard history
         }
     }
 }

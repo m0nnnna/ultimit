@@ -102,6 +102,8 @@ static const struct binding bindings[] = {
 	{ SUPER, XKB_KEY_e, 0, ACT_SPAWN, "ultimit-data", NULL, "Apps", "data",
 		"Open DATA (files)", 0 },
 	{ SUPER, XKB_KEY_r, 0, ACT_LAUNCHER, NULL, NULL, "Apps", "launcher", "Open the launcher", 0 },
+	{ SUPER, XKB_KEY_v, 0, ACT_SPAWN, "ultimit-clipboard", NULL, "Apps", "clipboard",
+		"Clipboard history (Enter pastes, P pins)", 0 },
 	{ SUPER, XKB_KEY_Super_L, 0, ACT_NONE, NULL, "Super (tap)", "Apps", "launcher-tap",
 		"Open the launcher when Super is tapped on its own", KB_DOC },
 	{ SUPER, XKB_KEY_l, 0, ACT_LOCK, NULL, NULL, "Session", "lock", "Lock the screen", 0 },

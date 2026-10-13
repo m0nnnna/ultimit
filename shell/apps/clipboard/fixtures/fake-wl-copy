@@ -1,0 +1,3 @@
+#!/bin/sh
+# fake wl-copy for test_clip.py: records what would go on the clipboard
+cat > "$CLIP_DIR/copied"; echo "$*" > "$CLIP_DIR/copied-args"
