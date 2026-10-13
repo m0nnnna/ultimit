@@ -10,8 +10,9 @@ and the shell answers with one JSON line on the unix socket
     $XDG_RUNTIME_DIR/ultimit-agents.sock     {"id": "...", "ok": true, "values": {...}}
 Typed secrets only travel over that socket: never argv, env, files or logs.
 
-Single instance: the daemon owns org.ultimit.Agents on the *session* bus and exits when
-that bus goes away.  Environment (all optional, mostly for tests):
+Single instance: the daemon owns org.ultimit.Agents on the *session* bus. A newer one (the
+next login: the user bus outlives sessions) takes the name over and the old one steps down,
+so prompts always go to the current session's shell. It also exits when that bus goes away.  Environment (all optional, mostly for tests):
   ULTIMIT_AGENTS_BUS      address of the bus where org.bluez / NetworkManager live
                           (default: the real system bus)
   ULTIMIT_AGENTS_SOCK     reply socket path
@@ -178,6 +179,7 @@ def start_socket():
     addr = Gio.UnixSocketAddress.new(SOCK_PATH)
     svc.add_address(addr, Gio.SocketType.STREAM, Gio.SocketProtocol.DEFAULT, None)
     os.chmod(SOCK_PATH, 0o600)
+    state["sock_ino"] = os.stat(SOCK_PATH).st_ino
 
     def incoming(_svc, conn, _src):
         try:
@@ -615,14 +617,20 @@ def start_agents():
     keep.append(NM(conn))
 
 
+def unlink_own_socket():
+    """Remove the reply socket unless a newer instance has put its own there."""
+    try:
+        if os.stat(SOCK_PATH).st_ino == state.get("sock_ino"):
+            os.unlink(SOCK_PATH)
+    except OSError:
+        pass
+
+
 def shutdown(*_):
     for a in keep:
         if hasattr(a, "unregister_sync"):
             a.unregister_sync()
-    try:
-        os.unlink(SOCK_PATH)
-    except OSError:
-        pass
+    unlink_own_socket()
     quit_loop(0)
     return False
 
@@ -641,19 +649,19 @@ def main():
 
     def lost(conn, name):
         if not state["acquired"]:
-            log("already running (%s is owned)" % BUS_NAME)
+            log("%s is owned and won't be handed over" % BUS_NAME)
             quit_loop(1)
         else:
-            quit_loop(0)
-    Gio.bus_own_name_on_connection(session, BUS_NAME, Gio.BusNameOwnerFlags.DO_NOT_QUEUE,
-                                   acquired, lost)
+            log("replaced by a newer instance")
+            shutdown()
+    Gio.bus_own_name_on_connection(
+        session, BUS_NAME,
+        Gio.BusNameOwnerFlags.DO_NOT_QUEUE | Gio.BusNameOwnerFlags.ALLOW_REPLACEMENT | Gio.BusNameOwnerFlags.REPLACE,
+        acquired, lost)
     for sig in (signal.SIGTERM, signal.SIGINT):
         GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, sig, shutdown)
     loop.run()
-    try:
-        os.unlink(SOCK_PATH)
-    except OSError:
-        pass
+    unlink_own_socket()
     return exit_code[0]
 
 

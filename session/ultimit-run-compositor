@@ -8,7 +8,8 @@
 #   - LOG_DIR/last-crash says what happened (JSON); the shell shows it on its next start
 #   - if it had been up for 20 s or more, it starts again right away, without the login screen
 #     (open apps are lost either way); 3 crashes within 10 minutes end the login instead.
-# A clean exit or a logout (SIGTERM, which ends this script too) is not a crash.
+# A clean exit or a logout (SIGTERM/SIGHUP) is not a crash; either way the whole login session is
+# ended, so nothing it started (tray applets, helpers) lingers and holds it open as "closing".
 # Core dumps (apport keeps them in /var/lib/apport/coredump/) are on for the compositor only, max 512 MB.
 BIN=$1 STARTUP=$2 LOG_DIR=$3
 CRASH_DIR="$LOG_DIR/crashes"
@@ -16,6 +17,14 @@ PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/ultimit-session.pid"
 MIN_UP=${ULTIMIT_CRASH_MIN_UP:-20}
 mkdir -p "$LOG_DIR"
 recent=""
+pid=""
+
+end_session() {
+	[ -n "$XDG_SESSION_ID" ] && loginctl terminate-session "$XDG_SESSION_ID" 2>/dev/null
+	exit "${1:-0}"
+}
+# Logout/greetd restart: let the compositor shut down cleanly first, then end the session.
+trap '[ -n "$pid" ] && kill -TERM "$pid" 2>/dev/null && wait "$pid"; end_session 0' TERM HUP INT
 while :; do
 	started=$(date +%s)
 	(ulimit -c 524288 2>/dev/null; exec "$BIN" -s "$STARTUP") >"$LOG_DIR/session.log" 2>&1 &
@@ -25,7 +34,7 @@ while :; do
 	wait "$pid"
 	status=$?
 	case $status in
-		0 | 129 | 130 | 143) exit 0 ;;
+		0 | 129 | 130 | 143) end_session 0 ;;
 	esac
 	now=$(date +%s)
 	up=$((now - started))
@@ -40,7 +49,7 @@ while :; do
 	if [ "$up" -lt "$MIN_UP" ] || [ "$(echo $recent | wc -w)" -ge 3 ]; then restart=false; fi
 	printf '{"time":%s,"what":"%s","uptime":%s,"report":"%s","restarted":%s}\n' \
 		"$now" "$what" "$up" "$report" "$restart" >"$LOG_DIR/last-crash"
-	$restart || exit 1
+	$restart || end_session 1
 	mv "$LOG_DIR/session.log" "$LOG_DIR/session.log.old"
 	sleep 1
 done
