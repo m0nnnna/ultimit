@@ -76,6 +76,10 @@ step "Installing the packages the desktop needs (apt)"
 dpkg --configure -a   # finish anything an earlier run left half-done
 apt-get update -q
 mapfile -t pkgs < <(list "$PREFIX/distro/packages-core.txt")
+# A precompiled release also lists the libraries its binaries link to (scripts/release-deps.sh)
+if [ -f "$PREFIX/distro/packages-runtime.txt" ]; then
+	mapfile -t -O ${#pkgs[@]} pkgs < <(list "$PREFIX/distro/packages-runtime.txt")
+fi
 apt-get install -y -q "${pkgs[@]}"
 
 # ------------------------------------------------------------------------------------ system
@@ -178,7 +182,8 @@ for f in bin/ultimit bin/qs bin/oo7-daemon libexec/oo7-daemon-login session/ulti
 	[ -e "$PREFIX/$f" ] || { warn "missing $PREFIX/$f"; fail=1; }
 done
 for b in ultimit qs; do
-	[ "$(ldd "$PREFIX/bin/$b" | grep -c "not found")" = 0 ] || { warn "$b is missing a library"; fail=1; }
+	gone=$(ldd "$PREFIX/bin/$b" | awk '/not found/ {print $1}' | tr '\n' ' ')
+	[ -z "$gone" ] || { warn "$b is missing libraries: $gone"; fail=1; }
 done
 "$PREFIX/bin/qs" --version >/dev/null 2>&1 || { warn "Quickshell doesn't start"; fail=1; }
 # (no "fc-list | grep -q": with pipefail, grep quitting early makes fc-list fail with SIGPIPE)
