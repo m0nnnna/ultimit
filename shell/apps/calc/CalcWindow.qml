@@ -59,8 +59,7 @@ FloatingWindow {
 
             RowLayout {
                 Layout.fillWidth: true; spacing: 6
-                SectionLabel { text: "Calc" }
-                Item { Layout.fillWidth: true }
+                Item { Layout.fillWidth: true } // the name is in the titlebar
                 CalcKey { Layout.preferredWidth: 58; implicitHeight: 30; kind: "fn"; text: Calc.deg ? "DEG" : "RAD"; on: false; onClicked: Calc.deg = !Calc.deg }
                 CalcKey { Layout.preferredWidth: 58; implicitHeight: 30; kind: "fn"; text: "SCI"; on: Calc.sci; onClicked: Calc.sci = !Calc.sci }
             }

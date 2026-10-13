@@ -68,10 +68,6 @@ Scope {
                 Column {
                     x: 0; y: 14; width: parent.width - 1
                     spacing: 0
-                    Item {
-                        width: parent.width; height: 34
-                        SectionLabel { x: 18; anchors.verticalCenter: parent.verticalCenter; text: "Settings" }
-                    }
                     Repeater {
                         model: root.pages
                         delegate: Item {

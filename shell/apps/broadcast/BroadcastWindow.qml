@@ -24,16 +24,13 @@ FloatingWindow {
         // ---------------- header ----------------
         Item {
             id: header
-            x: 20; y: 16
+            // The window title itself is in the compositor's titlebar.
+            x: 20; y: 10
             width: parent.width - 40
-            height: 44
-            Rectangle { id: sq; width: 8; height: 8; anchors.verticalCenter: parent.verticalCenter; color: Theme.accent }
-            Text {
-                id: ttl
-                anchors { left: sq.right; leftMargin: 10; verticalCenter: parent.verticalCenter }
-                text: "BROADCAST"
-                color: Theme.fg
-                font.family: Theme.display; font.pixelSize: 20; font.letterSpacing: 2
+            height: 36
+            GLabel {
+                anchors { left: parent.left; verticalCenter: parent.verticalCenter }
+                text: "Mic, speakers and camera"
             }
             Row {
                 anchors { right: parent.right; verticalCenter: parent.verticalCenter }
