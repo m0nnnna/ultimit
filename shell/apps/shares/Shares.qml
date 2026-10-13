@@ -195,8 +195,145 @@ Singleton {
     function uncPath(name) { return "\\\\" + host + "\\" + name; }
     function smbUrl(name) { return "smb://" + (addr ? addr.ip : host) + "/" + encodeURIComponent(name); }
 
+
+    // =====================================================================================================
+    // CONNECT: other computers' shares through gvfs (connect.py; no admin rights)
+    // =====================================================================================================
+    readonly property string connectHelper: Quickshell.shellPath("apps/shares/connect.py")
+    property string tab: "mine"             // mine | connect
+    property var caps: ({})                 // connect.py caps
+    property var servers: []                // [{name, host, address}]
+    property bool discovering: false
+    property bool discovered: false
+    property string discoverNote: ""
+    property var mounts: []                 // [{uri, name, path, scheme}]
+    property var saved: []                  // [{name, uri, user, domain, remember, reconnectAtLogin}]
+    property var browseServer: null         // {name, host} being browsed
+    property var browseShares: []
+    property bool browsing: false
+    property string browseError: ""
+    property var credReq: null              // {kind: "browse"|"connect", host, uri, name, user, domain, wrong}
+    property var connInfo: ({})             // uri -> {user, domain, remember} of connections made here (never a password)
+    property string connecting: ""          // uri / host being connected
+    property bool openAfter: false          // open the folder after the next successful connect (launcher / DATA driven)
+
+    function runC(args, input, cb) {
+        procC.createObject(root, { command: ["python3", root.connectHelper].concat(args), input: input || "", cb: cb });
+    }
+    function showConnect() { show(); tab = "connect"; refreshConnect(); if (!discovered) discover(); }
+    function refreshConnect() {
+        runC(["mounts"], "", o => { if (o.ok) mounts = o.mounts; });
+        runC(["saved"], "", o => { if (o.ok) saved = o.saved; });
+        if (!loadedCaps) { loadedCaps = true; runC(["caps"], "", o => { if (o.ok) caps = o.caps; }); }
+    }
+    property bool loadedCaps: false
+    Timer { interval: 5000; repeat: true; running: root.open && root.tab === "connect"; onTriggered: root.refreshConnect() }
+
+    function discover() {
+        if (discovering) return;
+        discovering = true; discoverNote = "";
+        runC(["discover"], "", o => {
+            discovering = false; discovered = true;
+            servers = (o.servers || []).filter(s => !s.self);
+            discoverNote = o.err || "";
+        });
+    }
+    function isMounted(uri) {
+        const k = uri.replace(/\/+$/, "").toLowerCase();
+        for (const m of mounts) if (m.uri.replace(/\/+$/, "").toLowerCase() === k) return true;
+        return false;
+    }
+    function isSaved(uri) {
+        const k = uri.replace(/\/+$/, "").toLowerCase();
+        for (const c of saved) if (c.uri.replace(/\/+$/, "").toLowerCase() === k) return true;
+        return false;
+    }
+    function browseHost(server) {
+        browseServer = server; browseShares = []; browseError = "";
+        doBrowse(server, null);
+    }
+    // creds: {user, domain, password, remember} or null. The password travels over stdin only.
+    function doBrowse(server, creds) {
+        browsing = true; browseError = "";
+        const a = ["browse", server.host];
+        if (creds) { a.push("--user", creds.user, "--domain", creds.domain, "--password-stdin"); }
+        runC(a, creds ? creds.password : "", o => {
+            browsing = false;
+            if (o.ok) { browseShares = o.shares; if (creds) hostCreds[server.host] = { user: creds.user, domain: creds.domain }; }
+            else if (o.code === "needs_password" || o.code === "denied") {
+                const h = hostCreds[server.host] || {};
+                credReq = { kind: "browse", host: server.host, name: server.name || server.host, user: (creds ? creds.user : h.user) || "",
+                            domain: (creds ? creds.domain : h.domain) || "", wrong: o.code === "denied" };
+                overlay = "creds";
+            } else browseError = o.error || "Could not list the shares.";
+        });
+    }
+    property var hostCreds: ({})
+    function connectShare(host, share) { connectAddress("smb://" + host + "/" + encodeURIComponent(share), false); }
+
+    // address: any form. openFolder: open the mounted folder afterwards.
+    function connectAddress(address, openFolder) {
+        showConnect();
+        openAfter = openFolder === true;
+        runC(["normalize", address], "", n => {
+            if (!n.ok) { say(n.error, "error"); return; }
+            if (n.kind === "server") { browseHost({ name: n.host, host: n.host }); return; }
+            if (n.kind === "share" || n.kind === "other") doConnect(n.uri, null, n.user ? { user: n.user, domain: n.domain } : null);
+        });
+    }
+    function doConnect(uri, creds, hint) {
+        if (connecting !== "") return;
+        connecting = uri;
+        say("Connecting\u2026");
+        const a = ["connect", uri];
+        const remember = !!(creds && creds.remember);
+        if (creds) { a.push("--user", creds.user, "--domain", creds.domain, "--password-stdin"); if (remember) a.push("--remember"); }
+        runC(a, creds ? creds.password : "", o => {
+            connecting = "";
+            if (o.ok) {
+                connInfo[o.uri] = { user: creds ? creds.user : "", domain: creds ? creds.domain : "", remember: remember && o.passwordSaved !== false };
+                say(o.note || ("Connected to " + o.name + "."), o.note ? "info" : "info");
+                refreshConnect();
+                if (openAfter) { openAfter = false; if (o.path) openFolder(o.path); }
+            } else if (o.code === "needs_password" || o.code === "denied") {
+                const p = hint || creds || {};
+                credReq = { kind: "connect", uri: uri, name: uri, user: p.user || "", domain: p.domain || "", wrong: o.code === "denied" };
+                overlay = "creds";
+                say("");
+            } else say(o.error || "Could not connect.", "error");
+        });
+    }
+    // The credentials dialog's answer (fields are cleared by the dialog right after this call).
+    function submitCreds(user, domain, pw, remember) {
+        const r = credReq; credReq = null;
+        if (!r) return;
+        const c = { user: user, domain: domain, password: pw, remember: remember };
+        if (r.kind === "browse") doBrowse({ name: r.name, host: r.host }, c);
+        else doConnect(r.uri, c, null);
+    }
+    function disconnect(uri) {
+        runC(["disconnect", uri], "", o => {
+            say(o.ok ? "Disconnected." : (o.error || "Could not disconnect."), o.ok ? "info" : "error");
+            refreshConnect();
+        });
+    }
+    function saveMount(m) {
+        const i = connInfo[m.uri] || {};
+        const a = ["save", m.uri, "--name", m.name];
+        if (i.user) a.push("--user", i.user);
+        if (i.domain) a.push("--domain", i.domain);
+        if (i.remember) a.push("--remember");
+        runC(a, "", o => { if (o.ok) { saved = o.saved; say("Saved \u201c" + m.name + "\u201d."); } else say(o.error, "error"); });
+    }
+    function unsave(uri) { runC(["unsave", uri], "", o => { if (o.ok) saved = o.saved; }); }
+    function setReconnect(uri, on) { runC(["set-reconnect", uri, on ? "on" : "off"], "", o => { if (o.ok) saved = o.saved; }); }
+    function connectSaved(c) {
+        doConnect(c.uri, null, c.user ? { user: c.user, domain: c.domain } : null);
+    }
+
     function dump() {
         return JSON.stringify({ loaded: loaded, open: open, overlay: overlay, busy: busy, note: note,
-            ready: canShare, host: host, shares: shares.map(s => s.name), steps: steps.map(s => s.id + ":" + s.state) });
+            ready: canShare, host: host, tab: tab, servers: servers.length, mounts: mounts.length, saved: saved.length,
+            browse: browseShares, credReq: credReq !== null, connecting: connecting, shares: shares.map(s => s.name), steps: steps.map(s => s.id + ":" + s.state) });
     }
 }

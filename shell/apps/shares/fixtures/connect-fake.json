@@ -1,0 +1,16 @@
+{
+ "servers": [
+  {"name": "FAMILY-NAS", "host": "family-nas.local", "address": "192.168.1.20", "source": "avahi", "self": false},
+  {"name": "Anna's MacBook", "host": "annas-macbook.local", "address": "192.168.1.31", "source": "avahi", "self": false},
+  {"name": "office-pc", "host": "192.168.1.55", "address": "192.168.1.55", "source": "avahi", "self": false}
+ ],
+ "hosts": {
+  "family-nas.local": {"auth": null, "shares": ["media", "backup", "photos", "public"]},
+  "192.168.1.20": {"auth": null, "shares": ["media", "backup", "photos", "public"]},
+  "annas-macbook.local": {"auth": {"user": "anna", "password": "pw"}, "shares": ["anna", "Public"]},
+  "192.168.1.31": {"auth": {"user": "anna", "password": "pw"}, "shares": ["anna", "Public"]},
+  "office-pc": {"auth": {"user": "bob", "password": "pw"}, "shares": ["docs"]},
+  "192.168.1.55": {"auth": {"user": "bob", "password": "pw"}, "shares": ["docs"]}
+ },
+ "mounts": []
+}

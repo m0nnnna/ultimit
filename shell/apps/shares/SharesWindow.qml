@@ -30,7 +30,8 @@ FloatingWindow {
             if (Shares.overlay === "new") newDlg.open(Shares.newPath);
             else if (Shares.overlay === "password") pwDlg.open();
             else if (Shares.overlay === "remove") rmDlg.visible = true;
-            else { newDlg.visible = false; pwDlg.clear(); pwDlg.visible = false; rmDlg.visible = false; }
+            else if (Shares.overlay === "creds") credsDlg.open();
+            else { credsDlg.clear(); credsDlg.visible = false; newDlg.visible = false; pwDlg.clear(); pwDlg.visible = false; rmDlg.visible = false; }
         }
     }
     Component.onCompleted: Shares.refresh()
@@ -62,10 +63,11 @@ FloatingWindow {
                 spacing: 10
                 GButton {
                     text: win.setupShown ? "Hide setup" : "Setup"
-                    visible: Shares.loaded && !Shares.setupNeeded
+                    visible: Shares.tab === "mine" && Shares.loaded && !Shares.setupNeeded
                     onClicked: win.showSetup = !win.showSetup
                 }
                 GButton {
+                    visible: Shares.tab === "mine"
                     primary: true
                     text: "New share…"
                     enabled: Shares.canShare && Shares.busy === ""
@@ -74,10 +76,43 @@ FloatingWindow {
             }
         }
 
+
+        // ---------------- tabs ----------------
+        Item {
+            id: tabBar
+            x: 20; anchors.top: header.bottom; anchors.topMargin: 2
+            width: parent.width - 40
+            height: 32
+            Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
+            Row {
+                spacing: 4
+                Repeater {
+                    model: [{ id: "mine", label: "My shares" }, { id: "connect", label: "Connect" }]
+                    delegate: Item {
+                        id: tb
+                        required property var modelData
+                        readonly property bool on: Shares.tab === modelData.id
+                        width: tl.implicitWidth + 36; height: 32
+                        Text {
+                            id: tl
+                            anchors.centerIn: parent
+                            text: tb.modelData.label.toUpperCase()
+                            color: tb.on ? Theme.accent : (tm.containsMouse ? Theme.fg : Theme.dim)
+                            font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.8
+                        }
+                        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 2; color: Theme.accent; visible: tb.on }
+                        MouseArea { id: tm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                            onClicked: { Shares.tab = tb.modelData.id; if (tb.modelData.id === "connect") Shares.showConnect(); } }
+                    }
+                }
+            }
+        }
+
         // ---------------- status chips + address ----------------
         Item {
             id: statusRow
-            x: 20; anchors.top: header.bottom; anchors.topMargin: 6
+            x: 20; anchors.top: tabBar.bottom; anchors.topMargin: 12
+            visible: Shares.tab === "mine"
             width: parent.width - 40
             height: chipFlow.height
             Flow {
@@ -117,7 +152,7 @@ FloatingWindow {
             color: Theme.panel2
             border.color: Theme.line
             border.width: 1
-            visible: Shares.loaded
+            visible: Shares.loaded && Shares.tab === "mine"
             Row {
                 anchors { left: parent.left; leftMargin: 14; verticalCenter: parent.verticalCenter }
                 spacing: 14
@@ -168,12 +203,13 @@ FloatingWindow {
             text: Shares.note
             color: Shares.noteKind === "error" ? Theme.bad : Theme.dim
             font.family: Theme.ui; font.pixelSize: 12
-            visible: Shares.note !== ""
+            visible: Shares.note !== "" && Shares.tab === "mine"
         }
 
         // ---------------- scroll area: setup + list ----------------
         Flickable {
             id: scroller
+            visible: Shares.tab === "mine"
             x: 20
             anchors.top: noteLine.bottom; anchors.topMargin: 8
             anchors.bottom: parent.bottom; anchors.bottomMargin: 16
@@ -256,9 +292,16 @@ FloatingWindow {
             }
         }
 
+        ConnectPage {
+            visible: Shares.tab === "connect"
+            x: 20; anchors.top: tabBar.bottom; anchors.topMargin: 14
+            anchors.bottom: parent.bottom; anchors.bottomMargin: 16
+            width: parent.width - 40
+        }
+
         GLabel {
             anchors.centerIn: parent
-            visible: !Shares.loaded
+            visible: !Shares.loaded && Shares.tab === "mine"
             text: "Checking…"
         }
     }
@@ -266,6 +309,7 @@ FloatingWindow {
     // ---------------- dialogs ----------------
     NewShareDialog { id: newDlg; onClosed: if (Shares.overlay === "new") Shares.overlay = "" }
     PasswordDialog { id: pwDlg; onClosed: if (Shares.overlay === "password") Shares.overlay = "" }
+    CredsDialog { id: credsDlg; onClosed: if (Shares.overlay === "creds") Shares.overlay = "" }
     SharesPrompt {
         id: rmDlg
         visible: false

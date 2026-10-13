@@ -23,3 +23,20 @@ ready)
 	printf 'path=%s\ncomment=\nusershare_acl=Everyone:F,\nguest_ok=y\n' "$d/home/Music" >"$d/shares/music"
 	;;
 esac
+# fake network for connect.py (see connect-fake.json); `ready` also starts with one connected share and one saved connection
+cp "$(dirname "$0")/connect-fake.json" "$d/connect-fake.json"
+if [ "$sc" = ready ]; then
+	mkdir -p "$d/mnt/smb-share:server=family-nas.local,share=media"
+	python3 - "$d" <<'PY'
+import json, sys
+d = sys.argv[1]; p = d + "/connect-fake.json"; j = json.load(open(p))
+j["mounts"].append({"uri": "smb://family-nas.local/media", "name": "media on family-nas.local",
+                    "path": d + "/mnt/smb-share:server=family-nas.local,share=media", "scheme": "smb"})
+json.dump(j, open(p, "w"), indent=1)
+saved = [{"name": "media on family-nas.local", "uri": "smb://family-nas.local/media", "user": "", "domain": "", "remember": False, "reconnectAtLogin": True},
+         {"name": "docs on office-pc", "uri": "smb://office-pc/docs", "user": "bob", "domain": "", "remember": True, "reconnectAtLogin": False}]
+import os
+os.makedirs(d + "/config/ultimit/shares", exist_ok=True)
+json.dump(saved, open(d + "/config/ultimit/shares/connections.json", "w"), indent=1)
+PY
+fi

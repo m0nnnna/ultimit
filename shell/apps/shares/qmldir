@@ -6,3 +6,5 @@ ShareRow 1.0 ShareRow.qml
 NewShareDialog 1.0 NewShareDialog.qml
 PasswordDialog 1.0 PasswordDialog.qml
 SharesPrompt 1.0 SharesPrompt.qml
+ConnectPage 1.0 ConnectPage.qml
+CredsDialog 1.0 CredsDialog.qml

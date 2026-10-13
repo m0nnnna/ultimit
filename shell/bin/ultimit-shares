@@ -1,9 +1,16 @@
 #!/bin/sh
-# ultimit-shares [--new FOLDER] - open SHARES, the file share maker. With --new, the "New share" dialog opens
-# prefilled with FOLDER. SHARES is its own quickshell process (shares-shell.qml), started here when not yet
+# ultimit-shares [--new FOLDER | --connect ADDRESS [--open] | --reconnect] - open SHARES, the file share maker.
+# --new: the "New share" dialog opens prefilled with FOLDER. --connect: the CONNECT tab connects to ADDRESS
+# (\\host\share, smb://host/share, host/share; a bare host is browsed) and asks for a password if needed; with
+# --open the folder is opened afterwards. --reconnect: no window, reconnect the saved connections marked
+# "reconnect at login" (run once per login by the session; never prompts). SHARES is its own quickshell process (shares-shell.qml), started here when not yet
 # running; it exits when its window closes.
 shell="${ULTIMIT_SHELL_DIR:-$(dirname "$(dirname "$(readlink -f "$0")")")}"
 cfg="$shell/shares-shell.qml"
+
+if [ "$1" = "--reconnect" ]; then
+    exec python3 "$shell/apps/shares/connect.py" reconnect
+fi
 
 shares() { qs -p "$cfg" ipc call shares "$@" >/dev/null 2>&1; }
 
@@ -20,6 +27,11 @@ if [ "$1" = "--new" ] && [ -n "$2" ]; then
     case "$2" in file://*) p=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.unquote(sys.argv[1]))' "${2#file://}");; *) p=$2;; esac
     case "$p" in /*) ;; *) p="$PWD/$p";; esac
     shares newShare "$p"
+elif [ "$1" = "--connect" ] && [ -n "$2" ]; then
+    open=false; [ "$3" = "--open" ] && open=true
+    shares connectAddress "$2" "$open"
+elif [ "$1" = "--connect-tab" ]; then
+    shares showConnect
 else
     shares open
 fi

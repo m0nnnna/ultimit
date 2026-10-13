@@ -459,6 +459,28 @@ FloatingWindow {
                         }
                     }
                     Item { width: 1; height: 10 }
+                    Lbl { x: 14; width: parent.width - 28; text: "NETWORK" }
+                    Item { width: 1; height: 6 }
+                    Repeater {
+                        model: Data.networks
+                        delegate: SideRow {
+                            required property var modelData
+                            stacked: true
+                            label: { const u = modelData.uri.replace(/\/+$/, ""); return decodeURIComponent(u.substring(u.lastIndexOf("/") + 1)); }
+                            sub: modelData.uri.replace(/^[a-z]+:\/\//i, "").split("/")[0]
+                            icon: Data.placeIcon("network")
+                            eject: true
+                            current: !Data.isTrash && modelData.path !== "" && (Data.path === modelData.path || Data.path.startsWith(modelData.path + "/"))
+                            dropPath: modelData.path
+                            onClicked: if (modelData.path !== "") Data.goTo(modelData.path)
+                            onEjectClicked: Data.disconnectNetwork(modelData)
+                        }
+                    }
+                    SideRow {
+                        label: "Browse network…"; icon: Data.placeIcon("network")
+                        onClicked: Quickshell.execDetached([Quickshell.shellPath("bin/ultimit-shares"), "--connect-tab"])
+                    }
+                    Item { width: 1; height: 10 }
                     Lbl { x: 14; width: parent.width - 28; text: "OTHER LOCATIONS" }
                     Item { width: 1; height: 6 }
                     SideRow {

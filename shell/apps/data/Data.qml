@@ -103,12 +103,69 @@ Singleton {
         t = t.trim();
         if (t === "") return;
         if (t === "trash:" || t === "trash") { goTo(trashUri); return; }
+        if (isNetAddress(t)) { connectNetwork(t); return; }
         if (t.startsWith("file://")) t = decodeURIComponent(t.slice(7));
         let p = expand(t);
         if (!p.startsWith("/")) p = join(path === trashUri ? home : (isArc ? dirname(arcFile) : path), p);
         addrProbe.target = p;
         addrProbe.exec(["sh", "-c", 'if [ -d "$1" ]; then echo dir; elif [ -e "$1" ]; then echo file; else echo none; fi', "sh", p]);
     }
+    // ---- network shares (gvfs, through SHARES' connect.py). smb://host/share, \\host\share, sftp://, ftp://, dav:// ...
+    readonly property string netHelper: Quickshell.shellPath("apps/shares/connect.py")
+    function isNetAddress(t) { return /^(smb|sftp|ftps?|davs?|nfs):\/\//i.test(t) || t.startsWith("\\\\"); }
+    function connectNetwork(addr) {
+        if (netConnect.running) { toast("Network", "Busy, try again in a moment."); return; }
+        netConnect.addr = addr;
+        netConnect.command = ["python3", netHelper, "connect", addr, "--no-prompt"];
+        netConnect.running = true;
+        toast("Network", "Connecting…");
+    }
+    // Needs a password (or is a whole computer, not a share): SHARES asks and opens the folder afterwards.
+    function connectViaShares(addr) {
+        Quickshell.execDetached([Quickshell.shellPath("bin/ultimit-shares"), "--connect", addr, "--open"]);
+    }
+    Process {
+        id: netConnect
+        property string addr: ""
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let r;
+                try { r = JSON.parse(text.trim().split("\n").pop()); } catch (e) { r = { ok: false, code: "failed", error: "helper failed" }; }
+                root.scanNetwork();
+                if (r.ok && r.path) { root.goTo(r.path); return; }
+                if (r.ok) { root.toast("Network", r.note || "Connected, but the files cannot be opened here yet."); return; }
+                if (r.code === "needs_password" || r.code === "denied" || r.code === "bad_address") { root.connectViaShares(netConnect.addr); return; }
+                root.toast("Network", r.error || "Could not connect.");
+            }
+        }
+    }
+    property var networks: []        // [{uri, name, path, scheme}] connected network locations
+    function scanNetwork() { if (!netScan.running) netScan.running = true; }
+    Process {
+        id: netScan
+        command: ["python3", root.netHelper, "mounts"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let d;
+                try { d = JSON.parse(text); } catch (e) { return; }
+                if (!d.ok) return;
+                const sig = JSON.stringify(d.mounts);
+                if (sig !== JSON.stringify(root.networks)) root.networks = d.mounts;
+            }
+        }
+    }
+    function disconnectNetwork(m) {
+        netOff.mp = m.path;
+        netOff.command = ["python3", netHelper, "disconnect", m.uri];
+        netOff.running = true;
+    }
+    Process {
+        id: netOff
+        property string mp: ""
+        stdout: StdioCollector { onStreamFinished: root.scanNetwork() }
+        onExited: if (netOff.mp !== "" && (root.path === netOff.mp || root.path.startsWith(netOff.mp + "/"))) root.goTo(root.home)
+    }
+
     Process {
         id: addrProbe
         property string target: ""
@@ -873,6 +930,7 @@ Singleton {
         placesProc.running = true;
         drivesProc.running = true;
         scanPhones();
+        scanNetwork();
     }
     Process {
         id: placesProc
@@ -899,7 +957,7 @@ Singleton {
     Timer {
         interval: 4000; repeat: true; triggeredOnStart: false
         running: root.open && root.started
-        onTriggered: { if (!drivesProc.running) drivesProc.running = true; root.scanPhones(); }
+        onTriggered: { if (!drivesProc.running) drivesProc.running = true; root.scanPhones(); root.scanNetwork(); }
     }
     Process {
         id: drivesProc
@@ -1167,7 +1225,7 @@ Singleton {
     function placeIcon(id) {
         const m = { home: "user-home", desktop: "user-desktop", documents: "folder-documents", download: "folder-download",
                     downloads: "folder-download", music: "folder-music", pictures: "folder-pictures", videos: "folder-videos",
-                    trash: "user-trash", root: "drive-harddisk", drive: "drive-removable-media" };
+                    trash: "user-trash", root: "drive-harddisk", drive: "drive-removable-media", network: "network-workgroup" };
         const n = m[id] || "folder";
         const p = Icons.path(n);
         return p !== "" ? p : Icons.path("folder");
@@ -1208,6 +1266,7 @@ Singleton {
         case "forward": goForward(); return "ok";
         case "up": goUp(); return "ok";
         case "go": goTo(arg); return "ok";
+        case "address": goAddress(arg); return "ok";
         case "trashview": goTo(trashUri); return "ok";
         case "props": showProps(); return "ok";
         case "openwith": showOpenWith(); return "ok";
