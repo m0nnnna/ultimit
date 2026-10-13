@@ -5,7 +5,7 @@ check_frame() {
 	local id=$1 label=$2 want=$3 bar; bar=$(BAR_EXPR "$id")
 	assert_eq "$(wf "$id" "w['ssd']")" "$want" "$label ssd"
 	assert_json "(lambda w, c, f: f['x']==c['x']-1 and f['y']==c['y']-$bar-1 and f['width']==c['width']+2 and f['height']==c['height']+$bar+2)(W($id), W($id)['content'], W($id)['frame'])" \
-		"$label frame == content + 1px border (+34 titlebar if ssd)"
+		"$label frame == content + 1px border (+38 titlebar if ssd)"
 	assert_json "W($id)['tree']['x']==W($id)['content']['x'] and W($id)['tree']['y']==W($id)['content']['y']" "$label scene tree origin == content origin"
 	assert_json "(W($id)['geometry_offset']['width'], W($id)['geometry_offset']['height'])==(W($id)['content']['width'], W($id)['content']['height'])" \
 		"$label content size == client window geometry"

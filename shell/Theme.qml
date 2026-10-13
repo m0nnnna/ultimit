@@ -96,6 +96,14 @@ Singleton {
     readonly property string ui: "Chakra Petch"
     readonly property string mono: "Share Tech Mono"
 
+    // Window-chrome colors for the compositor ("ultimitctl skin ..."), as
+    // #rrggbbaa: panel fg dim line lineStrong accent bad.
+    readonly property var chromeArgs: [cur.panel, cur.fg, cur.dim, cur.line, cur.lineStrong, cur.accent, cur.bad].map(_hex)
+    function _hex(v) {
+        if (typeof v === "string") return v;
+        return "#" + [v[0], v[1], v[2], Math.round(v[3] * 255)].map(n => n.toString(16).padStart(2, "0")).join("");
+    }
+
     // Display name used in captions, e.g. "MINE"
     readonly property string skinLabel: skin.toUpperCase()
 }

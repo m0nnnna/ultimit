@@ -2,7 +2,7 @@
 
 Restyles GTK3, GTK4/libadwaita, Electron (Wayland CSD) and Chromium (GTK theme
 mode) windows so they sit next to Ultimit's own server-side titlebar
-(`compositor/src/decoration.c`): glass-black panels, thin light lines, 34 px
+(`compositor/src/decoration.c`): glass-black panels, thin light lines, 38 px
 titlebar with the title in Michroma, bracketed `[ _ ] [ □ ] [ × ]` window
 buttons, accent corner bracket top-left, chamfered buttons, ice-blue accent (or
 the skin's accent). **Only inside Ultimit sessions**: nothing global is touched
@@ -29,7 +29,7 @@ committed; run the installer. Edit templates, not output.
 
 ## How it works
 - GTK3: `@import` of the builtin Adwaita(-dark) contained CSS, then overrides.
-  Headerbar/`.titlebar` is opaque panel colour (Chromium samples it), 34 px, bracket
+  Headerbar/`.titlebar` is opaque panel colour (Chromium samples it), 38 px, bracket
   and bottom rule as background gradients. Window buttons: stock icon hidden, the
   bracketed glyph is the button's `background-image` (an SVG file in `assets/`;
   GTK3 does not load `data:` URIs and ignores `-gtk-icon-source` on a GtkImage

@@ -108,6 +108,13 @@ struct wlr_session_lock_manager_v1;
 struct wlr_session_lock_v1;
 struct wlr_idle_notifier_v1;
 
+/* Window chrome colors for the current skin (straight RGBA). Starts as Mine
+ * (theme.h); the shell pushes its skin with the "skin" IPC command. */
+struct ul_skin {
+	float panel[4], panel_dim[4], fg[4], dim[4], line[4], line_strong[4];
+	float accent[4], accent_dim[4], bad[4];
+};
+
 struct ul_server {
 	struct wl_display *display;
 	struct wlr_backend *backend;
@@ -234,6 +241,9 @@ struct ul_server {
 
 	struct ul_view *last_click_view;
 	uint32_t last_click_msec;
+
+	struct ul_skin skin;
+	struct ul_view *hover_view; /* view whose titlebar button is under the cursor */
 };
 
 struct ul_output {
@@ -275,12 +285,17 @@ struct ul_decoration {
 	struct wlr_scene_rect *brackets[4];
 	struct wlr_scene_buffer *titlebar;
 	struct wlr_scene_rect *line; /* open animation */
+	struct wlr_scene_rect *sweep; /* focus sweep along the titlebar's bottom edge */
+	struct wl_event_source *sweep_timer;
+	uint32_t sweep_start;
 	int button_x[3]; /* left edge of minimize, maximize, close, in titlebar coords */
 	int button_w[3];
 	/* What the titlebar buffer was last drawn with, to skip redundant redraws. */
 	int drawn_width;
 	bool drawn_focused;
+	int drawn_hover;
 	char *drawn_title;
+	int hover;       /* titlebar button under the cursor: 0..2, or -1 */
 };
 
 enum ul_view_type {
@@ -478,6 +493,12 @@ void anim_finish_all(struct ul_server *server);
 void decoration_create(struct ul_view *view);
 void decoration_update(struct ul_view *view);
 enum ul_titlebar_hit decoration_hit(struct ul_view *view, double lx, double ly);
+void skin_init(struct ul_skin *skin);
+bool skin_parse(struct ul_skin *skin, const char *args);
+void decoration_restyle_all(struct ul_server *server);
+void decoration_set_hover(struct ul_server *server, struct ul_view *view, int button);
+void decoration_focus_sweep(struct ul_view *view);
+void decoration_finish(struct ul_view *view);
 
 /* capture.c */
 void capture_init(struct ul_server *server);

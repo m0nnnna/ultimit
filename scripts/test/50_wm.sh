@@ -123,11 +123,12 @@ import sys
 from PIL import Image
 im = Image.open(sys.argv[1]).convert("RGB")
 x0, x1, y = int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])
-# the preview's 2px right edge is the accent colour (pale blue: B well above R); the amber wallpaper is not
+# the preview's 2px right edge is the skin accent at 85%: it stands out from
+# the wallpaper just outside the preview, whatever the skin
 n = 0
 for y in range(y + 20, y + 60):
-    r, g, bl = im.getpixel((x1 - 1, y))
-    n += bl > r + 15
+    edge, out = im.getpixel((x1 - 1, y)), im.getpixel((x1 + 6, y))
+    n += sum(abs(a - b) for a, b in zip(edge, out)) > 40
 sys.exit(0 if n >= 30 else 1)
 PY
 	ctl drag-release >/dev/null

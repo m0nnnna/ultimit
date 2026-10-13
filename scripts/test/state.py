@@ -4,7 +4,6 @@
   state.py eval   EXPR            print the value (JSON for dicts/lists)
   state.py assert EXPR            exit 0 if EXPR is truthy, else print it and exit 1
   state.py save   FILE            write the state JSON to FILE
-  state.py buttons PNG FX FY FW   locate titlebar buttons in a screenshot
   state.py popup BEFORE AFTER     bounding box of a popup between two screenshots
 
 Names available in EXPR: s (whole state), out (first output), usable, full,
@@ -37,35 +36,6 @@ def get_state():
                 break
             data += chunk
     return json.loads(data)
-
-
-def buttons(png, fx, fy, fw):
-    """Find the [ _ ] [ □ ] [ × ] buttons in a screenshot of the titlebar.
-
-    Their glyphs are the bright columns at the right end of the titlebar row.
-    Buttons are three equal-width cells (text + 8px) ending 10px from the
-    frame's right edge, so span = 3*w - 8 gives w. Prints
-    "min_x max_x close_x y w" (screen coordinates of each cell's centre).
-    """
-    from PIL import Image
-    im = Image.open(png).convert("RGB")
-    right = fx + fw
-    y0, y1 = fy + 8, fy + 27
-    lo, hi = right - 10 - 170, right - 8
-    cols = []
-    for x in range(max(lo, 0), min(hi, im.width)):
-        n = sum(1 for y in range(y0, y1) if sum(im.getpixel((x, y))) > 160)
-        if n >= 5:
-            cols.append(x)
-    if len(cols) < 6:
-        print("none")
-        return 1
-    left, last = cols[0], cols[-1]
-    w = round((last - left + 1 + 8) / 3)
-    end = right - 10
-    centres = [end - w * (3 - i) + w // 2 for i in range(3)]
-    print(centres[0], centres[1], centres[2], fy + 17, w)
-    return 0
 
 
 def popup(before, after):
@@ -104,8 +74,6 @@ def main(argv):
     mode = argv[0]
     if mode == "popup":
         return popup(argv[1], argv[2])
-    if mode == "buttons":
-        return buttons(argv[1], int(argv[2]), int(argv[3]), int(argv[4]))
     s = get_state()
     if mode == "save":
         with open(argv[1], "w") as f:

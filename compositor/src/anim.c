@@ -427,8 +427,7 @@ static struct ul_ghost *ghost_create(struct ul_view *view, enum ghost_kind kind)
 	g->content_h = view->height;
 	g->origin_x = view->x;
 	g->origin_y = view->y;
-	static const float accent[4] = UL_COLOR_ACCENT;
-	g->line = wlr_scene_rect_create(g->tree, 2, UL_BRACKET_W, accent);
+	g->line = wlr_scene_rect_create(g->tree, 2, UL_BRACKET_W, server->skin.accent);
 	g->line->accepts_input = false;
 	wlr_scene_node_set_enabled(&g->line->node, false);
 	wl_list_insert(&server->ghosts, &g->link);

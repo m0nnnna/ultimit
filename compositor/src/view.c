@@ -100,6 +100,7 @@ void view_focus(struct ul_view *view) {
 		server->focused_view = view;
 		view_set_activated(view, true);
 		decoration_update(view);
+		decoration_focus_sweep(view);
 	}
 
 	/* A layer surface with exclusive keyboard focus (lock screen, launcher)
@@ -746,6 +747,10 @@ void view_unmap(struct ul_view *view) {
 	if (server->last_click_view == view) {
 		server->last_click_view = NULL;
 	}
+	if (server->hover_view == view) {
+		server->hover_view = NULL;
+		view->deco.hover = -1;
+	}
 	wl_list_remove(&view->link);
 	wl_list_init(&view->link);
 	idle_update_inhibit(server);
@@ -764,6 +769,7 @@ void view_destroy(struct ul_view *view) {
 	}
 	wl_list_remove(&view->link);
 	wlr_scene_node_destroy(&view->tree->node);
+	decoration_finish(view);
 	free(view->deco.drawn_title);
 	free(view);
 }

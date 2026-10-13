@@ -73,7 +73,11 @@ Scope {
         if (changed) save.restart();
     }
 
+    // Window chrome is drawn by the compositor; give it the skin's colors.
+    function pushChrome() { Quickshell.execDetached(["ultimitctl", "skin"].concat(Theme.chromeArgs)); }
+
     Component.onCompleted: {
+        root.pushChrome();
         Quickshell.execDetached(["mkdir", "-p", root.dir]);
         store.path = root.dir + "/shell.json";
     }
@@ -87,6 +91,7 @@ Scope {
         target: Theme
         function onSkinChanged() {
             root.push();
+            root.pushChrome();
             // Re-colour the mouse cursor with the skin (theme/cursors).
             const name = "UltimitCursor-" + Theme.skin.charAt(0).toUpperCase() + Theme.skin.slice(1);
             Quickshell.execDetached(["sh", "-c", "[ -e \"$HOME/.local/share/icons/" + name + "/cursors/default\" ] && ultimitctl cursor-theme " + name + " && gsettings set org.gnome.desktop.interface cursor-theme " + name]);

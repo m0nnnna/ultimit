@@ -154,16 +154,16 @@ dialog.alert .response-area > button {
 window.dialog.message .dialog-action-area, window.messagedialog .response-area { border-spacing: 8px; }
 
 /* -------------------------------- headerbar ------------------------------- */
-/* glass-dark bar, 34px, accent bracket top-left, bottom rule fading out;
+/* glass-dark bar, 38px, accent bracket top-left, bottom rule fading out;
  * the same look as compositor/src/decoration.c */
 headerbar {
   background-color: @u_panel;
   {{hb_bg(accent, line2, line)}}
   color: @u_fg;
   border: none; border-radius: 0; box-shadow: none;
-  min-height: 34px; padding: 0; margin: 0;
+  min-height: 38px; padding: 0; margin: 0;
 }
-headerbar > windowhandle > box { padding: 0 8px; min-height: 34px; }
+headerbar > windowhandle > box { padding: 0 8px; min-height: 38px; }
 headerbar > windowhandle > box > box.start, headerbar > windowhandle > box > box.end { border-spacing: 4px; }
 headerbar:backdrop {
   background-color: @u_bg;
@@ -171,35 +171,39 @@ headerbar:backdrop {
   color: @u_dim; box-shadow: none;
 }
 headerbar:backdrop > windowhandle { filter: none; }
-headerbar.default-decoration { min-height: 34px; }
+headerbar.default-decoration { min-height: 38px; }
 headerbar.default-decoration > windowhandle > box { padding: 0 8px; }
 headerbar windowhandle, headerbar > windowhandle > box { border-radius: 0; }
 
 /* Title: Michroma, letter-spaced (as in the compositor); subtitle: mono caps */
 headerbar .title, windowtitle .title, headerbar windowtitle > box > .title {
   font-family: "Michroma", "Eurostile", "Arial Black", sans-serif;
-  font-size: 10.5pt; font-weight: normal; letter-spacing: 0.06em; color: @u_fg;
-  padding: 0 12px;
+  font-size: 11.5pt; font-weight: normal; letter-spacing: 0.06em; color: @u_fg;
+  padding: 0 12px 0 28px;
+  /* accent square before the title, as in the compositor's titlebar */
+  background-image: linear-gradient(@u_accent, @u_accent); background-size: 6px 6px;
+  background-position: 12px center; background-repeat: no-repeat;
 }
 headerbar .subtitle, windowtitle .subtitle {
   font-family: "Share Tech Mono", ui-monospace, "DejaVu Sans Mono", monospace;
   font-size: 9pt; font-weight: normal; letter-spacing: 0.18em; text-transform: uppercase;
   color: @u_dim; padding: 0 12px;
 }
-headerbar:backdrop .title { color: @u_dim; }
+headerbar:backdrop .title { color: @u_dim; background-image: linear-gradient(@u_dim, @u_dim); }
 headerbar separator { background-color: @u_line; min-width: 1px; margin: 8px 3px; }
 
 /* Window controls: Ultimit's  [ _ ]  [ □ ]  [ × ]  as SVG, no circles.
  * (selectors are over-qualified to beat libadwaita's and our generic button rules) */
 windowcontrols { margin: 0; border-spacing: 4px; }
 windowcontrols > {{WCB}} {
-  min-width: 42px; min-height: 16px; padding: 0; margin: 0;
+  min-width: 42px; min-height: 28px; padding: 0; margin: 0;
   border-radius: 0; border: none; background-color: transparent;
   box-shadow: none; outline-offset: -2px; color: @u_dim;
 }
 windowcontrols > {{WCB}}:hover, windowcontrols > {{WCB}}:active, windowcontrols > {{WCB}}:checked {
-  background-color: transparent; box-shadow: none; border: none;
+  background-color: alpha(@u_fg, 0.08); box-shadow: none; border: none;
 }
+windowcontrols > {{WCB}}.close:hover, windowcontrols > {{WCB}}.close:active { background-color: alpha(@u_bad, 0.20); }
 windowcontrols > button > image { min-width: 0; min-height: 0; padding: 0; margin: 0; background: none;
   border-radius: 0; box-shadow: none; border: none; opacity: 0; }
 {{titlebuttons(["windowcontrols >"], WCB)}}

@@ -83,6 +83,14 @@ static void write_state(struct ul_server *server, struct out *o) {
 		put_box(o, (struct wlr_box){ view->x - UL_BORDER, view->y - bar - UL_BORDER,
 			view->width + 2 * UL_BORDER, view->height + bar + 2 * UL_BORDER });
 		put(o, ",\"tree\":{\"x\":%d,\"y\":%d}", view->tree->node.x, view->tree->node.y);
+		/* Titlebar buttons (minimize, maximize, close) as layout boxes. */
+		put(o, ",\"buttons\":[");
+		for (int i = 0; view->ssd && i < 3; i++) {
+			put(o, "%s", i ? "," : "");
+			put_box(o, (struct wlr_box){ view->x - UL_BORDER + view->deco.button_x[i],
+				view->y - bar - UL_BORDER, view->deco.button_w[i], UL_TITLEBAR_H });
+		}
+		put(o, "]");
 		put(o, ",\"geometry_offset\":");
 		put_box(o, view_geometry_offset(view));
 		put(o, ",\"ssd\":%s,\"focused\":%s,\"mapped\":%s,\"minimized\":%s,"
@@ -153,6 +161,17 @@ static void run_command(struct ul_server *server, char *line, struct out *o) {
 		}
 		put(o, input_set_cursor_theme(server, name, size) ?
 			"{\"ok\":true}" : "{\"error\":\"cannot load cursor theme\"}");
+		return;
+	}
+	if (strcmp(cmd, "skin") == 0) {
+		/* skin PANEL FG DIM LINE LINE_STRONG ACCENT BAD: window chrome colors,
+		 * sent by the shell at startup and on a skin change. */
+		if (!skin_parse(&server->skin, line + strlen("skin"))) {
+			put(o, "{\"error\":\"usage: skin PANEL FG DIM LINE LINE_STRONG ACCENT BAD (#rrggbb[aa])\"}");
+			return;
+		}
+		decoration_restyle_all(server);
+		put(o, "{\"ok\":true}");
 		return;
 	}
 	if (strcmp(cmd, "keys") == 0) {

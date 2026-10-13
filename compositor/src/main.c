@@ -110,6 +110,7 @@ int main(int argc, char *argv[]) {
 	signal(SIGPIPE, SIG_IGN);
 
 	struct ul_server server = {0};
+	skin_init(&server.skin);
 	wl_list_init(&server.views);
 	wl_list_init(&server.ghosts);
 	wl_list_init(&server.unmanaged);

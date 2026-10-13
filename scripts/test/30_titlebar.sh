@@ -1,23 +1,12 @@
 # Server-side titlebar (compositor drawn) and X11 clients.
 
-# tb_buttons ID: screenshot the titlebar and locate the three buttons.
-# Sets BMIN BMAX BCLOSE (x centres) and BY. Layout (decoration.c): titlebar is
-# the top 34px of the frame; buttons "[ _ ]" "[ □ ]" "[ × ]" are equal-width
-# cells packed against the right edge, 10px in. Cell width depends on the font,
-# so it is measured from the screenshot's bright glyph columns.
+# tb_buttons ID: locate the three titlebar buttons from the compositor's state
+# (windows[].buttons: minimize, maximize, close as layout boxes). Sets BMIN BMAX
+# BCLOSE (x centres), BY and BW (cell width).
 tb_buttons() {
-	local id=$1 fx fy fw res
+	local id=$1
 	ptr_to 600 600; sleep 0.3
-	read -r fx fy fw < <(sj "(lambda f: '%d %d %d' % (f['x'], f['y'], f['width']))(W($id)['frame'])")
-	grim "$RUNDIR/tb.png"
-	if res=$(python3 "$STATE_PY" buttons "$RUNDIR/tb.png" "$fx" "$fy" "$fw") && [ "$res" != none ]; then
-		read -r BMIN BMAX BCLOSE BY BW <<<"$res"
-	else
-		# TODO: could not read glyphs from the screenshot; assume 44px cells.
-		note "button positions guessed (no glyphs found)"
-		BW=44; BY=$((fy + 17))
-		BCLOSE=$((fx + fw - 10 - BW / 2)); BMAX=$((BCLOSE - BW)); BMIN=$((BMAX - BW))
-	fi
+	read -r BMIN BMAX BCLOSE BY BW < <(sj "(lambda b: '%d %d %d %d %d' % (b[0]['x']+b[0]['width']//2, b[1]['x']+b[1]['width']//2, b[2]['x']+b[2]['width']//2, b[2]['y']+b[2]['height']//2, b[2]['width']))(W($id)['buttons'])")
 }
 
 scenario_titlebar_buttons() {
@@ -48,7 +37,7 @@ scenario_titlebar_buttons() {
 
 	# double-click on the titlebar toggles maximize (title area, left of buttons)
 	local tx ty
-	tx=$(sj "W($id)['frame']['x']+60"); ty=$(sj "W($id)['frame']['y']+17")
+	tx=$(sj "W($id)['frame']['x']+60"); ty=$(sj "W($id)['frame']['y']+19")
 	ptr_to "$tx" "$ty"; sleep 0.1
 	wlrctl pointer click left; wlrctl pointer click left
 	assert_soon "W($id)['maximized']" "double-click on titlebar maximizes"
@@ -57,14 +46,14 @@ scenario_titlebar_buttons() {
 	# A plain click (no drag) on a maximized titlebar must not change anything.
 	# Regression: a plain click on a maximized titlebar must not restore it
 	# (fixed by restoring only once a drag actually moves).
-	tx=$(sj "W($id)['frame']['x']+60"); ty=$(sj "W($id)['frame']['y']+17")
+	tx=$(sj "W($id)['frame']['x']+60"); ty=$(sj "W($id)['frame']['y']+19")
 	click "$tx" "$ty"; sleep 0.8
 	assert_json "W($id)['maximized']" "single click on a maximized titlebar leaves it maximized"
 	# back to a known state: maximized
 	[ "$(sj "W($id)['maximized']")" = True ] || ctl maximize "$id" >/dev/null
 	assert_soon "W($id)['maximized']" "maximized again"
 	sleep 0.6
-	tx=$(sj "W($id)['frame']['x']+60"); ty=$(sj "W($id)['frame']['y']+17")
+	tx=$(sj "W($id)['frame']['x']+60"); ty=$(sj "W($id)['frame']['y']+19")
 	ptr_to "$tx" "$ty"; sleep 0.1
 	wlrctl pointer click left; wlrctl pointer click left
 	assert_soon "not W($id)['maximized']" "double-click on a maximized titlebar un-maximizes"
@@ -88,7 +77,7 @@ scenario_x11_app() {
 		local id=$WID
 		assert_json "W($id)['type']=='xwayland'" "$app is an XWayland window"
 		assert_json "W($id)['ssd']" "$app gets a server-side titlebar"
-		assert_json "W($id)['frame']['height']==W($id)['content']['height']+34+2" "$app frame includes the titlebar"
+		assert_json "W($id)['frame']['height']==W($id)['content']['height']+38+2" "$app frame includes the titlebar"
 		ctl move "$id" 420 210 >/dev/null
 		assert_soon "box(W($id)['content'])[:2]==(420, 210)" "$app moves via ultimitctl"
 		snap "$app"

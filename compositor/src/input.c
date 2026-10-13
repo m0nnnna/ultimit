@@ -179,6 +179,16 @@ void input_update_pointer_focus(struct ul_server *server, uint32_t time_msec) {
 	struct ul_view *view;
 	struct wlr_surface *surface = surface_at(server, server->cursor->x, server->cursor->y,
 		&sx, &sy, &view, NULL);
+	int button = -1;
+	if (!surface && view) {
+		switch (decoration_hit(view, server->cursor->x, server->cursor->y)) {
+		case UL_HIT_MINIMIZE: button = 0; break;
+		case UL_HIT_MAXIMIZE: button = 1; break;
+		case UL_HIT_CLOSE: button = 2; break;
+		default: break;
+		}
+	}
+	decoration_set_hover(server, view, button);
 	if (surface) {
 		wlr_seat_pointer_notify_enter(server->seat, surface, sx, sy);
 		wlr_seat_pointer_notify_motion(server->seat, time_msec, sx, sy);
@@ -194,8 +204,10 @@ void input_update_pointer_focus(struct ul_server *server, uint32_t time_msec) {
 /* ---- drag-to-snap ----------------------------------------------------------- */
 
 static void preview_rects(struct ul_server *server, struct wlr_box box) {
-	static const float fill[4] = { 212 / 255.0f * 0.22f, 235 / 255.0f * 0.22f, 1.0f * 0.22f, 0.22f };
-	static const float edge[4] = { 212 / 255.0f * 0.85f, 235 / 255.0f * 0.85f, 1.0f * 0.85f, 0.85f };
+	/* The accent, premultiplied at 22% (fill) and 85% (edges). */
+	const float *a = server->skin.accent;
+	const float fill[4] = { a[0] * 0.22f, a[1] * 0.22f, a[2] * 0.22f, 0.22f };
+	const float edge[4] = { a[0] * 0.85f, a[1] * 0.85f, a[2] * 0.85f, 0.85f };
 	const int t = 2;
 	if (!server->snap_preview) {
 		server->snap_preview = wlr_scene_tree_create(server->layers[UL_LAYER_GHOSTS]);
@@ -211,6 +223,7 @@ static void preview_rects(struct ul_server *server, struct wlr_box box) {
 		{ 0, 0, t, box.height }, { box.width - t, 0, t, box.height },
 	};
 	for (int i = 0; i < 5; i++) {
+		wlr_scene_rect_set_color(server->snap_preview_rects[i], i ? edge : fill);
 		wlr_scene_rect_set_size(server->snap_preview_rects[i], r[i].w, r[i].h);
 		wlr_scene_node_set_position(&server->snap_preview_rects[i]->node, r[i].x, r[i].y);
 	}

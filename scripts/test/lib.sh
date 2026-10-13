@@ -195,5 +195,5 @@ open_ssd_app() {
 	else return 1; fi
 }
 
-BAR_EXPR() { echo "(34 if W($1)['ssd'] else 0)"; }
+BAR_EXPR() { echo "(38 if W($1)['ssd'] else 0)"; }
 ctl() { "$ROOT/shell/bin/ultimitctl" "$@"; }
