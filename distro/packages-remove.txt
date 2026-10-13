@@ -14,10 +14,6 @@ seahorse
 gnome-online-accounts
 evolution-data-server
 xdg-desktop-portal-gnome
-gvfs
-gvfs-backends
-gvfs-daemons
-gvfs-fuse
 nautilus
 gnome-text-editor
 gnome-calculator

@@ -22,14 +22,14 @@ PURGE=(
 	gnome-session-bin gnome-settings-daemon gnome-control-center
 	gnome-initial-setup gnome-keyring seahorse gnome-online-accounts
 	evolution-data-server xdg-desktop-portal-gnome
-	gvfs gvfs-backends gvfs-daemons gvfs-fuse
 	nautilus gnome-text-editor gnome-calculator gnome-terminal ptyxis
 	papers loupe gnome-disk-utility gnome-logs gnome-clocks gnome-characters
 )
 
 # Autoremove candidates that are GNOME leftovers (removed). Everything else
 # that autoremove would take is kept.
-GNOME_RX='^(gvfs-|libgoa|libebook|libedata|libedataserver|evolution-data-server-common|libecal|libebackend|libcamel|gir1\.2-(mutter|gnome|gdm|gweather|gdesktopenums|gmenu|webkit2|javascriptcoregtk|wnck|vte|gck|gcr)|libgnome-|libmutter|gnome-|mutter-common|nautilus-|libnautilus|gjs$|libgjs|libmozjs|papers-common|libpps|baobab|libgdm|language-selector-gnome|libgweather|geocode-glib|libgeocode|tecla|localsearch|tinysparql|libmalcontent|libpanel|libspelling|libgtksourceview-5|libwnck|libvte-2.91-gtk4|rygel|librygel|libgupnp|sysprof|libsysprof|whoopsie|libwhoopsie|ubuntu-docs|libunity|libdee|apport-gtk|update-manager|update-notifier$|ubuntu-release-upgrader-gtk|python3-aptdaemon\.gtk3widgets|libgsound|libgnome-qr|libglycin-gtk4|libcolord-gtk4|libportal-gtk4|libmsgraph|librest|libinsights|ubuntu-insights|ubuntu-report|libwebkit2gtk|libjavascriptcoregtk|gst-(audio|video)-thumbnailer|libgtop|libgxps|libphonenumber|libpam-gnome-keyring)'
+GNOME_RX='^(libgoa|libebook|libedata|libedataserver|evolution-data-server-common|libecal|libebackend|libcamel|gir1\.2-(mutter|gnome|gdm|gweather|gdesktopenums|gmenu|webkit2|javascriptcoregtk|wnck|vte|gck|gcr)|libgnome-|libmutter|gnome-|mutter-common|nautilus-|libnautilus|gjs$|libgjs|libmozjs|papers-common|libpps|baobab|libgdm|language-selector-gnome|libgweather|geocode-glib|libgeocode|tecla|localsearch|tinysparql|libmalcontent|libpanel|libspelling|libgtksourceview-5|libwnck|libvte-2.91-gtk4|rygel|librygel|libgupnp|sysprof|libsysprof|whoopsie|libwhoopsie|ubuntu-docs|libunity|libdee|apport-gtk|update-manager|update-notifier$|ubuntu-release-upgrader-gtk|python3-aptdaemon\.gtk3widgets|libgsound|libgnome-qr|libglycin-gtk4|libcolord-gtk4|libportal-gtk4|libmsgraph|librest|libinsights|ubuntu-insights|ubuntu-report|libwebkit2gtk|libjavascriptcoregtk|gst-(audio|video)-thumbnailer|libgtop|libgxps|libphonenumber|libpam-gnome-keyring)'
+# gvfs (smb:// and other network folders) is kept: SHARES connects to shares through it.
 # Matched above but kept: not the GNOME desktop, and useful without it.
 KEEP_ANYWAY='^(gnome-themes-extra|gnome-accessibility-themes|network-manager-(openvpn|pptp)-gnome|libnma|gir1\.2-nma4)'
 

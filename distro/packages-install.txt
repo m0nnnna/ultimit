@@ -27,6 +27,10 @@ wtype
 # File sharing (SHARES app: Samba usershares)
 samba
 smbclient
+# Connecting to other computers' shares (SHARES, DATA, file dialogs): smb:// via gvfs
+gvfs-backends
+gvfs-daemons
+gvfs-fuse
 # Media and archives
 mpv
 ffmpeg
