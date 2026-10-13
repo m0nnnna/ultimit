@@ -38,6 +38,8 @@ wpasupplicant
 iw
 wireless-regdb
 ubuntu-drivers-common
+# Dual boot: GRUB lists Windows (and other systems) found on the disks
+os-prober
 # Network, sound, Bluetooth, power, drives
 network-manager
 pipewire

@@ -110,6 +110,13 @@ done
 if ! grep -q pam_oo7 /etc/pam.d/greetd 2>/dev/null; then
 	printf "\n# Ultimit: unlock the oo7 keyring with the login password.\nauth     optional pam_oo7.so\nsession  optional pam_oo7.so auto_start\n" >>/etc/pam.d/greetd
 fi
+# Dual boot: Ubuntu has GRUB skip other systems (os-prober off); turn it on so Windows is in the
+# boot menu (GRUB then shows its menu at start when it found one)
+if [ -d /etc/default/grub.d ] && command -v update-grub >/dev/null; then
+	printf '# Written by Ultimit: list Windows and other systems in the boot menu\nGRUB_DISABLE_OS_PROBER=false\n' \
+		>/etc/default/grub.d/90-ultimit-os-prober.cfg
+	update-grub >/dev/null 2>&1 || warn "update-grub failed (the boot menu may not list other systems)"
+fi
 # Where the login screen remembers the last user and session
 GU=$(getent passwd _greetd >/dev/null && echo _greetd || echo greeter)
 mkdir -p /var/lib/ultimit-greeter && chown "$GU" /var/lib/ultimit-greeter
