@@ -7,6 +7,7 @@
  * on an existing desktop for development (wlroots picks the backend).
  */
 
+#include <execinfo.h>
 #include <getopt.h>
 #include <signal.h>
 #include <stdio.h>
@@ -79,6 +80,18 @@ static void usage(const char *argv0) {
 		"  -d          debug logging\n", argv0);
 }
 
+/* A crash: write a backtrace into the session log (session/ultimit-session saves it as a crash
+ * report), then die of the same signal so a core dump still happens. Only async-signal-safe calls. */
+static void handle_crash(int sig) {
+	static const char msg[] = "\nultimit: crashed, backtrace follows (addr2line -e ultimit -f <addr>)\n";
+	write(STDERR_FILENO, msg, sizeof(msg) - 1);
+	void *frames[64];
+	int n = backtrace(frames, 64);
+	backtrace_symbols_fd(frames, n, STDERR_FILENO);
+	signal(sig, SIG_DFL);
+	raise(sig);
+}
+
 static int handle_terminate(int signal, void *data) {
 	/* Logout or kill: shut down cleanly so clients and XWayland exit too. */
 	wl_display_terminate(data);
@@ -88,6 +101,12 @@ static int handle_terminate(int signal, void *data) {
 int main(int argc, char *argv[]) {
 	const char *startup_cmd = NULL;
 	enum wlr_log_importance log_level = WLR_INFO;
+	void *warm[1];
+	backtrace(warm, 1); /* loads libgcc now, not inside the crash handler */
+	static const int crash_signals[] = { SIGSEGV, SIGABRT, SIGBUS, SIGFPE, SIGILL };
+	for (size_t i = 0; i < sizeof(crash_signals) / sizeof(crash_signals[0]); i++) {
+		signal(crash_signals[i], handle_crash);
+	}
 	int c;
 	bool exit_with_startup = false;
 	while ((c = getopt(argc, argv, "s:xdh")) != -1) {

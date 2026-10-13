@@ -1,0 +1,46 @@
+#!/bin/sh
+# ultimit-run-compositor BINARY STARTUP LOG_DIR - run the Ultimit compositor for this login and
+# recover from its crashes. Called by ultimit-session.
+#
+# The compositor runs as a child, logging to LOG_DIR/session.log. When it crashes (a non-zero exit,
+# or a signal other than HUP/INT/TERM):
+#   - its log becomes a crash report in LOG_DIR/crashes/ (the newest 10 are kept)
+#   - LOG_DIR/last-crash says what happened (JSON); the shell shows it on its next start
+#   - if it had been up for 20 s or more, it starts again right away, without the login screen
+#     (open apps are lost either way); 3 crashes within 10 minutes end the login instead.
+# A clean exit or a logout (SIGTERM, which ends this script too) is not a crash.
+# Core dumps (apport keeps them in /var/lib/apport/coredump/) are on for the compositor only, max 512 MB.
+BIN=$1 STARTUP=$2 LOG_DIR=$3
+CRASH_DIR="$LOG_DIR/crashes"
+PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/ultimit-session.pid"
+MIN_UP=${ULTIMIT_CRASH_MIN_UP:-20}
+mkdir -p "$LOG_DIR"
+recent=""
+while :; do
+	started=$(date +%s)
+	(ulimit -c 524288 2>/dev/null; exec "$BIN" -s "$STARTUP") >"$LOG_DIR/session.log" 2>&1 &
+	pid=$!
+	# Lets scripts/restart-session.sh and the shell supervisor find this session's compositor.
+	echo "$pid" >"$PIDFILE"
+	wait "$pid"
+	status=$?
+	case $status in
+		0 | 129 | 130 | 143) exit 0 ;;
+	esac
+	now=$(date +%s)
+	up=$((now - started))
+	what="exit status $status"
+	[ "$status" -gt 128 ] && what="signal SIG$(kill -l $((status - 128)) 2>/dev/null || echo $((status - 128)))"
+	mkdir -p "$CRASH_DIR"
+	report="$CRASH_DIR/$(date +%Y%m%d-%H%M%S)-$pid.log"
+	{ echo "Ultimit compositor crashed: $what after ${up}s ($(date))"; echo; cat "$LOG_DIR/session.log"; } >"$report"
+	ls -1t "$CRASH_DIR"/*.log 2>/dev/null | tail -n +11 | xargs -r rm -f
+	recent="$(for t in $recent; do [ $((now - t)) -lt 600 ] && echo "$t"; done) $now"
+	restart=true
+	if [ "$up" -lt "$MIN_UP" ] || [ "$(echo $recent | wc -w)" -ge 3 ]; then restart=false; fi
+	printf '{"time":%s,"what":"%s","uptime":%s,"report":"%s","restarted":%s}\n' \
+		"$now" "$what" "$up" "$report" "$restart" >"$LOG_DIR/last-crash"
+	$restart || exit 1
+	mv "$LOG_DIR/session.log" "$LOG_DIR/session.log.old"
+	sleep 1
+done

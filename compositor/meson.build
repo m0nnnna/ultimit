@@ -103,6 +103,8 @@ executable(
 		scenefx, wayland_server, wlroots, xkbcommon, xcb, libdrm, pixman, cairo, pangocairo, libinput,
 	],
 	build_rpath: deps_libdir,
+	# Function names in the crash backtrace (main.c handle_crash).
+	export_dynamic: true,
 	install_rpath: deps_libdir,
 	install: true,
 )

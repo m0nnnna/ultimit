@@ -18,6 +18,7 @@ ShellRoot {
     SettingsWindow {}                                    // Settings window (replaces Accessory; rail ACCESSORY button)
     LockScreen {}                                        // session lock, idle dim/lock/suspend, lock on sleep
     BatteryWatch {}                                      // low-battery warnings (20/10/5%)
+    CrashNotice {}                                       // "Ultimit crashed" once after a compositor crash
     Polkit {}                                            // polkit authentication agent + dialog
     Agents {}        // Bluetooth pairing / Wi-Fi & VPN password prompts (bin/ultimit-agents)
     DataWindow {}    // DATA file manager (ultimit-data, qs ipc call data open <path>)

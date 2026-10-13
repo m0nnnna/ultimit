@@ -1,16 +1,39 @@
 #!/bin/sh
 # Keeps the Ultimit shell running for the whole session.
 #
-# Runs the working copy (shell/, hot-reloads while developing). If it exits,
-# it is restarted; if it keeps dying within seconds of starting (e.g. a
-# half-edited QML file), fall back to the last committed shell so the desktop
-# never ends up black; retry the working copy when a QML file changes.
+# Runs the working copy (shell/, hot-reloads while developing). If it exits, it is restarted. Once it
+# has run for a minute, a copy of it is kept as the last good shell. If the working copy keeps dying
+# within seconds of starting (e.g. a half-edited QML file), the last good copy runs instead (or, the
+# first time ever, the last committed one when this is a git checkout), and the working copy gets
+# another chance as soon as one of its QML files changes. If that copy keeps dying too, a rescue
+# screen (session/rescue-shell.qml: try again, terminal, log, log out) shows instead of a black screen.
 ROOT=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
-FALLBACK="${XDG_CACHE_HOME:-$HOME/.cache}/ultimit/shell-committed"
+CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/ultimit"
+GOOD="$CACHE/shell-good"
+FALLBACK="$CACHE/shell-fallback"
+GOOD_AFTER=${ULTIMIT_SHELL_GOOD_AFTER:-60}
 
+# Keep the running working copy as the last good shell (atomically: copy, then swap).
+snapshot() {
+	rm -rf "$GOOD.new" && mkdir -p "$CACHE" && cp -a "$ROOT/shell" "$GOOD.new" &&
+		find "$GOOD.new" -name __pycache__ -type d -prune -exec rm -rf {} + &&
+		rm -rf "$GOOD.old" && { [ ! -e "$GOOD" ] || mv "$GOOD" "$GOOD.old"; } && mv "$GOOD.new" "$GOOD" &&
+		rm -rf "$GOOD.old"
+}
+
+# What to run when the working copy fails: the last good copy, else the last commit (git checkouts).
 fallback_ready() {
-	rm -rf "$FALLBACK" && mkdir -p "$FALLBACK" &&
+	rm -rf "$FALLBACK" && mkdir -p "$FALLBACK" || return 1
+	if [ -d "$GOOD" ]; then
+		cp -a "$GOOD/." "$FALLBACK/"
+	elif git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
 		git -C "$ROOT" archive HEAD shell | tar -x -C "$FALLBACK" --strip-components=1
+	else
+		return 1
+	fi
+	# The copy lives outside the checkout: point its ../session and ../compositor back at it.
+	ln -sfn "$ROOT/session" "$CACHE/session" 2>/dev/null
+	ln -sfn "$ROOT/compositor" "$CACHE/compositor" 2>/dev/null
 }
 
 # Belong to this session's compositor only: the session script records its
@@ -23,30 +46,50 @@ alive() {
 	[ "$(cat /proc/"$COMPOSITOR"/comm 2>/dev/null)" = ultimit ]
 }
 
+# Run qs on a config; returns 0 when it lasted 10 s or more.
+run_for() {
+	start=$(date +%s)
+	qs -p "$1"
+	[ $(($(date +%s) - start)) -ge 10 ]
+}
+
 fails=0
 while alive; do
-	start=$(date +%s)
-	if [ "$fails" -ge 2 ] && fallback_ready; then
-		echo "ultimit-shell: working copy keeps failing; running last committed shell" >&2
-		qs -p "$FALLBACK" &
-		pid=$!
-		# Give the working copy another chance once something in it changes.
-		touch "$FALLBACK/.since"
-		until [ -n "$(find "$ROOT/shell" -newer "$FALLBACK/.since" -name '*.qml' -print -quit)" ]; do
-			sleep 3
-			kill -0 "$pid" 2>/dev/null || break
-			alive || break
-		done
-		kill "$pid" 2>/dev/null
-		wait "$pid" 2>/dev/null
+	if [ "$fails" -ge 2 ]; then
+		if fallback_ready; then
+			echo "ultimit-shell: working copy keeps failing; running the last good shell" >&2
+			ffails=0
+			touch "$FALLBACK/.since"
+			while alive; do
+				qs -p "$FALLBACK" &
+				pid=$!
+				start=$(date +%s)
+				# Give the working copy another chance once something in it changes.
+				until [ -n "$(find "$ROOT/shell" -newer "$FALLBACK/.since" -name '*.qml' -print -quit)" ]; do
+					sleep 3
+					kill -0 "$pid" 2>/dev/null || break
+					alive || break
+				done
+				if kill -0 "$pid" 2>/dev/null; then # the working copy changed: back to it
+					kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
+					break
+				fi
+				wait "$pid" 2>/dev/null
+				if [ $(($(date +%s) - start)) -lt 10 ]; then ffails=$((ffails + 1)); else ffails=0; fi
+				[ "$ffails" -ge 2 ] && break
+				sleep 1
+			done
+			[ "${ffails:-0}" -lt 2 ] && { fails=0; continue; }
+		fi
+		echo "ultimit-shell: no shell will start; showing the rescue screen" >&2
+		qs -p "$ROOT/session/rescue-shell.qml" # returns on "Try again"
 		fails=0
 		continue
 	fi
-	qs -p "$ROOT/shell"
-	if [ $(($(date +%s) - start)) -lt 10 ]; then
-		fails=$((fails + 1))
-	else
-		fails=0
-	fi
+	# A minute in, keep this working copy as the last good shell (cancelled if it dies sooner).
+	(sleep "$GOOD_AFTER"; alive && snapshot) &
+	snap=$!
+	if run_for "$ROOT/shell"; then fails=0; else fails=$((fails + 1)); fi
+	kill "$snap" 2>/dev/null
 	sleep 1
 done
