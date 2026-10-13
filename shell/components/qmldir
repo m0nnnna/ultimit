@@ -31,5 +31,6 @@ singleton Privacy 1.0 Privacy.qml
 Flyout 1.0 Flyout.qml
 BatteryWatch 1.0 BatteryWatch.qml
 CrashNotice 1.0 CrashNotice.qml
+UpdateWatch 1.0 UpdateWatch.qml
 ShortcutSheet 1.0 ShortcutSheet.qml
 AltTab 1.0 AltTab.qml

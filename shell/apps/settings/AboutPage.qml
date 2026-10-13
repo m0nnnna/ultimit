@@ -12,7 +12,8 @@ Page {
     Cmd {
         id: probe
         argv: ["sh", "-c", [
-            'echo "ver=$(git -C "$1" describe --always --dirty 2>/dev/null)"',
+            // installed: /opt/ultimit/VERSION (a release tag or a commit); a checkout: git describe
+            'echo "ver=$(cat "$1/../VERSION" 2>/dev/null || git -C "$1" describe --tags --always --dirty 2>/dev/null)"',
             '. /etc/os-release 2>/dev/null; echo "os=$PRETTY_NAME"',
             'echo "host=$(hostname)"',
             'echo "kernel=$(uname -r)"',
@@ -34,7 +35,8 @@ Page {
     }
     Component.onCompleted: probe.go()
 
-    InfoRow { Layout.fillWidth: true; label: "Ultimit"; value: Config.version + (info.ver ? " (" + info.ver + ")" : "") }
+    InfoRow { Layout.fillWidth: true; label: "Ultimit"; value: /^v?\d+\./.test(info.ver || "") ? info.ver.replace(/^v/, "")
+                                                                       : Config.version + (info.ver ? " (" + info.ver + ")" : "") }
     InfoRow { Layout.fillWidth: true; label: "Operating system"; value: info.os || "…" }
     InfoRow { Layout.fillWidth: true; label: "Device name"; value: info.host || "…" }
     InfoRow { Layout.fillWidth: true; label: "Kernel"; value: info.kernel || "…" }

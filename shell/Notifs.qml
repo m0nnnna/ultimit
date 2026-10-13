@@ -34,6 +34,7 @@ Singleton {
     property var live: ({})      // nid -> Notification (tracked while its popup is up)
     property var watchers: ({})  // nid -> Connections holder
     property int _toastSeq: 0
+    property var _toastClicks: ({})   // toast nid -> function run when the card is clicked
 
     // ---------- helpers ----------
     function esc(s) {
@@ -162,6 +163,7 @@ Singleton {
     function release(nid, dismissed) {
         const i = indexOfNid(popupModel, nid);
         if (i >= 0) popupModel.remove(i);
+        delete _toastClicks[nid];
         const n = live[nid];
         if (n) {
             forget(nid);
@@ -172,6 +174,8 @@ Singleton {
     function closePopup(nid) { release(nid, true); }
 
     function invoke(nid, actionId) {
+        const f = _toastClicks[nid];
+        if (f) { release(nid, true); f(); return; }
         const n = live[nid];
         if (!n) return;
         const a = n.actions || [];
@@ -194,16 +198,18 @@ Singleton {
     function toggleDnd() { dnd = !dnd; }
 
     // Toasts.show() lands here.
-    // urgency 2 = critical (red card). Returns the toast's nid, for release(nid).
-    function toast(title, message, command, timeoutMs, urgency) {
+    // urgency 2 = critical (red card). onClick: run when the card is clicked. Returns the toast's
+    // nid, for release(nid).
+    function toast(title, message, command, timeoutMs, urgency, onClick) {
         const nid = -(++_toastSeq);
         popupModel.append({
             nid: nid, kind: "toast", app: title || "", title: "",
             body: esc(message || ""), icon: "", image: "", urgency: urgency === undefined ? 1 : urgency,
             timeout: timeoutMs === 0 ? 0 : (timeoutMs || (command ? 12000 : 4200)),   // 0 = sticky
-            actions: "[]", hasDefault: false, command: command || "",
+            actions: "[]", hasDefault: !!onClick, command: command || "",
             time: Date.now(), rev: 0
         });
+        if (onClick) _toastClicks[nid] = onClick;
         while (popupModel.count > maxPopups) release(popupModel.get(0).nid, false);
         return nid;
     }

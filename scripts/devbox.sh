@@ -26,6 +26,7 @@ start)
 	if [ "$2" = window ]; then backend=""; else backend=headless; fi
 	(
 		export PATH="$DEPS/bin:$ROOT/shell/bin:$PATH"
+		export ULTIMIT_DEVBOX=1   # (the shell skips things like the update check)
 		. "$ROOT/shell/theme/session-env.sh"
 		# Don't inherit the parent's display or the devbox would nest
 		# into whatever ran this script when headless.
