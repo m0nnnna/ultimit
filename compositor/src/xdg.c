@@ -60,6 +60,7 @@ static void xdg_commit(struct wl_listener *listener, void *data) {
 	}
 	struct wlr_box geo = toplevel->base->geometry;
 	view_update_size(view, geo.width, geo.height);
+	view_update_blur(view);
 	capture_view_commit(view);
 }
 

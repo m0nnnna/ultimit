@@ -18,7 +18,7 @@ FloatingWindow {
     implicitWidth: 900
     implicitHeight: 620
     minimumSize: Qt.size(640, 440)
-    color: Theme.bg1
+    color: "transparent"   // the Theme.panel glass below fills it
 
     onVisibleChanged: {
         if (visible !== Games.open) Games.open = visible;

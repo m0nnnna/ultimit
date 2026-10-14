@@ -1,8 +1,8 @@
 /*
- * decoration.c: Altimit-style window chrome. A translucent titlebar with the
+ * decoration.c: Altimit-style window chrome. A frosted-glass titlebar and frame with the
  * accent square, the window title in the display face, the app id as a mono
  * subtitle, a rule that fades out toward the [ _ ] [ □ ] [ × ] buttons (which
- * light up under the cursor, close in red), a 1px frame, accent corner brackets top-left and
+ * light up under the cursor, close in red), a glass frame with a 1px outline, accent corner brackets top-left and
  * bottom-right, and a soft shadow. Client-side-decorated windows keep the
  * frame, brackets and shadow but get no titlebar.
  */
@@ -344,10 +344,15 @@ void decoration_create(struct ul_view *view) {
 		UL_SHADOW_SIGMA, color_shadow);
 	const struct ul_skin *k = &view->server->skin;
 	deco->hover = -1;
-	deco->border = wlr_scene_rect_create(deco->tree, 0, 0, k->line);
+	for (int i = 0; i < 4; i++) {
+		deco->glass[i] = wlr_scene_rect_create(deco->tree, 0, 0, k->panel);
+		wlr_scene_rect_set_backdrop_blur(deco->glass[i], true);
+		wlr_scene_rect_set_backdrop_blur_optimized(deco->glass[i], true);
+	}
 	deco->titlebar = wlr_scene_buffer_create(deco->tree, NULL);
 	wlr_scene_buffer_set_backdrop_blur(deco->titlebar, true);
 	wlr_scene_buffer_set_backdrop_blur_optimized(deco->titlebar, true);
+	deco->border = wlr_scene_rect_create(deco->tree, 0, 0, k->line);
 	for (int i = 0; i < 4; i++) {
 		deco->brackets[i] = wlr_scene_rect_create(deco->tree, 0, 0, k->accent);
 	}
@@ -424,6 +429,39 @@ void decoration_focus_sweep(struct ul_view *view) {
 	sweep_tick(view);
 }
 
+/* The glass frame and its outline for a frame fh tall (less than the full height while
+ * the open animation wipes the window down). The glass is four strips around the
+ * content rather than one rect, because a blurred rect blurs its whole box: behind the
+ * content it would show through any see-through part of the window. */
+void decoration_place_frame(struct ul_view *view, int fh) {
+	struct ul_decoration *deco = &view->deco;
+	int bar = view->ssd ? UL_TITLEBAR_H : 0;
+	int fx = -UL_BORDER;
+	int fy = -bar - UL_BORDER;
+	int fw = view->width + 2 * UL_BORDER;
+	int side = fh - bar - 2 * UL_BORDER;
+	if (side < 0) side = 0;
+
+	wlr_scene_rect_set_size(deco->border, fw, fh);
+	wlr_scene_node_set_position(&deco->border->node, fx, fy);
+	wlr_scene_rect_set_clipped_region(deco->border, (struct clipped_region){
+		.corner_radius = 0,
+		.corners = CORNER_LOCATION_NONE,
+		.area = { 1, 1, fw - 2, fh - 2 },
+	});
+
+	struct { int x, y, w, h; } g[4] = {
+		{ fx, -UL_BORDER, fw, UL_BORDER },            /* under the titlebar (top edge if none) */
+		{ fx, 0, UL_BORDER, side },                   /* left */
+		{ fx + fw - UL_BORDER, 0, UL_BORDER, side },  /* right */
+		{ fx, fy + fh - UL_BORDER, fw, UL_BORDER },   /* bottom */
+	};
+	for (int i = 0; i < 4; i++) {
+		wlr_scene_rect_set_size(deco->glass[i], g[i].w, g[i].h);
+		wlr_scene_node_set_position(&deco->glass[i]->node, g[i].x, g[i].y);
+	}
+}
+
 /* Positions everything relative to the view's root tree, whose origin is the
  * client surface origin (the content box starts at the geometry offset). */
 void decoration_update(struct ul_view *view) {
@@ -448,14 +486,11 @@ void decoration_update(struct ul_view *view) {
 	int fw = view->width + 2 * UL_BORDER;
 	int fh = view->height + bar + 2 * UL_BORDER;
 
-	wlr_scene_rect_set_size(deco->border, fw, fh);
-	wlr_scene_node_set_position(&deco->border->node, fx, fy);
 	wlr_scene_rect_set_color(deco->border, focused ? k->line_strong : k->line);
-	wlr_scene_rect_set_clipped_region(deco->border, (struct clipped_region){
-		.corner_radius = 0,
-		.corners = CORNER_LOCATION_NONE,
-		.area = { UL_BORDER, UL_BORDER, fw - 2 * UL_BORDER, fh - 2 * UL_BORDER },
-	});
+	for (int i = 0; i < 4; i++) {
+		wlr_scene_rect_set_color(deco->glass[i], focused ? k->panel : k->panel_dim);
+	}
+	decoration_place_frame(view, fh);
 
 	int sigma = (int)UL_SHADOW_SIGMA;
 	wlr_scene_shadow_set_size(deco->shadow, fw + 2 * sigma, fh + 2 * sigma);
@@ -504,8 +539,12 @@ enum ul_titlebar_hit decoration_hit(struct ul_view *view, double lx, double ly) 
 	}
 	double tx = lx - (view->x - UL_BORDER);
 	double ty = ly - (view->y - UL_TITLEBAR_H - UL_BORDER);
-	if (tx < 0 || ty < 0 || tx >= view->width + 2 * UL_BORDER || ty >= UL_TITLEBAR_H) {
+	/* The glass strip between the titlebar and the content drags like the titlebar. */
+	if (tx < 0 || ty < 0 || tx >= view->width + 2 * UL_BORDER || ty >= UL_TITLEBAR_H + UL_BORDER) {
 		return UL_HIT_NONE;
+	}
+	if (ty >= UL_TITLEBAR_H) {
+		return UL_HIT_TITLE;
 	}
 	static const enum ul_titlebar_hit hits[3] = {
 		UL_HIT_MINIMIZE, UL_HIT_MAXIMIZE, UL_HIT_CLOSE,

@@ -15,7 +15,7 @@ FloatingWindow {
     implicitWidth: 340
     implicitHeight: 620
     minimumSize: Qt.size(300, 520)
-    color: Theme.bg1
+    color: "transparent"   // the Theme.panel glass below fills it
 
     onVisibleChanged: { if (visible !== Calc.open) Calc.open = visible; if (visible) Qt.callLater(() => ui.forceActiveFocus()); }
     Component.onCompleted: Qt.callLater(() => ui.forceActiveFocus())

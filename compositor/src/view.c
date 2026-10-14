@@ -374,6 +374,20 @@ static void set_backdrop_blur(struct wlr_scene_buffer *buffer, int sx, int sy, v
 	}
 }
 
+/* Glass behind the see-through parts of a window's surfaces (SceneFX only blurs where a
+ * buffer isn't opaque). Called on every commit, since a surface can get a new scene buffer
+ * (subsurfaces, a client that recreates its surface tree); the setters are no-ops when
+ * nothing changes. Off for fullscreen windows so games keep direct scanout, and for
+ * client-decorated windows, whose buffers carry soft shadows outside the window that
+ * would come out as a blurred halo. */
+void view_update_blur(struct ul_view *view) {
+	if (!view->content) {
+		return;
+	}
+	bool blur = !view->fullscreen && view->ssd;
+	wlr_scene_node_for_each_buffer(&view->content->node, set_backdrop_blur, &blur);
+}
+
 void view_set_fullscreen(struct ul_view *view, bool fullscreen) {
 	struct ul_server *server = view->server;
 	if (view->fullscreen == fullscreen) {
@@ -403,8 +417,7 @@ void view_set_fullscreen(struct ul_view *view, bool fullscreen) {
 			view_request_size(view, view->saved.width, view->saved.height);
 		}
 	}
-	bool blur = !fullscreen;
-	wlr_scene_node_for_each_buffer(&view->content->node, set_backdrop_blur, &blur);
+	view_update_blur(view);
 	if (view->type == UL_VIEW_XDG) {
 		wlr_xdg_toplevel_set_fullscreen(view->xdg_toplevel, fullscreen);
 	} else {
@@ -550,6 +563,7 @@ void view_set_ssd(struct ul_view *view, bool ssd) {
 		return;
 	}
 	view->ssd = ssd;
+	view_update_blur(view);
 	if (view->mapped) {
 		/* Keep the content where it is; the titlebar grows upward. */
 		decoration_update(view);

@@ -17,7 +17,7 @@ FloatingWindow {
     implicitWidth: 960
     implicitHeight: 600
     minimumSize: Qt.size(760, 440)
-    color: Theme.bg1
+    color: Theme.panel   // frosted glass, like every Ultimit app window
 
     onVisibleChanged: { if (visible !== Data.open) Data.open = visible; if (visible) Qt.callLater(() => ui.forceActiveFocus()); }
     Component.onCompleted: Qt.callLater(() => ui.forceActiveFocus())

@@ -14,7 +14,7 @@ FloatingWindow {
     implicitWidth: 880
     implicitHeight: 640
     minimumSize: Qt.size(660, 460)
-    color: Theme.bg1
+    color: "transparent"   // the Theme.panel glass below fills it
 
     property bool showSetup: false
     readonly property bool setupShown: Shares.loaded && (Shares.setupNeeded || showSetup)
