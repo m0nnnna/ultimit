@@ -27,6 +27,8 @@ qml6-module-qtcore
 # The shell's helpers (Python) and the keyring library the VPN agent uses
 python3
 python3-gi
+# Draws the mouse cursors in the skin's colours (shell/theme/cursors)
+python3-cairo
 gir1.2-secret-1
 gir1.2-glib-2.0
 # Hardware support a desktop expects (Ubuntu's server image leaves some out): firmware for GPUs,

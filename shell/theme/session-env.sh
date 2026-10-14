@@ -25,8 +25,7 @@ esac
 export ADW_DEBUG_COLOR_SCHEME=$_ul_scheme
 
 # Mouse cursor: the skin's Shard theme (theme/cursors), when installed.
-case "$_ul_skin" in amber|silver|verdant) _ul_cur=$_ul_skin ;; *) _ul_cur=mine ;; esac
-_ul_cur="UltimitCursor-$(printf '%s' "$_ul_cur" | sed 's/./\U&/')"
+_ul_cur="UltimitCursor-$(printf '%s' "${_ul_skin:-mine}" | sed 's/./\U&/')"
 if [ -z "${XCURSOR_THEME:-}" ] && [ -e "$HOME/.local/share/icons/$_ul_cur/cursors/default" ]; then
 	export XCURSOR_THEME=$_ul_cur
 fi
