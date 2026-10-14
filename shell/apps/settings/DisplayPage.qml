@@ -67,9 +67,10 @@ Item {
         return a.x < b.x + lw(b) && b.x < a.x + lw(a) && a.y < b.y + lh(b) && b.y < a.y + lh(a);
     }
     // The spot next to one of `placed` (edge to edge, never overlapping them) nearest to (x, y).
-    // Edges that come within `snap` of lining up do line up.
-    function nearestSpot(o, x, y, placed) {
-        const w = lw(o), h = lh(o), snap = 64;
+    // Along that edge it goes wherever it was put; edges that come within `snap` (logical px, 0 = off)
+    // of lining up do line up.
+    function nearestSpot(o, x, y, placed, snap) {
+        const w = lw(o), h = lh(o);
         let best = null, bd = 1e18;
         for (const p of placed) {
             const pw = lw(p), ph = lh(p);
@@ -97,9 +98,10 @@ Item {
         return best || { x: x, y: y };
     }
     // Put every enabled monitor edge to edge: the main display stays, the others (nearest first,
-    // `moved` with its wished-for spot) snap to the closest free side of one already placed.
+    // `moved` with its wished-for spot) go to the closest free side of one already placed. Only the
+    // one being moved lines up with edges (within `snap`); the others keep their offsets.
     // Then shift everything so the layout starts at 0,0.
-    function pack(list, moved, wantX, wantY) {
+    function pack(list, moved, wantX, wantY, snap) {
         const en = list.filter(o => o.enabled);
         if (en.length === 0) return list;
         const main = en.find(o => o.primary) || en[0];
@@ -116,8 +118,10 @@ Item {
             if (moved !== undefined && b === list[moved]) return -1;
             return (Math.abs(a.x - main.x) + Math.abs(a.y - main.y)) - (Math.abs(b.x - main.x) + Math.abs(b.y - main.y));
         });
+        // dragging the main display: the one nearest to it is the one that lines up
+        const snapper = moved === undefined ? null : list[moved] === main ? rest[0] : list[moved];
         for (const o of rest) {
-            const s = nearestSpot(o, o.x, o.y, placed);
+            const s = nearestSpot(o, o.x, o.y, placed, o === snapper ? (snap || 0) : 0);
             o.x = s.x; o.y = s.y;
             placed.push(o);
         }
@@ -155,6 +159,11 @@ Item {
                    "--transform", o.transform, "--adaptive-sync", o.vrr ? "enabled" : "disabled");
         }
         return a;
+    }
+    // Typed position (logical px): exactly there, next to the others, no lining up.
+    function place(i, x, y) {
+        if (isNaN(x) || isNaN(y)) { outs = clone(outs); return; }
+        outs = pack(clone(outs), i, x, y, 0);
     }
     function edit(i, patch) {
         const l = clone(outs);
@@ -357,7 +366,7 @@ Item {
             Rectangle { anchors.fill: parent; color: Theme.panel2; border.width: 1; border.color: Theme.line }
             Text {
                 anchors { right: parent.right; bottom: parent.bottom; margins: 8 }
-                text: pg.duplicate ? "DUPLICATED" : (pg.enabledOuts.length > 1 ? "DRAG TO ARRANGE" : "")
+                text: pg.duplicate ? "DUPLICATED" : (pg.enabledOuts.length > 1 ? "DRAG TO ARRANGE  ·  HOLD SHIFT: NO SNAPPING" : "")
                 color: Theme.dim; font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1.6
             }
             Repeater {
@@ -393,12 +402,14 @@ Item {
                         drag.threshold: 4
                         onPressed: pg.sel = mon.index
                         onPositionChanged: if (drag.active) mon.dragging = true
-                        onReleased: {
+                        onReleased: mouse => {
                             if (!mon.dragging) return;
                             mon.dragging = false;
                             const wx = Math.round((mon.x - canvas.ox) / canvas.k + canvas.x0);
                             const wy = Math.round((mon.y - canvas.oy) / canvas.k + canvas.y0);
-                            pg.outs = pg.pack(pg.clone(pg.outs), mon.index, wx, wy);
+                            // lines up with edges within ~10 px on the canvas; Shift places it freely
+                            const snap = (mouse.modifiers & Qt.ShiftModifier) ? 0 : 10 / canvas.k;
+                            pg.outs = pg.pack(pg.clone(pg.outs), mon.index, wx, wy, snap);
                         }
                     }
                 }
@@ -512,6 +523,27 @@ Item {
                 visible: !!od.o && od.o.enabled
                 Layout.fillWidth: true
                 spacing: 8
+                Text {
+                    visible: pg.enabledOuts.length > 1 && !pg.duplicate
+                    text: "POSITION  (TOP-LEFT CORNER, LOGICAL PIXELS)"; color: Theme.dim
+                    font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.8
+                }
+                RowLayout {   // exact placement; Enter moves it (it stays touching a neighbour)
+                    visible: pg.enabledOuts.length > 1 && !pg.duplicate
+                    spacing: 8
+                    Text { text: "X"; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 12 }
+                    TextEntry {
+                        id: posX; implicitWidth: 90
+                        text: od.o ? String(od.o.x) : ""
+                        onAccepted: pg.place(pg.sel, parseInt(text), parseInt(posY.text))
+                    }
+                    Text { text: "Y"; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 12 }
+                    TextEntry {
+                        id: posY; implicitWidth: 90
+                        text: od.o ? String(od.o.y) : ""
+                        onAccepted: pg.place(pg.sel, parseInt(posX.text), parseInt(text))
+                    }
+                }
                 Dropdown {
                     label: "Resolution"
                     options: od.o ? pg.resolutions(od.o) : []
