@@ -1,0 +1,18 @@
+#!/bin/sh
+# Flatpak apps need a copy of NVIDIA's graphics libraries that matches the
+# host driver exactly (org.freedesktop.Platform.GL.nvidia-<version>). Without
+# it they get no GPU at all: Chromium falls back to drawing everything on the
+# CPU (choppy scrolling, software video decode). Flatpak only fetches it when
+# the driver is already running at install or update time, which is not the
+# case for apps installed by the ISO installer or before a driver upgrade.
+# Run in the background at every login by ultimit-session; a no-op when the
+# matching extension is installed or the PC has no NVIDIA driver running.
+command -v flatpak >/dev/null 2>&1 || exit 0
+ver=$(cat /sys/module/nvidia/version 2>/dev/null) || exit 0
+[ -n "$ver" ] || exit 0
+ext=org.freedesktop.Platform.GL.nvidia-$(printf %s "$ver" | tr . -)
+flatpak list --runtime --columns=application 2>/dev/null | grep -qx "$ext" && exit 0
+# A per-user install needs no password; Flatpak finds extensions in every
+# installation, so system-wide apps use it too.
+flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo &&
+	flatpak install --user -y --noninteractive flathub "$ext"
