@@ -1,5 +1,6 @@
 // EntryMouse.qml - mouse handling shared by list rows and grid cells: click / ctrl / shift
 // selection, double-click open, right-click menu, and drag start (move; Ctrl = copy).
+// A drag that leaves the window goes on as a system drag, into other apps.
 // `win` is the DataWindow (provides ghost + openItemMenu).
 import QtQuick
 import "../.."
@@ -14,6 +15,7 @@ MouseArea {
     property real px: 0
     property real py: 0
     property bool dragging: false
+    property bool handedOut: false   // the drag left the window: the system drag has it now
 
     onPressed: mouse => {
         host.forceActiveFocus();
@@ -24,7 +26,7 @@ MouseArea {
             host.openItemMenu(pt.x, pt.y);
             return;
         }
-        px = mouse.x; py = mouse.y; dragging = false;
+        px = mouse.x; py = mouse.y; dragging = false; handedOut = false;
         if (mouse.modifiers & Qt.ControlModifier) Data.toggleSel(idx);
         else if (mouse.modifiers & Qt.ShiftModifier) Data.selectRange(idx);
         else if (!Data.isSel(entry.p)) Data.selectOnly(idx);
@@ -33,6 +35,7 @@ MouseArea {
     onReleased: mouse => {
         if (dragging) {
             dragging = false;
+            if (handedOut) return;
             host.ghostDrop(mouse.modifiers & Qt.ControlModifier);
             return;
         }
@@ -40,12 +43,15 @@ MouseArea {
             && Data.selCount > 1 && Data.isSel(entry.p)) Data.selectOnly(idx);
     }
     onPositionChanged: mouse => {
-        if (!pressed || !(pressedButtons & Qt.LeftButton) || Data.isTrash || Data.isArc) return;
+        if (!pressed || !(pressedButtons & Qt.LeftButton) || Data.isTrash || Data.isArc || handedOut) return;
         if (!dragging && Math.abs(mouse.x - px) + Math.abs(mouse.y - py) > 10) {
             dragging = true;
             host.ghostStart(Data.dragPaths(entry), entry.n);
         }
-        if (dragging) { const pt = mapToItem(host.ui, mouse.x, mouse.y); host.ghostMove(pt.x, pt.y); }
+        if (!dragging) return;
+        const pt = mapToItem(host.ui, mouse.x, mouse.y);
+        if (pt.x < 0 || pt.y < 0 || pt.x >= host.ui.width || pt.y >= host.ui.height) { handedOut = true; host.ghostOut(); }
+        else host.ghostMove(pt.x, pt.y);
     }
     onDoubleClicked: mouse => { if (mouse.button === Qt.LeftButton) Data.openEntry(entry); }
 }

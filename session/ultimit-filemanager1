@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+"""org.freedesktop.FileManager1 for Ultimit sessions, answered by DATA.
+
+Browsers' "Show in folder" on a download (Ungoogled Chromium, also from
+its Flatpak sandbox), the portal's "open containing folder" and other apps
+ask this D-Bus service to show a file; without it nothing happens, since
+Nautilus isn't there to answer. ShowItems opens the file's folder in DATA
+with the file selected, ShowFolders opens the folders.
+
+Started with the session (ultimit-session), not D-Bus activated, so the
+Ubuntu session keeps its own file manager. Exits with the compositor, or
+when another instance (the next login) takes the name over.
+"""
+import os
+import sys
+
+from gi.repository import Gio, GLib
+
+NAME = "org.freedesktop.FileManager1"
+PATH = "/org/freedesktop/FileManager1"
+XML = """<node><interface name="org.freedesktop.FileManager1">
+  <method name="ShowFolders"><arg type="as" direction="in"/><arg type="s" direction="in"/></method>
+  <method name="ShowItems"><arg type="as" direction="in"/><arg type="s" direction="in"/></method>
+  <method name="ShowItemProperties"><arg type="as" direction="in"/><arg type="s" direction="in"/></method>
+</interface></node>"""
+ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+DATA = os.path.join(ROOT, "shell", "bin", "ultimit-data")
+PIDFILE = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "ultimit-session.pid")
+
+loop = GLib.MainLoop()
+
+
+def local_path(uri):
+    if uri.startswith("/"):
+        return uri
+    if uri.startswith("file:"):
+        return Gio.File.new_for_uri(uri).get_path()
+    return None
+
+
+def run(*args):
+    GLib.spawn_async([DATA, *args], flags=GLib.SpawnFlags.STDOUT_TO_DEV_NULL | GLib.SpawnFlags.STDERR_TO_DEV_NULL)
+
+
+def on_call(conn, sender, path, iface, method, params, invocation):
+    uris, _startup_id = params.unpack()
+    paths = [p for p in map(local_path, uris) if p]
+    try:
+        if method == "ShowFolders":
+            for p in paths:
+                run(p)
+        elif paths:
+            # One file is the usual case; several get one folder view, first selected.
+            run("--reveal", paths[0])
+    except GLib.Error as e:
+        print(f"ultimit-filemanager1: {e.message}", file=sys.stderr)
+    invocation.return_value(None)
+
+
+def on_bus(conn, name):
+    conn.register_object(PATH, Gio.DBusNodeInfo.new_for_xml(XML).interfaces[0], on_call)
+
+
+def compositor_alive():
+    try:
+        with open(PIDFILE) as f:
+            os.kill(int(f.read().strip()), 0)
+        return True
+    except (OSError, ValueError):
+        return False
+
+
+def watch():
+    if not compositor_alive():
+        loop.quit()
+        return False
+    return True
+
+
+Gio.bus_own_name(Gio.BusType.SESSION, NAME,
+                 Gio.BusNameOwnerFlags.ALLOW_REPLACEMENT | Gio.BusNameOwnerFlags.REPLACE,
+                 on_bus, None, lambda conn, name: loop.quit())
+if compositor_alive():
+    GLib.timeout_add_seconds(30, watch)
+loop.run()
