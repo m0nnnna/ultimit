@@ -354,7 +354,7 @@ Item {
             id: canvas
             visible: pg.outs.length > 0
             Layout.fillWidth: true
-            Layout.preferredHeight: 220
+            Layout.preferredHeight: 300
             readonly property var en: pg.enabledOuts
             readonly property real x0: en.length ? Math.min(...en.map(o => o.x)) : 0
             readonly property real y0: en.length ? Math.min(...en.map(o => o.y)) : 0
@@ -400,15 +400,18 @@ Item {
                         cursorShape: pg.enabledOuts.length > 1 && !pg.duplicate ? Qt.SizeAllCursor : Qt.PointingHandCursor
                         drag.target: pg.enabledOuts.length > 1 && !pg.duplicate ? mon : null
                         drag.threshold: 4
+                        preventStealing: true   // else the page's Flickable takes vertical drags and the drop never lands
                         onPressed: pg.sel = mon.index
                         onPositionChanged: if (drag.active) mon.dragging = true
+                        onCanceled: mon.dragging = false
                         onReleased: mouse => {
                             if (!mon.dragging) return;
-                            mon.dragging = false;
+                            // read the drop spot first: clearing `dragging` snaps x/y back to the old place
                             const wx = Math.round((mon.x - canvas.ox) / canvas.k + canvas.x0);
                             const wy = Math.round((mon.y - canvas.oy) / canvas.k + canvas.y0);
-                            // lines up with edges within ~10 px on the canvas; Shift places it freely
-                            const snap = (mouse.modifiers & Qt.ShiftModifier) ? 0 : 10 / canvas.k;
+                            mon.dragging = false;
+                            // lines up with edges within ~8 px on the canvas; Shift places it freely
+                            const snap = (mouse.modifiers & Qt.ShiftModifier) ? 0 : 8 / canvas.k;
                             pg.outs = pg.pack(pg.clone(pg.outs), mon.index, wx, wy, snap);
                         }
                     }
