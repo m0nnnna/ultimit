@@ -55,6 +55,8 @@ gsettings set org.gnome.desktop.interface font-rgba-order rgb 2>/dev/null
 gsettings set org.gnome.desktop.interface color-scheme "$ADW_DEBUG_COLOR_SCHEME" 2>/dev/null
 # Flatpak apps: the Ultimit theme instead of Adwaita, and Chromium's GTK theme + system titlebar.
 "$ROOT/session/ultimit-flatpak-theme" >/dev/null 2>&1 || true
+# Discord (Vesktop): a launcher entry per account, each running on its own; the Ultimit theme.
+("$ROOT/shell/bin/ultimit-discord" setup >/dev/null 2>&1 &)
 
 # Tell xdg-desktop-portal which backends serve an Ultimit desktop. Without
 # this, GTK apps wait on portal timeouts at startup (slow launches).

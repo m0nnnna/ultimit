@@ -289,6 +289,10 @@ add("apps", "ultimit-firewall",
 add("apps", "ultimit-terminal",
     P(cp(5, 8, 38, 32, 4, ("tr", "bl")), A, "fill"), S("M5 16H43", A),
     S("M12 22L18 27L12 32", F), S("M22 33H32", A), SOL("M8 11h3v2H8z", F))
+add("apps", "ultimit-chat",
+    # a chamfered speech bubble with a tail, two eye blocks and a mouth line (Discord / Vesktop)
+    P("M9 9H35L41 15V33H23L15 40V33H9L7 31V11Z", A, "fill"),
+    SOL("M16 18h4v5h-4zM28 18h4v5h-4z", F), S("M18 28H30", F), SOL("M38 4h4v4h-4z", A))
 add("apps", "web-browser",
     brackets(),
     P(poly(24, 24, 18, 8, -67.5), A, "fill"),

@@ -97,7 +97,10 @@ Scope {
     Timer {
         id: fastfetchTimer
         interval: 1500
-        onTriggered: Quickshell.execDetached([Quickshell.shellPath("../session/ultimit-fastfetch-config")])
+        onTriggered: {
+            Quickshell.execDetached([Quickshell.shellPath("../session/ultimit-fastfetch-config")]);
+            Quickshell.execDetached([Quickshell.shellPath("bin/ultimit-discord"), "theme"]);
+        }
     }
     Connections {
         target: Theme
@@ -108,7 +111,7 @@ Scope {
             const name = "UltimitCursor-" + Theme.skin.charAt(0).toUpperCase() + Theme.skin.slice(1);
             Quickshell.execDetached(["sh", "-c", "[ -e \"$HOME/.local/share/icons/" + name + "/cursors/default\" ] && ultimitctl cursor-theme " + name + " && gsettings set org.gnome.desktop.interface cursor-theme " + name
                 + " && { ! command -v flatpak >/dev/null || flatpak override --user --env=XCURSOR_THEME=" + name + "; }"]);
-            // fastfetch colours follow the skin too (after shell.json is written).
+            // fastfetch and Discord colours follow the skin too (after shell.json is written).
             fastfetchTimer.restart();
         }
     }

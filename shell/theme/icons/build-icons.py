@@ -54,6 +54,10 @@ ALIASES = {
     ("apps", "preferences-system"): ("apps", "ultimit-settings"),
     ("apps", "applications-games"): ("apps", "ultimit-games"),
     ("apps", "internet-web-browser"): ("apps", "web-browser"),
+    ("apps", "dev.vencord.Vesktop"): ("apps", "ultimit-chat"),
+    ("apps", "vesktop"): ("apps", "ultimit-chat"),
+    ("apps", "com.discordapp.Discord"): ("apps", "ultimit-chat"),
+    ("apps", "discord"): ("apps", "ultimit-chat"),
     ("apps", "application-x-generic"): ("mimetypes", "application-x-executable"),
     # places / devices
     ("devices", "smartphone"): ("devices", "phone"),

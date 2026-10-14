@@ -1,0 +1,8 @@
+#!/bin/sh
+# fake flatpak for test_discord.py: logs each call; Vesktop counts as installed when
+# $DISCORD_TEST_INSTALLED is 1.
+echo "$*" >>"$DISCORD_TEST_LOG"
+case "$1" in
+	info) [ "$DISCORD_TEST_INSTALLED" = 1 ] ;;
+	*) exit 0 ;;
+esac
