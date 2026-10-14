@@ -3,6 +3,7 @@
 // keyboard focus; the glass panel sits beside the rail, top-left, with mockup corner brackets.
 // Apps come from Quickshell's DesktopEntries (NoDisplay entries skipped).
 import QtQuick
+import QtQuick.Shapes
 import Quickshell
 import Quickshell.Wayland
 import ".."
@@ -195,7 +196,7 @@ PanelWindow {
                     Rectangle { x: 0; width: 2; height: parent.height; color: Theme.accent; visible: row.cur }
                     Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line; opacity: .5 }
 
-                    readonly property string iconSrc: modelData.icon ? Icons.path(modelData.icon) : ""
+                    readonly property string iconSrc: modelData.icon ? Icons.app(modelData.icon) : ""
                     Item {
                         id: ico
                         x: 12; anchors.verticalCenter: parent.verticalCenter
@@ -208,10 +209,26 @@ PanelWindow {
                             fillMode: Image.PreserveAspectFit
                             asynchronous: true
                         }
-                        Rectangle {   // fallback: bordered initial
+                        Item {   // letter tile (other apps' icons, Config.appIcons): the WINDOWS list's chamfer frame
                             anchors.fill: parent
                             visible: row.iconSrc === ""
-                            color: "transparent"; border.width: 1; border.color: Theme.lineStrong
+                            Shape {
+                                anchors.fill: parent
+                                preferredRendererType: Shape.CurveRenderer
+                                ShapePath {
+                                    strokeWidth: 1
+                                    strokeColor: Theme.lineStrong
+                                    fillColor: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.08)
+                                    joinStyle: ShapePath.MiterJoin
+                                    startX: 0.5; startY: 0.5
+                                    PathLine { x: 22.5; y: 0.5 }
+                                    PathLine { x: 27.5; y: 5.5 }
+                                    PathLine { x: 27.5; y: 27.5 }
+                                    PathLine { x: 5.5; y: 27.5 }
+                                    PathLine { x: 0.5; y: 22.5 }
+                                    PathLine { x: 0.5; y: 0.5 }
+                                }
+                            }
                             Text {
                                 anchors.centerIn: parent
                                 text: (row.modelData.name || "?").charAt(0).toUpperCase()

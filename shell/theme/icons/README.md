@@ -29,6 +29,9 @@ Layout of a built theme: `index.theme`, `names.json`, `scalable/{apps,places,dev
   `/usr/share`'s hicolor copy instead, which for Steam is the cardboard-box stand-in from Ubuntu's
   `steam-installer`; Steam links its real icon (and `steam_icon_<appid>` for games) into the user
   directory. Windows of running Steam games (class `steam_app_<appid>`) get the game's icon, else Steam's.
+* App icons in the launcher, window list, Alt-Tab and pins go through `Icons.app()`: with
+  Settings > Appearance > Other apps' icons = Letters (the default) only names this theme draws
+  resolve, and every other app gets a letter tile in the skin's colours; Original uses `Icons.path()`.
 * `QS_ICON_THEME` (theme/session-env.sh) still matters for native lookups: launcher entries,
   tray, notifications of other processes. It is set to `Ultimit-<skin>` at session start; it is not
   updated on a live switch (those lookups keep the start-up skin's colours until the next login).

@@ -73,6 +73,11 @@ Singleton {
         const m = /^steam_app_(\d+)$/.exec(name);
         return m ? (root.path("steam_icon_" + m[1]) || root.path("steam")) : "";
     }
+    // An app's icon (launcher, windows, Alt-Tab, pins). With Config.appIcons "letters" only the icons
+    // the Ultimit theme draws resolve; "" for anything else, so the caller draws its letter tile.
+    function app(name) {
+        return Config.appIcons === "letters" ? root.own(name) : root.path(name);
+    }
     // Same, with a final fallback icon name.
     function pathOr(name, fallback) {
         const p = root.path(name);

@@ -137,6 +137,14 @@ Page {
         onPicked: id => Config.railSpin = id
     }
 
+    SectionLabel { text: "Other apps' icons" }
+    Chips {
+        Layout.fillWidth: true
+        options: [{ id: "letters", label: "Letters" }, { id: "original", label: "Original" }]
+        current: Config.appIcons
+        onPicked: id => Config.appIcons = id
+    }
+
     SectionLabel { text: "System" }
     // Reduced motion when off: window open/close/minimize, the focus sweep, panel transitions,
     // shard and rail-icon motion, the boot and lock animations.

@@ -84,7 +84,7 @@ Page {
                 id: ar
                 required property var modelData
                 width: addList.width; height: 44
-                readonly property string src: modelData.kind === "app" && modelData.icon ? Icons.path(modelData.icon) : ""
+                readonly property string src: modelData.kind === "app" && modelData.icon ? Icons.app(modelData.icon) : ""
                 Rectangle { anchors.fill: parent; color: Theme.panel2; opacity: am.containsMouse ? 1 : 0 }
                 Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line; opacity: .5 }
                 Item {

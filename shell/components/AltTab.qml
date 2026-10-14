@@ -76,7 +76,7 @@ PanelWindow {
                     readonly property var de: appId !== "" ? DesktopEntries.heuristicLookup(appId) : null
                     readonly property string own: Icons.windowIcon(appId, title)
                     readonly property string iconName: own !== "" ? own : (de && de.icon ? de.icon : appId)
-                    readonly property string iconSrc: iconName !== "" ? Icons.path(iconName) : ""
+                    readonly property string iconSrc: iconName !== "" ? Icons.app(iconName) : ""
 
                     width: win.tileW; height: win.tileH
                     color: sel ? Theme.panel2 : "transparent"
