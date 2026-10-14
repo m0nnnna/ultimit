@@ -121,7 +121,8 @@ Singleton {
     }
     Connections { target: Quickshell; function onScreensChanged() { primaryDelay.restart(); } }
     Timer { id: primaryDelay; interval: 500; onTriggered: root.refreshPrimary() }   // after the compositor settles
-    // Rail and bottom bar on every display ("all", like Windows' taskbar) or on the main one only.
+    // Rail on every display ("all", like Windows' taskbar) or on the main one only. The news
+    // ticker (bottom bar) is always on the main display only.
     property string barsOn: "all"
     function showsBars(name) { return barsOn === "all" || isMainScreen(name); }
 

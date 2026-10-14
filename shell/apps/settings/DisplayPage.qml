@@ -451,7 +451,7 @@ Item {
                 onPicked: id => pg.outs = id === "duplicate" ? pg.duplicateAll(pg.clone(pg.outs)) : pg.extendAll(pg.clone(pg.outs))
             }
             Text {
-                text: "RAIL AND BAR ON"; color: Theme.dim
+                text: "RAIL ON"; color: Theme.dim
                 font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.8
             }
             Chips {   // takes effect at once (no countdown: nothing about the screens changes)
