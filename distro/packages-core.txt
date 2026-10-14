@@ -47,6 +47,9 @@ pipewire
 pipewire-audio
 pipewire-pulse
 wireplumber
+# ALSA tools: alsactl keeps sound card switches (HDMI/DisplayPort audio) across reboots;
+# aplay/amixer/speaker-test for checking a card that stays silent
+alsa-utils
 bluez
 upower
 power-profiles-daemon

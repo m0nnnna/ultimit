@@ -1,0 +1,255 @@
+[
+ {
+  "id": 50,
+  "type": "PipeWire:Interface:Device",
+  "info": {
+   "props": {
+    "media.class": "Audio/Device",
+    "device.description": "AD104 High Definition Audio Controller",
+    "device.name": "alsa_card.pci-0000_01_00.1"
+   },
+   "params": {
+    "EnumProfile": [
+     {
+      "index": 0,
+      "name": "off",
+      "description": "off",
+      "priority": 5000,
+      "available": "yes"
+     },
+     {
+      "index": 1,
+      "name": "output:hdmi-stereo",
+      "description": "output:hdmi-stereo",
+      "priority": 5000,
+      "available": "yes"
+     },
+     {
+      "index": 2,
+      "name": "output:hdmi-stereo-extra1",
+      "description": "output:hdmi-stereo-extra1",
+      "priority": 5000,
+      "available": "yes"
+     },
+     {
+      "index": 3,
+      "name": "output:hdmi-stereo-extra2",
+      "description": "output:hdmi-stereo-extra2",
+      "priority": 5000,
+      "available": "no"
+     },
+     {
+      "index": 4,
+      "name": "output:hdmi-stereo-extra3",
+      "description": "output:hdmi-stereo-extra3",
+      "priority": 5000,
+      "available": "no"
+     },
+     {
+      "index": 5,
+      "name": "output:hdmi-surround-extra2",
+      "description": "output:hdmi-surround-extra2",
+      "priority": 5000,
+      "available": "no"
+     },
+     {
+      "index": 6,
+      "name": "output:hdmi-surround71-extra2",
+      "description": "output:hdmi-surround71-extra2",
+      "priority": 5000,
+      "available": "no"
+     },
+     {
+      "index": 7,
+      "name": "output:hdmi-surround-extra3",
+      "description": "output:hdmi-surround-extra3",
+      "priority": 5000,
+      "available": "no"
+     },
+     {
+      "index": 8,
+      "name": "output:hdmi-surround71-extra3",
+      "description": "output:hdmi-surround71-extra3",
+      "priority": 5000,
+      "available": "no"
+     },
+     {
+      "index": 9,
+      "name": "pro-audio",
+      "description": "pro-audio",
+      "priority": 5000,
+      "available": "yes"
+     }
+    ],
+    "Profile": [
+     {
+      "index": 1,
+      "name": "output:hdmi-stereo",
+      "description": "output:hdmi-stereo",
+      "priority": 5000,
+      "available": "yes"
+     }
+    ],
+    "EnumRoute": [
+     {
+      "index": 0,
+      "direction": "Output",
+      "name": "hdmi-output-0",
+      "description": "HDMI / DisplayPort",
+      "priority": 5900,
+      "available": "yes",
+      "info": [
+       3,
+       "port.type",
+       "hdmi",
+       "card.profile.port",
+       "0",
+       "device.product.name",
+       "100027813"
+      ],
+      "profiles": [
+       1
+      ]
+     },
+     {
+      "index": 1,
+      "direction": "Output",
+      "name": "hdmi-output-1",
+      "description": "HDMI / DisplayPort 2",
+      "priority": 5800,
+      "available": "yes",
+      "info": [
+       3,
+       "port.type",
+       "hdmi",
+       "card.profile.port",
+       "1",
+       "device.product.name",
+       "LG ULTRAGEAR"
+      ],
+      "profiles": [
+       2
+      ]
+     },
+     {
+      "index": 2,
+      "direction": "Output",
+      "name": "hdmi-output-2",
+      "description": "HDMI / DisplayPort 3",
+      "priority": 5700,
+      "available": "no",
+      "info": [
+       2,
+       "port.type",
+       "hdmi",
+       "card.profile.port",
+       "2"
+      ],
+      "profiles": [
+       3,
+       5,
+       6
+      ]
+     },
+     {
+      "index": 3,
+      "direction": "Output",
+      "name": "hdmi-output-3",
+      "description": "HDMI / DisplayPort 4",
+      "priority": 5600,
+      "available": "no",
+      "info": [
+       2,
+       "port.type",
+       "hdmi",
+       "card.profile.port",
+       "3"
+      ],
+      "profiles": [
+       4,
+       7,
+       8
+      ]
+     }
+    ]
+   }
+  }
+ },
+ {
+  "id": 51,
+  "type": "PipeWire:Interface:Device",
+  "info": {
+   "props": {
+    "media.class": "Audio/Device",
+    "device.description": "Starship/Matisse HD Audio Controller"
+   },
+   "params": {
+    "EnumProfile": [
+     {
+      "index": 0,
+      "name": "off",
+      "description": "Off",
+      "priority": 5000,
+      "available": "yes"
+     },
+     {
+      "index": 1,
+      "name": "output:analog-stereo+input:analog-stereo",
+      "description": "Analog",
+      "priority": 5000,
+      "available": "yes"
+     }
+    ],
+    "Profile": [
+     {
+      "index": 1,
+      "name": "x",
+      "description": "x",
+      "priority": 5000,
+      "available": "yes"
+     }
+    ],
+    "EnumRoute": []
+   }
+  }
+ },
+ {
+  "id": 140,
+  "type": "PipeWire:Interface:Node",
+  "info": {
+   "props": {
+    "media.class": "Audio/Sink",
+    "device.id": 50,
+    "node.name": "alsa_output.pci-0000_01_00.1.hdmi-stereo"
+   }
+  }
+ },
+ {
+  "id": 58,
+  "type": "PipeWire:Interface:Node",
+  "info": {
+   "props": {
+    "media.class": "Audio/Sink",
+    "device.id": 48,
+    "node.name": "alsa_output.usb-Kraken"
+   }
+  }
+ },
+ {
+  "id": 30,
+  "type": "PipeWire:Interface:Metadata",
+  "props": {
+   "metadata.name": "default"
+  },
+  "metadata": [
+   {
+    "subject": 0,
+    "key": "default.audio.sink",
+    "type": "Spa:String:JSON",
+    "value": {
+     "name": "alsa_output.usb-Kraken"
+    }
+   }
+  ]
+ }
+]
