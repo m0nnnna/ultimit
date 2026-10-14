@@ -33,6 +33,10 @@ Singleton {
 
     // Rail core icons turn like Altimit's: "always" | "hover" | "off" (Settings > Appearance).
     property string railSpin: "always"
+    // Icons of other apps (launcher, windows, Alt-Tab, pins): "letters" draws a letter tile in the
+    // skin's colours, "original" shows the app's own icon (Settings > Appearance). Ultimit's apps,
+    // and apps the Ultimit theme draws, always keep their skin icons.
+    property string appIcons: "letters"
     // UI animation duration scale: 0 when motion is off (reduced motion), else 1.
     readonly property real motionScale: motion ? 1 : 0
     function dur(ms) { return Math.round(ms * motionScale); }
