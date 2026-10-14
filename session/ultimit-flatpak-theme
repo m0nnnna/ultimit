@@ -1,0 +1,83 @@
+#!/bin/sh
+# Ultimit's look for Flatpak apps. Run at every login by ultimit-session (and
+# by scripts/setup-browser.sh after installing the browser).
+#
+# 1. Every Flatpak app may read ~/.themes, where install-gtk-theme.sh puts the
+#    Flatpak build of the Ultimit GTK themes, and gets GTK_THEME and the colour
+#    scheme of the current skin. Without this a sandboxed app cannot see the
+#    themes in ~/.local/share/themes and falls back to Adwaita.
+# 2. Chromium-based Flatpak browsers: each profile is switched once to the GTK
+#    theme (Chromium only picks it by itself on desktops it knows, so Ultimit
+#    gets "Classic") and to the system title bar, so the compositor draws the
+#    Ultimit titlebar and borders. Later changes in the browser's settings are
+#    kept. A running browser is skipped and handled at the next login.
+ROOT=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
+command -v flatpak >/dev/null 2>&1 || exit 0
+[ -n "${GTK_THEME:-}" ] || . "$ROOT/shell/theme/session-env.sh"
+
+set -- --filesystem=~/.themes:ro --env=GTK_THEME="$GTK_THEME" \
+	--env=ADW_DEBUG_COLOR_SCHEME="${ADW_DEBUG_COLOR_SCHEME:-prefer-dark}"
+[ -n "${XCURSOR_THEME:-}" ] && set -- "$@" --env=XCURSOR_THEME="$XCURSOR_THEME"
+[ -n "${XCURSOR_SIZE:-}" ] && set -- "$@" --env=XCURSOR_SIZE="$XCURSOR_SIZE"
+flatpak override --user "$@"
+
+python3 - "$(flatpak list --app --columns=application 2>/dev/null)" <<'PY'
+import json, os, sys
+
+# Flatpak app id -> its Chromium config dir under ~/.var/app/ID/config
+BROWSERS = {
+    "io.github.ungoogled_software.ungoogled_chromium": "chromium",
+    "org.chromium.Chromium": "chromium",
+    "com.google.Chrome": "google-chrome",
+    "com.brave.Browser": "BraveSoftware/Brave-Browser",
+}
+installed = set(sys.argv[1].split())
+state_dir = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state"), "ultimit")
+done_file = os.path.join(state_dir, "chromium-theme-profiles")
+try:
+    done = set(open(done_file).read().split("\n"))
+except OSError:
+    done = set()
+
+
+def ultimit_prefs(prefs):
+    prefs.setdefault("browser", {})["custom_chrome_frame"] = False  # system title bar and borders
+    prefs.setdefault("extensions", {}).setdefault("theme", {})["system_theme"] = 1  # GTK
+
+
+for app, sub in BROWSERS.items():
+    if app not in installed:
+        continue
+    root = os.path.expanduser(os.path.join("~/.var/app", app, "config", sub))
+    if os.path.lexists(os.path.join(root, "SingletonLock")):
+        continue  # running: it would overwrite the change on exit
+    profiles = [os.path.join(root, d) for d in sorted(os.listdir(root))] if os.path.isdir(root) else []
+    profiles = [p for p in profiles if os.path.isfile(os.path.join(p, "Preferences"))]
+    if not profiles:
+        # Never started: seed the first profile.
+        path = os.path.join(root, "Default", "Preferences")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        prefs = {}
+        ultimit_prefs(prefs)
+        json.dump(prefs, open(path, "w"))
+        done.add(os.path.dirname(path))
+        continue
+    for p in profiles:
+        if p in done:
+            continue
+        path = os.path.join(p, "Preferences")
+        try:
+            prefs = json.load(open(path))
+        except (OSError, ValueError):
+            continue
+        ultimit_prefs(prefs)
+        tmp = path + ".ultimit-tmp"
+        with open(tmp, "w") as f:
+            json.dump(prefs, f, separators=(",", ":"))
+        os.replace(tmp, path)
+        done.add(p)
+
+os.makedirs(state_dir, exist_ok=True)
+with open(done_file, "w") as f:
+    f.write("\n".join(sorted(d for d in done if d)) + "\n")
+PY

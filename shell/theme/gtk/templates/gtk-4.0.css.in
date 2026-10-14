@@ -4,10 +4,12 @@
  *
  * HOW IT LOADS: libadwaita skips its own stylesheet whenever GTK_THEME is set,
  * so this theme re-imports libadwaita's built-in stylesheet from its gresource
- * (Ubuntu build, Yaru-patched) and overrides it. Later rules win.
+ * and overrides it. Later rules win. The host build imports Ubuntu's
+ * Yaru-patched stylesheet; the Flatpak build (~/.themes) imports upstream
+ * libadwaita's, which is what Flathub runtimes ship.
  * ========================================================================== */
 
-@import url("resource:///org/gnome/Adwaita/styles/main-{{scheme}}-yaru-default.css");
+@import url("{{adw_import}}");
 
 /* ------------------------------- skin tokens ------------------------------- */
 @define-color u_bg      {{bg}};

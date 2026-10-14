@@ -2,7 +2,7 @@
 # Ultimit's browser: Ungoogled Chromium (Flathub; it has no maintained
 # Ubuntu packages). Removes the Chromium and Firefox snaps and Ubuntu's
 # firefox transitional package, sets Ungoogled Chromium as the default
-# browser, and makes it use Ultimit's own titlebar.
+# browser, and makes it use Ultimit's theme and titlebar.
 #
 # Used on this machine and by the ISO build (distro/). Needs sudo.
 set -e
@@ -36,12 +36,8 @@ for t in x-scheme-handler/http x-scheme-handler/https text/html application/xhtm
 	xdg-mime default "$DESKTOP" "$t"
 done
 
-# Use the system (Ultimit) titlebar instead of Chromium's own frame, for a
-# profile that hasn't been created yet. Existing profiles: Settings >
-# Appearance > "Use system title bar and borders".
-PREFS="$HOME/.var/app/$APP/config/chromium/Default/Preferences"
-if [ ! -e "$PREFS" ]; then
-	mkdir -p "$(dirname "$PREFS")"
-	echo '{"browser":{"custom_chrome_frame":false}}' >"$PREFS"
-fi
+# Ultimit's GTK theme and the system (Ultimit) titlebar instead of Chromium's
+# own frame, for every profile (session/ultimit-flatpak-theme, also run at
+# each login).
+"$(dirname "$(readlink -f "$0")")/../session/ultimit-flatpak-theme" || true
 echo "Done: $(xdg-settings get default-web-browser 2>/dev/null)"
