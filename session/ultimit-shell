@@ -46,6 +46,11 @@ alive() {
 	[ "$(cat /proc/"$COMPOSITOR"/comm 2>/dev/null)" = ultimit ]
 }
 
+# Draw the shell's text with the system's font rasterizer (hinted, as set in
+# fontconfig) instead of Qt Quick's distance fields, which render small text
+# thin and soft.
+export QML_DISABLE_DISTANCEFIELD=1
+
 # Run qs on a config; returns 0 when it lasted 10 s or more.
 run_for() {
 	start=$(date +%s)
