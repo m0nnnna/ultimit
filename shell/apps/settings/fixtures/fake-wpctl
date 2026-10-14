@@ -1,0 +1,4 @@
+#!/bin/sh
+# fake wpctl for test_audio.py: logs calls
+echo "$*" >> "$AUDIO_TEST_LOG"
+exit 0

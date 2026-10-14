@@ -1,6 +1,9 @@
-// Sound: output / input devices, volume, mute, per-app streams (PipeWire).
+// Sound: output / input devices, which screen a graphics card plays to, volume, mute, per-app
+// streams (PipeWire).
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
+import Quickshell.Io
 import Quickshell.Services.Pipewire
 import "../.."
 import "../accessory"
@@ -36,6 +39,60 @@ Page {
         Text {
             visible: pg.outputs.length === 0
             text: "No output devices."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
+        }
+    }
+    // Display audio: which HDMI/DisplayPort connector a graphics card plays to (its profile; one at a
+    // time). Through audio.py (pw-dump + wpctl set-profile).
+    readonly property string audioScript: Quickshell.shellPath("apps/settings/audio.py")
+    property var displayCards: []
+    property bool displayBusy: false
+    function reloadDisplays() { if (!displayBusy) { displayList.running = false; displayList.running = true; } }
+    Component.onCompleted: reloadDisplays()
+    Timer { interval: 5000; running: true; repeat: true; onTriggered: pg.reloadDisplays() }
+    Process {
+        id: displayList
+        command: ["python3", "-I", pg.audioScript, "list"]
+        stdout: StdioCollector {
+            onStreamFinished: { try { const o = JSON.parse(text); if (o.ok) pg.displayCards = o.cards || []; } catch (e) {} }
+        }
+    }
+    function useDisplay(card, out) {
+        if (displayBusy || out.active) return;
+        if (SetSys.dryRun) { SetSys.note("audio.py set " + card.id + " " + out.index + " (" + out.label + ")"); return; }
+        displayBusy = true;
+        displaySet.command = ["python3", "-I", audioScript, "set", String(card.id), String(out.index)];
+        displaySet.running = true;
+    }
+    Process {
+        id: displaySet
+        onExited: { pg.displayBusy = false; pg.reloadDisplays(); }
+    }
+    Repeater {
+        model: pg.displayCards
+        delegate: ColumnLayout {
+            id: dc
+            required property var modelData
+            Layout.fillWidth: true
+            spacing: 0
+            Text {
+                Layout.topMargin: 8; Layout.bottomMargin: 4
+                text: "Screen speakers: " + dc.modelData.name + " plays to one screen at a time."
+                Layout.fillWidth: true; wrapMode: Text.WordWrap
+                color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+            }
+            Repeater {
+                model: dc.modelData.outputs
+                delegate: ItemRow {
+                    required property var modelData
+                    title: modelData.label
+                    subtitle: (modelData.label !== modelData.port ? modelData.port + " · " : "") + modelData.kind
+                              + (modelData.connected === false ? " · no screen" : "")
+                    titleColor: selected ? Theme.accent : (modelData.connected === false ? Theme.dim : Theme.fg)
+                    selected: modelData.active
+                    badge: selected ? "playing here" : ""
+                    onClicked: pg.useDisplay(dc.modelData, modelData)
+                }
+            }
         }
     }
     SliderField {
