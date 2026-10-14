@@ -7,6 +7,8 @@ ROOT=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
 export LD_LIBRARY_PATH="$ROOT/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export XDG_CURRENT_DESKTOP=Ultimit XDG_SESSION_TYPE=wayland
 export QT_QPA_PLATFORM=wayland
+# Hinted text like the session (see ultimit-shell)
+export QML_DISABLE_DISTANCEFIELD=1
 # The greeter user may have no writable home; keep Quickshell's state in the runtime dir and the
 # remembered user/session in /var/lib/ultimit-greeter.
 export XDG_CACHE_HOME="${XDG_RUNTIME_DIR:-/tmp}/ultimit-greeter/cache"

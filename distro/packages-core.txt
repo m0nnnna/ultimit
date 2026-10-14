@@ -70,6 +70,8 @@ wlr-randr
 fontconfig
 fonts-noto-core
 fonts-noto-color-emoji
+# Metric-compatible Arial, Times New Roman and Courier New, which web pages ask for
+fonts-liberation
 adwaita-icon-theme
 librsvg2-common
 # Everyday tools the shell calls

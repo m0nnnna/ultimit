@@ -12,6 +12,11 @@
 #    gets "Classic") and to the system title bar, so the compositor draws the
 #    Ultimit titlebar and borders. Later changes in the browser's settings are
 #    kept. A running browser is skipped and handled at the next login.
+# 3. Every Flatpak app gets Ultimit's font rendering (greyscale, light hinting,
+#    session/defaults/fontconfig): a sandboxed app sees the host's fonts but not
+#    its fontconfig settings, so without this Chromium draws thin, unhinted
+#    text. It goes into the app's own config dir (~/.var/app/ID/config), where
+#    the sandbox's fontconfig looks; the user's copy in ~/.config wins if edited.
 ROOT=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
 command -v flatpak >/dev/null 2>&1 || exit 0
 [ -n "${GTK_THEME:-}" ] || . "$ROOT/shell/theme/session-env.sh"
@@ -28,6 +33,17 @@ flatpak override --user "$@"
 for app in io.github.ungoogled_software.ungoogled_chromium; do
 	flatpak info "$app" >/dev/null 2>&1 && flatpak override --user --filesystem=xdg-pictures:ro \
 		--filesystem=xdg-videos:ro --filesystem=xdg-music:ro --filesystem=xdg-documents:ro "$app"
+done
+
+fc_src="$HOME/.config/fontconfig/conf.d/60-ultimit.conf"
+if [ ! -f "$fc_src" ] || head -n1 "$fc_src" | grep -q "Managed by Ultimit"; then
+	fc_src="$ROOT/session/defaults/fontconfig/60-ultimit.conf"
+fi
+for app in $(flatpak list --app --columns=application 2>/dev/null); do
+	fc_dst="$HOME/.var/app/$app/config/fontconfig/conf.d/60-ultimit.conf"
+	if [ ! -e "$fc_dst" ] || head -n1 "$fc_dst" | grep -q "Managed by Ultimit"; then
+		mkdir -p "$(dirname "$fc_dst")" && cp "$fc_src" "$fc_dst"
+	fi
 done
 
 python3 - "$(flatpak list --app --columns=application 2>/dev/null)" <<'PY'
