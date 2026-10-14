@@ -40,6 +40,8 @@ GNOME stays installed as a safety net until phase 4.
       udisks/mount; no gvfs)
 - [x] Text editor (MEMO, own process, draft recovery)
 - [x] Calculator (CALC)
+- [x] Claude (CLAUDE, own process): troubleshooting this PC and project work on Claude Code,
+      several accounts side by side
 - [x] Terminal: foot, themed
 - [x] Non-GNOME picks for PDF and images: zathura, imv (to be replaced later)
   - [x] Image viewer: IMAGE (own process) replaces imv

@@ -57,6 +57,7 @@ Singleton {
         if (title === Config.gamesTitle) return "ultimit-games";
         if (title.endsWith("\u2014 MEMO")) return "ultimit-memo";   // "<name> - MEMO" (em dash)
         if (title === "IMAGE" || title.endsWith("\u2014 IMAGE")) return "ultimit-image";   // "<name> - IMAGE"
+        if (title === "CLAUDE" || title.endsWith("\u2014 CLAUDE")) return "ultimit-claude";   // "<chat> - CLAUDE"
         const own = { DATA: "ultimit-data", CALC: "ultimit-calc", SHARES: "ultimit-shares", FIREWALL: "ultimit-firewall",
                       BROADCAST: "ultimit-broadcast", STORE: "ultimit-store" };
         return own[title] || "";

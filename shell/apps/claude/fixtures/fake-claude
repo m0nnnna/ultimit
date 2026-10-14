@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+"""fake-claude - stands in for the Claude Code CLI in test_claude.py (ULTIMIT_CLAUDE_BIN). Speaks the same
+stream-json shapes the real `claude -p --input-format stream-json --output-format stream-json` does
+(captured from Claude Code 2.1.300), and keeps its "login" in $CLAUDE_CONFIG_DIR/.credentials.json.
+
+A prompt containing "write" asks to use the Write tool (a can_use_tool control request) and reports
+what the host answered; any other prompt gets a plain answer that names the config dir in use and
+whether a credential leaked in through the environment."""
+import json
+import os
+import sys
+import uuid
+
+cfg = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
+creds = os.path.join(cfg, ".credentials.json")
+
+
+def out(o):
+    sys.stdout.write(json.dumps(o) + "\n")
+    sys.stdout.flush()
+
+
+a = sys.argv[1:]
+if a[:1] == ["--version"]:
+    print("9.9.9 (Claude Code)")
+    sys.exit(0)
+if a[:2] == ["auth", "status"]:
+    ok = os.path.exists(creds)
+    print(json.dumps({"loggedIn": ok, "authMethod": "claude.ai" if ok else "none", "configDirectory": cfg,
+                      **({"account": {"emailAddress": "noc@example.com"}} if ok else {})}, indent=2))
+    sys.exit(0 if ok else 1)
+if a[:2] == ["auth", "logout"]:
+    if os.path.exists(creds):
+        os.unlink(creds)
+    print("Successfully logged out")
+    sys.exit(0)
+if a[:2] == ["auth", "login"]:
+    print("Opening browser to sign in…")
+    print("If the browser didn't open, visit: https://claude.com/cai/oauth/authorize?code=true&state=x")
+    sys.stdout.write("Paste code here if prompted > ")
+    sys.stdout.flush()
+    code = sys.stdin.readline().strip()
+    if code != "good-code":
+        print("\nLogin failed: invalid code")
+        sys.exit(1)
+    os.makedirs(cfg, exist_ok=True)
+    with open(creds, "w") as f:
+        f.write("{}")
+    print("\nLogin successful")
+    sys.exit(0)
+
+if "-p" not in a:
+    sys.exit(2)
+session = a[a.index("--resume") + 1] if "--resume" in a else str(uuid.uuid4())
+mode = a[a.index("--permission-mode") + 1] if "--permission-mode" in a else "default"
+if not os.path.exists(creds):
+    pass  # the real CLI reports this as the result of the first turn
+inited = False
+pending = None
+for line in sys.stdin:
+    m = json.loads(line)
+    if m.get("type") == "control_request":
+        sub = m["request"]["subtype"]
+        out({"type": "control_response", "response": {"subtype": "success", "request_id": m["request_id"], "response": {}}})
+        if sub == "interrupt":
+            out({"type": "result", "subtype": "error_during_execution", "is_error": True, "session_id": session,
+                 "result": "Interrupted", "total_cost_usd": 0})
+        continue
+    if m.get("type") == "control_response":
+        r = m["response"]["response"]
+        allowed = r.get("behavior") == "allow"
+        out({"type": "user", "parent_tool_use_id": None, "session_id": session, "message": {"role": "user", "content": [
+            {"type": "tool_result", "tool_use_id": "toolu_1", "is_error": not allowed,
+             "content": "File created successfully" if allowed else r.get("message", "denied")}]}})
+        out({"type": "assistant", "parent_tool_use_id": None, "session_id": session, "message": {"role": "assistant", "content": [
+            {"type": "text", "text": "Wrote it." if allowed else "Not written."}]}})
+        out({"type": "result", "subtype": "success", "is_error": False, "session_id": session, "num_turns": 2,
+             "total_cost_usd": 0.01, "duration_ms": 1200, "result": "", "permission_denials": [] if allowed else [{}]})
+        continue
+    if m.get("type") != "user":
+        continue
+    if not inited:
+        inited = True
+        out({"type": "system", "subtype": "init", "session_id": session, "model": "claude-test-1",
+             "permissionMode": mode, "claude_code_version": "9.9.9", "cwd": os.getcwd()})
+    if not os.path.exists(creds):
+        out({"type": "result", "subtype": "success", "is_error": True, "session_id": session,
+             "result": "Not logged in · Please run /login"})
+        continue
+    text = m["message"]["content"]
+    out({"type": "system", "subtype": "task_summary", "detail": "Thinking it over", "session_id": session})
+    if "write" in text.lower():
+        out({"type": "assistant", "parent_tool_use_id": None, "session_id": session, "message": {"role": "assistant", "content": [
+            {"type": "tool_use", "id": "toolu_1", "name": "Write", "input": {"file_path": "/tmp/x/hello.txt", "content": "hi"}}]}})
+        out({"type": "control_request", "request_id": "req-1", "request": {
+            "subtype": "can_use_tool", "tool_name": "Write", "display_name": "Write",
+            "input": {"file_path": "/tmp/x/hello.txt", "content": "hi"}, "description": "hello.txt",
+            "permission_suggestions": [{"type": "setMode", "mode": "acceptEdits", "destination": "session"}],
+            "tool_use_id": "toolu_1"}})
+        continue
+    leaked = [k for k in ("ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN") if k in os.environ]
+    reply = "config=%s leaked=%s sysinfo=%s cwd=%s" % (cfg, ",".join(leaked) or "none",
+                                                       "<system-summary>" in text, os.getcwd())
+    for i in range(0, len(reply), 8):
+        out({"type": "stream_event", "parent_tool_use_id": None, "session_id": session,
+             "event": {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": reply[i:i + 8]}}})
+    out({"type": "assistant", "parent_tool_use_id": None, "session_id": session, "message": {"role": "assistant", "content": [
+        {"type": "text", "text": reply}]}})
+    out({"type": "result", "subtype": "success", "is_error": False, "session_id": session, "num_turns": 1,
+         "total_cost_usd": 0.002, "duration_ms": 900, "result": reply, "permission_denials": []})

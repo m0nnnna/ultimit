@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Name=CLAUDE
+GenericName=AI Assistant
+Comment=Claude for troubleshooting this PC and working on your projects, with several accounts
+Exec=ultimit-claude %f
+Icon=ultimit-claude
+Terminal=false
+Categories=Development;Utility;
+Keywords=claude;ai;assistant;chat;troubleshoot;help;
+Actions=troubleshoot;
+
+[Desktop Action troubleshoot]
+Name=Troubleshoot this PC
+Exec=ultimit-claude --troubleshoot
