@@ -1,30 +1,39 @@
 #!/bin/sh
-# Build and install the four UltimitCursor-<Skin> themes.
+# Build and install the UltimitCursor-<Skin> themes, one per skin in shell/Theme.qml.
 # Usage: install-cursors.sh [DEST]   (default: $HOME/.local/share/icons)
-# Quiet and idempotent: skips the rebuild when build-cursors.py is unchanged
-# and every theme is already present (sha256 stamp per theme).
+# Quiet and idempotent: skips the rebuild when build-cursors.py and Theme.qml are
+# unchanged and every theme is already present (sha256 stamp per theme).
+# Needs python3-cairo; a failed build is logged to ~/.local/state/ultimit/cursors.log.
 set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)
+THEME="$HERE/../../Theme.qml"
 DEST=${1:-${DEST:-$HOME/.local/share/icons}}
-SKINS="Mine Amber Silver Verdant"
-SUM=$(sha256sum "$HERE/build-cursors.py" | cut -d' ' -f1)
+LOG="${XDG_STATE_HOME:-$HOME/.local/state}/ultimit/cursors.log"
+SKINS=$(sed -n 's/^[[:space:]]*\([a-z][a-z]*\)[[:space:]]*:[[:space:]]*{.*/\1/p' "$THEME" \
+	| while read -r s; do printf '%s%s\n' "$(printf %s "$s" | cut -c1 | tr a-z A-Z)" "$(printf %s "$s" | cut -c2-)"; done)
+[ -n "$SKINS" ] || SKINS="Mine Amber Silver Verdant"
+SUM=$(cat "$HERE/build-cursors.py" "$THEME" | sha256sum | cut -d' ' -f1)
 
 fresh=1
 for s in $SKINS; do
-    t="$DEST/UltimitCursor-$s"
-    if [ ! -f "$t/.stamp" ] || [ "$(cat "$t/.stamp")" != "$SUM" ] || [ ! -e "$t/cursors/default" ]; then
-        fresh=0
-    fi
+	t="$DEST/UltimitCursor-$s"
+	if [ ! -f "$t/.stamp" ] || [ "$(cat "$t/.stamp")" != "$SUM" ] || [ ! -e "$t/cursors/default" ]; then
+		fresh=0
+	fi
 done
 [ "$fresh" = 1 ] && exit 0
 
-mkdir -p "$DEST"
+mkdir -p "$DEST" "$(dirname "$LOG")"
 TMP=$(mktemp -d "$DEST/.ulcur-build.XXXXXX")
 trap 'rm -rf "${TMP:?}"' EXIT
-python3 "$HERE/build-cursors.py" "$TMP" >/dev/null
+if ! python3 "$HERE/build-cursors.py" "$TMP" --theme "$THEME" >"$LOG" 2>&1; then
+	echo "install-cursors: build failed, see $LOG" >&2
+	exit 1
+fi
 for s in $SKINS; do
-    t="UltimitCursor-$s"
-    printf '%s\n' "$SUM" > "$TMP/$t/.stamp"
-    rm -rf "${DEST:?}/${t:?}"
-    mv "$TMP/$t" "$DEST/$t"
+	t="UltimitCursor-$s"
+	[ -d "$TMP/$t" ] || continue
+	printf '%s\n' "$SUM" > "$TMP/$t/.stamp"
+	rm -rf "${DEST:?}/${t:?}"
+	mv "$TMP/$t" "$DEST/$t"
 done

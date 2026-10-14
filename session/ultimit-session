@@ -97,6 +97,13 @@ for d in "$ROOT"/shell/apps/*/ultimit-*.desktop; do
 	sed "s|^Exec=ultimit-|Exec=$ROOT/shell/bin/ultimit-|" "$d" \
 		>"$HOME/.local/share/applications/$(basename "$d")"
 done
+# Folders open in DATA (xdg-open, the portal's "open folder") unless the
+# user picked a file manager that is still installed (Settings > Default apps).
+fm=$(xdg-mime query default inode/directory 2>/dev/null) fm_ok=""
+for d in "$HOME/.local/share" $(echo "$XDG_DATA_DIRS" | tr : ' '); do
+	[ -n "$fm" ] && [ -e "$d/applications/$fm" ] && fm_ok=1
+done
+[ -n "$fm_ok" ] || xdg-mime default ultimit-data.desktop inode/directory 2>/dev/null
 
 # Keep a log of the last session for debugging; the previous one is kept too.
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/ultimit"
@@ -109,7 +116,7 @@ mkdir -p "$LOG_DIR"
 # apps they launch (portals, notifications, file pickers) find this session,
 # stop any portal that started too early without them (it restarts on
 # demand with the right environment), then start the shell.
-STARTUP="dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_DATA_DIRS GTK_THEME ADW_DEBUG_COLOR_SCHEME QS_ICON_THEME SSH_AUTH_SOCK XCURSOR_THEME XCURSOR_SIZE; systemctl --user stop xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr 2>/dev/null; ('$ROOT/session/ultimit-portal-watch' &); systemctl --user start nekomail.service 2>/dev/null; ('$ROOT/session/ultimit-secrets' &); ((sleep 15; '$ROOT/shell/bin/ultimit-shares' --reconnect) >/dev/null 2>&1 &); ((sleep 20; '$ROOT/shell/bin/ultimit-broadcast' --restore) >/dev/null 2>&1 &); ('$ROOT/shell/bin/ultimit-agents' &); '$ROOT/session/ultimit-autostart'; '$ROOT/session/ultimit-shell'"
+STARTUP="dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_DATA_DIRS GTK_THEME ADW_DEBUG_COLOR_SCHEME QS_ICON_THEME SSH_AUTH_SOCK XCURSOR_THEME XCURSOR_SIZE; systemctl --user stop xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr 2>/dev/null; ('$ROOT/session/ultimit-portal-watch' &); systemctl --user start nekomail.service 2>/dev/null; ('$ROOT/session/ultimit-secrets' &); ('$ROOT/session/ultimit-filemanager1' >/dev/null 2>&1 &); ((sleep 15; '$ROOT/shell/bin/ultimit-shares' --reconnect) >/dev/null 2>&1 &); ((sleep 20; '$ROOT/shell/bin/ultimit-broadcast' --restore) >/dev/null 2>&1 &); ('$ROOT/shell/bin/ultimit-agents' &); '$ROOT/session/ultimit-autostart'; '$ROOT/session/ultimit-shell'"
 
 # Hybrid laptops: render the desktop on the GPU that drives the built-in
 # panel (Intel/AMD), keeping the NVIDIA card free for games (PRIME offload)

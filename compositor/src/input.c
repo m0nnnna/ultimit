@@ -59,7 +59,11 @@ static struct wlr_surface *surface_at(struct ul_server *server, double lx, doubl
 	/* While locked, only the lock screen can be hit. */
 	struct wlr_scene_node *root = server->locked ?
 		&server->layers[UL_LAYER_LOCK]->node : &server->scene->tree.node;
+	/* A drag icon sits right under the cursor: look through it. */
+	bool icons = !wl_list_empty(&server->drag_icons->children);
+	if (icons) wlr_scene_node_set_enabled(&server->drag_icons->node, false);
 	struct wlr_scene_node *node = wlr_scene_node_at(root, lx, ly, sx, sy);
+	if (icons) wlr_scene_node_set_enabled(&server->drag_icons->node, true);
 	if (node_out) *node_out = node;
 	if (!node) {
 		return NULL;
@@ -175,6 +179,17 @@ void input_update_pointer_focus(struct ul_server *server, uint32_t time_msec) {
 		clock_gettime(CLOCK_MONOTONIC, &now);
 		time_msec = now.tv_sec * 1000 + now.tv_nsec / 1000000;
 	}
+	struct wlr_seat *seat = server->seat;
+	if (server->press_surface && !seat->drag && seat->pointer_state.button_count > 0 &&
+			seat->pointer_state.focused_surface == server->press_surface &&
+			server->press_surface->mapped) {
+		/* Implicit grab: the pressed surface keeps the pointer until release
+		 * (still focused, so not destroyed; one that unmaps lets go). */
+		wlr_seat_pointer_notify_motion(seat, time_msec,
+			server->press_sx + server->cursor->x - server->press_lx,
+			server->press_sy + server->cursor->y - server->press_ly);
+		return;
+	}
 	double sx, sy;
 	struct ul_view *view;
 	struct wlr_surface *surface = surface_at(server, server->cursor->x, server->cursor->y,
@@ -196,7 +211,8 @@ void input_update_pointer_focus(struct ul_server *server, uint32_t time_msec) {
 		uint32_t edges = 0;
 		view_edge_at(server, server->cursor->x, server->cursor->y, &edges);
 		wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr, edge_cursor(edges));
-		wlr_seat_pointer_clear_focus(server->seat);
+		/* notify_: a drag in progress also leaves the surface it was over. */
+		wlr_seat_pointer_notify_clear_focus(server->seat);
 	}
 	check_constraint(server, surface);
 }
@@ -374,6 +390,8 @@ static void handle_motion(struct ul_server *server, struct wlr_input_device *dev
 		}
 	}
 	wlr_cursor_move(server->cursor, device, dx, dy);
+	wlr_scene_node_set_position(&server->drag_icons->node,
+		(int)server->cursor->x, (int)server->cursor->y);
 	process_motion(server, time_msec);
 }
 
@@ -438,6 +456,10 @@ static void cursor_button(struct wl_listener *listener, void *data) {
 			event->button, event->state);
 		if (server->cursor_mode != UL_CURSOR_PASSTHROUGH) {
 			finish_grab(server);
+		} else if (server->press_surface && server->seat->pointer_state.button_count == 0) {
+			/* Implicit grab over: the surface under the cursor gets it now. */
+			server->press_surface = NULL;
+			input_update_pointer_focus(server, event->time_msec);
 		}
 		return;
 	}
@@ -536,6 +558,13 @@ static void cursor_button(struct wl_listener *listener, void *data) {
 
 	wlr_seat_pointer_notify_button(server->seat, event->time_msec,
 		event->button, event->state);
+	if (surface && server->seat->pointer_state.button_count == 1) {
+		server->press_surface = surface;
+		server->press_sx = sx;
+		server->press_sy = sy;
+		server->press_lx = server->cursor->x;
+		server->press_ly = server->cursor->y;
+	}
 }
 
 static void cursor_axis(struct wl_listener *listener, void *data) {
@@ -757,6 +786,32 @@ static void request_set_primary_selection(struct wl_listener *listener, void *da
 	wlr_seat_set_primary_selection(server->seat, event->source, event->serial);
 }
 
+/* Drag and drop between windows (files out of DATA, tabs, text). The
+ * client asks to start one with the serial of the button press it began
+ * with; wlroots then routes pointer motion and the release to the drag. */
+static void request_start_drag(struct wl_listener *listener, void *data) {
+	struct ul_server *server = wl_container_of(listener, server, request_start_drag);
+	struct wlr_seat_request_start_drag_event *event = data;
+	if (wlr_seat_validate_pointer_grab_serial(server->seat, event->origin, event->serial)) {
+		wlr_seat_start_pointer_drag(server->seat, event->drag, event->serial);
+		return;
+	}
+	wlr_data_source_destroy(event->drag->source);
+}
+
+static void start_drag(struct wl_listener *listener, void *data) {
+	struct ul_server *server = wl_container_of(listener, server, start_drag);
+	struct wlr_drag *drag = data;
+	server->press_surface = NULL;
+	if (drag->icon) {
+		/* Destroyed along with the icon when the drag ends. */
+		wlr_scene_drag_icon_create(server->drag_icons, drag->icon);
+		wlr_scene_node_raise_to_top(&server->drag_icons->node);
+		wlr_scene_node_set_position(&server->drag_icons->node,
+			(int)server->cursor->x, (int)server->cursor->y);
+	}
+}
+
 /* Swap the cursor theme at runtime (skin change). Apps started later get
  * it through the environment; running clients mostly ask us to draw via
  * cursor-shape, so they follow at once. */
@@ -832,4 +887,8 @@ void input_init(struct ul_server *server) {
 	server->request_set_primary_selection.notify = request_set_primary_selection;
 	wl_signal_add(&server->seat->events.request_set_primary_selection,
 		&server->request_set_primary_selection);
+	server->request_start_drag.notify = request_start_drag;
+	wl_signal_add(&server->seat->events.request_start_drag, &server->request_start_drag);
+	server->start_drag.notify = start_drag;
+	wl_signal_add(&server->seat->events.start_drag, &server->start_drag);
 }

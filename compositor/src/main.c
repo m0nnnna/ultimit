@@ -176,6 +176,7 @@ int main(int argc, char *argv[]) {
 	 * right above this marker. */
 	server.blur_layer = wlr_scene_tree_create(&server.scene->tree);
 	wlr_scene_node_place_above(&server.blur_layer->node, &server.layers[UL_LAYER_BOTTOM]->node);
+	server.drag_icons = wlr_scene_tree_create(&server.scene->tree);
 
 	/* Buffer sharing and timing: the GPU path games and video players use. */
 	if (wlr_renderer_get_texture_formats(server.renderer, WLR_BUFFER_CAP_DMABUF)) {
@@ -259,7 +260,7 @@ int main(int argc, char *argv[]) {
 		&server.request_set_shape, &server.new_constraint, &server.constraint_destroy,
 		&server.new_input, &server.new_virtual_keyboard, &server.new_virtual_pointer,
 		&server.request_cursor, &server.request_set_selection,
-		&server.request_set_primary_selection,
+		&server.request_set_primary_selection, &server.request_start_drag, &server.start_drag,
 	};
 	for (size_t i = 0; i < sizeof(listeners) / sizeof(listeners[0]); i++) {
 		wl_list_remove(&listeners[i]->link);

@@ -193,6 +193,14 @@ struct ul_server {
 	struct wl_listener request_cursor;
 	struct wl_listener request_set_selection;
 	struct wl_listener request_set_primary_selection;
+	struct wl_listener request_start_drag;
+	struct wl_listener start_drag;
+	struct wlr_scene_tree *drag_icons; /* drag-and-drop icons, above everything, follow the cursor */
+	/* Implicit grab: while a button is held, motion keeps going to the
+	 * surface it was pressed on (text selection, scrollbars and drags
+	 * that leave the window), as on every other Wayland desktop. */
+	struct wlr_surface *press_surface; /* used only while it still has pointer focus */
+	double press_sx, press_sy, press_lx, press_ly;
 	struct wl_list keyboards;
 	struct wl_list pointers; /* ul_pointer.link */
 	struct ul_config config;
