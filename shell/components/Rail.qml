@@ -15,7 +15,10 @@ PanelWindow {
     implicitWidth: Config.railWidth
     exclusiveZone: Config.railWidth
     color: "transparent"
-    WlrLayershell.layer: WlrLayer.Top
+    // While the launcher is open on this screen the rail rises to the overlay layer with it, so a
+    // fullscreen window doesn't hide the rail (like the taskbar coming up with the Start menu).
+    readonly property bool withLauncher: Config.launcherOpen && Config.isUiScreen(screen ? screen.name : "")
+    WlrLayershell.layer: win.withLauncher ? WlrLayer.Overlay : WlrLayer.Top
     WlrLayershell.namespace: "ultimit-rail"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand   // Tab / Enter on rail buttons
 
@@ -64,6 +67,7 @@ PanelWindow {
         return pin.builtin ? findToplevel(pin.app.appIds, pin.app) : Pins.matchToplevel(pin);
     }
     function activatePin(pin) {
+        Config.closeLauncher();   // the rail sits above the launcher while it is open
         if (pin.builtin) { activate(pin.app); return; }
         const tl = Pins.matchToplevel(pin);
         if (tl) { tl.minimized = false; tl.activate(); }
@@ -185,7 +189,7 @@ PanelWindow {
                             badge: modelData.builtin && modelData.id === "mailer" ? Config.mailUnread : 0
                             on: { win.tick; return win.pinToplevel(modelData) !== null; }
                             onClicked: win.activatePin(modelData)
-                            onRightClicked: gy => Pins.openMenu(modelData.id, gy, win.screen ? win.screen.name : "")
+                            onRightClicked: gy => { Config.closeLauncher(); Pins.openMenu(modelData.id, gy, win.screen ? win.screen.name : ""); }
                         }
                     }
                 }

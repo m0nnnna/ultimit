@@ -167,6 +167,7 @@ Item {
                 onExited: { tipTimer.stop(); WindowUi.hideTip(); }
                 onClicked: mouseEvent => {
                     tipTimer.stop();
+                    Config.closeLauncher();   // the rail sits above the launcher while it is open
                     const tl = ent.modelData;
                     if (mouseEvent.button === Qt.MiddleButton) { WindowUi.hideTip(); tl.close(); }
                     else if (mouseEvent.button === Qt.RightButton) {

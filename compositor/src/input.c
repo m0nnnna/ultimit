@@ -442,6 +442,16 @@ static void cursor_button(struct wl_listener *listener, void *data) {
 		return;
 	}
 
+	/* A menu or flyout holding the keyboard covers only its own screen, so it
+	 * never sees a click on another one: ask the shell to close it. */
+	if (server->focused_layer && server->focused_layer->current.keyboard_interactive ==
+			ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE) {
+		struct ul_output *at = output_at(server, server->cursor->x, server->cursor->y);
+		if (at && at->wlr_output != server->focused_layer->output) {
+			ipc_emit_dismiss("");
+		}
+	}
+
 	double sx, sy;
 	struct ul_view *view;
 	struct wlr_surface *surface = surface_at(server, server->cursor->x, server->cursor->y,

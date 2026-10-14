@@ -428,6 +428,7 @@ void alttab_view_gone(struct ul_server *server, unsigned id);
 /* ipc.c */
 void ipc_broadcast(const char *line);
 void ipc_emit_alttab(struct ul_server *server, const char *action);
+void ipc_emit_dismiss(const char *keep);
 void ipc_init(struct ul_server *server, const char *wayland_socket);
 void ipc_finish(struct ul_server *server);
 

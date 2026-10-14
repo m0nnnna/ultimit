@@ -27,6 +27,20 @@ ShellRoot {
     CalcWindow {}    // CALC calculator (ultimit-calc, qs ipc call calc toggle|open|close)
     GamesWindow {}   // Ultimit Games app (toggle: qs ipc call games toggle)
 
+    // Menus and flyouts cover only their own screen and keep the keyboard, so the compositor says
+    // when a shortcut ran or a click landed on another screen; close them all. "keep" is the panel
+    // that shortcut toggles itself (Super tap, Super+V, Super+/).
+    Connections {
+        target: AltTabState
+        function onDismiss(keep) {
+            FlyoutState.close(); SysState.closeQs(); TrayUi.close();
+            Config.closeMenu(); Pins.closeMenu(); WindowUi.closeMenu();
+            if (keep !== "launcher") Config.closeLauncher();
+            if (keep !== "clipboard") Clipboard.open = false;
+            if (keep !== "shortcuts") Config.shortcutsOpen = false;
+        }
+    }
+
     IpcHandler {
         target: "launcher"
         function toggle(): void { Config.toggleLauncher(""); }
