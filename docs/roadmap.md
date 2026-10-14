@@ -42,6 +42,7 @@ GNOME stays installed as a safety net until phase 4.
 - [x] Calculator (CALC)
 - [x] Terminal: foot, themed
 - [x] Non-GNOME picks for PDF and images: zathura, imv (to be replaced later)
+  - [x] Image viewer: IMAGE (own process) replaces imv
 
 ## Phase 3b: what GNOME did quietly
 - [x] SSH agent: export gcr's socket (gcr4 stays)

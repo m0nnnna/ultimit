@@ -263,6 +263,10 @@ kk = "".join("M%s %sh5v4.5h-5z" % (x, y) for y in (23.5, 30, 36.5) for x in (14.
 add("apps", "ultimit-calc",
     P(cp(9, 5, 30, 38, 5, ("tr", "bl")), A, "fill"), P("M14 10H34V17H14Z", F),
     S(kk, F))
+add("apps", "ultimit-image",
+    # a photo (hills and a hex sun) in the viewfinder brackets
+    brackets(), P(cp(8, 11, 32, 26, 4, ("tl", "br")), A, "fill"),
+    S("M8 32L17 23L24 30L30 24L40 32", F), SOL(poly(31, 18, 2.6, 6, -90), A))
 add("apps", "ultimit-settings",
     P(cp(7, 7, 34, 34, 5, ("tl", "br")), A, "fill"),
     S("M13 17H35M13 24H35M13 31H35", D),
