@@ -70,6 +70,13 @@ Page {
         value: Config.shardDensity
         onMoved: v => Config.shardDensity = v
     }
+    ToggleRow {   // off: the shards stay still; window and panel animations are unaffected
+        visible: Config.wallpaper === "" && !pg.pictureMode
+        Layout.fillWidth: true
+        text: "Moving shards"
+        checked: Config.wallpaperMotion
+        onToggled: value => Config.wallpaperMotion = value
+    }
     // ---- picture: thumbnails from the usual picture folders, Browse…, how it fills the screen ----
     GridLayout {
         visible: Config.wallpaper !== "" || pg.pictureMode

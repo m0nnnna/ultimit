@@ -15,6 +15,9 @@ Singleton {
     // Wallpaper animation. When false the wallpaper is drawn once (zero idle cost).
     // Set ULTIMIT_MOTION=0 in the environment to start with motion off.
     property bool motion: Quickshell.env("ULTIMIT_MOTION") !== "0"
+    // The shard wallpaper moves (when motion is on too). Off: drawn once, still, while windows and
+    // panels keep their animations. Settings > Appearance > Wallpaper.
+    property bool wallpaperMotion: true
     // Wallpaper redraw rate cap while motion is on.
     property int wallpaperFps: 20
     // Number of main shards in the wing (mockup slider: 16..60).

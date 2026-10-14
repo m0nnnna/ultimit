@@ -33,6 +33,7 @@ Scope {
         if (!root.envSkin && a.skin in Theme.skins) Theme.skin = a.skin;
         if (!root.envMotion) Config.motion = a.motion;
         Config.railSpin = a.railSpin;
+        Config.wallpaperMotion = a.wallpaperMotion;
         if (!root.envBoot) Config.bootOnStart = a.bootOnStart;
         Config.shardDensity = clampDensity(a.shardDensity);
         Config.wallpaper = typeof a.wallpaper === "string" ? a.wallpaper : "";
@@ -65,6 +66,7 @@ Scope {
         if (!root.envSkin && a.skin !== Theme.skin) { a.skin = Theme.skin; changed = true; }
         if (!root.envMotion && a.motion !== Config.motion) { a.motion = Config.motion; changed = true; }
         if (a.railSpin !== Config.railSpin) { a.railSpin = Config.railSpin; changed = true; }
+        if (a.wallpaperMotion !== Config.wallpaperMotion) { a.wallpaperMotion = Config.wallpaperMotion; changed = true; }
         if (a.shardDensity !== Config.shardDensity) { a.shardDensity = Config.shardDensity; changed = true; }
         if (a.wallpaper !== Config.wallpaper) { a.wallpaper = Config.wallpaper; changed = true; }
         if (a.barsOn !== Config.barsOn) { a.barsOn = Config.barsOn; changed = true; }
@@ -113,6 +115,7 @@ Scope {
         target: Config
         function onMotionChanged() { root.push(); Quickshell.execDetached(["ultimitctl", "motion", Config.motion ? "on" : "off"]); }
         function onRailSpinChanged() { root.push(); }
+        function onWallpaperMotionChanged() { root.push(); }
         function onShardDensityChanged() { root.push(); }
         function onWallpaperChanged() { root.push(); }
         function onWallpaperFitChanged() { root.push(); }
@@ -154,6 +157,7 @@ Scope {
             property string skin: "mine"
             property bool motion: true
             property string railSpin: "always"
+            property bool wallpaperMotion: true
             property int shardDensity: 34
             property string wallpaper: ""
             property string wallpaperFit: "fill"
