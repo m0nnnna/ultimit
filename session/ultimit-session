@@ -61,11 +61,11 @@ gsettings set org.gnome.desktop.interface color-scheme "$ADW_DEBUG_COLOR_SCHEME"
 mkdir -p "$HOME/.config/xdg-desktop-portal"
 cp "$ROOT/session/portals/ultimit-portals.conf" "$HOME/.config/xdg-desktop-portal/"
 
-# Ultimit-styled configs for the terminal (foot), PDF viewer (zathura) and
-# image viewer (imv), and font rendering for every app (fontconfig; Flatpak
+# Ultimit-styled configs for the terminal (foot) and PDF viewer (zathura),
+# and font rendering for every app (fontconfig; Flatpak
 # apps get a copy from ultimit-flatpak-theme). Installed only where missing or
 # still marked "Managed by Ultimit", so the user's own edits are never overwritten.
-for f in foot/foot.ini zathura/zathurarc imv/config fontconfig/60-ultimit.conf; do
+for f in foot/foot.ini zathura/zathurarc fontconfig/60-ultimit.conf; do
 	dst="$HOME/.config/$f"
 	case "$f" in fontconfig/*) dst="$HOME/.config/fontconfig/conf.d/${f#fontconfig/}" ;; esac
 	if [ ! -e "$dst" ] || head -n1 "$dst" | grep -q "Managed by Ultimit"; then
@@ -104,6 +104,26 @@ for d in "$HOME/.local/share" $(echo "$XDG_DATA_DIRS" | tr : ' '); do
 	[ -n "$fm" ] && [ -e "$d/applications/$fm" ] && fm_ok=1
 done
 [ -n "$fm_ok" ] || xdg-mime default ultimit-data.desktop inode/directory 2>/dev/null
+# Pictures open in IMAGE, once per user (in the background: xdg-mime is slow): every picture type
+# whose viewer is unset, uninstalled or imv (Ultimit's viewer before IMAGE). After that the choices
+# in Settings > Default apps stand.
+img_mark="$HOME/.local/state/ultimit/image-default"
+if [ ! -e "$img_mark" ]; then
+	(
+		img_set=""
+		for t in $(sed -n 's/^MimeType=//p' "$ROOT/shell/apps/image/ultimit-image.desktop" | tr ';' ' '); do
+			v=$(xdg-mime query default "$t" 2>/dev/null) keep=""
+			case "$v" in "" | imv.desktop | imv-dir.desktop) ;; *)
+				for d in "$HOME/.local/share" $(echo "${XDG_DATA_DIRS:-/usr/local/share:/usr/share}" | tr : ' '); do
+					[ -e "$d/applications/$v" ] && keep=1
+				done ;;
+			esac
+			[ -n "$keep" ] || img_set="$img_set $t"
+		done
+		[ -z "$img_set" ] || xdg-mime default ultimit-image.desktop $img_set 2>/dev/null
+		mkdir -p "$(dirname "$img_mark")" && touch "$img_mark"
+	) &
+fi
 
 # Keep a log of the last session for debugging; the previous one is kept too.
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/ultimit"
