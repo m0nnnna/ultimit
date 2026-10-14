@@ -131,6 +131,8 @@ mkdir -p "$LOG_DIR"
 [ -f "$LOG_DIR/session.log" ] && mv "$LOG_DIR/session.log" "$LOG_DIR/session.log.old"
 # Flatpak apps: NVIDIA's graphics libraries for the running driver (else no GPU in Chromium).
 ("$ROOT/session/ultimit-flatpak-gpu" >"$LOG_DIR/flatpak-gpu.log" 2>&1 &)
+# Ungoogled Chromium: spell-check dictionaries (it can't download its own, so nothing gets underlined).
+("$ROOT/session/ultimit-spellcheck" >"$LOG_DIR/spellcheck.log" 2>&1 &)
 
 # Once the compositor is up: hand the display variables to systemd/D-Bus so
 # apps they launch (portals, notifications, file pickers) find this session,

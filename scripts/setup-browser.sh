@@ -2,7 +2,8 @@
 # Ultimit's browser: Ungoogled Chromium (Flathub; it has no maintained
 # Ubuntu packages). Removes the Chromium and Firefox snaps and Ubuntu's
 # firefox transitional package, sets Ungoogled Chromium as the default
-# browser, and makes it use Ultimit's theme and titlebar.
+# browser, makes it use Ultimit's theme and titlebar, and gives it
+# spell-check dictionaries.
 #
 # Used on this machine and by the ISO build (distro/). Needs sudo.
 set -e
@@ -40,4 +41,7 @@ done
 # own frame, for every profile (session/ultimit-flatpak-theme, also run at
 # each login).
 "$(dirname "$(readlink -f "$0")")/../session/ultimit-flatpak-theme" || true
+# Spell-check dictionaries: Ungoogled Chromium blocks its own download of them
+# (session/ultimit-spellcheck, also run at each login).
+"$(dirname "$(readlink -f "$0")")/../session/ultimit-spellcheck" || true
 echo "Done: $(xdg-settings get default-web-browser 2>/dev/null)"
