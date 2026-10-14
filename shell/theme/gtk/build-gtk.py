@@ -13,7 +13,10 @@ Template syntax: {{ python-expression }} evaluated with the palette tokens as
 variables plus helper functions (chamfer, svg_btn, mix, alpha, ...).
 Palettes mirror shell/Theme.qml; keep them in sync.
 
-Usage: build-gtk.py OUT_DIR [--alias SKIN] [--only SKIN]
+With --flatpak the GTK4 themes import upstream libadwaita's stylesheet
+(Flathub runtimes) instead of Ubuntu's Yaru-patched one.
+
+Usage: build-gtk.py OUT_DIR [--alias SKIN] [--only SKIN] [--flatpak]
 """
 import json, os, re, sys
 
@@ -226,9 +229,19 @@ CursorTheme=Adwaita
 """
 
 
-def build(out, tname, skin):
+# libadwaita's stylesheet, re-imported by the GTK4 theme: Ubuntu's libadwaita
+# is Yaru-patched; upstream (Flathub runtimes, libadwaita >= 1.6) ships one
+# gtk.css that follows the colour scheme through media queries.
+def adw_import(scheme, flatpak):
+    if flatpak:
+        return "resource:///org/gnome/Adwaita/styles/gtk.css"
+    return "resource:///org/gnome/Adwaita/styles/main-%s-yaru-default.css" % scheme
+
+
+def build(out, tname, skin, flatpak=False):
     ns = palette(skin)
     ns["tname"] = tname
+    ns["adw_import"] = adw_import(ns["scheme"], flatpak)
     d = os.path.join(out, tname)
     for sub, src in (("gtk-3.0", "gtk-3.0.css.in"), ("gtk-4.0", "gtk-4.0.css.in")):
         os.makedirs(os.path.join(d, sub), exist_ok=True)
@@ -266,13 +279,14 @@ def main(argv):
         alias = argv[argv.index("--alias") + 1]
     if "--only" in argv:
         only = argv[argv.index("--only") + 1]
+    flatpak = "--flatpak" in argv
     alias = alias if alias in SKINS else current_skin()
     for skin in SKINS:
         if only and skin != only:
             continue
-        build(out, "Ultimit-" + NAMES[skin], skin)
+        build(out, "Ultimit-" + NAMES[skin], skin, flatpak)
     if not only:
-        build(out, "Ultimit", alias)
+        build(out, "Ultimit", alias, flatpak)
     print("built %d themes in %s (Ultimit = %s)" % (len(SKINS) + 1, out, alias))
 
 

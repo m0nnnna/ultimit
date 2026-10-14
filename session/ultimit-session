@@ -46,6 +46,10 @@ gsettings set org.gnome.desktop.interface gtk-theme "$GTK_THEME" 2>/dev/null
 [ -n "$XCURSOR_THEME" ] && gsettings set org.gnome.desktop.interface cursor-theme "$XCURSOR_THEME" 2>/dev/null
 gsettings set org.gnome.desktop.interface cursor-size "${XCURSOR_SIZE:-24}" 2>/dev/null
 gsettings set org.gnome.desktop.wm.preferences button-layout ':minimize,maximize,close' 2>/dev/null
+# Dark or light per skin; sandboxed apps (Flatpak) and Chromium read it through the portal.
+gsettings set org.gnome.desktop.interface color-scheme "$ADW_DEBUG_COLOR_SCHEME" 2>/dev/null
+# Flatpak apps: the Ultimit theme instead of Adwaita, and Chromium's GTK theme + system titlebar.
+"$ROOT/session/ultimit-flatpak-theme" >/dev/null 2>&1 || true
 
 # Tell xdg-desktop-portal which backends serve an Ultimit desktop. Without
 # this, GTK apps wait on portal timeouts at startup (slow launches).

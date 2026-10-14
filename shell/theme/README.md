@@ -50,6 +50,17 @@ opaque solid colours here and selection is a solid accent mix. Electron apps (e.
 the Claude desktop app) draw a GTK-themed CSD frame on Wayland from GTK3's
 headerbar style, so the GTK3 theme is what they use.
 
+## Flatpak apps
+A sandboxed app's GTK only searches its own data dir, `~/.themes` and the
+runtime, so `install-gtk-theme.sh` also writes the themes to `~/.themes`, built
+with `--flatpak`: the GTK4 theme imports upstream libadwaita's
+`resource:///org/gnome/Adwaita/styles/gtk.css` (Flathub runtimes) instead of
+Ubuntu's Yaru one. `session/ultimit-flatpak-theme` (every login) gives all
+Flatpak apps read access to `~/.themes` plus `GTK_THEME`,
+`ADW_DEBUG_COLOR_SCHEME` and the cursor through `flatpak override --user`, and
+switches each Chromium-based Flatpak browser profile once to the GTK theme and
+the system title bar (Chromium only defaults to GTK on desktops it recognises).
+
 ## Regenerating the radius lists (after a libadwaita / GTK3 upgrade)
 Extract the stylesheet with `gresource extract <lib> <path>` (libadwaita:
 `/org/gnome/Adwaita/styles/default-dark-yaru-default.css`; GTK3:
@@ -58,8 +69,7 @@ Extract the stylesheet with `gresource extract <lib> <path>` (libadwaita:
 
 ## Known limitations
 See the end of NOTES in the handoff; in short: titles are centred (GtkHeaderBar),
-small-caps only via `text-transform` in GTK4, Ubuntu/Yaru-specific libadwaita import
-path, running apps keep their skin until restarted.
+small-caps only via `text-transform` in GTK4, running apps keep their skin until restarted.
 
 ## Icon theme
 `theme/icons/` builds the four `Ultimit-<Skin>` freedesktop icon themes (see `theme/icons/README.md`);
