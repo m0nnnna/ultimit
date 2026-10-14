@@ -88,6 +88,21 @@ if [ -f "$PREFIX/distro/packages-runtime.txt" ]; then
 fi
 apt-get install -y -q "${pkgs[@]}"
 
+# ------------------------------------------------------------------------------------ NVIDIA
+# The desktop needs NVIDIA's graphics libraries (EGL, and GBM for Wayland). Ubuntu's server
+# installer installs the compute-only driver (--gpgpu: the kernel module, no graphics), and then
+# nothing can draw. Swap it for the desktop driver ubuntu-drivers recommends.
+if lspci -n 2>/dev/null | grep -qE ' 03(00|02): 10de:'; then
+	if ! dpkg-query -W -f='${Status}' libnvidia-egl-gbm1 2>/dev/null | grep -q "install ok installed"; then
+		step "Installing NVIDIA's desktop driver (graphics libraries)"
+		if ubuntu-drivers install; then
+			note "$(dpkg-query -W -f='${Package} ' 'nvidia-driver-*' 2>/dev/null | head -c 200)"
+		else
+			warn "ubuntu-drivers couldn't install the NVIDIA desktop driver; run 'sudo ubuntu-drivers install' later"
+		fi
+	fi
+fi
+
 # ------------------------------------------------------------------------------------ system
 step "Setting up the system (fonts, session, keyring unlock, helpers, commands)"
 P=$PREFIX

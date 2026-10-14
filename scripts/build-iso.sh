@@ -42,6 +42,8 @@ trap 'rm -rf "$work"' EXIT
 # ---- boot menu: "Install Ultimit" first, with autoinstall on --------------------------------
 # subiquity-storage-version=2: subiquity's newer partitioning (as Ubuntu's desktop installer uses);
 # with the old one, autoinstall's "use the free space" finds no gap on a drive that has partitions.
+# subiquity-server-force-no-gpgpu: the desktop NVIDIA driver; from a server ISO subiquity would
+# install the compute-only one (no OpenGL/EGL/GBM), and the login screen can't draw.
 cat >"$work/grub.cfg" <<'GRUB'
 set timeout=10
 
@@ -52,7 +54,7 @@ set menu_color_highlight=black/light-gray
 
 menuentry "Install Ultimit" {
     set gfxpayload=keep
-    linux  /casper/vmlinuz  autoinstall  subiquity-storage-version=2  ---
+    linux  /casper/vmlinuz  autoinstall  subiquity-storage-version=2  subiquity-server-force-no-gpgpu  ---
     initrd /casper/initrd
 }
 menuentry "Try or Install Ubuntu Server (no Ultimit)" {
