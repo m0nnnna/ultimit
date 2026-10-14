@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 """Build the Ultimit "Shard" Xcursor theme set (UltimitCursor-<Skin>).
 
-Usage: build-cursors.py OUTDIR [--sheets DIR] [--skins Mine,Amber,...]
+Usage: build-cursors.py OUTDIR [--sheets DIR] [--skins Mine,Amber,...] [--theme Theme.qml]
 
 Draws every cursor with pycairo as vector paths at 24/32/48 px (no bitmap
-downscaling), writes xcursorgen config files and runs /usr/bin/xcursorgen.
+downscaling) and writes the Xcursor files itself (no xcursorgen needed).
+The skins and their accent colours are read from shell/Theme.qml, so the
+cursor follows Settings > Appearance; a new skin gets a cursor of its own.
 Original artwork: faceted crystal-shard language, dark-glass fill, thin accent
 edge, one faint facet line, 1px near-black outer outline.
 """
 import math
 import os
+import re
 import shutil
-import subprocess
+import struct
 import sys
-import tempfile
 
 import cairo
 
@@ -23,12 +25,44 @@ U = 52.0            # drawing canvas in design units
 C = 26.0            # centre
 OUTLINE = "#050607"
 
+THEME_QML = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "Theme.qml")
+
+# Glass fill per skin, tuned by eye against each skin's panels. A skin missing
+# here gets its panel colour (shell/Theme.qml) as the fill.
+FILLS = {
+    "Mine":    "#14181d",
+    "Amber":   "#1c1108",
+    "Silver":  "#f6f7f9",   # light skin
+    "Verdant": "#0a1d0d",
+}
+# Used only when Theme.qml cannot be read.
 SKINS = {
     "Mine":    dict(accent="#d4ebff", fill="#14181d"),
     "Amber":   dict(accent="#ffb04a", fill="#1c1108"),
-    "Silver":  dict(accent="#2c5b88", fill="#f6f7f9"),   # light skin
-    "Verdant": dict(accent="#b9ff8c", fill="#0a1d0d"),   # accent from shell/Theme.qml
+    "Silver":  dict(accent="#2c5b88", fill="#f6f7f9"),
+    "Verdant": dict(accent="#b9ff8c", fill="#0a1d0d"),
 }
+
+
+def load_skins(path):
+    """Skin name -> accent/fill, from the `skins` table in shell/Theme.qml."""
+    try:
+        src = open(path, encoding="utf-8").read()
+    except OSError:
+        return dict(SKINS)
+    out = {}
+    for m in re.finditer(r'^\s*(\w+)\s*:\s*\{(.*?)\}', src, re.M | re.S):
+        body = m.group(2)
+        acc = re.search(r'\baccent\s*:\s*"(#[0-9a-fA-F]{6})"', body)
+        if not acc:
+            continue
+        name = m.group(1).capitalize()
+        fill = FILLS.get(name)
+        if fill is None:
+            pan = re.search(r'\bpanel\s*:\s*\[\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)', body)
+            fill = "#%02x%02x%02x" % tuple(int(v) for v in pan.groups()) if pan else "#14181d"
+        out[name] = dict(accent=acc.group(1).lower(), fill=fill)
+    return out or dict(SKINS)
 
 
 # ---------------------------------------------------------------- helpers
@@ -487,6 +521,29 @@ def is_clipped(skin, shapes, hs, size):
     return False
 
 
+# ---------------------------------------------------------------- Xcursor files
+XCURSOR_IMAGE = 0xfffd0002
+
+
+def write_xcursor(path, images):
+    """images: [(nominal, surface, (hx, hy), delay_ms)]. cairo's ARGB32 is the
+    premultiplied native-endian ARGB Xcursor stores (little-endian here)."""
+    toc, chunks, pos = [], [], 16 + 12 * len(images)
+    for nominal, surf, (hx, hy), delay in images:
+        surf.flush()
+        w, h, st = surf.get_width(), surf.get_height(), surf.get_stride()
+        data = bytes(surf.get_data())
+        px = b"".join(data[y * st:y * st + w * 4] for y in range(h))
+        chunk = struct.pack("<9I", 36, XCURSOR_IMAGE, nominal, 1, w, h, hx, hy, delay) + px
+        toc.append(struct.pack("<3I", XCURSOR_IMAGE, nominal, pos))
+        chunks.append(chunk)
+        pos += len(chunk)
+    with open(path, "wb") as f:
+        f.write(b"Xcur" + struct.pack("<3I", 16, 0x10000, len(images)))
+        f.write(b"".join(toc))
+        f.write(b"".join(chunks))
+
+
 # ---------------------------------------------------------------- build
 def build_theme(skin_name, outdir, registry, keep=None, warn=None):
     skin = Skin(skin_name)
@@ -495,37 +552,28 @@ def build_theme(skin_name, outdir, registry, keep=None, warn=None):
     if os.path.isdir(tdir):
         shutil.rmtree(tdir)
     os.makedirs(os.path.join(tdir, "cursors"))
-    work = tempfile.mkdtemp(prefix="ulcur-")
     rendered = {}
-    try:
-        for name, cur in registry.items():
-            cfg = []
+    for name, cur in registry.items():
+        images = []
+        for size in SIZES:
             for fi, shapes in enumerate(cur["frames"]):
-                for size in SIZES:
-                    surf, (hx, hy) = render(skin, shapes, cur["hs"], size)
-                    if warn is not None and fi == 0 and is_clipped(skin, shapes, cur["hs"], size):
-                        warn.append("%s/%s frame %d @%d touches the canvas edge" % (tname, name, fi, size))
-                    fn = os.path.join(work, "%s_%d_%d.png" % (name, size, fi))
-                    surf.write_to_png(fn)
+                surf, (hx, hy) = render(skin, shapes, cur["hs"], size)
+                if warn is not None and fi == 0 and is_clipped(skin, shapes, cur["hs"], size):
+                    warn.append("%s/%s frame %d @%d touches the canvas edge" % (tname, name, fi, size))
+                if keep is not None:
                     rendered[(name, size, fi)] = (surf, (hx, hy))
-                    cfg.append("%d %d %d %s %d" % (size, hx, hy, fn, cur["delay"]))
-            cfgfile = os.path.join(work, name + ".cfg")
-            with open(cfgfile, "w") as f:
-                f.write("\n".join(cfg) + "\n")
-            subprocess.run(["xcursorgen", cfgfile, os.path.join(tdir, "cursors", name)],
-                           check=True, cwd=work)
-        for name, cur in registry.items():
-            for a in cur["aliases"]:
-                dst = os.path.join(tdir, "cursors", a)
-                if os.path.lexists(dst):
-                    os.unlink(dst)
-                os.symlink(name, dst)
-        with open(os.path.join(tdir, "index.theme"), "w") as f:
-            f.write("[Icon Theme]\nName=%s\nComment=Ultimit Shard cursors (%s skin): "
-                    "faceted dark-glass crystal shards with an accent edge\n"
-                    "Inherits=Adwaita\n" % (tname, skin_name))
-    finally:
-        shutil.rmtree(work, ignore_errors=True)
+                images.append((size, surf, (hx, hy), cur["delay"]))
+        write_xcursor(os.path.join(tdir, "cursors", name), images)
+    for name, cur in registry.items():
+        for a in cur["aliases"]:
+            dst = os.path.join(tdir, "cursors", a)
+            if os.path.lexists(dst):
+                os.unlink(dst)
+            os.symlink(name, dst)
+    with open(os.path.join(tdir, "index.theme"), "w") as f:
+        f.write("[Icon Theme]\nName=%s\nComment=Ultimit Shard cursors (%s skin): "
+                "faceted dark-glass crystal shards with an accent edge\n"
+                "Inherits=Adwaita\n" % (tname, skin_name))
     if keep is not None:
         keep.update(rendered)
     return tdir
@@ -602,15 +650,16 @@ def main(argv):
         return 2
     outdir = argv[1]
     sheets = None
+    theme = argv[argv.index("--theme") + 1] if "--theme" in argv else THEME_QML
+    found = load_skins(theme)
+    SKINS.clear()
+    SKINS.update(found)
     skins = list(SKINS)
     if "--sheets" in argv:
         sheets = argv[argv.index("--sheets") + 1]
         os.makedirs(sheets, exist_ok=True)
     if "--skins" in argv:
         skins = argv[argv.index("--skins") + 1].split(",")
-    if not shutil.which("xcursorgen"):
-        print("xcursorgen not found", file=sys.stderr)
-        return 1
     os.makedirs(outdir, exist_ok=True)
     reg = build_registry()
     warns = []
