@@ -12,6 +12,21 @@ Item {
     property real railInset: Config.railWidth
     onAnimateChanged: cv.requestPaint()
 
+    // Two layers, so an animation frame redraws only what moves. `base` holds the still parts
+    // (background, vignette, hex outlines, rings) and is painted once per size or skin change;
+    // `cv` above it is transparent and holds the moving parts (hex flicker, turning arc and ticks,
+    // the crystal wing). Every screen has its own copy, so this matters most with several screens.
+    Canvas {
+        id: base
+        anchors.fill: parent
+        renderStrategy: Canvas.Cooperative
+        onPaint: {
+            const c = getContext("2d");
+            c.reset();
+            cv.drawBase(c, width, height);
+        }
+    }
+
     Canvas {
         id: cv
         anchors.fill: parent
@@ -81,9 +96,9 @@ Item {
             c.closePath();
         }
 
-        function draw(c, w, h, t) {
-            const light = Theme.light, motion = art.animate;
-            const shardC = Theme.shard, edgeC = Theme.edge, shadeC = Theme.shade, hexC = Theme.hexc;
+        // The still layer: painted into `base` once, not every animation frame.
+        function drawBase(c, w, h) {
+            const light = Theme.light, hexC = Theme.hexc;
 
             // background gradient + vignette
             const g = c.createLinearGradient(0, h, w * .9, 0);
@@ -97,27 +112,43 @@ Item {
             c.fillStyle = vg;
             c.fillRect(0, 0, w, h);
 
-            const G = geo(w, h), px = G.px, py = G.py, R = G.R, sc = G.sc;
+            const sc = geo(w, h).sc;
 
-            // hex grid
+            // hex grid outlines
             c.lineWidth = 1;
             for (let i = 0; i < hexes.length; i++) {
                 const x = hexes[i];
                 hexPath(c, x.x, x.y, hexSize - 2);
                 c.strokeStyle = "rgba(" + hexC + "," + x.al + ")";
                 c.stroke();
+            }
+
+            // concentric rings
+            const rx = w * .8, ry = h * .22;
+            c.strokeStyle = "rgba(" + hexC + ",.14)";
+            [70, 98, 150].forEach(function (rr) {
+                c.beginPath(); c.arc(rx, ry, rr * sc, 0, 6.283); c.stroke();
+            });
+        }
+
+        // The moving layer, over `base`: redrawn every animation frame (once when motion is off).
+        function draw(c, w, h, t) {
+            const light = Theme.light, motion = art.animate;
+            const shardC = Theme.shard, edgeC = Theme.edge, shadeC = Theme.shade, hexC = Theme.hexc;
+            const G = geo(w, h), px = G.px, py = G.py, R = G.R, sc = G.sc;
+
+            // hex flicker: a few cells light up now and then
+            for (let i = 0; i < hexes.length; i++) {
+                const x = hexes[i];
                 if (x.f >= 0 && Math.sin(t * .0012 + x.f * 3) > .85) {
+                    hexPath(c, x.x, x.y, hexSize - 2);
                     c.fillStyle = "rgba(" + hexC + "," + (x.al * .7) + ")";
                     c.fill();
                 }
             }
 
-            // concentric rings, rotating arc, tick marks
+            // rotating arc, tick marks
             const rx = w * .8, ry = h * .22, rot = t * .00025;
-            c.strokeStyle = "rgba(" + hexC + ",.14)";
-            [70, 98, 150].forEach(function (rr) {
-                c.beginPath(); c.arc(rx, ry, rr * sc, 0, 6.283); c.stroke();
-            });
             c.strokeStyle = "rgba(" + hexC + ",.4)";
             c.lineWidth = 2;
             c.beginPath(); c.arc(rx, ry, 120 * sc, rot, rot + 1.3); c.stroke();
@@ -172,6 +203,7 @@ Item {
         function relayout() {
             if (width < 2 || height < 2) return;
             genHex(width, height);
+            base.requestPaint();
             requestPaint();
         }
         onWidthChanged: relayout()
@@ -180,7 +212,7 @@ Item {
 
         Connections {
             target: Theme
-            function onSkinChanged() { cv.requestPaint(); }
+            function onSkinChanged() { base.requestPaint(); cv.requestPaint(); }
         }
         Connections {
             target: Config

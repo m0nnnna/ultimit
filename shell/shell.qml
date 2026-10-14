@@ -82,9 +82,10 @@ ShellRoot {
 
             Wallpaper   { screen: scope.modelData }   // background layer (+ wordmark)
             StatusBlock { screen: scope.modelData }   // bottom layer, top-right
-            // rail + bottom bar: every display, or the main one only (Config.barsOn)
+            // rail: every display, or the main one only (Config.barsOn)
             Rail        { screen: scope.modelData; visible: Config.showsBars(scope.modelData.name) }   // top layer, left, exclusive zone
-            Ticker      { screen: scope.modelData; visible: Config.showsBars(scope.modelData.name) }   // top layer, bottom, exclusive zone
+            // news ticker: the main display only, so its scroll animation runs once, not per screen
+            Ticker      { screen: scope.modelData; visible: Config.isMainScreen(scope.modelData.name) }   // top layer, bottom, exclusive zone
             Launcher    { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, app launcher (rail emblem)
             ContextMenu { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, desktop right-click menu
             RailMenu    { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, rail button right-click menu

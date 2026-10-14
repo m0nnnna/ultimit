@@ -22,7 +22,8 @@ PanelWindow {
 
     // A picture when one is set and it loads; otherwise (or if the file is gone) the shards.
     readonly property bool picture: Config.wallpaper !== "" && pic.status !== Image.Error
-    WallpaperArt { id: cv; anchors.fill: parent; visible: !win.picture; active: win.visible && !win.picture }
+    WallpaperArt { id: cv; anchors.fill: parent; visible: !win.picture; active: win.visible && !win.picture
+                   animate: Config.motion && Config.wallpaperMotion }
     Image {
         id: pic
         anchors.fill: parent

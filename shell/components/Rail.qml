@@ -79,7 +79,7 @@ PanelWindow {
             // Own window: open it, or raise it if already mapped.
             const w = findToplevel(app.appIds, app);
             if (w) { w.minimized = false; w.activate(); }
-            else Config.accessoryOpen = true;
+            else Config.openSettings("");
             return;
         }
         if (app.id === "data") {
