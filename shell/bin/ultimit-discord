@@ -1,0 +1,5 @@
+#!/bin/sh
+# ultimit-discord [list | setup | open ID | add [NAME] | rename ID NAME | remove ID | theme]
+# Discord with Vencord (Vesktop), one instance per account so several run at once.
+# See shell/apps/discord/discord.py.
+exec python3 -I "$(dirname "$(dirname "$(readlink -f "$0")")")/apps/discord/discord.py" "$@"

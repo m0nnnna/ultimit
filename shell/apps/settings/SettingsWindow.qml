@@ -28,6 +28,7 @@ Scope {
         { id: "power",      n: "Power",        file: "PowerPage.qml" },
         { id: "input",      n: "Input",        file: "InputPage.qml" },
         { id: "defaults",   n: "Default apps", file: "DefaultAppsPage.qml" },
+        { id: "discord",    n: "Discord",      file: "DiscordPage.qml" },
         { id: "datetime",   n: "Date & time",  file: "DateTimePage.qml" },
         { id: "users",      n: "Users",        file: "UsersPage.qml" },
         { id: "updates",    n: "Updates",      file: "UpdatesPage.qml" },

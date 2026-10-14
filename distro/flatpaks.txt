@@ -7,3 +7,5 @@ com.obsproject.Studio
 com.obsproject.Studio.Plugin.BackgroundRemoval
 # Clean mic (RNNoise, Deep Noise Remover)
 com.github.wwmm.easyeffects
+# Discord with Vencord built in; ultimit-discord runs one per account, side by side
+dev.vencord.Vesktop
