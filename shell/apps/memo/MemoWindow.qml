@@ -6,6 +6,7 @@ import QtQuick.Layouts
 import Quickshell
 import "../.."
 import "../accessory"
+import "../data" as DataApp
 
 FloatingWindow {
     id: win
@@ -311,6 +312,40 @@ FloatingWindow {
         ta.select(Math.max(a0, s + delta0), e + deltaAll);
     }
 
+    // ---- right-click menu ----
+    function openMenu(x, y) {   // x, y in the window content (ui) coordinates
+        if (overlay !== "") return;
+        const sel = ta.selectedText !== "";
+        const ro = ta.readOnly;
+        ctx.items = [
+            { id: "undo", label: "Undo", hint: "Ctrl+Z", disabled: ro || !ta.canUndo },
+            { id: "redo", label: "Redo", hint: "Ctrl+Shift+Z", disabled: ro || !ta.canRedo },
+            { kind: "sep" },
+            { id: "cut", label: "Cut", hint: "Ctrl+X", disabled: ro || !sel },
+            { id: "copy", label: "Copy", hint: "Ctrl+C", disabled: !sel },
+            { id: "paste", label: "Paste", hint: "Ctrl+V", disabled: ro || !ta.canPaste },
+            { id: "delete", label: "Delete", hint: "Del", disabled: ro || !sel },
+            { kind: "sep" },
+            { id: "selall", label: "Select all", hint: "Ctrl+A", disabled: ta.length === 0 },
+            { kind: "sep" },
+            { id: "find", label: sel && ta.selectedText.indexOf("\n") < 0 ? "Find selection" : "Find", hint: "Ctrl+F" },
+            { id: "replace", label: "Replace", hint: "Ctrl+H", disabled: ro }
+        ];
+        ctx.popup(x, y);
+    }
+    function onMenuPicked(id) {
+        ta.forceActiveFocus();
+        if (id === "undo") ta.undo();
+        else if (id === "redo") ta.redo();
+        else if (id === "cut") ta.cut();
+        else if (id === "copy") ta.copy();
+        else if (id === "paste") ta.paste();
+        else if (id === "delete") ta.remove(ta.selectionStart, ta.selectionEnd);
+        else if (id === "selall") ta.selectAll();
+        else if (id === "find") openFind(false);
+        else if (id === "replace") openFind(true);
+    }
+
     // ---- shortcuts ----
     Item {
         id: keys
@@ -340,6 +375,7 @@ FloatingWindow {
 
     // ---- UI ----
     Rectangle {
+        id: ui
         anchors.fill: parent
         color: Theme.panel
 
@@ -589,6 +625,23 @@ FloatingWindow {
                                 event.accepted = true;
                             } else if (event.key === Qt.Key_Escape) {
                                 win.closeBars();
+                            } else if (event.key === Qt.Key_Menu || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) {
+                                const r = cursorRectangle;
+                                const p = mapToItem(ui, r.x, r.y + r.height);
+                                win.openMenu(p.x, p.y);
+                                event.accepted = true;
+                            }
+                        }
+                        // right-click: keep a selection the click lands in, otherwise move the caret there first
+                        TapHandler {
+                            acceptedButtons: Qt.RightButton
+                            onTapped: pt => {
+                                const pos = ta.positionAt(pt.position.x, pt.position.y);
+                                if (ta.selectionStart === ta.selectionEnd || pos < ta.selectionStart || pos > ta.selectionEnd)
+                                    ta.cursorPosition = pos;
+                                ta.forceActiveFocus();
+                                const p = ta.mapToItem(ui, pt.position.x, pt.position.y);
+                                win.openMenu(p.x, p.y);
                             }
                         }
                         function insertTab() {
@@ -624,6 +677,12 @@ FloatingWindow {
                     font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 0.8
                 }
             }
+        }
+
+        DataApp.DMenu {
+            id: ctx
+            onPicked: id => win.onMenuPicked(id)
+            onDismissed: ta.forceActiveFocus()
         }
 
         // ---- modal overlays ----
