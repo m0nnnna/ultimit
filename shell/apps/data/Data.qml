@@ -43,6 +43,13 @@ Singleton {
         else if (path === "") goTo(Quickshell.env("ULTIMIT_DATA_START") || home);
         raise++;
     }
+    // "Show in folder" (ultimit-data --reveal, FileManager1.ShowItems): p's folder with p selected.
+    function reveal(p) {
+        const dir = dirname(p);
+        if (open && path === dir) { show(""); pendingSelect = p; refresh(true); return; }
+        show(dir);
+        pendingSelect = p;
+    }
     property int raise: 0          // bumped on show(): the window grabs focus
     property bool started: false
 

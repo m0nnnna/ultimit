@@ -1,7 +1,7 @@
 // DataWindow.qml - DATA, the Ultimit file manager: a normal xdg toplevel (the compositor draws
 // the frame). Instantiate once from shell.qml:  DataWindow {}
 // Open / toggle:  Data.show(path) / Data.toggle()  or
-//   qs -p <shell> ipc call data open <path> | toggle     (also: shell/bin/ultimit-data [path])
+//   qs -p <shell> ipc call data open <path> | reveal <file> | toggle     (also: shell/bin/ultimit-data [--reveal] [path])
 import QtQuick
 import QtQuick.Controls
 import Quickshell
@@ -25,6 +25,7 @@ FloatingWindow {
     IpcHandler {
         target: "data"
         function open(path: string): void { Data.show(path); }
+        function reveal(path: string): void { Data.reveal(path); }
         function newtab(path: string): void { Data.show(""); Data.newTab(path, false); }
         function toggle(): void { Data.toggle(); }
         function close(): void { Data.hide(); }
@@ -43,7 +44,24 @@ FloatingWindow {
     readonly property int cols: Math.max(1, Math.floor(gridView.width / gridView.cellWidth))
 
     // -------- drag ghost (internal drag and drop inside DATA)
-    function ghostStart(paths, label) { ghost.paths = paths; ghost.label = label; ghost.Drag.active = true; }
+    function ghostStart(paths, label) {
+        ghost.paths = paths; ghost.label = label; ghost.Drag.active = true;
+        outDrag.Drag.imageSource = "";
+        ghostCard.grabToImage(r => { if (ghost.Drag.active) outDrag.Drag.imageSource = r.url; });   // the system drag's icon
+    }
+    // Dragged out of the window: the system drag (wl_data_device) carries the files on, as
+    // text/uri-list, to whatever app they're dropped on (a browser, a chat, an editor). Copy
+    // only: DATA never deletes what another app took.
+    function ghostOut() {
+        const local = ghost.paths.filter(p => p.startsWith("/"));
+        ghost.Drag.cancel();
+        if (!local.length || outDrag.Drag.active) return;
+        outDrag.Drag.mimeData = {
+            "text/uri-list": local.map(p => "file://" + p.split("/").map(encodeURIComponent).join("/")).join("\r\n") + "\r\n",
+            "text/plain": local.join("\n")
+        };
+        outDrag.Drag.active = true;
+    }
     function ghostMove(x, y) { ghost.x = x; ghost.y = y; }
     function ghostDrop(ctrl) { ghost.copy = !!ctrl; ghost.Drag.drop(); }
     function forceActiveFocus() { ui.forceActiveFocus(); }
@@ -802,8 +820,67 @@ FloatingWindow {
                         for (const p of parts) { acc += "/" + p; out.push({ label: p, path: acc }); }
                         return out;
                     }
-                    function beginEdit() { editing = true; pathInput.text = Data.isTrash ? "trash:" : (Data.isArc ? Data.arcFile : Data.path); pathInput.forceActiveFocus(); pathInput.selectAll(); }
-                    function endEdit() { editing = false; ui.forceActiveFocus(); }
+                    function beginEdit() { editing = true; comps = []; pathInput.text = Data.isTrash ? "trash:" : (Data.isArc ? Data.arcFile : Data.path); pathInput.forceActiveFocus(); pathInput.selectAll(); }
+                    function endEdit() { editing = false; comps = []; ui.forceActiveFocus(); }
+
+                    // Completion while typing a path: what matches the last segment is listed under
+                    // the bar (folders first). Tab fills the common part, then cycles; Up/Down pick.
+                    property var comps: []          // [{ n, d }] matches shown
+                    property int compIdx: -1
+                    property string compBase: ""    // typed text up to and including the last "/"
+                    property string compPrefix: ""  // the segment being typed
+                    property string listedDir: ""
+                    property var listing: []        // [{ n, d }] of listedDir, folders first
+                    function compDir(base) {   // typed folder part -> absolute path
+                        if (base === "") return Data.fsPath;
+                        let d = base.startsWith("~/") ? Data.home + base.slice(1) : base;
+                        if (!d.startsWith("/")) d = Data.join(Data.fsPath, d);
+                        d = d.replace(/\/+$/, "");
+                        return d === "" ? "/" : d;
+                    }
+                    function updateComps() {
+                        const t = pathInput.text;
+                        compIdx = -1;
+                        if (t === "" || t === "~" || /^[a-z]+:/i.test(t) || t.startsWith("\\\\")) { comps = []; return; }
+                        const i = t.lastIndexOf("/");
+                        compBase = t.slice(0, i + 1); compPrefix = t.slice(i + 1);
+                        const dir = compDir(compBase);
+                        if (dir !== listedDir) { comps = []; compLister.exec(["sh", "-c", 'printf "%s\\n" "$1"; find "$1" -mindepth 1 -maxdepth 1 -printf "%Y\\t%f\\n" 2>/dev/null', "sh", dir]); return; }
+                        const p = compPrefix, shown = e => p.startsWith(".") || !e.n.startsWith(".");
+                        let m = listing.filter(e => shown(e) && e.n.startsWith(p));
+                        if (!m.length) { const lp = p.toLowerCase(); m = listing.filter(e => shown(e) && e.n.toLowerCase().startsWith(lp)); }
+                        comps = m;
+                    }
+                    function fill(i) {
+                        const e = comps[i];
+                        pathInput.text = compBase + e.n + (e.d ? "/" : "");
+                    }
+                    function complete(step) {
+                        if (!comps.length) return;
+                        if (comps.length === 1) { fill(0); updateComps(); return; }
+                        let common = comps[0].n;
+                        for (const e of comps) { let k = 0; while (k < common.length && k < e.n.length && common[k] === e.n[k]) k++; common = common.slice(0, k); }
+                        if (common.length > compPrefix.length) { pathInput.text = compBase + common; updateComps(); return; }
+                        compIdx = (compIdx + step + comps.length) % comps.length;
+                        fill(compIdx);
+                    }
+                    Process {
+                        id: compLister
+                        stdout: StdioCollector {
+                            onStreamFinished: {
+                                const lines = text.split("\n");
+                                const out = [];
+                                for (const l of lines.slice(1)) {
+                                    const tab = l.indexOf("\t");
+                                    if (tab > 0) out.push({ d: l.slice(0, tab) === "d", n: l.slice(tab + 1) });
+                                }
+                                out.sort((a, b) => (b.d - a.d) || a.n.localeCompare(b.n));
+                                crumb.listing = out;
+                                crumb.listedDir = lines[0];
+                                if (crumb.editing) crumb.updateComps();
+                            }
+                        }
+                    }
                     // Navigating (list, sidebar, back/up) leaves edit mode, so the bar always
                     // shows where you are; a click in the list doesn't take focus from it.
                     Connections {
@@ -890,8 +967,18 @@ FloatingWindow {
                         color: Theme.fg; selectionColor: Theme.accent; selectedTextColor: Theme.onAccent
                         font.family: Theme.mono; font.pixelSize: 12; clip: true
                         onAccepted: { const t = text; crumb.endEdit(); Data.goAddress(t); }
-                        onActiveFocusChanged: if (!activeFocus && crumb.editing) crumb.editing = false
-                        Keys.onPressed: event => { if (event.key === Qt.Key_Escape) { crumb.endEdit(); event.accepted = true; } }
+                        onTextEdited: crumb.updateComps()
+                        onActiveFocusChanged: if (!activeFocus && crumb.editing) { crumb.editing = false; crumb.comps = []; }
+                        Keys.onPressed: event => {
+                            const n = crumb.comps.length;
+                            if (event.key === Qt.Key_Escape) { if (n) crumb.comps = []; else crumb.endEdit(); event.accepted = true; }
+                            else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) { crumb.complete(event.key === Qt.Key_Backtab ? -1 : 1); event.accepted = true; }
+                            else if ((event.key === Qt.Key_Down || event.key === Qt.Key_Up) && n) {
+                                crumb.compIdx = (crumb.compIdx + (event.key === Qt.Key_Down ? 1 : (crumb.compIdx < 0 ? 0 : -1)) + n) % n;
+                                crumb.fill(crumb.compIdx);
+                                event.accepted = true;
+                            }
+                        }
                     }
                 }
             }
@@ -1221,6 +1308,48 @@ FloatingWindow {
         }
         DDialog { id: dialogs }
 
+        // address bar completions (crumb.comps), over the list
+        Rectangle {
+            id: compPop
+            visible: crumb.editing && crumb.comps.length > 0
+            z: 150
+            x: { crumb.width; win.width; return crumb.mapToItem(ui, 0, 0).x; }
+            y: { crumb.height; win.height; return crumb.mapToItem(ui, 0, crumb.height).y + 2; }
+            width: crumb.width
+            height: Math.min(crumb.comps.length, 10) * 26 + 2
+            color: Theme.bg1; border.width: 1; border.color: Theme.accent
+            ListView {
+                id: compList
+                anchors { fill: parent; margins: 1 }
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                model: crumb.comps
+                currentIndex: crumb.compIdx
+                onCurrentIndexChanged: if (currentIndex >= 0) positionViewAtIndex(currentIndex, ListView.Contain)
+                delegate: Rectangle {
+                    id: compRow
+                    required property var modelData
+                    required property int index
+                    width: compList.width; height: 26
+                    color: index === crumb.compIdx || compMa.containsMouse ? Theme.panel2 : "transparent"
+                    Text {
+                        anchors { left: parent.left; leftMargin: 10; right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
+                        text: compRow.modelData.n + (compRow.modelData.d ? "/" : ""); elide: Text.ElideRight
+                        color: compRow.index === crumb.compIdx ? Theme.accent : (compRow.modelData.d ? Theme.fg : Theme.dim)
+                        font.family: Theme.mono; font.pixelSize: 12
+                    }
+                    MouseArea {   // a folder opens in the bar (its contents listed); a file goes
+                        id: compMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            crumb.fill(compRow.index);
+                            if (compRow.modelData.d) crumb.updateComps();
+                            else { const t = pathInput.text; crumb.endEdit(); Data.goAddress(t); }
+                        }
+                    }
+                }
+            }
+        }
+
         // drag ghost
         Item {
             id: ghost
@@ -1233,6 +1362,7 @@ FloatingWindow {
             Drag.keys: ["data-file"]
             Drag.supportedActions: Qt.MoveAction | Qt.CopyAction
             Rectangle {
+                id: ghostCard
                 visible: ghost.Drag.active
                 x: 12; y: 10; width: gl.implicitWidth + 24; height: 24
                 color: Theme.bg1; border.width: 1; border.color: Theme.accent; opacity: 0.92
@@ -1242,6 +1372,14 @@ FloatingWindow {
                     color: Theme.accent; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.4
                 }
             }
+        }
+        Item {   // system drag out of the window (ghostOut)
+            id: outDrag
+            width: 1; height: 1
+            Drag.dragType: Drag.Automatic
+            Drag.supportedActions: Qt.CopyAction
+            Drag.proposedAction: Qt.CopyAction
+            Drag.onDragFinished: if (outDrag.Drag.active) outDrag.Drag.active = false
         }
     }
 
