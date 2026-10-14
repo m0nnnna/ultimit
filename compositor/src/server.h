@@ -270,6 +270,8 @@ struct ul_output {
 	 * "needs redrawing" flag per blur node and the first screen to draw clears it, so a node
 	 * shared by several screens leaves the others without a cache (slow blur every frame). */
 	struct wlr_scene_optimized_blur *blur;
+	struct wl_event_source *blur_timer; /* rate-limits refreshing it (output_refresh_blur) */
+	bool blur_pending;
 	struct wl_list layer_surfaces[4]; /* ul_layer_surface.link, per zwlr layer */
 
 	struct wl_listener frame;
@@ -297,7 +299,8 @@ struct ul_layer_surface {
 struct ul_decoration {
 	struct wlr_scene_tree *tree;
 	struct wlr_scene_shadow *shadow;
-	struct wlr_scene_rect *border;
+	struct wlr_scene_rect *border; /* 1px outline around the frame */
+	struct wlr_scene_rect *glass[4]; /* frame sides: under the titlebar, left, right, bottom */
 	struct wlr_scene_rect *brackets[4];
 	struct wlr_scene_buffer *titlebar;
 	struct wlr_scene_rect *line; /* open animation */
@@ -449,6 +452,7 @@ void output_finish(struct ul_server *server);
 struct ul_output *output_at(struct ul_server *server, double lx, double ly);
 struct ul_output *output_for_view(struct ul_view *view);
 void output_arrange(struct ul_output *output);
+void output_refresh_blur(struct ul_output *output, bool now);
 void server_update_backdrop(struct ul_server *server);
 
 /* layer.c */
@@ -489,6 +493,7 @@ void view_clamp_into(struct ul_view *view, struct wlr_box area);
 struct ul_view *view_by_id(struct ul_server *server, unsigned id);
 void view_show_desktop(struct ul_server *server);
 void view_set_fullscreen(struct ul_view *view, bool fullscreen);
+void view_update_blur(struct ul_view *view);
 void view_set_minimized(struct ul_view *view, bool minimized);
 void view_close(struct ul_view *view);
 void view_begin_interactive(struct ul_view *view, enum ul_cursor_mode mode, uint32_t edges);
@@ -515,6 +520,7 @@ void anim_finish_all(struct ul_server *server);
 /* decoration.c */
 void decoration_create(struct ul_view *view);
 void decoration_update(struct ul_view *view);
+void decoration_place_frame(struct ul_view *view, int fh);
 enum ul_titlebar_hit decoration_hit(struct ul_view *view, double lx, double ly);
 void skin_init(struct ul_skin *skin);
 bool skin_parse(struct ul_skin *skin, const char *args);

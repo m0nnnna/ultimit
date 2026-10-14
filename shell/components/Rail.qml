@@ -183,7 +183,7 @@ PanelWindow {
                             phase: index * 52   // staggered so the icons don't turn in lockstep
                             appId: modelData.builtin ? modelData.id : ""
                             label: modelData.label
-                            iconSrc: modelData.builtin ? "" : (modelData.icon ? Icons.path(modelData.icon) : "")
+                            iconSrc: modelData.builtin ? "" : (modelData.icon ? Icons.app(modelData.icon) : "")
                             letter: modelData.builtin ? "" : ((modelData.name || modelData.label || "?").charAt(0).toUpperCase())
                             missing: modelData.builtin ? !Config.available(modelData.app) : !modelData.found
                             badge: modelData.builtin && modelData.id === "mailer" ? Config.mailUnread : 0

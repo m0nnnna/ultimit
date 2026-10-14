@@ -19,7 +19,7 @@ the ISO, or ~/.local/share/ultimit/dxvk per user.
 Install everything in these lists (dry run first, then --yes):
 scripts/install-apps.sh. It enables 32-bit packages, installs the apt list,
 installs the pinned .debs, adds Flathub system-wide and installs the Flatpaks (Ungoogled Chromium,
-ProtonPlus), and puts DXVK in /opt/ultimit/dxvk. Steam comes from the
+ProtonPlus, Vesktop for Discord), and puts DXVK in /opt/ultimit/dxvk. Steam comes from the
 steam-installer package; its client downloads on each user's first launch.
 ProtonPlus installs Proton builds (GE-Proton, DW-Proton) into that Steam.
 

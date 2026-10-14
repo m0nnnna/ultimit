@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=IMAGE
+GenericName=Image Viewer
+Comment=Ultimit image viewer
+Exec=ultimit-image %F
+Icon=ultimit-image
+Terminal=false
+Categories=Graphics;Viewer;
+MimeType=image/png;image/jpeg;image/gif;image/webp;image/bmp;image/svg+xml;image/svg+xml-compressed;image/tiff;image/avif;image/heic;image/heif;image/jxl;image/x-icon;image/vnd.microsoft.icon;image/x-tga;image/vnd.adobe.photoshop;image/x-xcf;image/x-exr;image/x-portable-bitmap;image/x-portable-graymap;image/x-portable-pixmap;image/x-portable-anymap;image/x-xbitmap;image/x-xpixmap;image/jp2;image/qoi;image/x-qoi;

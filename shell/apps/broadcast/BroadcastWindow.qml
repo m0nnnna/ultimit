@@ -12,7 +12,7 @@ FloatingWindow {
     implicitWidth: 880
     implicitHeight: 640
     minimumSize: Qt.size(700, 480)
-    color: Theme.bg1
+    color: "transparent"   // the Theme.panel glass below fills it
 
     onVisibleChanged: if (visible !== Broadcast.open) Broadcast.open = visible
     Component.onCompleted: Broadcast.refresh()

@@ -7,8 +7,9 @@ Draws every cursor with pycairo as vector paths at 24/32/48 px (no bitmap
 downscaling) and writes the Xcursor files itself (no xcursorgen needed).
 The skins and their accent colours are read from shell/Theme.qml, so the
 cursor follows Settings > Appearance; a new skin gets a cursor of its own.
-Original artwork: faceted crystal-shard language, dark-glass fill, thin accent
-edge, one faint facet line, 1px near-black outer outline.
+Original artwork in the desktop's language: two-tone crystal shards (lit face
+in the skin's accent, shadow face sunk toward its panel colour), hairlines,
+chamfered chips and corner brackets, with one thin contrast outline.
 """
 import math
 import os
@@ -105,223 +106,192 @@ def L(pts, w=1.8, color="accent", alpha=1.0, close=False, cap="butt", outline=Fa
 
 
 # ---------------------------------------------------------------- geometry
-ARROW = [(4, 3), (4, 41), (14, 31), (22, 47), (28, 44), (20, 28), (34, 28)]
-ARROW_SHADE = [(4, 3), (19, 28.5), (14, 31), (4, 41)]
-ARROW_HS = (4, 3)
-BC = (40.0, 38.5)    # badge centre
+# The Ultimit look: lit crystal shards (the wallpaper), hairlines, chamfered
+# chips and corner brackets. Solid shapes are two-tone shards (a lit face in the
+# accent, a shadow face mixed toward the skin's panel); everything else is a
+# thin accent line. One thin outline in the skin's contrast colour keeps it
+# readable on any background.
+ARROW = [(5, 3), (5, 44), (15.5, 34), (32, 33)]
+ARROW_HS = (5, 3)
+BC = (40.0, 40.0)    # badge centre
+LW = 3.0             # line weight (design units; ~1.4 px at 24 px)
+
+
+def shard(pts, lit):
+    """Two-tone shard: silhouette `pts`, `lit` is the lit face (rest is shadow)."""
+    return P(pts, fill="shade", shade=lit, edge=False, lit=True)
 
 
 def arrow_shapes():
-    return [P(ARROW, shade=ARROW_SHADE, facets=[[(4, 3), (19, 28.5)]])]
-
-
-def badge_hex(r=7.6):
-    return P(hexpts(BC[0], BC[1], r), shade=None)
-
-
-def with_arrow(badge):
-    return arrow_shapes() + badge
+    return [shard(ARROW, ARROW[:3])]
 
 
 def at(pts, c=BC):
     return [(c[0] + x, c[1] + y) for x, y in pts]
 
 
-def ring_cells(cx, cy, ro, ri, intens, rot0=-90, shrink=0.88):
-    shapes = []
+def head(tip, back, half, notch=2.2):
+    """Arrowhead shard pointing +x: tip at x=tip, wings at x=tip-back."""
+    pts = [(tip, 0), (tip - back, -half), (tip - back + notch, 0), (tip - back, half)]
+    return pts, [(tip, 0), (tip - back, -half), (tip - back + notch, 0)]
+
+
+def turned(shape_pts, angle, c=(C, C)):
+    return [(c[0] + x * math.cos(math.radians(angle)) - y * math.sin(math.radians(angle)),
+             c[1] + x * math.sin(math.radians(angle)) + y * math.cos(math.radians(angle)))
+            for x, y in shape_pts]
+
+
+def arrowhead(angle, tip, back=8.5, half=6.5, c=(C, C)):
+    pts, lit = head(tip, back, half)
+    return shard(turned(pts, angle, c), turned(lit, angle, c))
+
+
+def chip(c=BC, r=7.0, k=2.5):
+    """Ultimit's chamfered chip (corners cut top-left and bottom-right)."""
+    return P(at([(-r + k, -r), (r, -r), (r, r - k), (r - k, r), (-r, r), (-r, -r + k)], c),
+             fill="fill", edge=True)
+
+
+def hex_line(cx, cy, r, start=-90, w=LW, alpha=1.0):
+    pts = hexpts(cx, cy, r, start)
+    return L(pts + [pts[0]], w=w, alpha=alpha, outline=True)
+
+
+def hex_segments(cx, cy, r, intens, w):
+    out = []
+    pts = hexpts(cx, cy, r, -90)
     for i in range(6):
-        a0, a1 = rot0 + 60 * i, rot0 + 60 * (i + 1)
-        pts = [(cx + ro * math.cos(math.radians(a0)), cy + ro * math.sin(math.radians(a0))),
-               (cx + ro * math.cos(math.radians(a1)), cy + ro * math.sin(math.radians(a1))),
-               (cx + ri * math.cos(math.radians(a1)), cy + ri * math.sin(math.radians(a1))),
-               (cx + ri * math.cos(math.radians(a0)), cy + ri * math.sin(math.radians(a0)))]
-        mx = sum(p[0] for p in pts) / 4
-        my = sum(p[1] for p in pts) / 4
-        pts = [(mx + (x - mx) * shrink, my + (y - my) * shrink) for x, y in pts]
-        t = intens[i]
-        shapes.append(P(pts, fill=("mix", 0.9 * t), ea=0.45 + 0.55 * t))
-    return shapes
+        a, b = pts[i], pts[(i + 1) % 6]
+        g = 0.14
+        a2 = (a[0] + (b[0] - a[0]) * g, a[1] + (b[1] - a[1]) * g)
+        b2 = (b[0] + (a[0] - b[0]) * g, b[1] + (a[1] - b[1]) * g)
+        out.append(L([a2, b2], w=w, alpha=0.35 + 0.65 * intens[i], outline=True))
+    return out
 
 
 def intensities(frame, n=12):
-    head = frame * 6.0 / n
+    head_ = frame * 6.0 / n
     out = []
     for i in range(6):
-        d = (head - i) % 6
+        d = (head_ - i) % 6
         out.append(max(0.0, 1.0 - d / 3.4) ** 1.3)
     return out
 
 
-def hand_pointer():
-    pts = [(14, 2), (18, 6), (18, 19), (22, 17.5), (26, 19.5), (30, 22), (33, 25.5),
-           (33, 35), (28, 43), (28, 47), (15, 47), (15, 42), (8, 33), (5, 27),
-           (8, 25), (10, 28), (10, 6)]
-    fy = lambda p: (p[0], 3.5 + (p[1] - 2) * (42.5 / 45.0))
-    pts = [fy(p) for p in pts]
-    return [P(pts, shade=[fy(p) for p in [(10, 6), (14, 2), (14, 28), (10, 28)]],
-              facets=[[fy(p) for p in f] for f in ([(14, 2), (14, 26)], [(18, 19), (15, 30)])])]
+def pointer():
+    # An upright crystal spike: pointing, without a cartoon hand.
+    return [shard([(18, 2), (29.5, 36), (18, 28.5), (6.5, 36)], [(18, 2), (18, 28.5), (6.5, 36)])]
 
 
-def hand_open():
-    pts = [(14, 17), (15.2, 15), (17.8, 15), (19, 17), (19, 22), (20.2, 22), (20.2, 11),
-           (21.4, 9), (24, 9), (25.2, 11), (25.2, 20), (26.4, 20), (26.4, 9), (27.6, 7),
-           (30.2, 7), (31.4, 9), (31.4, 20), (32.6, 20), (32.6, 13), (33.8, 11),
-           (36.4, 11), (37.6, 13), (37.6, 29), (36, 40), (31, 47), (19, 47), (13, 41),
-           (6, 31), (5, 27), (8, 25.5), (13, 30), (14, 30)]
-    return [P(pts, shade=[(14, 15), (22.5, 15), (22.5, 47), (14, 47)],
-              facets=[[(22.7, 9), (22.7, 24)], [(13, 30), (19, 38)]])]
+def brackets(r, arm):
+    out = []
+    for k in range(4):
+        out.append(L(turned([(-r, -r + arm), (-r, -r), (-r + arm, -r)], 90 * k, (C, C)),
+                     w=LW, outline=True))
+    return out
 
 
-def hand_closed():
-    pts = [(13, 25), (14.5, 20.5), (19, 20.5), (20.5, 22.5), (21.5, 19), (26, 18), (30, 18),
-           (31.5, 20), (33, 19), (37, 19.5), (39, 23), (39, 32), (35, 41), (32, 47),
-           (18, 47), (15, 41), (10, 34), (10, 30)]
-    return [P(pts, shade=[(10, 18), (25, 18), (25, 47), (10, 47)],
-              facets=[[(25, 18), (25, 30)], [(13, 25), (20, 33)]])]
+def diamond(r, c=(C, C)):
+    return shard([(c[0], c[1] - r), (c[0] + r, c[1]), (c[0], c[1] + r), (c[0] - r, c[1])],
+                 [(c[0], c[1] - r), (c[0], c[1] + r), (c[0] - r, c[1])])
 
 
 def ibeam(angle=0):
-    pts = [(18, 5), (34, 5), (34, 9), (28.3, 11.5), (28.3, 40.5), (34, 43), (34, 47),
-           (18, 47), (18, 43), (23.7, 40.5), (23.7, 11.5), (18, 9)]
-    sh = [(18, 5), (26, 5), (26, 47), (18, 47)]
-    fc = [[(26, 11.5), (26, 40.5)]]
-    if angle:
-        pts, sh = rot(pts, angle), rot(sh, angle)
-        fc = [rot(f, angle) for f in fc]
-    return [P(pts, shade=sh, facets=fc)]
+    f = lambda pts: turned(pts, angle)
+    return [L(f([(0, -17), (0, 17)]), w=LW, outline=True),
+            L(f([(-6, -19), (-2, -19), (0, -17), (2, -19), (6, -19)]), w=LW, outline=True),
+            L(f([(-6, 19), (-2, 19), (0, 17), (2, 19), (6, 19)]), w=LW, outline=True)]
 
 
 def crosshair():
-    arm = [(-1.7, -21), (1.7, -21), (1.3, -9), (0, -6.2), (-1.3, -9)]
-    sh = []
-    for k in range(4):
-        sh.append(P(rel(rot(arm, 90 * k, (0, 0))), shade=None))
-    dia = rel([(0, -2.6), (2.6, 0), (0, 2.6), (-2.6, 0)])
-    sh.append(P(dia, fill="accent"))
-    return sh
+    sh = [L(turned([(0, -21), (0, -6)], 90 * k), w=LW, outline=True) for k in range(4)]
+    return sh + [diamond(2.6)]
 
 
-def fleur(tip=21, hb=14, hw=6.5, sw=2.0, diamond=False):
-    arm = [(-sw, -hb), (-hw, -hb), (0, -tip), (hw, -hb), (sw, -hb), (sw, -sw)]
-    pts = []
-    for k in range(4):
-        pts += rot(arm, 90 * k, (0, 0))
-    pts = rel(pts)
-    sh = [P(pts, shade=[(C - tip, C - tip), (C, C - tip), (C, C + tip), (C - tip, C + tip)],
-            facets=[[(C, C - tip), (C, C - sw)], [(C - tip, C), (C - sw, C)]])]
-    if diamond:
-        sh.append(P(rel([(0, -2.8), (2.8, 0), (0, 2.8), (-2.8, 0)]), fill="accent"))
+def fleur(tip=22, diamond_=False):
+    sh = [L([(C - tip + 6, C), (C + tip - 6, C)], w=LW, outline=True),
+          L([(C, C - tip + 6), (C, C + tip - 6)], w=LW, outline=True)]
+    sh += [arrowhead(90 * k, tip, back=8, half=6) for k in range(4)]
+    if diamond_:
+        sh.append(diamond(4))
     return sh
 
 
 def resize_single(angle):
-    arrow = [(-19, -2.5), (3, -2.5), (3, -7), (13, 0), (3, 7), (3, 2.5), (-19, 2.5)]
-    bar = [(15.5, -8), (18.5, -9.5), (18.5, 9.5), (15.5, 8)]
-    f = lambda pts: rel(rot(pts, angle, (0, 0)))
-    return [P(f(arrow), shade=f([(-19, -2.5), (13, 0), (-19, 0)]) if False else None,
-              facets=[f([(-19, 0), (11, 0)])]),
-            P(f(bar))]
+    return [L(turned([(-18, 0), (8, 0)], angle), w=LW, outline=True),
+            arrowhead(angle, 15, back=9, half=7),
+            L(turned([(19.5, -10), (19.5, 10)], angle), w=LW, outline=True)]
 
 
 def resize_double(angle):
-    pts = [(-20, 0), (-11, -7.5), (-11, -2.5), (11, -2.5), (11, -7.5), (20, 0),
-           (11, 7.5), (11, 2.5), (-11, 2.5), (-11, 7.5)]
-    f = lambda p: rel(rot(p, angle, (0, 0)))
-    return [P(f(pts), shade=f([(-20, 0), (20, 0), (11, 2.5), (-11, 2.5), (-11, 7.5)]),
-              facets=[f([(-20, 0), (20, 0)])])]
+    return [L(turned([(-13, 0), (13, 0)], angle), w=LW, outline=True),
+            arrowhead(angle, 21, back=9, half=7), arrowhead(angle + 180, 21, back=9, half=7)]
 
 
 def resize_split(vertical):
     a = 90 if vertical else 0
-    f = lambda p: rel(rot(p, a, (0, 0)))
-    left = [(-20, 0), (-12, -6.5), (-12, -2.5), (-2, -2.5), (-2, 2.5), (-12, 2.5), (-12, 6.5)]
-    right = [(-x, y) for x, y in left]
-    bar = [(-2.2, -11), (0, -14), (2.2, -11), (2.2, 11), (0, 14), (-2.2, 11)]
-    return [P(f(bar), facets=[f([(0, -14), (0, 14)])]),
-            P(f(left), facets=[f([(-20, 0), (-6, 0)])]),
-            P(f(right), facets=[f([(20, 0), (6, 0)])])]
+    return [L(turned([(0, -15), (0, 15)], a), w=LW, outline=True),
+            L(turned([(5, 0), (13, 0)], a), w=LW, outline=True),
+            L(turned([(-5, 0), (-13, 0)], a), w=LW, outline=True),
+            arrowhead(a, 21, back=9, half=7), arrowhead(a + 180, 21, back=9, half=7)]
 
 
-def forbidden(cx=C, cy=C, ro=19.5, ri=11.5):
-    outer = hexpts(cx, cy, ro, -135)
-    inner = hexpts(cx, cy, ri, -135)
-    d = (math.cos(math.radians(45)), math.sin(math.radians(45)))
-    n = (-d[1], d[0])
-    hl, hw = ri + 3.0, 2.6
-    bar = [(cx + d[0] * s + n[0] * w, cy + d[1] * s + n[1] * w)
-           for s, w in ((-hl, -hw), (hl, -hw), (hl, hw), (-hl, hw))]
-    return [P(outer, inner, rule="evenodd", facets=[hexpts(cx, cy, (ro + ri) / 2, -135) + [hexpts(cx, cy, (ro + ri) / 2, -135)[0]]] if False else ()),
-            P(bar, edge=False, outline=False),
-            L([bar[0], bar[3]], w=1.0, alpha=0.9), L([bar[1], bar[2]], w=1.0, alpha=0.9)]
+def forbidden():
+    d = 11.5
+    return [hex_line(C, C, 18, -90), L([(C - d, C + d * 0.62), (C + d, C - d * 0.62)], w=LW, outline=True)]
 
 
 def zoom(plus):
     lc = (21.0, 21.0)
-    d = (math.sqrt(.5), math.sqrt(.5))
-    n = (-d[1], d[0])
-    w = 2.9
-    pt = lambda s, ww: (lc[0] + d[0] * s + n[0] * ww, lc[1] + d[1] * s + n[1] * ww)
-    handle = [pt(12, -w), pt(30, -w), pt(33, 0), pt(30, w), pt(12, w)]
-    ring = P(hexpts(lc[0], lc[1], 14, -90), hexpts(lc[0], lc[1], 8.2, -90), rule="evenodd")
-    sh = [P(handle, facets=[[pt(13, 0), pt(32, 0)]]), ring,
-          L([(lc[0] - 4, lc[1]), (lc[0] + 4, lc[1])], w=1.9)]
+    sh = [L([(30.5, 30.5), (44, 44)], w=4.4, outline=True), hex_line(lc[0], lc[1], 13, -90),
+          L([(lc[0] - 5, lc[1]), (lc[0] + 5, lc[1])], w=LW, outline=True)]
     if plus:
-        sh.append(L([(lc[0], lc[1] - 4), (lc[0], lc[1] + 4)], w=1.9))
+        sh.append(L([(lc[0], lc[1] - 5), (lc[0], lc[1] + 5)], w=LW, outline=True))
     return sh
 
 
 def pencil():
-    T = (4.5, 47.5)
+    T = (5, 47)
     d = (math.sqrt(.5), -math.sqrt(.5))
     n = (math.sqrt(.5), math.sqrt(.5))
     p = lambda a, b: (T[0] + d[0] * a + n[0] * b, T[1] + d[1] * a + n[1] * b)
-    body = [p(0, 0), p(9, -3.8), p(39, -3.8), p(42, 0), p(39, 3.8), p(9, 3.8)]
-    return [P(body, shade=[p(0, 0), p(42, 0), p(39, 3.8), p(9, 3.8)],
-              facets=[[p(9, 0), p(41, 0)]]),
-            L([p(9, -3.8), p(9, 3.8)], w=1.1, alpha=0.9),
-            L([p(34, -3.8), p(34, 3.8)], w=1.1, alpha=0.6),
-            P([p(0, 0), p(6, -2.4), p(6, 2.4)], fill="accent", edge=False, outline=False)]
+    body = [p(0, 0), p(9, -3.6), p(40, -3.6), p(42.5, 0), p(40, 3.6), p(9, 3.6)]
+    return [shard(body, [p(0, 0), p(9, -3.6), p(40, -3.6), p(42.5, 0)]),
+            L([p(9, -3.6), p(9, 3.6)], w=1.4, color="fill", alpha=0.9)]
 
 
 def wait_frames(n=12):
-    return [ring_cells(C, C, 19, 10.5, intensities(f, n)) for f in range(n)]
+    return [hex_segments(C, C, 17, intensities(f, n), 3.6) + [diamond(3.2)] for f in range(n)]
 
 
 def progress_frames(n=12):
-    out = []
-    for f in range(n):
-        out.append(arrow_shapes() + ring_cells(39.5, 38.5, 8.6, 4.4, intensities(f, n), shrink=0.86))
-    return out
+    return [arrow_shapes() + [chip()] + hex_segments(BC[0], BC[1], 4.6, intensities(f, n), 2.0)
+            for f in range(n)]
 
 
 def plus_big():
-    t, w = 21, 3.6
-    pts = [(-w, -t), (w, -t), (w, -w), (t, -w), (t, w), (w, w), (w, t), (-w, t),
-           (-w, w), (-t, w), (-t, -w), (-w, -w)]
-    return [P(rel(pts), shade=[(C - t, C - t), (C, C - t), (C, C + t), (C - t, C + t)],
-              facets=[[(C - t, C), (C + t, C)]])]
+    return [L([(C - 16, C), (C + 16, C)], w=LW, outline=True),
+            L([(C, C - 16), (C, C + 16)], w=LW, outline=True), diamond(3.4)]
 
 
 def badge_cursor(kind):
-    s = arrow_shapes()
+    s = arrow_shapes() + [chip()]
+    g = lambda pts, w=2.0: L(at(pts), w=w)
     if kind == "copy":
-        s += [badge_hex(), L(at([(-3.6, 0), (3.6, 0)]), w=2.2), L(at([(0, -3.6), (0, 3.6)]), w=2.2)]
+        s += [g([(-3.6, 0), (3.6, 0)]), g([(0, -3.6), (0, 3.6)])]
     elif kind == "alias":
-        s += [badge_hex(), L(at([(-3.8, 0), (3.2, 0)]), w=2.0),
-              L(at([(0.4, -3.3), (3.8, 0), (0.4, 3.3)]), w=2.0)]
+        s += [g([(-3.6, 3.4), (-3.6, -0.6), (3.4, -0.6)]), g([(0.6, -3.4), (3.4, -0.6), (0.6, 2.2)])]
     elif kind == "help":
-        s += [badge_hex(8.0),
-              L(at([(-2.6, -2.2), (-2.6, -3.4), (0, -4.4), (2.6, -3.4), (2.6, -1.4), (0, 0.4), (0, 1.4)]), w=1.5),
-              L(at([(0, 3.1), (0, 4.0)]), w=1.7)]
+        s += [g([(-2.6, -2.0), (-2.6, -3.6), (2.6, -3.6), (2.6, -1.0), (0, 0.6), (0, 1.6)], 1.6),
+              g([(0, 3.0), (0, 4.4)], 1.8)]
     elif kind == "menu":
-        s += [P(at([(-6.4, -6), (3.6, -6), (6.4, -3.2), (6.4, 6), (-6.4, 6)])),
-              L(at([(-3.6, -2.8), (3.8, -2.8)]), w=1.3), L(at([(-3.6, 0.2), (3.8, 0.2)]), w=1.3),
-              L(at([(-3.6, 3.2), (3.8, 3.2)]), w=1.3)]
+        s += [g([(-3.8, -2.8), (3.8, -2.8)], 1.5), g([(-3.8, 0), (3.8, 0)], 1.5),
+              g([(-3.8, 2.8), (1.8, 2.8)], 1.5)]
     elif kind == "nodrop":
-        s += [badge_hex(), L(at([(-3.6, -3.6), (3.6, 3.6)]), w=2.2)]
+        s += [g([(-3.6, 3.6), (3.6, -3.6)])]
     elif kind == "dndmove":
-        s += [P(at([(0, -7.4), (6.2, 0), (0, 7.4), (-6.2, 0)])),
-              P(at([(0, -3.2), (2.6, 0), (0, 3.2), (-2.6, 0)]), fill="accent", edge=False, outline=False)]
+        s += [P(at([(0, -3.4), (3.4, 0), (0, 3.4), (-3.4, 0)]), fill="accent", edge=False, outline=False)]
     return s
 
 
@@ -338,7 +308,7 @@ def build_registry():
     add("default", arrow_shapes(), ARROW_HS, ["left_ptr", "arrow", "top_left_arrow", "right_ptr", "center_ptr"])
     add("text", ibeam(), ctr, ["xterm", "ibeam"])
     add("vertical-text", ibeam(90), ctr, ["vertical_text"])
-    add("pointer", hand_pointer(), (14, 3.5),
+    add("pointer", pointer(), (18, 2),
         ["hand1", "hand2", "pointing_hand", "hand",
          "9d800788f1b08800ae810202380a0822", "e29285e634086352946a0e7090d73106"])
     add("wait", wait_frames(), ctr, ["watch"], anim=True)
@@ -348,9 +318,9 @@ def build_registry():
     add("crosshair", crosshair(), ctr, ["cross", "tcross"])
     add("move", fleur(), ctr, ["fleur", "size_all", "4498f0e0c1937ffe01fd06f973665830",
                                "9081237383d90e509aa00f00170e968f"])
-    add("all-scroll", fleur(tip=18, hb=12, hw=5.5, diamond=True), ctr, ["all_scroll"])
-    add("grab", hand_open(), (26, 27), ["openhand", "9141b49c8149039304290b508d208c40"])
-    add("grabbing", hand_closed(), (26, 28), ["closedhand", "08ffe1cb5fe6fc01f906f1c063814ccf"])
+    add("all-scroll", fleur(tip=19, diamond_=True), ctr, ["all_scroll"])
+    add("grab", brackets(14, 7) + [diamond(2.4)], ctr, ["openhand", "9141b49c8149039304290b508d208c40"])
+    add("grabbing", brackets(9, 5) + [diamond(4.2)], ctr, ["closedhand", "08ffe1cb5fe6fc01f906f1c063814ccf"])
     add("not-allowed", forbidden(), ctr,
         ["crossed_circle", "forbidden", "circle", "03b6e0fcb3499374a867c041f52298f0"])
     add("no-drop", badge_cursor("nodrop"), ARROW_HS, ["dnd-none", "dnd_none", "dnd_no_drop"])
@@ -367,7 +337,7 @@ def build_registry():
     add("cell", plus_big(), ctr, ["plus"])
     add("zoom-in", zoom(True), (21, 21), ["zoom_in"])
     add("zoom-out", zoom(False), (21, 21), ["zoom_out"])
-    add("pencil", pencil(), (4.5, 47.5), ["draft", "draft_large", "draft_small"])
+    add("pencil", pencil(), (5, 47), ["draft", "draft_large", "draft_small"])
     # resize family
     for name, ang in (("e-resize", 0), ("se-resize", 45), ("s-resize", 90), ("sw-resize", 135),
                       ("w-resize", 180), ("nw-resize", 225), ("n-resize", 270), ("ne-resize", 315)):
@@ -398,8 +368,11 @@ class Skin:
         self.name = name
         self.accent = rgb(s["accent"])
         self.fill = rgb(s["fill"])
-        self.outline = rgb(OUTLINE)
-        self.shade = mix(self.fill, self.accent, 0.14)
+        light = sum(self.fill) / 3 > 0.5
+        # Contrast outline: near-black on dark skins, white on light ones.
+        self.outline = (1.0, 1.0, 1.0) if light else rgb(OUTLINE)
+        # Shadow face of a shard: the accent sunk toward the panel colour.
+        self.shade = mix(self.accent, self.fill, 0.42)
 
     def colour(self, key):
         if isinstance(key, tuple):
@@ -445,7 +418,7 @@ def render(skin, shapes, hs, size, pad=0):
         if sh["kind"] == "poly":
             trace(c, sh)
             c.set_fill_rule(cairo.FILL_RULE_EVEN_ODD if sh["rule"] == "evenodd" else cairo.FILL_RULE_WINDING)
-            c.set_line_width(edge_w + 2 * out_w)
+            c.set_line_width((edge_w if sh["edge"] else 0) + 2 * out_w)
             c.stroke()
         else:
             c.move_to(*sh["pts"][0])
@@ -471,7 +444,7 @@ def render(skin, shapes, hs, size, pad=0):
                 for p in sh["shade"][1:]:
                     c.line_to(*p)
                 c.close_path()
-                c.set_source_rgb(*skin.shade)
+                c.set_source_rgb(*(skin.accent if sh.get("lit") else skin.shade))
                 c.fill()
                 c.restore()
             if sh["facets"]:
@@ -572,7 +545,7 @@ def build_theme(skin_name, outdir, registry, keep=None, warn=None):
             os.symlink(name, dst)
     with open(os.path.join(tdir, "index.theme"), "w") as f:
         f.write("[Icon Theme]\nName=%s\nComment=Ultimit Shard cursors (%s skin): "
-                "faceted dark-glass crystal shards with an accent edge\n"
+                "two-tone crystal shards and accent hairlines\n"
                 "Inherits=Adwaita\n" % (tname, skin_name))
     if keep is not None:
         keep.update(rendered)

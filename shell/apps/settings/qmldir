@@ -17,6 +17,7 @@ BluetoothPage 1.0 BluetoothPage.qml
 PowerPage 1.0 PowerPage.qml
 InputPage 1.0 InputPage.qml
 DefaultAppsPage 1.0 DefaultAppsPage.qml
+DiscordPage 1.0 DiscordPage.qml
 DateTimePage 1.0 DateTimePage.qml
 AboutPage 1.0 AboutPage.qml
 UpdatesPage 1.0 UpdatesPage.qml

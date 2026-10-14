@@ -255,6 +255,7 @@ static void x_commit(struct wl_listener *listener, void *data) {
 	struct wlr_surface *surface = view->xwayland_surface->surface;
 	if (view->mapped) {
 		view_update_size(view, surface->current.width, surface->current.height);
+		view_update_blur(view);
 		capture_view_commit(view);
 	}
 }

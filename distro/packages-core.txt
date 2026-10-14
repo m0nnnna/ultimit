@@ -66,6 +66,9 @@ libglib2.0-bin
 dconf-gsettings-backend
 zenity
 wlr-randr
+# Spell-check dictionaries for native apps (GTK/Qt apps via Enchant/Sonnet, LibreOffice...);
+# Ubuntu's desktop pulls them in, the server base Ultimit starts from does not
+hunspell-en-us
 # Fonts and icons the look falls back on
 fontconfig
 fonts-noto-core

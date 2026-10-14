@@ -33,6 +33,7 @@ Scope {
         if (!root.envSkin && a.skin in Theme.skins) Theme.skin = a.skin;
         if (!root.envMotion) Config.motion = a.motion;
         Config.railSpin = a.railSpin;
+        Config.appIcons = a.appIcons === "original" ? "original" : "letters";
         Config.wallpaperMotion = a.wallpaperMotion;
         if (!root.envBoot) Config.bootOnStart = a.bootOnStart;
         Config.shardDensity = clampDensity(a.shardDensity);
@@ -66,6 +67,7 @@ Scope {
         if (!root.envSkin && a.skin !== Theme.skin) { a.skin = Theme.skin; changed = true; }
         if (!root.envMotion && a.motion !== Config.motion) { a.motion = Config.motion; changed = true; }
         if (a.railSpin !== Config.railSpin) { a.railSpin = Config.railSpin; changed = true; }
+        if (a.appIcons !== Config.appIcons) { a.appIcons = Config.appIcons; changed = true; }
         if (a.wallpaperMotion !== Config.wallpaperMotion) { a.wallpaperMotion = Config.wallpaperMotion; changed = true; }
         if (a.shardDensity !== Config.shardDensity) { a.shardDensity = Config.shardDensity; changed = true; }
         if (a.wallpaper !== Config.wallpaper) { a.wallpaper = Config.wallpaper; changed = true; }
@@ -97,7 +99,10 @@ Scope {
     Timer {
         id: fastfetchTimer
         interval: 1500
-        onTriggered: Quickshell.execDetached([Quickshell.shellPath("../session/ultimit-fastfetch-config")])
+        onTriggered: {
+            Quickshell.execDetached([Quickshell.shellPath("../session/ultimit-fastfetch-config")]);
+            Quickshell.execDetached([Quickshell.shellPath("bin/ultimit-discord"), "theme"]);
+        }
     }
     Connections {
         target: Theme
@@ -108,7 +113,7 @@ Scope {
             const name = "UltimitCursor-" + Theme.skin.charAt(0).toUpperCase() + Theme.skin.slice(1);
             Quickshell.execDetached(["sh", "-c", "[ -e \"$HOME/.local/share/icons/" + name + "/cursors/default\" ] && ultimitctl cursor-theme " + name + " && gsettings set org.gnome.desktop.interface cursor-theme " + name
                 + " && { ! command -v flatpak >/dev/null || flatpak override --user --env=XCURSOR_THEME=" + name + "; }"]);
-            // fastfetch colours follow the skin too (after shell.json is written).
+            // fastfetch and Discord colours follow the skin too (after shell.json is written).
             fastfetchTimer.restart();
         }
     }
@@ -116,6 +121,7 @@ Scope {
         target: Config
         function onMotionChanged() { root.push(); Quickshell.execDetached(["ultimitctl", "motion", Config.motion ? "on" : "off"]); }
         function onRailSpinChanged() { root.push(); }
+        function onAppIconsChanged() { root.push(); }
         function onWallpaperMotionChanged() { root.push(); }
         function onShardDensityChanged() { root.push(); }
         function onWallpaperChanged() { root.push(); }
@@ -158,6 +164,7 @@ Scope {
             property string skin: "mine"
             property bool motion: true
             property string railSpin: "always"
+            property string appIcons: "letters"
             property bool wallpaperMotion: true
             property int shardDensity: 34
             property string wallpaper: ""

@@ -6,10 +6,13 @@ Xcursor themes for the Ultimit desktop, one per skin in `shell/Theme.qml`:
 list of skins) are read from `Theme.qml`, so the cursor follows Settings > Appearance; a skin
 added there gets a cursor at the next login, and changing a skin's colours rebuilds them.
 
-Design: faceted crystal-shard arrow, dark-glass fill, thin accent edge, one faint
-facet line, 1 px near-black (#050607) outer outline for contrast on any background.
-Everything is drawn as vector paths with pycairo at 24 (nominal), 32 and 48 px.
-Wait/progress are animated 12-frame hex rings (60 ms/frame).
+Design: the desktop's own language rather than a classic pointer. Solid shapes are two-tone
+crystal shards like the wallpaper's (lit face in the skin's accent, shadow face sunk toward its
+panel colour); everything else is accent hairlines, chamfered chips (badges) and corner brackets
+(grab), with hex rings for wait/progress and not-allowed. No cartoon hands: the link pointer is an
+upright shard. One thin outline in the skin's contrast colour (near-black, white on Silver).
+Drawn as vector paths with pycairo at 24 (nominal), 32 and 48 px; wait/progress are animated
+12-frame hex rings (60 ms/frame).
 
 Coverage: all CSS cursor-shape-v1 names (files) plus X11 and hash-named aliases (symlinks).
 

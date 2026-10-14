@@ -72,7 +72,7 @@ Item {
             readonly property string ownIcon: Icons.windowIcon(appId, title)
             readonly property string iconName: ownIcon !== "" ? ownIcon : (de && de.icon ? de.icon : appId)
             // Skin-aware (Icons.qml): follows the current skin live, falls back to the startup icon theme.
-            readonly property string iconSrc: iconName !== "" ? Icons.path(iconName) : ""
+            readonly property string iconSrc: iconName !== "" ? Icons.app(iconName) : ""
             readonly property bool active: modelData.activated
             readonly property bool mini: modelData.minimized
 

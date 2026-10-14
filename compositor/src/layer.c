@@ -95,9 +95,45 @@ struct wlr_scene_tree *layer_popup_parent(struct wlr_layer_surface_v1 *layer_sur
 	return l->popups;
 }
 
+/* The wallpaper and desktop widgets (background and bottom layers) are what the cached
+ * glass blur shows, so the cache has to follow them. */
+static bool under_glass(struct ul_layer_surface *l) {
+	return l->layer_surface->current.layer <= ZWLR_LAYER_SHELL_V1_LAYER_BOTTOM;
+}
+
+struct layer_blur {
+	bool enabled, optimized;
+};
+
+static void set_layer_blur(struct wlr_scene_buffer *buffer, int sx, int sy, void *data) {
+	struct layer_blur *b = data;
+	if (wlr_scene_surface_try_from_buffer(buffer)) {
+		wlr_scene_buffer_set_backdrop_blur(buffer, b->enabled);
+		wlr_scene_buffer_set_backdrop_blur_optimized(buffer, b->optimized);
+	}
+}
+
+/* Glass behind the shell's own panels above the windows (menus, flyouts, launcher,
+ * dialogs, the rail and ticker). SceneFX blurs only under pixels that aren't fully
+ * transparent, so a panel's invisible click-catcher stays clear. Panels that reserve a
+ * screen edge (rail, ticker) only ever have the wallpaper under them and use the cheap
+ * cached blur; the rest float over windows and blur what is really there. Other clients'
+ * layer surfaces are left alone. */
+static void layer_update_blur(struct ul_layer_surface *l) {
+	const char *ns = l->layer_surface->namespace;
+	struct layer_blur b = {
+		.enabled = !under_glass(l) && ns && strncmp(ns, "ultimit-", 8) == 0,
+		.optimized = l->layer_surface->current.exclusive_zone > 0,
+	};
+	wlr_scene_node_for_each_buffer(&l->scene->tree->node, set_layer_blur, &b);
+}
+
 static void layer_map(struct wl_listener *listener, void *data) {
 	struct ul_layer_surface *l = wl_container_of(listener, l, map);
 	l->mapped = true;
+	if (under_glass(l)) {
+		output_refresh_blur(l->output, true);
+	}
 	layer_arrange(l->output);
 	if (l->layer_surface->current.keyboard_interactive ==
 			ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_ON_DEMAND &&
@@ -114,6 +150,9 @@ static void layer_unmap(struct wl_listener *listener, void *data) {
 		input_focus_layer(l->server, NULL);
 	}
 	if (l->output) {
+		if (under_glass(l)) {
+			output_refresh_blur(l->output, true);
+		}
 		layer_arrange(l->output);
 	}
 	input_update_pointer_focus(l->server, 0);
@@ -135,6 +174,14 @@ static void layer_commit(struct wl_listener *listener, void *data) {
 	if (ls->initial_commit || ls->current.committed) {
 		layer_arrange(l->output);
 	}
+	if (!l->mapped) {
+		return;
+	}
+	if (under_glass(l)) {
+		/* A new wallpaper frame: refresh this screen's glass (rate-limited). */
+		output_refresh_blur(l->output, false);
+	}
+	layer_update_blur(l);
 }
 
 static void layer_destroy(struct wl_listener *listener, void *data) {

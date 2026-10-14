@@ -4,7 +4,9 @@ greetd
 foot
 zathura
 zathura-pdf-poppler
-imv
+# IMAGE (the image viewer): Qt readers for WebP/TIFF, and AVIF/HEIF/JPEG XL/PSD/RAW...
+qt6-image-formats-plugins
+kimageformat6-plugins
 go-mtpfs
 system-config-printer
 flatpak

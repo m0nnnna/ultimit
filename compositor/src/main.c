@@ -165,6 +165,11 @@ int main(int argc, char *argv[]) {
 	output_init(&server);
 
 	server.scene = wlr_scene_create();
+	/* Glass: a wide, frosted blur (Aero-strength). SceneFX's default is 3 passes of radius 5
+	 * with a darkening; this is 3 passes of 9 (about 144 px across), a touch of grain, no
+	 * extra darkening (the skins' tint does that) and a little more color. Every window and
+	 * the rail sample a cached copy per screen, so the width costs nothing per frame. */
+	wlr_scene_set_blur_data(server.scene, 3, 9, 0.03f, 1.0f, 0.95f, 1.2f);
 	server.scene_layout = wlr_scene_attach_output_layout(server.scene, server.output_layout);
 	for (int i = 0; i < UL_LAYER_COUNT; i++) {
 		server.layers[i] = wlr_scene_tree_create(&server.scene->tree);
