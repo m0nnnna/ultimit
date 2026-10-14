@@ -23,7 +23,8 @@ desktop shell, not a theme on top of another desktop.
 
 1. **Games work without fuss.** Steam and Proton, NVIDIA and hybrid laptops,
    fullscreen direct scanout, VRR and tearing control. A desktop decision that
-   costs games frames or latency is the wrong decision.
+   costs games frames or latency is the wrong decision. Games confirmed working,
+   with the settings they need: [`docs/games.md`](docs/games.md).
 2. **It looks like nothing else.** The approved design lives in
    [`docs/design/mockup.html`](docs/design/mockup.html). Open it in a browser
    and click around; it is the reference for every screen.
@@ -61,6 +62,7 @@ out, and Settings › Updates installs it. See [`docs/updates.md`](docs/updates.
 | `docs/architecture.md` | Stack choices and why |
 | `docs/install.md` | Installing on another computer, updating, removing |
 | `docs/iso.md` | The Ultimit ISO: Ubuntu's server installer, patched to set up Ultimit |
+| `docs/games.md` | Tested games: which work, with which Proton and launch options |
 | `docs/updates.md` | Updates: Ubuntu's packages the Ubuntu way, Ultimit from GitHub releases; publishing one |
 | `scripts/install.sh` | The installer (builds the libraries, installs to `/opt/ultimit`, sets up the login screen) |
 | `assets/fonts/` | Michroma, Chakra Petch, Share Tech Mono (SIL Open Font License, licences beside them) |
