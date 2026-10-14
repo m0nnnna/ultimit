@@ -6,6 +6,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Wayland
 
 Singleton {
     id: root
@@ -46,7 +47,17 @@ Singleton {
     // "Add device..." in the Bluetooth flyout: Settings > Bluetooth starts a scan when it shows the page.
     property bool btScanRequest: false
     function openBluetoothAdd() { btScanRequest = true; openSettings("bluetooth"); }
-    function openSettings(page) { settingsPage = page || ""; settingsRequest++; accessoryOpen = true; }
+    // Raise the Settings window when it's open; otherwise make a fresh one (SettingsWindow.qml loads it
+    // only while accessoryOpen; a FloatingWindow closed from its frame won't show again).
+    function openSettings(page) {
+        settingsPage = page || "";
+        settingsRequest++;
+        for (const t of ToplevelManager.toplevels.values) {
+            if (t.appId === "org.quickshell" && t.title === accessoryTitle) { t.minimized = false; t.activate(); return; }
+        }
+        accessoryOpen = false;
+        accessoryOpen = true;
+    }
     // Bumped to ask Boot.qml to (re)play the boot overlay.
     property int bootRequest: 0
     function playBoot() { bootRequest++; }

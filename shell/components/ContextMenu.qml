@@ -63,7 +63,7 @@ PanelWindow {
         case "term": close(); Config.openTerminal(); return;
         case "files": close(); Data.show(""); return;
         case "launch": Config.openLauncher(win.screenName); return;
-        case "acc": close(); Config.accessoryOpen = true; return;
+        case "acc": close(); Config.openSettings(""); return;
         case "boot": close(); Config.playBoot(); return;
         }
         close();
