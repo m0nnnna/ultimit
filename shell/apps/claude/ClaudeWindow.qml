@@ -263,7 +263,7 @@ FloatingWindow {
                             id: headBtns
                             anchors.right: parent.right; anchors.rightMargin: 14; anchors.verticalCenter: parent.verticalCenter
                             spacing: 6
-                            ChamferButton { implicitHeight: 30; text: "Folder"; visible: !!win.proj; onClicked: win.showFolder(win.proj.dir) }
+                            ChamferButton { implicitHeight: 30; text: "Show in DATA"; visible: !!win.proj; onClicked: win.showFolder(win.proj.dir) }
                             ChamferButton { implicitHeight: 30; text: "Project"; onClicked: win.editProject(win.proj) }
                             ChamferButton { implicitHeight: 30; text: "New chat"; onClicked: win.newChat() }
                         }

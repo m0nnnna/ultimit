@@ -5,7 +5,6 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
-import Quickshell.Io
 import "../.."
 import "../accessory"
 
@@ -22,10 +21,10 @@ Rectangle {
     property string err: ""
     property bool confirmRemove: false
 
-    implicitHeight: col.implicitHeight + 40
+    implicitHeight: picking ? 480 : col.implicitHeight + 40
     color: Theme.bg1
     border.width: 1; border.color: Theme.lineStrong
-    Keys.onEscapePressed: host.overlay = ""
+    Keys.onEscapePressed: if (picking) picking = false; else host.overlay = ""
 
     function save() {
         const o = { id: isNew ? "" : project.id, name: nameE.text, dir: dirE.text.replace(/^~(?=\/|$)/, Quickshell.env("HOME")),
@@ -37,15 +36,28 @@ Rectangle {
         });
     }
 
-    Process {
-        id: browse
-        command: ["zenity", "--file-selection", "--directory", "--title=Project folder",
-                  "--filename=" + (dirE.text || Quickshell.env("HOME")) + "/"]
-        stdout: StdioCollector { onStreamFinished: { const f = text.trim(); if (f.startsWith("/")) { dirE.text = f; if (nameE.text === "") nameE.text = f.substring(f.lastIndexOf("/") + 1); } } }
+    // Browse… swaps the form for an in-app folder picker (FolderPicker.qml) in this same panel.
+    property bool picking: false
+    function picked(f) {
+        dirE.text = f;
+        if (nameE.text === "") nameE.text = f.substring(f.lastIndexOf("/") + 1);
+        picking = false;
+        dirE.focusEntry();
+    }
+    Loader {
+        x: 20; y: 20; width: parent.width - 40; height: parent.height - 40
+        active: root.picking
+        sourceComponent: FolderPicker {
+            startDir: dirE.text.trim() || "~"
+            onAccepted: d => root.picked(d)
+            onCancelled: root.picking = false
+        }
+        onLoaded: item.forceActiveFocus()
     }
 
     ColumnLayout {
         id: col
+        visible: !root.picking
         x: 20; y: 20; width: parent.width - 40
         spacing: 10
 
@@ -59,7 +71,7 @@ Rectangle {
             visible: !root.builtin
             Layout.fillWidth: true
             Entry { id: dirE; Layout.fillWidth: true; mono: true; text: root.project && root.project.dir ? root.project.dir : ""; placeholder: "~/src/my-project" }
-            ChamferButton { implicitHeight: 32; text: "Browse…"; onClicked: browse.running = true }
+            ChamferButton { implicitHeight: 32; text: "Browse…"; onClicked: root.picking = true }
         }
 
         Label_ { text: "Account" }
