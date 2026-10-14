@@ -40,7 +40,7 @@ FloatingWindow {
     implicitWidth: 880
     implicitHeight: 620
     minimumSize: Qt.size(520, 360)
-    color: Theme.bg1
+    color: "transparent"   // the Theme.panel glass below fills it
     visible: true
 
     // ---- find state ----

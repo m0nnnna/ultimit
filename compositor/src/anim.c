@@ -36,6 +36,7 @@ static void set_chrome_enabled(struct ul_view *view, bool enabled) {
 	wlr_scene_node_set_enabled(&deco->border->node, enabled);
 	wlr_scene_node_set_enabled(&deco->titlebar->node, enabled && view->ssd);
 	for (int i = 0; i < 4; i++) {
+		wlr_scene_node_set_enabled(&deco->glass[i]->node, enabled);
 		wlr_scene_node_set_enabled(&deco->brackets[i]->node, enabled);
 	}
 }
@@ -89,12 +90,7 @@ static int tick(void *data) {
 		 * hidden (decoration_update puts everything back when done). */
 		int hidden = view->height - clip.height;
 		int fh = view->height + bar + 2 * UL_BORDER - hidden;
-		wlr_scene_rect_set_size(deco->border, fw, fh);
-		wlr_scene_rect_set_clipped_region(deco->border, (struct clipped_region){
-			.corner_radius = 0,
-			.corners = CORNER_LOCATION_NONE,
-			.area = { UL_BORDER, UL_BORDER, fw - 2 * UL_BORDER, fh - 2 * UL_BORDER },
-		});
+		decoration_place_frame(view, fh);
 		/* Bottom-right brackets (horizontal, vertical) sit on the current bottom. */
 		wlr_scene_node_set_position(&deco->brackets[2]->node,
 			fx + fw - UL_BRACKET_LEN, fy + fh - UL_BRACKET_W);

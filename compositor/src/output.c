@@ -107,6 +107,45 @@ void output_relocate_views(struct ul_server *server, struct ul_output *gone) {
 	server->relayout = false;
 }
 
+/* How often a screen's cached glass blur may be redrawn while its wallpaper is moving. The
+ * moving shards run at up to 20 fps; following them at half that keeps the glass alive
+ * without a full-screen redraw on every wallpaper frame. */
+#define BLUR_REFRESH_MS 100
+
+static int blur_refresh(void *data) {
+	struct ul_output *output = data;
+	output->blur_pending = false;
+	wlr_scene_optimized_blur_mark_dirty(output->blur);
+	return 0;
+}
+
+/* SceneFX draws an optimized blur node once and keeps it until it is marked dirty, which it
+ * never does on its own when what lies under it changes. Without this a screen keeps the
+ * glass it had when it came up: plain backdrop if the wallpaper wasn't drawn yet, which is
+ * why some screens' windows looked frosted and others' flat. */
+void output_refresh_blur(struct ul_output *output, bool now) {
+	if (!output || !output->blur) {
+		return;
+	}
+	if (now) {
+		if (output->blur_pending) {
+			wl_event_source_timer_update(output->blur_timer, 0);
+			output->blur_pending = false;
+		}
+		wlr_scene_optimized_blur_mark_dirty(output->blur);
+		return;
+	}
+	if (output->blur_pending) {
+		return;
+	}
+	if (!output->blur_timer) {
+		output->blur_timer = wl_event_loop_add_timer(
+			wl_display_get_event_loop(output->server->display), blur_refresh, output);
+	}
+	output->blur_pending = true;
+	wl_event_source_timer_update(output->blur_timer, BLUR_REFRESH_MS);
+}
+
 void server_update_backdrop(struct ul_server *server) {
 	struct wlr_box box;
 	wlr_output_layout_get_box(server->output_layout, NULL, &box);
@@ -224,6 +263,9 @@ static void output_destroy(struct wl_listener *listener, void *data) {
 	wl_list_remove(&output->request_state.link);
 	wl_list_remove(&output->destroy.link);
 	wl_list_remove(&output->link);
+	if (output->blur_timer) {
+		wl_event_source_remove(output->blur_timer);
+	}
 	wlr_scene_node_destroy(&output->blur->node);
 	output->wlr_output->data = NULL;
 	free(output);

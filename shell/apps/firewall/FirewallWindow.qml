@@ -15,7 +15,7 @@ FloatingWindow {
     implicitWidth: 900
     implicitHeight: 680
     minimumSize: Qt.size(680, 480)
-    color: Theme.bg1
+    color: "transparent"   // the Theme.panel glass below fills it
 
     onVisibleChanged: if (visible !== Firewall.open) Firewall.open = visible
     Connections {

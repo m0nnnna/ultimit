@@ -12,17 +12,17 @@
 
 /* Window chrome metrics, in logical pixels. */
 #define UL_TITLEBAR_H      38
-#define UL_BORDER          1
+#define UL_BORDER          5  /* glass frame around the window, outlined by a 1px line */
 #define UL_BRACKET_LEN     14
 #define UL_BRACKET_W       2
 #define UL_SHADOW_SIGMA    24.0f
-#define UL_RESIZE_MARGIN   6
+#define UL_RESIZE_MARGIN   (UL_BORDER + 5) /* past the content edge */
 #define UL_BUTTON_MIN_W    30 /* titlebar button hit cell */
 
 /* Mine palette. */
 #define UL_COLOR_BG            UL_RGBA(5, 6, 7, 1.0f)
-#define UL_COLOR_PANEL         UL_RGBA(13, 15, 18, 0.80f)
-#define UL_COLOR_PANEL_DIM     UL_RGBA(13, 15, 18, 0.70f)
+#define UL_COLOR_PANEL         UL_RGBA(13, 15, 18, 0.62f)
+#define UL_COLOR_PANEL_DIM     UL_RGBA(13, 15, 18, 0.54f)
 #define UL_COLOR_FG            UL_RGBA(238, 241, 244, 1.0f)
 #define UL_COLOR_DIM           UL_RGBA(141, 148, 158, 1.0f)
 #define UL_COLOR_LINE          UL_RGBA(235, 240, 245, 0.16f)

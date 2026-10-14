@@ -24,7 +24,7 @@ Singleton {
     readonly property var skins: ({
         mine: {
             bg1: "#050607", bg2: "#1c2026",
-            panel: [13, 15, 18, .80], panel2: [255, 255, 255, .05], rail: [7, 8, 10, .86],
+            panel: [13, 15, 18, .62], panel2: [255, 255, 255, .05], rail: [7, 8, 10, .72],
             fg: "#eef1f4", dim: "#8d949e",
             line: [235, 240, 245, .16], lineStrong: [235, 240, 245, .48],
             accent: "#d4ebff", onAccent: "#07090b",
@@ -34,7 +34,7 @@ Singleton {
         },
         amber: {
             bg1: "#b84d05", bg2: "#f8cf96",
-            panel: [34, 17, 5, .78], panel2: [255, 220, 180, .07], rail: [28, 13, 3, .86],
+            panel: [34, 17, 5, .60], panel2: [255, 220, 180, .07], rail: [28, 13, 3, .72],
             fg: "#fff4e6", dim: "#dcb48c",
             line: [255, 226, 196, .2], lineStrong: [255, 226, 196, .55],
             accent: "#ffb04a", onAccent: "#2a1404",
@@ -44,7 +44,7 @@ Singleton {
         },
         silver: {
             bg1: "#f6f7f9", bg2: "#aeb5bf",
-            panel: [248, 249, 251, .82], panel2: [20, 30, 45, .05], rail: [232, 235, 239, .9],
+            panel: [248, 249, 251, .66], panel2: [20, 30, 45, .05], rail: [232, 235, 239, .76],
             fg: "#14171b", dim: "#5a626d",
             line: [20, 24, 30, .16], lineStrong: [20, 24, 30, .5],
             accent: "#2c5b88", onAccent: "#ffffff",
@@ -54,7 +54,7 @@ Singleton {
         },
         verdant: {
             bg1: "#062a0c", bg2: "#79d24f",
-            panel: [5, 20, 8, .78], panel2: [200, 255, 180, .06], rail: [3, 14, 5, .86],
+            panel: [5, 20, 8, .60], panel2: [200, 255, 180, .06], rail: [3, 14, 5, .72],
             fg: "#effbe9", dim: "#a3cc95",
             line: [220, 255, 205, .18], lineStrong: [220, 255, 205, .5],
             accent: "#b9ff8c", onAccent: "#082008",
@@ -64,6 +64,9 @@ Singleton {
         }
     })
 
+    // "panel" is the frosted glass every app window, menu, flyout and the window chrome are
+    // filled with; "rail" is the rail and ticker. The compositor blurs what is behind them
+    // (Aero-strength), so these alphas are the tint over that blur, not a plain see-through.
     readonly property var cur: skins[skin]
 
     function _rgba(a) { return Qt.rgba(a[0] / 255, a[1] / 255, a[2] / 255, a[3]); }
