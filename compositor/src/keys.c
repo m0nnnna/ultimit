@@ -224,6 +224,7 @@ static void run(struct ul_server *server, const struct binding *b, uint32_t mods
 
 /* Opens the launcher (the Super tap and Super+R). */
 void keys_super_tap(struct ul_server *server) {
+	ipc_emit_dismiss("launcher");
 	const char *cmd = getenv("ULTIMIT_LAUNCHER");
 	server_spawn(cmd ? cmd : "ultimit-launcher");
 }
@@ -253,6 +254,13 @@ bool keys_handle(struct ul_server *server, uint32_t mods, xkb_keysym_t sym) {
 		}
 		if (lower != b->sym && sym != b->sym2) {
 			continue;
+		}
+		if (!(b->flags & KB_ALWAYS) && b->act != ACT_LAUNCHER) {
+			/* Any shortcut but the media keys closes the shell's menus and
+			 * flyouts; Super+V and Super+/ keep the panel they toggle. */
+			bool panel = b->act == ACT_SPAWN && (strcmp(b->action, "clipboard") == 0 ||
+				strcmp(b->action, "shortcuts") == 0);
+			ipc_emit_dismiss(panel ? b->action : "");
 		}
 		run(server, b, mods);
 		return true;

@@ -14,7 +14,8 @@
  *                          left/right cycles 1/2, 1/3, 2/3 like Super+Left/Right
  *   subscribe              keep the connection open and receive events, one
  *                          JSON line each: {"event":"alttab","action":"show"|
- *                          "move"|"hide","index":N,"items":[...]} (alttab.c)
+ *                          "move"|"hide","index":N,"items":[...]} (alttab.c),
+ *                          {"event":"dismiss","keep":NAME} (ipc_emit_dismiss)
  *   drag ID X Y            test hook: start a titlebar drag of window ID and move
  *                          the pointer to layout X,Y, as if the button were held;
  *                          "drag-release" drops it (the real snap code runs)
@@ -372,6 +373,19 @@ void ipc_emit_alttab(struct ul_server *server, const char *action) {
 		}
 		put(&o, "]");
 	}
+	put(&o, "}\n");
+	ipc_broadcast(o.data);
+	free(o.data);
+}
+
+/* Tells the shell to close its menus and flyouts: a shortcut ran or a click
+ * landed on another screen while one held the keyboard (keys.c, input.c).
+ * "keep" names the panel that shortcut toggles itself ("launcher",
+ * "clipboard", "shortcuts"), so closing it first doesn't undo the toggle. */
+void ipc_emit_dismiss(const char *keep) {
+	struct out o = {0};
+	put(&o, "{\"event\":\"dismiss\",\"keep\":");
+	put_str(&o, keep ? keep : "");
 	put(&o, "}\n");
 	ipc_broadcast(o.data);
 	free(o.data);
