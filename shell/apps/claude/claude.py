@@ -35,6 +35,8 @@ started with.
   claude.py chat-rename <project> <chat> <title>   JSON {ok}
   claude.py chat-remove <project> <chat>           JSON {ok}
   claude.py sysinfo                      JSON {ok, text}         the system summary (Markdown)
+  claude.py dirs <folder>                JSON {ok, dir, parent, dirs[{n, h}]}  the folders in a folder
+                                         (the project folder picker; ~ works)
   claude.py session <project> <chat|new> JSON lines (see Session); stdin: JSON commands
                                          {op:send,text,sysinfo} {op:permit,rid,allow,always}
                                          {op:interrupt} {op:close}
@@ -492,6 +494,21 @@ def cmd_chat_remove(pid, cid):
 
 
 # ---------------------------------------------------------------------------------------- system info
+def cmd_dirs(d):
+    d = os.path.realpath(os.path.expanduser(d or "~"))
+    names = []
+    with os.scandir(d) as it:
+        for e in it:
+            try:
+                if e.is_dir():          # follows links to folders
+                    names.append(e.name)
+            except OSError:
+                pass
+    names.sort(key=lambda n: (n.lstrip(".").lower(), n))
+    return {"ok": True, "dir": d, "parent": os.path.dirname(d) if d != "/" else "",
+            "dirs": [{"n": n, "h": n.startswith(".")} for n in names]}
+
+
 def sh(args, timeout=8):
     try:
         p = subprocess.run(args, capture_output=True, text=True, timeout=timeout, stdin=subprocess.DEVNULL)
@@ -915,6 +932,8 @@ def main(argv):
             out(cmd_chat_rename(a[0], a[1], a[2]))
         elif c == "chat-remove":
             out(cmd_chat_remove(a[0], a[1]))
+        elif c == "dirs":
+            out(cmd_dirs(a[0] if a else ""))
         elif c == "sysinfo":
             out({"ok": True, "text": sysinfo()})
         elif c == "session":

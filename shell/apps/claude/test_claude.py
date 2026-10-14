@@ -206,6 +206,19 @@ class ClaudeHelper(unittest.TestCase):
     def test_cli_version(self):
         self.assertEqual(self.j("cli"), {"ok": True, "path": FAKE, "version": "9.9.9"})
 
+    def test_dirs(self):
+        os.makedirs(os.path.join(self.home, "src", "b"))
+        os.makedirs(os.path.join(self.home, ".config"))
+        os.makedirs(os.path.join(self.home, "Apps"))
+        open(os.path.join(self.home, "notes.txt"), "w").close()
+        os.symlink(os.path.join(self.home, "src"), os.path.join(self.home, "code"))
+        o = self.j("dirs", "~")
+        self.assertEqual(o["dir"], os.path.realpath(self.home))
+        self.assertEqual([d["n"] for d in o["dirs"]], ["Apps", "code", ".config", "src"])
+        self.assertTrue(o["dirs"][2]["h"])
+        self.assertEqual(self.j("dirs", "/")["parent"], "")
+        self.assertFalse(self.j("dirs", os.path.join(self.home, "nope"))["ok"])
+
 
 if __name__ == "__main__":
     unittest.main()
