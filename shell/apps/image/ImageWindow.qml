@@ -26,7 +26,7 @@ FloatingWindow {
     implicitWidth: 1040
     implicitHeight: 720
     minimumSize: Qt.size(420, 300)
-    color: Theme.bg1
+    color: "transparent"   // the Theme.panel glass below fills it
     visible: true
 
     // ---- view state (reset for every picture) ----
@@ -172,7 +172,7 @@ FloatingWindow {
     // ---- UI ----
     Rectangle {
         anchors.fill: parent
-        color: Theme.bg1
+        color: Theme.panel
 
         ColumnLayout {
             anchors.fill: parent

@@ -17,7 +17,7 @@ FloatingWindow {
     implicitWidth: 1180
     implicitHeight: 780
     minimumSize: Qt.size(760, 480)
-    color: Theme.bg1
+    color: "transparent"   // the Theme.panel glass below fills it
     visible: true
 
     property string projectId: "system"
@@ -109,7 +109,7 @@ FloatingWindow {
     // ================================================================ UI
     Rectangle {
         anchors.fill: parent
-        color: Theme.bg1
+        color: Theme.panel
 
         RowLayout {
             anchors.fill: parent
