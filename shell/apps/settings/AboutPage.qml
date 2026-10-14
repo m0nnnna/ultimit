@@ -82,6 +82,19 @@ Page {
             }
         }
     }
+    RowLayout {
+        Layout.fillWidth: true
+        spacing: 12
+        Text {
+            Layout.fillWidth: true; wrapMode: Text.WordWrap
+            text: "Or ask Claude: CLAUDE gets a summary of this PC, can read the logs, and asks before it changes anything."
+            color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+        }
+        ChamferButton {
+            text: "Troubleshoot with Claude"
+            onClicked: Quickshell.execDetached([Quickshell.shellPath("bin/ultimit-claude"), "--troubleshoot"])
+        }
+    }
     Process {
         id: reportProc
         command: [Quickshell.shellPath("bin/ultimit-report")]

@@ -1,0 +1,937 @@
+#!/usr/bin/env python3
+"""claude.py - helper for CLAUDE, the Ultimit Claude app (stdlib only). Talks to the official Claude
+Code CLI (`claude`); never to the API directly, and never stores a credential itself.
+
+Accounts: each account is its own Claude Code configuration directory (CLAUDE_CONFIG_DIR), so every
+account keeps its own login, settings and session history. The account with dir "" is the user's
+normal Claude Code setup (~/.claude). Logins live where Claude Code puts them (<dir>/.credentials.json,
+mode 0600); this helper only runs `claude auth login|logout|status` in the account's directory.
+Every ANTHROPIC_* / CLAUDE_* variable in the environment (ANTHROPIC_API_KEY, CLAUDE_CODE_OAUTH_TOKEN, ...)
+is dropped for every run, so an account always means its own login and its own settings.
+
+Projects: a name, a folder Claude works in, the account, a model, a permission mode and notes
+(handed to Claude on every chat in it). "system" is built in: troubleshooting this PC, from $HOME,
+with the Ultimit system summary attached to new chats.
+
+Chats: <data>/chats/<project>/<chat>.json (title, account, Claude Code session id, times) and
+<chat>.jsonl (what the window shows). A chat resumes its Claude Code session with the account it
+started with.
+
+  claude.py state                        JSON {ok, cli, accounts[], projects[], dataDir}
+  claude.py cli                          JSON {ok, path, version}
+  claude.py install                      JSON lines {ev: line|done}: Anthropic's installer, for this user
+  claude.py account-add <name>           JSON {ok, account}      (a new, empty configuration dir)
+  claude.py account-default              JSON {ok, account}      (adds "My Claude Code" = ~/.claude)
+  claude.py account-rename <id> <name>   JSON {ok}
+  claude.py account-remove <id> [purge]  JSON {ok}               (purge: also delete its directory)
+  claude.py auth-status <id>             JSON {ok, loggedIn, method, email, org, raw}
+  claude.py login <id> [console]         JSON lines {ev: url|code|line|done}; a line on stdin is the
+                                         code the browser shows (when it cannot hand it back itself)
+  claude.py logout <id>                  JSON {ok, err}
+  claude.py project-save                 stdin: project JSON (no id: new)  -> JSON {ok, project}
+  claude.py project-remove <id>          JSON {ok}               (its chats go too)
+  claude.py chats <project>              JSON {ok, chats[]}      newest first
+  claude.py chat <project> <chat>        JSON {ok, meta, items[]}
+  claude.py chat-rename <project> <chat> <title>   JSON {ok}
+  claude.py chat-remove <project> <chat>           JSON {ok}
+  claude.py sysinfo                      JSON {ok, text}         the system summary (Markdown)
+  claude.py session <project> <chat|new> JSON lines (see Session); stdin: JSON commands
+                                         {op:send,text,sysinfo} {op:permit,rid,allow,always}
+                                         {op:interrupt} {op:close}
+
+Environment: ULTIMIT_CLAUDE_HOME (data dir, default $XDG_DATA_HOME/ultimit/claude),
+ULTIMIT_CLAUDE_BIN (the claude binary), ULTIMIT_CLAUDE_FAKE_SYSINFO (text, for tests).
+"""
+import json
+import os
+import re
+import secrets
+import selectors
+import shutil
+import signal
+import subprocess
+import sys
+import threading
+import time
+
+HOME = os.path.expanduser("~")
+DATA = os.environ.get("ULTIMIT_CLAUDE_HOME") or os.path.join(
+    os.environ.get("XDG_DATA_HOME") or os.path.join(HOME, ".local", "share"), "ultimit", "claude")
+STATE = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.join(HOME, ".local", "state"), "ultimit")
+
+# Nothing Claude Code reads from the environment comes from the desktop: credentials (ANTHROPIC_API_KEY,
+# CLAUDE_CODE_OAUTH_TOKEN, ...), endpoints and options all belong to the account, in its own settings.json "env".
+DROP_PREFIXES = ("ANTHROPIC_", "CLAUDE_", "CLAUDECODE")
+PERM_MODES = ("default", "acceptEdits", "plan", "auto", "bypassPermissions")
+SYSTEM_ID = "system"
+
+
+def out(o):
+    sys.stdout.write(json.dumps(o, ensure_ascii=False) + "\n")
+    sys.stdout.flush()
+
+
+def new_id():
+    return time.strftime("%Y%m%d%H%M%S") + "-" + secrets.token_hex(3)
+
+
+# ---------------------------------------------------------------------------------------- storage
+def path(*p):
+    return os.path.join(DATA, *p)
+
+
+def load_json(p, default):
+    try:
+        with open(p, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return default
+
+
+def save_json(p, o):
+    os.makedirs(os.path.dirname(p), mode=0o700, exist_ok=True)
+    tmp = p + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(o, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, p)
+
+
+def safe_id(s):
+    if not re.fullmatch(r"[A-Za-z0-9._-]{1,80}", s or "") or s.startswith("."):
+        raise ValueError("bad id")
+    return s
+
+
+def accounts():
+    return load_json(path("accounts.json"), {}).get("accounts", [])
+
+
+def save_accounts(a):
+    save_json(path("accounts.json"), {"accounts": a})
+
+
+def account(aid):
+    for a in accounts():
+        if a["id"] == aid:
+            return a
+    return None
+
+
+def system_project():
+    return {"id": SYSTEM_ID, "name": "This PC", "dir": HOME, "account": "", "model": "", "perm": "default",
+            "notes": "", "builtin": True}
+
+
+def projects():
+    stored = load_json(path("projects.json"), {}).get("projects", [])
+    sysp = system_project()
+    rest = []
+    for p in stored:
+        if p.get("id") == SYSTEM_ID:   # the user's choices for the built-in one (account, model, notes)
+            for k in ("account", "model", "perm", "notes"):
+                if k in p:
+                    sysp[k] = p[k]
+        else:
+            rest.append(p)
+    return [sysp] + rest
+
+
+def project(pid):
+    for p in projects():
+        if p["id"] == pid:
+            return p
+    return None
+
+
+def save_projects(ps):
+    save_json(path("projects.json"), {"projects": [{k: v for k, v in p.items() if k != "builtin"} for p in ps]})
+
+
+# ---------------------------------------------------------------------------------------- the CLI
+def find_claude():
+    b = os.environ.get("ULTIMIT_CLAUDE_BIN")
+    if b:
+        return b if os.access(b, os.X_OK) else ""
+    w = shutil.which("claude")
+    if w:
+        return w
+    for c in (os.path.join(HOME, ".local", "bin", "claude"), os.path.join(HOME, ".claude", "local", "claude")):
+        if os.access(c, os.X_OK):
+            return c
+    return ""
+
+
+def account_env(a):
+    env = {k: v for k, v in os.environ.items() if not k.startswith(DROP_PREFIXES)}
+    if a and a.get("dir"):
+        env["CLAUDE_CONFIG_DIR"] = a["dir"]
+    local_bin = os.path.join(HOME, ".local", "bin")
+    if local_bin not in env.get("PATH", "").split(":"):
+        env["PATH"] = env.get("PATH", "/usr/bin:/bin") + ":" + local_bin
+    return env
+
+
+def cmd_cli():
+    b = find_claude()
+    if not b:
+        return {"ok": True, "path": "", "version": ""}
+    try:
+        p = subprocess.run([b, "--version"], capture_output=True, text=True, timeout=20, env=account_env(None))
+        v = p.stdout.strip().split(" ")[0] if p.returncode == 0 else ""
+    except (OSError, subprocess.TimeoutExpired):
+        v = ""
+    return {"ok": True, "path": b, "version": v}
+
+
+def cmd_state():
+    return {"ok": True, "accounts": accounts(), "projects": projects(), "dataDir": DATA,
+            "defaultUsed": any(a.get("dir", "") == "" for a in accounts())}
+
+
+INSTALL_CMD = "curl -fsSL https://claude.ai/install.sh | bash"   # the official native installer, per user
+
+
+def cmd_install():
+    """Install Claude Code for this user with Anthropic's own installer (~/.local/bin/claude; it keeps
+    itself up to date). JSON lines {ev: line|done}."""
+    try:
+        p = subprocess.Popen(["sh", "-c", INSTALL_CMD], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                             stdin=subprocess.DEVNULL, env=account_env(None), cwd=HOME)
+    except OSError as ex:
+        out({"ev": "done", "ok": False, "err": str(ex)})
+        return
+    log = []
+    for raw in p.stdout:
+        line = re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", raw.decode("utf-8", "replace")).rstrip()
+        if line.strip():
+            log.append(line)
+            out({"ev": "line", "text": line})
+    p.wait()
+    cli = cmd_cli()
+    ok = p.returncode == 0 and bool(cli["path"])
+    out({"ev": "done", "ok": ok, "cli": cli, "err": "" if ok else "\n".join(log[-5:]) or "The installer failed"})
+
+
+# ---------------------------------------------------------------------------------------- accounts
+def slug(name):
+    s = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:32]
+    return s or "account"
+
+
+def cmd_account_add(name):
+    name = name.strip() or "Account"
+    a = accounts()
+    base = slug(name)
+    aid, n = base, 2
+    while any(x["id"] == aid for x in a) or os.path.exists(path("accounts", aid)):
+        aid, n = "%s-%d" % (base, n), n + 1
+    d = path("accounts", aid)
+    os.makedirs(d, mode=0o700, exist_ok=True)
+    os.chmod(d, 0o700)
+    acc = {"id": aid, "name": name, "dir": d}
+    save_accounts(a + [acc])
+    return {"ok": True, "account": acc}
+
+
+def cmd_account_default():
+    a = accounts()
+    for x in a:
+        if x.get("dir", "") == "":
+            return {"ok": True, "account": x}
+    aid = "default"
+    while any(x["id"] == aid for x in a):
+        aid += "-1"
+    acc = {"id": aid, "name": "My Claude Code", "dir": ""}
+    save_accounts(a + [acc])
+    return {"ok": True, "account": acc}
+
+
+def cmd_account_rename(aid, name):
+    a = accounts()
+    for x in a:
+        if x["id"] == aid:
+            x["name"] = name.strip() or x["name"]
+    save_accounts(a)
+    return {"ok": True}
+
+
+def cmd_account_remove(aid, purge=False):
+    a = accounts()
+    gone = [x for x in a if x["id"] == aid]
+    save_accounts([x for x in a if x["id"] != aid])
+    # only ever delete a directory this app created (never ~/.claude)
+    if purge and gone and gone[0].get("dir") and os.path.dirname(os.path.abspath(gone[0]["dir"])) == path("accounts"):
+        shutil.rmtree(gone[0]["dir"], ignore_errors=True)
+    return {"ok": True}
+
+
+def cmd_auth_status(aid):
+    a = account(aid)
+    b = find_claude()
+    if not a:
+        return {"ok": False, "err": "No such account"}
+    if not b:
+        return {"ok": False, "err": "Claude Code is not installed"}
+    try:
+        p = subprocess.run([b, "auth", "status"], capture_output=True, text=True, timeout=30, env=account_env(a),
+                           stdin=subprocess.DEVNULL)
+    except (OSError, subprocess.TimeoutExpired) as ex:
+        return {"ok": False, "err": str(ex)}
+    try:
+        raw = json.loads(p.stdout)
+    except ValueError:
+        raw = {}
+    def find(o, words):          # the fields differ by login type; look for them anywhere
+        if isinstance(o, dict):
+            for k, v in o.items():
+                if isinstance(v, str) and v and any(w in k.lower() for w in words):
+                    return v
+            for v in o.values():
+                r = find(v, words)
+                if r:
+                    return r
+        return ""
+    email = find(raw, ("email",))
+    org = find(raw, ("orgname", "organizationname", "organization_name"))
+    return {"ok": True, "loggedIn": bool(raw.get("loggedIn")) and p.returncode == 0,
+            "method": raw.get("authMethod", ""), "email": email or "", "org": org or "", "raw": raw}
+
+
+URL_RE = re.compile(r"https://\S+")
+
+
+def cmd_login(aid, console=False):
+    """Run `claude auth login` for one account, relaying what it prints. The browser normally hands the
+    login back by itself; when it shows a code instead, the window sends that code as a line on stdin."""
+    a = account(aid)
+    b = find_claude()
+    if not a or not b:
+        out({"ev": "done", "ok": False, "err": "No such account" if not a else "Claude Code is not installed"})
+        return
+    if a.get("dir"):
+        os.makedirs(a["dir"], mode=0o700, exist_ok=True)
+    args = [b, "auth", "login"] + (["--console"] if console else [])
+    try:
+        p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                             env=account_env(a), start_new_session=True)
+    except OSError as ex:
+        out({"ev": "done", "ok": False, "err": str(ex)})
+        return
+    signal.signal(signal.SIGTERM, lambda *_: (p.terminate(), sys.exit(1)))   # the window cancelled
+    sel = selectors.DefaultSelector()
+    sel.register(p.stdout, selectors.EVENT_READ, "child")
+    try:
+        sel.register(sys.stdin, selectors.EVENT_READ, "us")
+    except (ValueError, OSError):
+        pass
+    buf, seen_url, asked, log = "", False, False, []
+    while True:
+        if p.poll() is not None and not sel.get_map().get(p.stdout.fileno()):
+            break
+        for key, _ in sel.select(timeout=0.5):
+            if key.data == "child":
+                chunk = os.read(p.stdout.fileno(), 4096)
+                if not chunk:
+                    sel.unregister(p.stdout)
+                    continue
+                buf += chunk.decode("utf-8", "replace")
+                while "\n" in buf:
+                    line, buf = buf.split("\n", 1)
+                    line = line.rstrip("\r")
+                    m = URL_RE.search(line)
+                    if re.search(r"(?i)paste code", line):
+                        line = re.sub(r"(?i).*paste code here if prompted\s*>?\s*", "", line)
+                        if not asked:
+                            asked = True
+                            out({"ev": "code"})
+                    if m and not seen_url:
+                        seen_url = True
+                        out({"ev": "url", "url": m.group(0)})
+                    elif line.strip() and not m:
+                        log.append(line)
+                        out({"ev": "line", "text": line})
+                if not asked and re.search(r"(?i)paste code", buf):
+                    asked = True
+                    out({"ev": "code"})
+            else:
+                line = sys.stdin.readline()
+                if not line:           # the window went away; the login stays up until it is killed
+                    sel.unregister(sys.stdin)
+                    continue
+                try:
+                    p.stdin.write(line.strip().encode() + b"\n")
+                    p.stdin.flush()
+                except OSError:
+                    pass
+        if p.poll() is not None and not sel.get_map().get(p.stdout.fileno()):
+            break
+    p.wait()
+    st = cmd_auth_status(aid)
+    ok = p.returncode == 0 and st.get("loggedIn", False)
+    out({"ev": "done", "ok": ok, "status": st,
+         "err": "" if ok else ("\n".join(l for l in log[-6:] if l.strip()) or "Sign-in did not finish")})
+
+
+def cmd_logout(aid):
+    a = account(aid)
+    b = find_claude()
+    if not a or not b:
+        return {"ok": False, "err": "No such account" if not a else "Claude Code is not installed"}
+    p = subprocess.run([b, "auth", "logout"], capture_output=True, text=True, timeout=30, env=account_env(a),
+                       stdin=subprocess.DEVNULL)
+    return {"ok": p.returncode == 0, "err": (p.stderr or p.stdout).strip()[-400:]}
+
+
+# ---------------------------------------------------------------------------------------- projects
+def cmd_project_save(o):
+    ps = projects()
+    pid = o.get("id") or ""
+    if pid == SYSTEM_ID:
+        p = ps[0]
+        for k in ("account", "model", "perm", "notes"):
+            if k in o:
+                p[k] = o[k]
+    else:
+        d = os.path.abspath(os.path.expanduser(o.get("dir") or HOME))
+        if not os.path.isdir(d):
+            return {"ok": False, "err": "Not a folder: " + d}
+        if o.get("perm", "default") not in PERM_MODES:
+            return {"ok": False, "err": "Unknown permission mode"}
+        p = {"id": pid, "name": (o.get("name") or os.path.basename(d) or "Project").strip(), "dir": d,
+             "account": o.get("account", ""), "model": o.get("model", ""), "perm": o.get("perm", "default"),
+             "notes": o.get("notes", "")}
+        if pid and any(x["id"] == pid for x in ps):
+            ps = [p if x["id"] == pid else x for x in ps]
+        else:
+            p["id"] = slug(p["name"])[:24] + "-" + secrets.token_hex(2)
+            ps.append(p)
+    save_projects(ps)
+    return {"ok": True, "project": p}
+
+
+def cmd_project_remove(pid):
+    if pid == SYSTEM_ID:
+        return {"ok": False, "err": "This PC is built in"}
+    save_projects([p for p in projects() if p["id"] != pid])
+    shutil.rmtree(path("chats", safe_id(pid)), ignore_errors=True)
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------------------------------- chats
+def chat_meta_path(pid, cid):
+    return path("chats", safe_id(pid), safe_id(cid) + ".json")
+
+
+def chat_items_path(pid, cid):
+    return path("chats", safe_id(pid), safe_id(cid) + ".jsonl")
+
+
+def cmd_chats(pid):
+    d = path("chats", safe_id(pid))
+    res = []
+    try:
+        names = os.listdir(d)
+    except OSError:
+        names = []
+    for n in names:
+        if n.endswith(".json"):
+            m = load_json(os.path.join(d, n), None)
+            if m:
+                res.append(m)
+    res.sort(key=lambda m: m.get("updated", 0), reverse=True)
+    return {"ok": True, "chats": res}
+
+
+def read_items(pid, cid):
+    items, by_tool = [], {}
+    try:
+        with open(chat_items_path(pid, cid), encoding="utf-8") as f:
+            for line in f:
+                try:
+                    it = json.loads(line)
+                except ValueError:
+                    continue
+                if it.get("k") == "tool_result":     # merged into its tool row
+                    t = by_tool.get(it.get("id"))
+                    if t is not None:
+                        t["status"] = "error" if it.get("error") else "ok"
+                        t["out"] = it.get("out", "")
+                    continue
+                if it.get("k") == "tool":
+                    by_tool[it.get("id")] = it
+                items.append(it)
+    except OSError:
+        pass
+    return items
+
+
+def cmd_chat(pid, cid):
+    m = load_json(chat_meta_path(pid, cid), None)
+    if m is None:
+        return {"ok": False, "err": "No such chat"}
+    return {"ok": True, "meta": m, "items": read_items(pid, cid)}
+
+
+def cmd_chat_rename(pid, cid, title):
+    p = chat_meta_path(pid, cid)
+    m = load_json(p, None)
+    if m is None:
+        return {"ok": False, "err": "No such chat"}
+    m["title"] = title.strip() or m.get("title", "")
+    save_json(p, m)
+    return {"ok": True}
+
+
+def cmd_chat_remove(pid, cid):
+    for p in (chat_meta_path(pid, cid), chat_items_path(pid, cid)):
+        try:
+            os.unlink(p)
+        except OSError:
+            pass
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------------------------------- system info
+def sh(args, timeout=8):
+    try:
+        p = subprocess.run(args, capture_output=True, text=True, timeout=timeout, stdin=subprocess.DEVNULL)
+        return p.stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def read(p, limit=200000):
+    try:
+        with open(p, encoding="utf-8", errors="replace") as f:
+            return f.read(limit)
+    except OSError:
+        return ""
+
+
+def tail(p, n):
+    t = read(p, 4 << 20)
+    return "\n".join(t.splitlines()[-n:]) if t else ""
+
+
+def sysinfo():
+    fake = os.environ.get("ULTIMIT_CLAUDE_FAKE_SYSINFO")
+    if fake is not None:
+        return fake
+    L = []
+    osr = dict(re.findall(r'^(\w+)="?([^"\n]*)"?$', read("/etc/os-release"), re.M))
+    L.append("Ultimit: %s (session %s)" % (read("/opt/ultimit/VERSION").strip() or "not in /opt/ultimit",
+                                           os.environ.get("ULTIMIT_VERSION", "?")))
+    L.append("OS: %s   Kernel: %s" % (osr.get("PRETTY_NAME", "?"), os.uname().release))
+    L.append("Session: %s %s on %s" % (os.environ.get("XDG_SESSION_TYPE", "?"), os.environ.get("XDG_CURRENT_DESKTOP", "?"),
+                                       os.environ.get("WAYLAND_DISPLAY", "no display")))
+    cpu = re.search(r"model name\s*:\s*(.*)", read("/proc/cpuinfo"))
+    L.append("CPU: %s (%d threads)" % (cpu.group(1) if cpu else "?", os.cpu_count() or 0))
+    mem = dict(re.findall(r"^(\w+):\s+(\d+) kB", read("/proc/meminfo"), re.M))
+    if mem:
+        L.append("Memory: %.1f GB total, %.1f GB available" % (int(mem.get("MemTotal", 0)) / 1048576,
+                                                               int(mem.get("MemAvailable", 0)) / 1048576))
+    gpus = [l for l in sh(["lspci"]).splitlines() if re.search(r"VGA compatible|3D controller|Display controller", l)]
+    for g in gpus:
+        L.append("GPU: " + g.split(": ", 1)[-1])
+    nv = read("/proc/driver/nvidia/version").splitlines()
+    if nv:
+        L.append("NVIDIA driver: " + nv[0].strip())
+    try:
+        st = json.loads(sh(["ultimitctl", "state"]) or "{}")
+        for o in st.get("outputs", []):
+            m = o.get("mode") or {}
+            L.append("Monitor %s: %sx%s @ %.0f Hz, scale %s%s%s" % (
+                o.get("name", "?"), m.get("width", "?"), m.get("height", "?"), (o.get("refresh_mhz") or 0) / 1000,
+                o.get("scale", "?"), ", primary" if o.get("primary") else "", "" if o.get("enabled", True) else ", off"))
+    except ValueError:
+        pass
+    df = sh(["df", "-h", "--output=target,size,avail,pcent", "/", HOME])
+    text = "## This PC\n" + "\n".join("- " + l for l in L)
+    if df:
+        text += "\n\n### Disks\n```\n" + df + "\n```"
+    failed = sh(["systemctl", "--failed", "--no-legend", "--plain"]) + "\n" + sh(["systemctl", "--user", "--failed", "--no-legend", "--plain"])
+    if failed.strip():
+        text += "\n\n### Failed services\n```\n" + failed.strip() + "\n```"
+    log = tail(os.path.join(STATE, "session.log"), 40)
+    if log:
+        text += "\n\n### Last lines of the session log (%s)\n```\n%s\n```" % (os.path.join(STATE, "session.log"), log)
+    errs = sh(["journalctl", "-b", "-p", "err", "-n", "25", "--no-pager", "-o", "short-monotonic"])
+    if errs:
+        text += "\n\n### Errors in this boot's journal (last 25)\n```\n" + errs + "\n```"
+    return text
+
+
+ULTIMIT_PROMPT = """This session runs in the Claude app built into Ultimit (its window is titled CLAUDE). Ultimit is a gaming-first Linux \
+desktop on Ubuntu 26.04 LTS: its own Wayland compositor (wlroots) and a Quickshell (QML) desktop shell, installed in \
+/opt/ultimit (source: https://github.com/m0nnnna/ultimit). Its native apps (DATA files, MEMO text, IMAGE, SETTINGS, \
+STORE, FIREWALL, BROADCAST) are QML in /opt/ultimit/shell/apps with Python helpers.
+
+The person talks to you in a chat window, not a terminal. Commands you run cannot be answered interactively, so never \
+start editors, pagers or anything that waits for input. For a step that needs root, run it through pkexec (the \
+desktop shows its own password dialog) or give the exact command and say why it needs root.
+
+Where things are on this PC:
+- Session log: ~/.local/state/ultimit/session.log (the previous session: session.log.old); crash notes in \
+~/.local/state/ultimit/crashes/
+- User settings: ~/.config/ultimit/ (shell.json skin and look, displays.conf monitors, compositor.ini input)
+- Compositor state (monitors, windows): `ultimitctl state`; keybindings: `ultimitctl keys`
+- A full problem report: `ultimit-report` (writes a .tar.gz and prints its path)
+- Ubuntu's own logs: `journalctl --user -b`, `journalctl -b -p warning`
+- Install and update logs: ~/.local/state/ultimit/install-*.log, /var/log/ultimit-update.log"""
+
+
+def system_prompt(proj):
+    parts = [ULTIMIT_PROMPT]
+    if proj["id"] == SYSTEM_ID:
+        parts.append("This chat is for troubleshooting and looking after this PC. Start from what the person says "
+                     "and the system summary in their first message; check logs and state before changing anything, "
+                     "and say what you changed and how to undo it.")
+    else:
+        parts.append('This chat belongs to the project "%s" in %s.' % (proj["name"], proj["dir"]))
+    if (proj.get("notes") or "").strip():
+        parts.append("Project notes from the person (keep to them):\n" + proj["notes"].strip())
+    return "\n\n".join(parts)
+
+
+# ---------------------------------------------------------------------------------------- session
+def summarize(name, inp):
+    if not isinstance(inp, dict):
+        return ""
+    for k in ("command", "file_path", "notebook_path", "path", "pattern", "url", "query", "description", "prompt", "skill"):
+        v = inp.get(k)
+        if isinstance(v, str) and v:
+            return v if len(v) < 400 else v[:400] + "…"
+    for v in inp.values():
+        if isinstance(v, str) and v:
+            return v[:200]
+    return ""
+
+
+def clip(s, n):
+    return s if len(s) <= n else s[:n] + "\n…(%d more characters)" % (len(s) - n)
+
+
+def result_text(c):
+    if isinstance(c, str):
+        return c
+    if isinstance(c, list):
+        return "\n".join(b.get("text", "") if isinstance(b, dict) and b.get("type") == "text" else
+                         ("[image]" if isinstance(b, dict) and b.get("type") == "image" else "") for b in c).strip()
+    return ""
+
+
+class Session:
+    """One running chat: `claude -p` with stream-json in and out, the window on the other side.
+
+    Out (one JSON per line): {ev: started|init|delta|thinking|status|text|tool|tool_result|ask|asked|result|
+    retry|limit|note|exit}. The window answers asks with {op: permit}."""
+
+    def __init__(self, pid, cid):
+        self.proj = project(pid)
+        if not self.proj:
+            raise ValueError("No such project")
+        self.new = cid == "new"
+        self.cid = new_id() if self.new else safe_id(cid)
+        self.meta = {"id": self.cid, "project": pid, "title": "", "session": "", "created": time.time(),
+                     "updated": time.time(), "account": self.proj.get("account", "")}
+        if not self.new:
+            m = load_json(chat_meta_path(pid, self.cid), None)
+            if m is None:
+                raise ValueError("No such chat")
+            self.meta.update(m)
+        self.acc = account(self.meta["account"])
+        self.lock = threading.Lock()
+        self.asks = {}            # request id -> request (for "always")
+        self.req = 0
+        self.child = None
+        self.busy = False
+
+    # -- persistence
+    def save_meta(self):
+        self.meta["updated"] = time.time()
+        save_json(chat_meta_path(self.proj["id"], self.cid), self.meta)
+
+    def record(self, item):
+        if self.new and not self.meta.get("title"):
+            return            # nothing is written for a chat until its first message
+        p = chat_items_path(self.proj["id"], self.cid)
+        os.makedirs(os.path.dirname(p), mode=0o700, exist_ok=True)
+        with open(p, "a", encoding="utf-8") as f:
+            f.write(json.dumps(item, ensure_ascii=False) + "\n")
+
+    def emit(self, o):
+        with self.lock:
+            out(o)
+
+    def write(self, o):
+        try:
+            self.child.stdin.write((json.dumps(o) + "\n").encode())
+            self.child.stdin.flush()
+        except (OSError, ValueError):
+            pass
+
+    def control(self, request):
+        self.req += 1
+        self.write({"type": "control_request", "request_id": "ul_%d_%s" % (self.req, secrets.token_hex(3)),
+                    "request": request})
+
+    # -- start
+    def start(self):
+        b = find_claude()
+        if not b:
+            self.emit({"ev": "exit", "code": -1, "err": "Claude Code is not installed"})
+            return False
+        if not self.acc:
+            self.emit({"ev": "exit", "code": -1, "err": "This chat's account is gone; pick an account for the project"})
+            return False
+        perm = self.proj.get("perm") or "default"
+        args = [b, "-p", "--output-format", "stream-json", "--input-format", "stream-json", "--verbose",
+                "--include-partial-messages", "--permission-prompt-tool", "stdio", "--permission-mode", perm,
+                "--append-system-prompt", system_prompt(self.proj)]
+        if self.proj.get("model"):
+            args += ["--model", self.proj["model"]]
+        if self.meta.get("session"):
+            args += ["--resume", self.meta["session"]]
+        cwd = self.proj["dir"] if os.path.isdir(self.proj["dir"]) else HOME
+        try:
+            self.child = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                          cwd=cwd, env=account_env(self.acc), start_new_session=True)
+        except OSError as ex:
+            self.emit({"ev": "exit", "code": -1, "err": str(ex)})
+            return False
+        self.stderr = []
+        signal.signal(signal.SIGTERM, lambda *_: (self.child.terminate(), sys.exit(1)))
+        threading.Thread(target=self.read_err, daemon=True).start()
+        self.control({"subtype": "initialize", "hooks": None})
+        self.emit({"ev": "started", "chat": self.cid, "meta": self.meta, "cwd": cwd,
+                   "account": self.acc.get("name", ""), "perm": perm})
+        return True
+
+    def read_err(self):
+        for line in self.child.stderr:
+            self.stderr = (self.stderr + [line.decode("utf-8", "replace").rstrip()])[-20:]
+
+    # -- from the window
+    def send(self, text, with_sysinfo):
+        body = text
+        if with_sysinfo:
+            body = "<system-summary>\n%s\n</system-summary>\n\n%s" % (sysinfo(), text)
+        if not self.meta.get("title"):
+            t = " ".join(text.split())
+            self.meta["title"] = t[:60] + ("…" if len(t) > 60 else "") or "Chat"
+            self.save_meta()
+        self.record({"k": "user", "text": text, "sysinfo": bool(with_sysinfo), "t": time.time()})
+        self.busy = True
+        self.write({"type": "user", "session_id": "", "parent_tool_use_id": None,
+                    "message": {"role": "user", "content": body}})
+
+    def permit(self, rid, allow, always):
+        req = self.asks.pop(rid, None)
+        if req is None:
+            return
+        if allow:
+            resp = {"behavior": "allow", "updatedInput": req.get("input") or {}}
+            if always and req.get("permission_suggestions"):
+                resp["updatedPermissions"] = req["permission_suggestions"]
+        else:
+            resp = {"behavior": "deny", "message": "The person declined this in the CLAUDE window."}
+        self.write({"type": "control_response",
+                    "response": {"subtype": "success", "request_id": rid, "response": resp}})
+        self.record({"k": "note", "text": ("Allowed" + (" (always)" if always and allow else "") if allow else "Declined")
+                     + ": " + req.get("tool_name", "") + " " + summarize(req.get("tool_name", ""), req.get("input")),
+                     "kind": "perm"})
+        self.emit({"ev": "asked", "rid": rid, "allow": allow})
+
+    # -- from Claude Code
+    def handle(self, m):
+        t = m.get("type")
+        if t == "system":
+            st = m.get("subtype")
+            if st == "init":
+                if m.get("session_id") and m["session_id"] != self.meta.get("session"):
+                    self.meta["session"] = m["session_id"]
+                    if self.meta.get("title"):
+                        self.save_meta()
+                self.emit({"ev": "init", "session": m.get("session_id", ""), "model": m.get("model", ""),
+                           "mode": m.get("permissionMode", ""), "version": m.get("claude_code_version", "")})
+            elif st == "task_summary":
+                self.emit({"ev": "status", "text": m.get("detail") or ""})
+            elif st == "api_retry":
+                self.emit({"ev": "retry", "attempt": m.get("attempt"), "max": m.get("max_retries"),
+                           "error": m.get("error", "")})
+        elif t == "stream_event":
+            if m.get("parent_tool_use_id"):
+                return
+            e = m.get("event") or {}
+            if e.get("type") == "content_block_delta":
+                d = e.get("delta") or {}
+                if d.get("type") == "text_delta":
+                    self.emit({"ev": "delta", "text": d.get("text", "")})
+                elif d.get("type") == "thinking_delta":
+                    self.emit({"ev": "thinking"})
+        elif t == "assistant":
+            if m.get("parent_tool_use_id"):
+                return
+            for b in (m.get("message") or {}).get("content") or []:
+                if b.get("type") == "text" and b.get("text", "").strip():
+                    self.record({"k": "claude", "text": b["text"]})
+                    self.emit({"ev": "text", "text": b["text"]})
+                elif b.get("type") == "tool_use":
+                    it = {"k": "tool", "id": b.get("id", ""), "name": b.get("name", ""),
+                          "summary": summarize(b.get("name"), b.get("input"))}
+                    self.record(it)
+                    self.emit(dict(it, ev="tool"))
+        elif t == "user":
+            if m.get("parent_tool_use_id"):
+                return
+            content = (m.get("message") or {}).get("content")
+            for b in content if isinstance(content, list) else []:
+                if isinstance(b, dict) and b.get("type") == "tool_result":
+                    o = clip(result_text(b.get("content")), 4000)
+                    it = {"k": "tool_result", "id": b.get("tool_use_id", ""), "error": bool(b.get("is_error")), "out": o}
+                    self.record(it)
+                    self.emit(dict(it, ev="tool_result"))
+        elif t == "control_request":
+            r = m.get("request") or {}
+            rid = m.get("request_id", "")
+            if r.get("subtype") == "can_use_tool":
+                self.asks[rid] = r
+                self.emit({"ev": "ask", "rid": rid, "tool": r.get("tool_name", ""),
+                           "title": r.get("title") or r.get("display_name") or "",
+                           "summary": summarize(r.get("tool_name"), r.get("input")),
+                           "detail": clip(json.dumps(r.get("input") or {}, indent=1, ensure_ascii=False), 3000),
+                           "reason": r.get("decision_reason") or r.get("description") or "",
+                           "always": bool(r.get("permission_suggestions"))})
+            else:
+                self.write({"type": "control_response", "response": {"subtype": "error", "request_id": rid,
+                                                                     "error": "Not supported by CLAUDE"}})
+        elif t == "rate_limit_event":
+            r = m.get("rate_limit_info") or {}
+            if r.get("status") not in (None, "allowed"):
+                self.emit({"ev": "limit", "status": r.get("status"), "type": r.get("rateLimitType", ""),
+                           "used": r.get("utilization"), "resets": r.get("resetsAt")})
+        elif t == "control_cancel_request":
+            rid = m.get("request_id", "")
+            if self.asks.pop(rid, None) is not None:
+                self.emit({"ev": "asked", "rid": rid, "allow": False, "cancelled": True})
+        elif t == "result":
+            self.busy = False
+            err = bool(m.get("is_error")) or (m.get("subtype") not in (None, "success"))
+            if m.get("session_id") and m["session_id"] != self.meta.get("session"):
+                self.meta["session"] = m["session_id"]
+            if self.meta.get("title"):
+                self.save_meta()
+            o = {"ev": "result", "error": err, "cost": m.get("total_cost_usd"), "turns": m.get("num_turns"),
+                 "ms": m.get("duration_ms"), "text": (m.get("result") or "") if err else "",
+                 "denied": len(m.get("permission_denials") or [])}
+            if err:
+                self.record({"k": "note", "text": o["text"] or m.get("subtype", "error"), "kind": "error"})
+            self.emit(o)
+
+    def read_out(self):
+        for line in self.child.stdout:
+            try:
+                m = json.loads(line)
+            except ValueError:
+                continue
+            try:
+                self.handle(m)
+            except Exception as ex:  # one odd message must not end the chat
+                self.emit({"ev": "note", "text": "Could not read a message from Claude Code: %s" % ex})
+        self.child.wait()
+        err = "\n".join(l for l in self.stderr if l.strip())[-1500:]
+        self.emit({"ev": "exit", "code": self.child.returncode, "err": err if self.child.returncode else ""})
+
+    def run(self):
+        if not self.start():
+            return
+        reader = threading.Thread(target=self.read_out, daemon=True)
+        reader.start()
+        for line in sys.stdin:
+            try:
+                c = json.loads(line)
+            except ValueError:
+                continue
+            op = c.get("op")
+            if op == "send" and (c.get("text") or "").strip():
+                self.send(c["text"], bool(c.get("sysinfo")))
+            elif op == "permit":
+                self.permit(c.get("rid", ""), bool(c.get("allow")), bool(c.get("always")))
+            elif op == "interrupt":
+                self.control({"subtype": "interrupt"})
+            elif op == "close":
+                break
+        if self.busy:          # closing mid-turn stops the turn, like the Stop button
+            self.control({"subtype": "interrupt"})
+        try:
+            self.child.stdin.close()
+        except OSError:
+            pass
+        for _ in range(100):
+            if self.child.poll() is not None:
+                break
+            time.sleep(0.1)
+        if self.child.poll() is None:
+            self.child.terminate()
+        reader.join(timeout=5)
+
+
+# ---------------------------------------------------------------------------------------- main
+def main(argv):
+    if not argv:
+        print(__doc__.strip())
+        return 2
+    c, a = argv[0], argv[1:]
+    try:
+        if c == "state":
+            out(cmd_state())
+        elif c == "cli":
+            out(cmd_cli())
+        elif c == "install":
+            cmd_install()
+        elif c == "account-add":
+            out(cmd_account_add(a[0] if a else ""))
+        elif c == "account-default":
+            out(cmd_account_default())
+        elif c == "account-rename":
+            out(cmd_account_rename(a[0], a[1]))
+        elif c == "account-remove":
+            out(cmd_account_remove(a[0], len(a) > 1 and a[1] == "purge"))
+        elif c == "auth-status":
+            out(cmd_auth_status(a[0]))
+        elif c == "login":
+            cmd_login(a[0], len(a) > 1 and a[1] == "console")
+        elif c == "logout":
+            out(cmd_logout(a[0]))
+        elif c == "project-save":
+            out(cmd_project_save(json.loads(sys.stdin.readline() or "{}")))
+        elif c == "project-remove":
+            out(cmd_project_remove(a[0]))
+        elif c == "chats":
+            out(cmd_chats(a[0]))
+        elif c == "chat":
+            out(cmd_chat(a[0], a[1]))
+        elif c == "chat-rename":
+            out(cmd_chat_rename(a[0], a[1], a[2]))
+        elif c == "chat-remove":
+            out(cmd_chat_remove(a[0], a[1]))
+        elif c == "sysinfo":
+            out({"ok": True, "text": sysinfo()})
+        elif c == "session":
+            try:
+                s = Session(a[0], a[1])
+            except ValueError as ex:
+                out({"ev": "exit", "code": -1, "err": str(ex)})
+                return 1
+            s.run()
+        else:
+            out({"ok": False, "err": "unknown command " + c})
+            return 2
+    except (IndexError, ValueError, OSError) as ex:
+        out({"ok": False, "err": str(ex) or ex.__class__.__name__})
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

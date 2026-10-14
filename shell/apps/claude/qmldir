@@ -1,0 +1,11 @@
+singleton Claude 1.0 Claude.qml
+ClaudeApp 1.0 ClaudeApp.qml
+ClaudeWindow 1.0 ClaudeWindow.qml
+ChatSession 1.0 ChatSession.qml
+ChatItem 1.0 ChatItem.qml
+AccountsPanel 1.0 AccountsPanel.qml
+ProjectPanel 1.0 ProjectPanel.qml
+Setup 1.0 Setup.qml
+SideRow 1.0 SideRow.qml
+SmallLink 1.0 SmallLink.qml
+Entry 1.0 Entry.qml

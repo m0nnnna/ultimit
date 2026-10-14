@@ -263,6 +263,11 @@ kk = "".join("M%s %sh5v4.5h-5z" % (x, y) for y in (23.5, 30, 36.5) for x in (14.
 add("apps", "ultimit-calc",
     P(cp(9, 5, 30, 38, 5, ("tr", "bl")), A, "fill"), P("M14 10H34V17H14Z", F),
     S(kk, F))
+add("apps", "ultimit-claude",
+    # a speech bubble with a spark in it: the assistant
+    P("M6 13L11 8H42V31L37 36H20L12 42V36H6Z", A, "fill"),
+    SOL("M24 13L26.2 19.8L33 22L26.2 24.2L24 31L21.8 24.2L15 22L21.8 19.8Z", F),
+    SOL("M35 12h3v3h-3z", A))
 add("apps", "ultimit-settings",
     P(cp(7, 7, 34, 34, 5, ("tl", "br")), A, "fill"),
     S("M13 17H35M13 24H35M13 31H35", D),
