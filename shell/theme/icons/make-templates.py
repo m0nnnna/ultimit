@@ -254,8 +254,9 @@ def brackets(c=D):
 
 
 add("apps", "ultimit-data",
-    P("M24 5L40 14V34L24 43L8 34V14Z", A, "fill"), S("M8 14L24 23L40 14M24 23V43", F),
-    SOL(poly(24, 23, 2.4, 6, -90), A))
+    # a folder holding the hex node (the old cube read as package-x-generic)
+    P("M5 13V8H17L21 13H43V40H5Z", A, "fill"), S("M5 17H43", A),
+    P(poly(24, 29, 7, 6, -90), F), SOL(poly(24, 29, 2.6, 6, -90), A))
 add("apps", "ultimit-memo",
     P("M11 6H29L38 15V41H11Z", A, "fill"), S("M29 6V15H38", A),
     S("M16 22H33M16 28H33M16 34H24", F), SOL("M27 32h3v5h-3z", A))
@@ -268,7 +269,9 @@ add("apps", "ultimit-settings",
     S("M13 17H35M13 24H35M13 31H35", D),
     P("M17 14H21V20H17Z", A, "fill"), P("M28 21H32V27H28Z", A, "fill"), P("M21 28H25V34H21Z", A, "fill"))
 add("apps", "ultimit-games",
-    pad(1.2, 1.2, 1.9))
+    # the controller set in Ultimit's hex: the library, not the device (input-gaming is the bare pad)
+    P(poly(24, 24, 21, 6, -90), D), SOL("M23 1h2v4h-2zM23 43h2v4h-2z", A),
+    pad(24 - 12 * 1.45, 24 - 12 * 1.45, 1.45))
 add("apps", "ultimit-shares",
     P("M6 14V9H18L22 14H42V39H6Z", A, "fill"), S("M6 18H42", A),
     S("M24 29H31M31 29L36 25M31 29L36 33", F), SOL("M20 27h4v4h-4z", A), SOL("M35 23h4v4h-4zM35 31h4v4h-4z", F))
