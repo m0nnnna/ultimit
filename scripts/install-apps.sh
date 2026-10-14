@@ -120,6 +120,16 @@ fi
 if [ ${#missing_flatpak[@]} -gt 0 ]; then
 	sudo flatpak install -y --noninteractive flathub "${missing_flatpak[@]}"
 fi
+# Flatpak apps reach an NVIDIA GPU only through NVIDIA's libraries built for the exact
+# running driver; without them Chromium draws everything on the CPU. Flatpak fetches
+# them by itself only when the driver was already running at install time.
+# (session/ultimit-flatpak-gpu repeats this per user at login, e.g. after a driver upgrade.)
+if nv=$(cat /sys/module/nvidia/version 2>/dev/null) && [ -n "$nv" ]; then
+	nv_gl=org.freedesktop.Platform.GL.nvidia-$(printf %s "$nv" | tr . -)
+	flatpak list --runtime --columns=application | grep -qx "$nv_gl" ||
+		sudo flatpak install -y --noninteractive flathub "$nv_gl" ||
+		echo "No Flatpak GL libraries on Flathub for NVIDIA $nv yet; Flatpak apps run without the GPU."
+fi
 
 # System config files (distro/system mirrors /), e.g. the virtual camera and the
 # FIREWALL helper (executables keep their x bit; everything is root-owned).
