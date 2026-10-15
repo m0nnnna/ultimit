@@ -50,6 +50,18 @@ Singleton {
         run(["project-save"], o => { if (o.ok) reload(() => cb && cb(o)); else if (cb) cb(o); }, JSON.stringify(p));
     }
 
+    // ---- plan usage: each account's limits as Claude Code last reported them (with every turn) ----
+    property var usage: ({})            // account id -> { windows: { five_hour: { used 0-1, resets }, ... }, overage, t }
+    function loadUsage() {
+        run(["usage"], o => {
+            if (!o.ok) return;
+            const all = Object.assign({}, o.accounts);
+            for (const id in root.usage) if (!all[id] || all[id].t < root.usage[id].t) all[id] = root.usage[id];
+            root.usage = all;
+        });
+    }
+    function setUsage(id, u) { const all = Object.assign({}, usage); all[id] = u; usage = all; }
+
     // ---- the window (IPC) ----
     property var ids: []
     property int raise: 0
@@ -64,7 +76,7 @@ Singleton {
     // CLAUDE runs as its own quickshell process; it exits shortly after its window closes.
     Timer { id: quitTimer; interval: 800; onTriggered: if (root.ids.length === 0) Qt.quit() }
 
-    Component.onCompleted: { checkCli(); reload(); }
+    Component.onCompleted: { checkCli(); reload(); loadUsage(); }
 
     // ---- helper process: run(args, callback(parsedJson), stdinLine?) ----
     function run(args, cb, input) {

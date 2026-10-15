@@ -169,6 +169,33 @@ class ClaudeHelper(unittest.TestCase):
         self.assertTrue(self.j("chat-remove", p["id"], chat)["ok"])
         self.assertEqual(self.j("chats", p["id"])["chats"], [])
 
+    def test_usage(self):
+        acc = self.add_logged_in()
+        p = self.j("project-save", stdin=json.dumps({"name": "Game", "dir": self.proj_dir, "account": acc["id"]}))["project"]
+        self.assertEqual(self.j("usage")["accounts"], {})
+        ev = self.session(p["id"], "new", {"op": "send", "text": "one"}, {"op": "send", "text": "two"})
+        # the plan's limits as Claude Code reported them, for the account, after every turn
+        us = [e for e in ev if e["ev"] == "usage"]
+        self.assertEqual(len(us), 2)
+        self.assertEqual(us[-1]["account"], acc["id"])
+        self.assertAlmostEqual(us[-1]["windows"]["five_hour"]["used"], 0.2)
+        self.assertEqual(us[-1]["windows"]["seven_day"]["resets"], 1792263600)
+        saved = self.j("usage")["accounts"][acc["id"]]
+        self.assertAlmostEqual(saved["windows"]["five_hour"]["used"], 0.2)
+        # the chat's totals: running cost counted once, tokens per turn, context of the last turn
+        res = [e for e in ev if e["ev"] == "result"]
+        self.assertAlmostEqual(res[-1]["usage"]["cost"], 0.004)
+        self.assertEqual(res[-1]["usage"]["output"], 60)
+        self.assertEqual(res[-1]["usage"]["turns"], 2)
+        self.assertEqual(res[-1]["context"], {"used": 2 + 2000 + 500 + 30, "window": 200000})
+        meta = self.j("chat", p["id"], ev[0]["chat"])["meta"]
+        self.assertEqual(meta["usage"]["turns"], 2)
+        # a new Claude Code process (resuming the chat) starts its running total again
+        ev = self.session(p["id"], ev[0]["chat"], {"op": "send", "text": "three"})
+        self.assertAlmostEqual([e for e in ev if e["ev"] == "result"][-1]["usage"]["cost"], 0.006)
+        self.assertTrue(self.j("account-remove", acc["id"])["ok"])
+        self.assertEqual(self.j("usage")["accounts"], {})
+
     def test_permission_ask_allow_and_deny(self):
         acc = self.add_logged_in()
         p = self.j("project-save", stdin=json.dumps({"name": "Game", "dir": self.proj_dir, "account": acc["id"]}))["project"]

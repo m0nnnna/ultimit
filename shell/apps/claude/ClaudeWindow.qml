@@ -1,7 +1,8 @@
 // ClaudeWindow.qml - the CLAUDE window: projects and their chats on the left, the chat on the right.
 // "This PC" is the built-in project for troubleshooting (the system summary goes with its first
 // message); every other project is a folder Claude works in, with its own account, model and notes.
-// A normal xdg toplevel (the compositor draws the frame). Created by ClaudeApp.qml.
+// The sidebar shows the account's plan limits; right-click a project, chat, message or the composer
+// for a menu. A normal xdg toplevel (the compositor draws the frame). Created by ClaudeApp.qml.
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -9,6 +10,7 @@ import Quickshell
 import Quickshell.Io
 import "../.."
 import "../accessory"
+import "../data" as DataApp
 
 FloatingWindow {
     id: win
@@ -73,6 +75,130 @@ FloatingWindow {
         return Qt.formatDate(d, "d MMM");
     }
     function tilde(p) { const h = Quickshell.env("HOME"); return p && h && p.startsWith(h) ? "~" + p.substring(h.length) : (p || ""); }
+    // ---- usage ----
+    function tokens(n) { return n >= 1000000 ? (n / 1000000).toFixed(1) + "M" : n >= 1000 ? Math.round(n / 1000) + "K" : String(n); }
+    readonly property string usageText: {
+        const parts = [], c = chat.context, u = chat.usage;
+        if (c && c.used) parts.push("Context " + tokens(c.used) + (c.window ? " / " + tokens(c.window) + " (" + Math.round(c.used / c.window * 100) + "%)" : ""));
+        if (u && u.cost) parts.push("$" + Number(u.cost).toFixed(u.cost < 0.1 ? 3 : 2) + " this chat");
+        return parts.join("   ·   ");
+    }
+
+    // ---- right-click menus (DataApp.DMenu); menuCtx says what the picked entry acts on ----
+    property var menuCtx: null
+    function popMenu(items, from, x, y, c) {
+        menuCtx = c;
+        ctx.items = items;
+        const p = from.mapToItem(ui, x, y);
+        ctx.popup(p.x, p.y);
+    }
+    function copy(t) { if (t) Quickshell.execDetached(["wl-copy", "--", t]); }
+    function conversationText() {
+        const out = [];
+        for (let i = 0; i < chat.items.count; i++) {
+            const it = chat.items.get(i);
+            if (it.k === "user") out.push("**You:** " + it.text);
+            else if (it.k === "claude") out.push("**Claude:** " + it.text);
+            else if (it.k === "tool") out.push("`" + it.name + "` " + it.summary);
+        }
+        return out.join("\n\n");
+    }
+    function itemMenu(item, x, y, link) {
+        const sel = item.selection(), items = [];
+        if (item.k === "tool") {
+            if (sel) items.push({ id: "copysel", label: "Copy", hint: "Ctrl+C" });
+            items.push({ id: "copycmd", label: "Copy command" },
+                       { id: "copyout", label: "Copy output", disabled: item.out === "" },
+                       { id: "toggle", label: item.open ? "Hide output" : "Show output", disabled: item.out === "" });
+        } else if (item.k === "note") {
+            items.push({ id: "copymsg", label: "Copy note" });
+        } else {
+            items.push({ id: "copysel", label: "Copy", hint: "Ctrl+C", disabled: !sel },
+                       { id: "copymsg", label: "Copy message" });
+            if (link) items.push({ id: "copylink", label: "Copy link" }, { id: "openlink", label: "Open link" });
+            items.push({ kind: "sep" },
+                       { id: "quote", label: sel ? "Quote selection in reply" : "Quote in reply" },
+                       { id: "selall", label: "Select all", hint: "Ctrl+A" });
+        }
+        items.push({ kind: "sep" }, { id: "copyall", label: "Copy conversation" });
+        popMenu(items, item, x, y, { item: item, sel: sel, link: link });
+    }
+    function backgroundMenu(x, y) {
+        Qt.callLater(() => {
+            if (ctx.visible) return;        // a message's own menu took this click
+            popMenu([{ id: "newchat", label: "New chat", hint: "Ctrl+N" },
+                     { id: "copyall", label: "Copy conversation", disabled: chat.items.count === 0 }], convoArea, x, y, {});
+        });
+    }
+    function inputMenu(x, y) {
+        const sel = input.selectedText !== "";
+        popMenu([{ id: "undo", label: "Undo", hint: "Ctrl+Z", disabled: !input.canUndo },
+                 { id: "redo", label: "Redo", hint: "Ctrl+Shift+Z", disabled: !input.canRedo },
+                 { kind: "sep" },
+                 { id: "cut", label: "Cut", hint: "Ctrl+X", disabled: !sel },
+                 { id: "copyin", label: "Copy", hint: "Ctrl+C", disabled: !sel },
+                 { id: "paste", label: "Paste", hint: "Ctrl+V", disabled: !input.canPaste },
+                 { id: "delete", label: "Delete", hint: "Del", disabled: !sel },
+                 { kind: "sep" },
+                 { id: "selallin", label: "Select all", hint: "Ctrl+A", disabled: input.length === 0 },
+                 { kind: "sep" },
+                 { id: "send", label: "Send", hint: "Enter", disabled: !win.canSend }], input, x, y, { input: true });
+    }
+    function projectMenu(row, p, x, y) {
+        popMenu([{ id: "projnew", label: "New chat" },
+                 { id: "projedit", label: "Edit project" },
+                 { id: "projshow", label: "Show in DATA" },
+                 { kind: "sep" },
+                 { id: "copypath", label: "Copy folder path" }], row, x, y, { project: p });
+    }
+    function chatMenu(row, c, x, y) {
+        popMenu([{ id: "chatopen", label: "Open", disabled: c.id === chat.chatId },
+                 { id: "chatrename", label: "Rename" },
+                 { id: "copytitle", label: "Copy title" },
+                 { kind: "sep" },
+                 { id: "chatremove", label: "Remove" }], row, x, y, { chat: c });
+    }
+    function menuPicked(id) {
+        const c = menuCtx || {};
+        menuCtx = null;
+        switch (id) {
+        case "copysel": copy(c.sel); break;
+        case "copymsg": copy(c.item.text); break;
+        case "copycmd": copy(c.item.summary); break;
+        case "copyout": copy(c.item.out); break;
+        case "toggle": c.item.open = !c.item.open; break;
+        case "copylink": copy(c.link); break;
+        case "openlink": Qt.openUrlExternally(c.link); break;
+        case "selall": c.item.selectAll(); break;
+        case "quote": {
+            const q = (c.sel || c.item.text).trim().split("\n").map(l => "> " + l).join("\n");
+            input.text = (input.text.trim() !== "" ? input.text.replace(/\s+$/, "") + "\n\n" : "") + q + "\n\n";
+            input.forceActiveFocus();
+            input.cursorPosition = input.length;
+            break;
+        }
+        case "copyall": copy(conversationText()); break;
+        case "newchat": newChat(); break;
+        case "undo": input.undo(); break;
+        case "redo": input.redo(); break;
+        case "cut": input.cut(); break;
+        case "copyin": input.copy(); break;
+        case "paste": input.paste(); break;
+        case "delete": input.remove(input.selectionStart, input.selectionEnd); break;
+        case "selallin": input.selectAll(); break;
+        case "send": sendNow(); break;
+        case "projnew": selectProject(c.project.id); break;
+        case "projedit": editProject(c.project); break;
+        case "projshow": showFolder(c.project.dir); break;
+        case "copypath": copy(c.project.dir); break;
+        case "chatopen": openChat(c.chat); break;
+        case "chatrename": target = c.chat; overlay = "rename"; break;
+        case "copytitle": copy(c.chat.title); break;
+        case "chatremove": target = c.chat; overlay = "rmchat"; break;
+        }
+        if (c.input) input.forceActiveFocus();
+    }
+
     readonly property var permLabels: ({ default: "Ask first", acceptEdits: "Edits allowed", plan: "Plan only",
                                          auto: "Auto", bypassPermissions: "No asking" })
 
@@ -108,6 +234,7 @@ FloatingWindow {
 
     // ================================================================ UI
     Rectangle {
+        id: ui
         anchors.fill: parent
         color: Theme.panel
 
@@ -162,6 +289,11 @@ FloatingWindow {
                         }
                         MouseArea { id: accMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.overlay = "accounts" }
                     }
+                    UsageMeters {
+                        Layout.fillWidth: true
+                        visible: !!win.accountStatus.loggedIn
+                        usage: Claude.usage[win.accountId] || null
+                    }
 
                     // projects
                     RowLayout {
@@ -178,12 +310,14 @@ FloatingWindow {
                         model: Claude.projects
                         ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
                         delegate: SideRow {
+                            id: projRow
                             required property var modelData
                             width: ListView.view.width
                             text: modelData.name
                             sub: modelData.builtin ? "TROUBLESHOOT · SYSTEM" : win.tilde(modelData.dir)
                             selected: modelData.id === win.projectId
                             onClicked: if (modelData.id !== win.projectId) win.selectProject(modelData.id)
+                            onMenu: (x, y) => win.projectMenu(projRow, modelData, x, y)
                         }
                     }
 
@@ -200,6 +334,7 @@ FloatingWindow {
                         model: win.chats
                         ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
                         delegate: SideRow {
+                            id: chatRow
                             required property var modelData
                             width: ListView.view.width
                             text: modelData.title || "Chat"
@@ -210,6 +345,7 @@ FloatingWindow {
                             onClicked: win.openChat(modelData)
                             onRename: { win.target = modelData; win.overlay = "rename"; }
                             onRemove: { win.target = modelData; win.overlay = "rmchat"; }
+                            onMenu: (x, y) => win.chatMenu(chatRow, modelData, x, y)
                         }
                         Text {
                             visible: win.chats.length === 0
@@ -271,8 +407,13 @@ FloatingWindow {
 
                     // the conversation
                     Item {
+                        id: convoArea
                         Layout.fillWidth: true; Layout.fillHeight: true
                         clip: true
+                        TapHandler {
+                            acceptedButtons: Qt.RightButton
+                            onTapped: pt => win.backgroundMenu(pt.position.x, pt.position.y)
+                        }
 
                         ListView {
                             id: convo
@@ -288,10 +429,12 @@ FloatingWindow {
                             onContentHeightChanged: if (stick) Qt.callLater(positionViewAtEnd)
                             onCountChanged: if (stick) Qt.callLater(positionViewAtEnd)
                             delegate: ChatItem {
+                                id: chatItem
                                 required property var model
                                 width: convo.width - 14
                                 k: model.k; text: model.text; name: model.name; summary: model.summary
                                 status: model.status; out: model.out; kind: model.kind; sysinfo: model.sysinfo
+                                onMenu: (x, y, link) => win.itemMenu(chatItem, x, y, link)
                             }
                             footer: Column {
                                 width: convo.width - 14
@@ -422,9 +565,24 @@ FloatingWindow {
                                     placeholderTextColor: Theme.dim
                                     font.family: Theme.ui; font.pixelSize: 14
                                     enabled: win.ready
+                                    ContextMenu.menu: null      // ours below, in the app's style
                                     Keys.onPressed: e => {
                                         if ((e.key === Qt.Key_Return || e.key === Qt.Key_Enter) && !(e.modifiers & Qt.ShiftModifier)) {
                                             win.sendNow(); e.accepted = true;
+                                        } else if (e.key === Qt.Key_Menu || (e.key === Qt.Key_F10 && (e.modifiers & Qt.ShiftModifier))) {
+                                            const r = input.cursorRectangle;
+                                            win.inputMenu(r.x, r.y + r.height); e.accepted = true;
+                                        }
+                                    }
+                                    // right-click: keep a selection the click lands in, otherwise move the caret there first
+                                    TapHandler {
+                                        acceptedButtons: Qt.RightButton
+                                        onTapped: pt => {
+                                            const pos = input.positionAt(pt.position.x, pt.position.y);
+                                            if (input.selectionStart === input.selectionEnd || pos < input.selectionStart || pos > input.selectionEnd)
+                                                input.cursorPosition = pos;
+                                            input.forceActiveFocus();
+                                            win.inputMenu(pt.position.x, pt.position.y);
                                         }
                                     }
                                 }
@@ -441,7 +599,7 @@ FloatingWindow {
                             }
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: [chat.info, chat.limit].filter(s => s !== "").join("   ·   ").toUpperCase()
+                                text: [chat.info, win.usageText, chat.limit].filter(s => s !== "").join("   ·   ").toUpperCase()
                                 color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.2
                             }
                         }
@@ -480,6 +638,11 @@ FloatingWindow {
                 onLoaded: item.forceActiveFocus()
             }
         }
+        DataApp.DMenu {
+            id: ctx
+            onPicked: id => win.menuPicked(id)
+        }
+
         Component { id: accountsC; AccountsPanel { host: win } }
         Component { id: projectC; ProjectPanel { host: win; project: win.editing } }
         Component {

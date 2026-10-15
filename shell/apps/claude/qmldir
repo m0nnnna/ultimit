@@ -10,3 +10,4 @@ SideRow 1.0 SideRow.qml
 SmallLink 1.0 SmallLink.qml
 Entry 1.0 Entry.qml
 FolderPicker 1.0 FolderPicker.qml
+UsageMeters 1.0 UsageMeters.qml

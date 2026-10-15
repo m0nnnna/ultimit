@@ -1,5 +1,6 @@
 // ChatItem.qml - one entry in a CLAUDE chat: your message, Claude's reply (Markdown, selectable),
-// a tool Claude ran (click for its output), or a note (permission answers, errors).
+// a tool Claude ran (click for its output), or a note (permission answers, errors). Right-click asks
+// for a menu: menu(x, y, link) in the item, with the link under the pointer if there is one.
 import QtQuick
 import "../.."
 
@@ -15,6 +16,17 @@ Item {
     property bool sysinfo: false        // user: the system summary went with it
     property bool streaming: false
     property bool open: false
+    signal menu(real x, real y, string link)
+
+    // the text the menu acts on: the reply, your message, or a tool's output
+    readonly property var textEdit: k === "user" ? userT : k === "claude" ? reply : k === "tool" && open ? outT : null
+    function selection() { return textEdit ? textEdit.selectedText : ""; }
+    function selectAll() { if (textEdit) textEdit.selectAll(); }
+
+    TapHandler {
+        acceptedButtons: Qt.RightButton
+        onTapped: pt => root.menu(pt.position.x, pt.position.y, root.k === "claude" ? reply.hoveredLink : "")
+    }
 
     implicitHeight: k === "user" ? userBox.height : k === "claude" ? reply.implicitHeight
                   : k === "tool" ? toolCol.implicitHeight : noteT.implicitHeight + 4

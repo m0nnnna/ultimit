@@ -34,12 +34,19 @@ started with.
   claude.py chat <project> <chat>        JSON {ok, meta, items[]}
   claude.py chat-rename <project> <chat> <title>   JSON {ok}
   claude.py chat-remove <project> <chat>           JSON {ok}
+  claude.py usage                        JSON {ok, accounts{id: usage}}  each account's plan limits as last
+                                         reported (see Usage)
   claude.py sysinfo                      JSON {ok, text}         the system summary (Markdown)
   claude.py dirs <folder>                JSON {ok, dir, parent, dirs[{n, h}]}  the folders in a folder
                                          (the project folder picker; ~ works)
   claude.py session <project> <chat|new> JSON lines (see Session); stdin: JSON commands
                                          {op:send,text,sysinfo} {op:permit,rid,allow,always}
                                          {op:interrupt} {op:close}
+
+Usage: Claude Code reports the plan's limits with every turn (rate_limit_event); the last report per
+account is kept in <data>/usage/<account>.json: {windows{five_hour|seven_day...: {used 0-1, resets}},
+status, overage, t}. A chat's meta keeps its own totals: usage{cost, input, output, cacheRead, cacheWrite,
+turns} and context{used, window} (the last turn's prompt + reply, of the model's context window).
 
 Environment: ULTIMIT_CLAUDE_HOME (data dir, default $XDG_DATA_HOME/ultimit/claude),
 ULTIMIT_CLAUDE_BIN (the claude binary), ULTIMIT_CLAUDE_FAKE_SYSINFO (text, for tests).
@@ -117,6 +124,27 @@ def account(aid):
         if a["id"] == aid:
             return a
     return None
+
+
+def usage_path(aid):
+    return path("usage", safe_id(aid) + ".json")
+
+
+def cmd_usage():
+    return {"ok": True, "accounts": {a["id"]: load_json(usage_path(a["id"]), None) for a in accounts()
+                                     if os.path.exists(usage_path(a["id"]))}}
+
+
+def plan_usage(r):
+    """rate_limit_info -> {windows, status, overage, t}: what the window shows as the account's limits."""
+    wins = {}
+    for k, w in (r.get("unifiedWindows") or {}).items():
+        if isinstance(w, dict) and isinstance(w.get("utilization"), (int, float)):
+            wins[k] = {"used": w["utilization"], "resets": w.get("resetsAt")}
+    if not wins and isinstance(r.get("utilization"), (int, float)) and r.get("rateLimitType"):
+        wins[r["rateLimitType"]] = {"used": r["utilization"], "resets": r.get("resetsAt")}
+    return {"windows": wins, "status": r.get("status") or "", "overage": bool(r.get("isUsingOverage")),
+            "t": time.time()}
 
 
 def system_project():
@@ -261,6 +289,10 @@ def cmd_account_remove(aid, purge=False):
     a = accounts()
     gone = [x for x in a if x["id"] == aid]
     save_accounts([x for x in a if x["id"] != aid])
+    try:
+        os.unlink(usage_path(aid))
+    except (OSError, ValueError):
+        pass
     # only ever delete a directory this app created (never ~/.claude)
     if purge and gone and gone[0].get("dir") and os.path.dirname(os.path.abspath(gone[0]["dir"])) == path("accounts"):
         shutil.rmtree(gone[0]["dir"], ignore_errors=True)
@@ -641,7 +673,7 @@ class Session:
     """One running chat: `claude -p` with stream-json in and out, the window on the other side.
 
     Out (one JSON per line): {ev: started|init|delta|thinking|status|text|tool|tool_result|ask|asked|result|
-    retry|limit|note|exit}. The window answers asks with {op: permit}."""
+    retry|limit|usage|note|exit}. The window answers asks with {op: permit}."""
 
     def __init__(self, pid, cid):
         self.proj = project(pid)
@@ -662,6 +694,7 @@ class Session:
         self.req = 0
         self.child = None
         self.busy = False
+        self.cost_seen = 0.0      # total_cost_usd is a running total for this Claude Code process
 
     # -- persistence
     def save_meta(self):
@@ -824,6 +857,10 @@ class Session:
                                                                      "error": "Not supported by CLAUDE"}})
         elif t == "rate_limit_event":
             r = m.get("rate_limit_info") or {}
+            u = plan_usage(r)
+            if u["windows"] and self.acc:
+                save_json(usage_path(self.acc["id"]), u)
+                self.emit(dict(u, ev="usage", account=self.acc["id"]))
             if r.get("status") not in (None, "allowed"):
                 self.emit({"ev": "limit", "status": r.get("status"), "type": r.get("rateLimitType", ""),
                            "used": r.get("utilization"), "resets": r.get("resetsAt")})
@@ -836,14 +873,41 @@ class Session:
             err = bool(m.get("is_error")) or (m.get("subtype") not in (None, "success"))
             if m.get("session_id") and m["session_id"] != self.meta.get("session"):
                 self.meta["session"] = m["session_id"]
+            self.count_usage(m)
             if self.meta.get("title"):
                 self.save_meta()
-            o = {"ev": "result", "error": err, "cost": m.get("total_cost_usd"), "turns": m.get("num_turns"),
+            o = {"ev": "result", "usage": self.meta.get("usage"), "context": self.meta.get("context"), "error": err, "cost": m.get("total_cost_usd"), "turns": m.get("num_turns"),
                  "ms": m.get("duration_ms"), "text": (m.get("result") or "") if err else "",
                  "denied": len(m.get("permission_denials") or [])}
             if err:
                 self.record({"k": "note", "text": o["text"] or m.get("subtype", "error"), "kind": "error"})
             self.emit(o)
+
+    def count_usage(self, m):
+        """Add one turn's tokens and cost to the chat's totals, and note how full the context is."""
+        u = m.get("usage") or {}
+        total = m.get("total_cost_usd")
+        cost = 0.0
+        if isinstance(total, (int, float)):
+            cost = total - self.cost_seen if total >= self.cost_seen else total
+            self.cost_seen = total
+        t = dict({"cost": 0.0, "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0, "turns": 0},
+                 **(self.meta.get("usage") or {}))
+        n = lambda v: v if isinstance(v, int) else 0
+        t["cost"] = round(t["cost"] + max(cost, 0.0), 6)
+        t["input"] += n(u.get("input_tokens"))
+        t["output"] += n(u.get("output_tokens"))
+        t["cacheRead"] += n(u.get("cache_read_input_tokens"))
+        t["cacheWrite"] += n(u.get("cache_creation_input_tokens"))
+        t["turns"] += 1 if u or cost else 0
+        self.meta["usage"] = t
+        last = (u.get("iterations") or [u])[-1] if u else {}
+        used = sum(n(last.get(k)) for k in ("input_tokens", "cache_read_input_tokens",
+                                             "cache_creation_input_tokens", "output_tokens"))
+        window = max([n(x.get("contextWindow")) for x in (m.get("modelUsage") or {}).values()
+                      if isinstance(x, dict)] or [0])
+        if used:
+            self.meta["context"] = {"used": used, "window": window or (self.meta.get("context") or {}).get("window", 0)}
 
     def read_out(self):
         for line in self.child.stdout:
@@ -934,6 +998,8 @@ def main(argv):
             out(cmd_chat_remove(a[0], a[1]))
         elif c == "dirs":
             out(cmd_dirs(a[0] if a else ""))
+        elif c == "usage":
+            out(cmd_usage())
         elif c == "sysinfo":
             out({"ok": True, "text": sysinfo()})
         elif c == "session":

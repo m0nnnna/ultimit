@@ -21,6 +21,8 @@ Item {
     property var askQueue: []
     property string info: ""            // after a turn: "2 turns · $0.01 · 4.1 s"
     property string limit: ""           // usage warning from Claude Code
+    property var usage: null            // this chat's totals: { cost, input, output, cacheRead, cacheWrite, turns }
+    property var context: null          // { used, window }: how full the context was after the last turn
     property string modelName: ""       // the model Claude Code reports
     property var proc: null
     property var pending: []            // messages typed before Claude Code was ready
@@ -51,6 +53,7 @@ Item {
         stopProc();
         projectId = pid; chatId = cid || ""; meta = ({}); itemModel.clear();
         liveText = ""; statusText = ""; info = ""; limit = ""; modelName = ""; ask = null; askQueue = [];
+        usage = null; context = null;
         busy = false; thinking = false; sysinfoUsed = false; pending = [];
         if (chatId === "") return;
         loading = true;
@@ -60,6 +63,8 @@ Item {
             root.loading = false;
             if (!o.ok) { root.addItem({ k: "note", kind: "error", text: o.err }); return; }
             root.meta = o.meta;
+            root.usage = o.meta.usage || null;
+            root.context = o.meta.context || null;
             for (const it of o.items) {
                 root.addItem(it);
                 if (it.sysinfo) root.sysinfoUsed = true;
@@ -147,7 +152,12 @@ Item {
         case "limit":
             limit = o.used ? Math.round(o.used * 100) + "% of the " + (o.type || "").replace(/_/g, "-") + " limit used" : "";
             break;
+        case "usage":
+            Claude.setUsage(o.account, o);
+            break;
         case "result": {
+            if (o.usage) usage = o.usage;
+            if (o.context) context = o.context;
             busy = false; thinking = false; statusText = ""; liveText = "";
             if (o.error && o.text) addItem({ k: "note", kind: "error", text: o.text });
             const parts = [];

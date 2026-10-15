@@ -1,5 +1,5 @@
 // SideRow.qml - a project or chat in the CLAUDE sidebar: name, a dim second line, accent bar when
-// selected; chats get rename / remove on hover.
+// selected; chats get rename / remove on hover. Right-click asks for a menu (menu(x, y), in the row).
 import QtQuick
 import "../.."
 
@@ -12,6 +12,7 @@ Item {
     signal clicked()
     signal rename()
     signal remove()
+    signal menu(real x, real y)
 
     height: 40
     Rectangle {
@@ -19,7 +20,12 @@ Item {
         color: root.selected ? Theme.panel2 : (ma.containsMouse ? Qt.rgba(Theme.panel2.r, Theme.panel2.g, Theme.panel2.b, Theme.panel2.a * 0.6) : "transparent")
         Rectangle { width: 2; height: parent.height; color: Theme.accent; visible: root.selected }
     }
-    MouseArea { id: ma; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.clicked() }
+    MouseArea {
+        id: ma
+        anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        onClicked: mouse => mouse.button === Qt.RightButton ? root.menu(mouse.x, mouse.y) : root.clicked()
+    }
     Column {
         x: 10; anchors.verticalCenter: parent.verticalCenter
         width: parent.width - 20 - (acts.visible ? acts.width + 6 : 0)
