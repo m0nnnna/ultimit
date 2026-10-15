@@ -204,7 +204,7 @@ FloatingWindow {
         menu.items = [{ id: "d-open", label: drv.mount ? "Open" : "Mount" },
                       { id: "d-tab", label: "Open in new tab", disabled: !drv.mount },
                       { id: "d-unmount", label: "Unmount", disabled: !drv.mount },
-                      { id: "d-power", label: "Power off", disabled: !!drv.mount }];
+                      { id: "d-power", label: "Power off", disabled: !!drv.mount || !!drv.internal }];
         menu.kind = "drive"; menu.drive = drv;
         menu.popup(x, y);
     }
@@ -515,7 +515,7 @@ FloatingWindow {
                         delegate: SideRow {
                             required property var modelData
                             label: modelData.label; icon: Data.placeIcon("drive"); sub: modelData.size
-                            eject: modelData.mount !== ""
+                            eject: modelData.mount !== "" && !modelData.internal   // internal disks: Unmount is in the menu
                             current: !Data.isTrash && modelData.mount !== "" && Data.path === modelData.mount
                             dropPath: modelData.mount
                             onClicked: Data.openDrive(modelData)

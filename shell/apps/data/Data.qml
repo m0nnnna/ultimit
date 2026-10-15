@@ -1097,7 +1097,9 @@ Singleton {
         }
     }
 
-    // ---------------------------------------------------------------- removable drives (udisks, no gvfs)
+    // ---------------------------------------------------------------- drives (udisks, no gvfs)
+    // Removable / hotplug ones (mounted or not), and internal ones mounted where data drives go
+    // (/mnt, /media, /run/media); system mounts (/, /boot, /home, snaps...) never show.
     property var drives: []
     readonly property string fakeLsblk: Quickshell.env("ULTIMIT_FAKE_LSBLK")
     Timer {
@@ -1119,11 +1121,13 @@ Singleton {
                     const removable = truthy(n.rm) || truthy(n.hotplug) || (parent && parent.removable);
                     const mps = (n.mountpoints || (n.mountpoint ? [n.mountpoint] : [])).filter(m => m);
                     n.removable = removable;
-                    if (removable && n.fstype && (n.type === "part" || n.type === "disk" || n.type === "crypt")) {
+                    const dataMount = mps.find(m => /^\/(mnt|media|run\/media)(\/|$)/.test(m)) || "";
+                    if ((removable || dataMount) && n.fstype && (n.type === "part" || n.type === "disk" || n.type === "crypt")) {
                         out.push({
                             dev: n.path || ("/dev/" + n.name), name: n.name, size: n.size || "",
-                            label: n.label || n.model || (n.vendor ? n.vendor.trim() : "") || n.name,
-                            mount: mps.length ? mps[0] : "", fstype: n.fstype, parent: n.pkname || (parent ? parent.name : "")
+                            label: n.label || (removable ? n.model || (n.vendor ? n.vendor.trim() : "") : dataMount.substring(dataMount.lastIndexOf("/") + 1)) || n.name,
+                            mount: removable ? (mps.length ? mps[0] : "") : dataMount, fstype: n.fstype,
+                            parent: n.pkname || (parent ? parent.name : ""), internal: !removable
                         });
                     }
                     for (const c of (n.children || [])) walk(c, n);
