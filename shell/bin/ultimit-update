@@ -1,0 +1,164 @@
+#!/bin/bash
+# ultimit-update - update Ultimit from a terminal or a script (for PCs without anyone at Settings).
+#
+#   ultimit-update                 install the newest release (what Settings > Updates installs)
+#   ultimit-update --edge          build and install the newest commit of the repository's main
+#                                  branch: for test and edge PCs that should run the latest code
+#   ultimit-update [--edge] --check
+#                                  only say whether there is something newer; exit 0 = up to date,
+#                                  10 = an update is waiting, 1 = couldn't tell
+# Options:
+#   --yes            don't ask before installing
+#   --branch NAME    --edge: follow that branch instead of main
+#   --apps           --edge: also install the apps in distro/ (by default only the desktop updates,
+#                    so an app you removed stays removed)
+#   --force          --edge: rebuild and install even when already on the newest commit
+#
+# The repository is the one in /opt/ultimit/distro/update-source (m0nnnna/ultimit). Run it as your
+# normal user; it asks for your password through sudo.
+#
+# --edge keeps its own clone in ~/.cache/ultimit-build/ultimit-src (don't work in it: every update
+# resets it to the branch) and runs that clone's scripts/install.sh. On a PC installed from a
+# release or the ISO the first --edge update builds wlroots, SceneFX, Quickshell and oo7 (20-40
+# minutes, 12 GB free in ~/.cache); later ones only rebuild what changed. /opt/ultimit is copied to
+# /opt/ultimit.previous first and put back if the install fails. Logs: ~/.local/state/ultimit/
+# install-*.log (--edge), /var/log/ultimit-update.log (releases).
+#
+# The new version starts at the next login.
+set -euo pipefail
+PREFIX=/opt/ultimit
+HELPER=/usr/libexec/ultimit/updates-helper
+WORK=${ULTIMIT_BUILD_DIR:-$HOME/.cache/ultimit-build}
+SRC=${ULTIMIT_EDGE_DIR:-$WORK/ultimit-src}
+SHELL_DIR=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
+
+EDGE=false CHECK=false YES=false APPS=false FORCE=false BRANCH=main
+while [ $# -gt 0 ]; do
+	case "$1" in
+	--edge) EDGE=true ;;
+	--check) CHECK=true ;;
+	--yes | -y) YES=true ;;
+	--apps) APPS=true ;;
+	--force) FORCE=true ;;
+	--branch) BRANCH=${2:?--branch needs a name}; shift ;;
+	-h | --help) sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+	*) echo "unknown option: $1 (see --help)" >&2; exit 2 ;;
+	esac
+	shift
+done
+
+say() { printf '\033[1;36m== %s\033[0m\n' "$*"; }
+die() { printf '\033[1;31multimit-update: %s\033[0m\n' "$*" >&2; exit 1; }
+ask() { $YES && return 0; [ -t 0 ] || die "nothing to answer \"$1\" (not a terminal): add --yes"; read -r -p "$1 [Y/n] " a; case "$a" in n | N) exit 1 ;; esac; }
+
+[ "$(id -u)" -ne 0 ] || die "run this as your normal user, not root (it uses sudo when needed)"
+installed=$(cat "$PREFIX/VERSION" 2>/dev/null || true)
+[ -n "$installed" ] || die "no Ultimit in $PREFIX"
+repo=$(sed -e 's/#.*//' -e 's/[[:space:]]//g' "$PREFIX/distro/update-source" 2>/dev/null | grep -m1 -E '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$' || true)
+repo=${repo:-m0nnnna/ultimit}
+running=$(cat /run/ultimit-update.running 2>/dev/null || true)
+if [ -n "$running" ] && [ -e "/proc/$running" ] && ! $CHECK; then die "an Ultimit update is already running (pid $running)"; fi
+
+# ------------------------------------------------------------------------------------ releases
+if ! $EDGE; then
+	info=$(python3 -I "$SHELL_DIR/apps/settings/updates.py" ultimit) || die "couldn't ask for the latest release"
+	read -r err tag newer < <(python3 -I -c '
+import json, sys
+o = json.load(sys.stdin)
+print((o.get("error") or "-").replace(" ", "_"), (o.get("latest") or {}).get("tag") or "-", int(bool(o.get("newer"))))' <<<"$info")
+	[ "$err" = - ] || die "${err//_/ }"
+	if [ "$newer" = 0 ]; then echo "Ultimit $installed is up to date (latest release: $tag)."; exit 0; fi
+	echo "Ultimit $tag is out (installed: $installed)."
+	$CHECK && exit 10
+	[ -x "$HELPER" ] || die "$HELPER is missing: open Settings > Updates once to set it up"
+	ask "Install Ultimit $tag?"
+	say "Installing Ultimit $tag"
+	sudo "$HELPER" ultimit "$tag" | python3 -I -c '
+import json, sys
+ok, last = False, ""
+for line in sys.stdin:
+    try:
+        o = json.loads(line)
+    except ValueError:
+        continue
+    if "ok" in o:
+        ok = o["ok"]
+        if not ok:
+            print("   failed: " + o.get("error", ""))
+    elif o.get("msg") and o["msg"] != last and o.get("stage") != "download":
+        last = o["msg"]
+        print("   " + last)
+sys.exit(0 if ok else 1)' || die "the update failed; see /var/log/ultimit-update.log"
+	echo "Ultimit $tag is installed. It starts at the next login."
+	exit 0
+fi
+
+# ------------------------------------------------------------------------------------ --edge
+url="https://github.com/$repo.git"
+# The installed commit: VERSION is `git describe` of the tree it was installed from
+# (v0.1.6, v0.1.6-3-gabc1234, abc1234; -dirty when it had uncommitted changes)
+case "$installed" in
+*-dirty) have="" ;;
+*-g[0-9a-f]*) have=${installed##*-g} ;;
+v[0-9]*) have=$(git ls-remote "$url" "refs/tags/$installed^{}" "refs/tags/$installed" 2>/dev/null | awk 'NR==1 {print $1}') ;;
+*) have=$installed ;;
+esac
+want=$(git ls-remote "$url" "refs/heads/$BRANCH" 2>/dev/null | awk '{print $1}') || true
+[ -n "$want" ] || die "couldn't reach $url, or it has no branch $BRANCH"
+if [ -n "$have" ] && [ "${want#"$have"}" != "$want" ] && ! $FORCE; then
+	echo "Ultimit $installed is the newest commit on $repo $BRANCH."
+	exit 0
+fi
+echo "$repo $BRANCH is at ${want:0:7} (installed: $installed)."
+$CHECK && exit 10
+
+mkdir -p "$WORK"
+exec 9>"$WORK/ultimit-update.lock"
+flock -n 9 || die "another ultimit-update is running"
+say "Getting $repo $BRANCH"
+if [ ! -d "$SRC/.git" ]; then
+	rm -rf "$SRC"
+	# Blobless: the full history and tags (VERSION needs `git describe`) without every old file
+	git clone -q --filter=blob:none -b "$BRANCH" "$url" "$SRC"
+else
+	git -C "$SRC" remote set-url origin "$url"
+	git -C "$SRC" fetch -q --tags --force --prune origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
+	git -C "$SRC" checkout -q -B "$BRANCH" "origin/$BRANCH"
+	git -C "$SRC" reset -q --hard "origin/$BRANCH"
+	git -C "$SRC" clean -q -fd
+fi
+rev=$(git -C "$SRC" describe --tags --always)
+if [ -n "$have" ] && git -C "$SRC" cat-file -e "$have^{commit}" 2>/dev/null; then
+	n=$(git -C "$SRC" rev-list --count "$have..HEAD")
+	echo "   $n new commit(s):"
+	git -C "$SRC" log --format='     %h %s' -n 15 "$have..HEAD"
+	[ "$n" -le 15 ] || echo "     ..."
+fi
+ask "Build and install Ultimit $rev?"
+
+flags=(--yes --keep-gnome)
+$APPS || flags+=(--no-apps)
+# This PC uses another login screen: leave it
+[ "$(basename "$(readlink -f /etc/systemd/system/display-manager.service)")" = greetd.service ] || flags+=(--keep-login-screen)
+
+say "Keeping a copy of Ultimit $installed in $PREFIX.previous"
+sudo rm -rf "$PREFIX.previous"
+sudo mkdir "$PREFIX.previous"
+sudo tar -C "$PREFIX" --exclude=./dxvk -cf - . | sudo tar -C "$PREFIX.previous" -xf -
+restore() {
+	echo "Putting Ultimit $installed back..."
+	sudo rm -rf "$PREFIX.failed"
+	sudo mv "$PREFIX" "$PREFIX.failed"
+	sudo mv "$PREFIX.previous" "$PREFIX"
+	if [ -d "$PREFIX.failed/dxvk" ]; then sudo mv "$PREFIX.failed/dxvk" "$PREFIX/dxvk"; fi
+	sudo rm -rf "$PREFIX.failed"
+}
+
+say "Building and installing Ultimit $rev (scripts/install.sh ${flags[*]})"
+if ! "$SRC/scripts/install.sh" "${flags[@]}"; then
+	restore
+	die "the install failed (its log is the newest in ~/.local/state/ultimit/install-*.log); Ultimit $installed is back"
+fi
+echo
+echo "Ultimit $(cat "$PREFIX/VERSION") is installed. It starts at the next login."
+echo "The previous version is in $PREFIX.previous until the next update."

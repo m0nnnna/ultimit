@@ -30,6 +30,30 @@ Flatpaks update in the Apps section.
 The repository it asks is in `/opt/ultimit/distro/update-source` (`m0nnnna/ultimit`). A fork
 points it at its own.
 
+## From a terminal, and edge PCs
+
+`ultimit-update` does the same from a terminal or a script, as your normal user (it asks for
+your password through sudo):
+
+```bash
+ultimit-update                  # the newest release, like Settings > Updates
+ultimit-update --edge           # the newest commit on main, built on this PC
+ultimit-update --edge --check   # exit 0 = up to date, 10 = an update is waiting
+```
+
+`--edge` is for test and edge PCs that should run the latest code rather than the latest
+release. It keeps its own clone of the repository in `~/.cache/ultimit-build/ultimit-src`
+(reset to the branch on every update, so don't work in it) and runs that clone's
+`scripts/install.sh --no-apps --keep-gnome`. `--branch NAME` follows another branch, `--apps`
+also installs the apps in `distro/`, `--force` reinstalls the same commit, `--yes` doesn't ask.
+Before installing it copies `/opt/ultimit` to `/opt/ultimit.previous` and puts it back if the
+install fails. On a PC installed from a release or the ISO, the first `--edge` update builds
+wlroots, SceneFX, Quickshell and oo7 (20-40 minutes, 12 GB free in `~/.cache`); later ones only
+rebuild the compositor and copy the rest.
+
+An edge install reports a version like `v0.2.0-5-gabc1234`, so Settings never offers it the
+older `v0.2.0` release, only the next one.
+
 ## Publishing a release
 
 On a machine with Ultimit built from source (`scripts/install.sh`), with the
