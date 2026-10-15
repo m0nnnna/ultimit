@@ -62,6 +62,7 @@ Singleton {
 
     function loadHome() {
         run(["home"], o => {
+            if (!o.ok && o.fix && !setup.tried) { setup.start(o.fix); return; }
             if (!o.ok) { root.error = o.error || "Flathub is not available."; return; }
             root.error = "";
             root.picks = o.picks; root.categories = o.categories; root.total = o.total;
@@ -96,6 +97,35 @@ Singleton {
             root.installedApps = o.apps;
             root.installedIds = o.apps.map(a => a.id);
         });
+    }
+
+    // ---- first run: add Flathub and/or download its catalogue, then load again ----
+    // `flatpak remote-add` does not fetch the AppStream catalogue STORE reads; that only arrives with
+    // the next `flatpak update`. Downloading it needs no password (polkit appstream-update); adding
+    // the remote asks for one through the Ultimit agent. Tried once per run.
+    readonly property string flathubRepo: "https://dl.flathub.org/repo/flathub.flatpakrepo"
+    property bool settingUp: setup.running
+    Process {
+        id: setup
+        property bool tried: false
+        property bool addFirst: false
+        property string err: ""
+        function start(fix) {
+            tried = true; err = ""; addFirst = fix === "remote";
+            root.error = "";
+            command = addFirst
+                ? ["sh", "-c", "flatpak remote-add --system --if-not-exists flathub \"$1\" && flatpak update -y --noninteractive --appstream --system flathub", "sh", root.flathubRepo]
+                : ["flatpak", "update", "-y", "--noninteractive", "--appstream", "--system", "flathub"];
+            running = true;
+        }
+        stderr: SplitParser { onRead: line => { const t = line.trim(); if (t !== "") setup.err = t; } }
+        onExited: code => {
+            if (code === 0) { root.loadHome(); return; }
+            root.error = /not authorized|authentication|dismissed/i.test(err)
+                ? "Flathub isn't set up. Open STORE again to set it up."
+                : "Couldn't download Flathub's catalogue" + (err ? ": " + err.replace(/^error:\s*/i, "") : ".")
+                  + " Check the internet connection and open STORE again.";
+        }
     }
 
     // ---- jobs: install / remove (queued) ----

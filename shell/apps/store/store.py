@@ -172,10 +172,24 @@ def build_index(path):
     return apps
 
 
+def have_remote():
+    try:
+        p = subprocess.run([FLATPAK, "remotes", "--columns=name"], capture_output=True, text=True, timeout=30,
+                           stdin=subprocess.DEVNULL)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+    return REMOTE in p.stdout.split()
+
+
 def load_index():
+    """(apps, "", "") or (None, error, fix); fix tells Store.qml what it can do about it:
+    "appstream" = the remote is there but its catalogue was never downloaded (flatpak remote-add does
+    not fetch it), "remote" = no Flathub remote at all."""
     path = appstream_path()
     if not path:
-        return None, "Flathub isn't set up: run  flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo"
+        if have_remote():
+            return None, "Downloading Flathub's catalogue…", "appstream"
+        return None, "Flathub isn't set up yet.", "remote"
     st = os.stat(path)
     key = "%s:%d:%d:%d" % (path, st.st_mtime, st.st_size, INDEX_VERSION)
     cache = os.path.join(CACHE, "index.json")
@@ -183,7 +197,7 @@ def load_index():
         with open(cache) as f:
             d = json.load(f)
         if d.get("key") == key:
-            return d["apps"], ""
+            return d["apps"], "", ""
     except (OSError, ValueError, KeyError):
         pass
     apps = build_index(path)
@@ -192,7 +206,7 @@ def load_index():
     with open(tmp, "w") as f:
         json.dump({"key": key, "apps": apps}, f)
     os.replace(tmp, cache)
-    return apps, ""
+    return apps, "", ""
 
 
 def card(a, installed):
@@ -263,9 +277,9 @@ def main(argv):
         return out({"ok": True, "apps": installed_apps()})
     if cmd not in ("home", "search", "app"):
         return out({"ok": False, "error": "usage: store.py home | search QUERY [CAT] | app ID | installed"}, 2)
-    apps, err = load_index()
+    apps, err, fix = load_index()
     if apps is None:
-        return out({"ok": False, "error": err})
+        return out({"ok": False, "error": err, "fix": fix})
     inst = {a["id"] for a in installed_apps()}
     if cmd == "home":
         by_id = {a["id"]: a for a in apps}

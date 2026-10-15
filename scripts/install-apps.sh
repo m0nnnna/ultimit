@@ -116,6 +116,8 @@ fi
 
 if ! $have_flathub; then
 	sudo flatpak remote-add --if-not-exists flathub "$FLATHUB"
+	# remote-add does not fetch the AppStream catalogue STORE reads
+	sudo flatpak update -y --noninteractive --appstream flathub
 fi
 if [ ${#missing_flatpak[@]} -gt 0 ]; then
 	sudo flatpak install -y --noninteractive flathub "${missing_flatpak[@]}"
