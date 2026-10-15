@@ -314,13 +314,20 @@ static void ghost_layout(struct ul_ghost *g, double fx, double fy, double s,
 		int ey = e->box.y;
 		struct clipped_region clip = e->clip;
 		double src_h = e->src.height;
-		/* The frame collapses with the wiped content: the border shortens
-		 * and whatever sits on the bottom edge (brackets) rides up with it. */
+		/* The frame collapses with the wiped content: the border and the
+		 * side glass strips shorten, and whatever sits on the bottom edge
+		 * (bottom glass, brackets) rides up with it. */
 		if (!e->content && frame_dy > 0) {
 			if (!wlr_box_empty(&clip.area)) {
 				h -= frame_dy;
 				clip.area.height -= frame_dy;
 				if (clip.area.height < 0) clip.area.height = 0;
+			} else if (e->box.y < frame_mid && e->box.y + e->box.height > frame_mid) {
+				h -= frame_dy;
+				if (h <= 0) {
+					wlr_scene_node_set_enabled(e->node, false);
+					continue;
+				}
 			} else if (e->box.y + e->box.height / 2 > frame_mid) {
 				ey -= frame_dy;
 			}

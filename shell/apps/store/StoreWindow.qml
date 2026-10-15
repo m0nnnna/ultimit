@@ -100,7 +100,7 @@ FloatingWindow {
             Text {
                 visible: Store.error === "" && !Store.homeLoaded
                 anchors.centerIn: parent
-                text: "Reading Flathub's catalogue…"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
+                text: Store.settingUp ? "Setting up Flathub: downloading its catalogue…" : "Reading Flathub's catalogue…"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
             }
 
             // home + results: a grid of cards
