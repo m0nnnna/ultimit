@@ -1,0 +1,9 @@
+# Ultimit: controllers for the person at the desk. Steam (and SDL games) read controllers through
+# hidraw, but steam-devices only opens hidraw for a fixed list of models, so other controllers
+# (wireless Xbox, 8BitDo, newer DualSense...) stayed root-only. Any HID device that is also a
+# gamepad or joystick gets "uaccess" here, like its input nodes do in systemd's 70-uaccess.rules;
+# 73-seat-late.rules then gives the active session access.
+ACTION=="remove", GOTO="ultimit_gamepads_end"
+SUBSYSTEM!="hidraw", GOTO="ultimit_gamepads_end"
+PROGRAM="/usr/libexec/ultimit/hidraw-gamepad %S%p", TAG+="uaccess"
+LABEL="ultimit_gamepads_end"

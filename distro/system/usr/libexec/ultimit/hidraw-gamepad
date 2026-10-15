@@ -1,0 +1,42 @@
+#!/usr/bin/python3 -I
+"""hidraw-gamepad SYSFS_PATH - exit 0 if this hidraw node belongs to a gamepad or joystick
+(72-ultimit-gamepads.rules). The HID device's input nodes say so: a gamepad button (BTN_GAMEPAD
+range), or a joystick button (BTN_JOYSTICK range) with axes. The input nodes are registered before
+the hidraw node, so they are there when udev asks."""
+import glob
+import os
+import sys
+
+BTN_JOYSTICK, BTN_GAMEPAD, BTN_DIGI = 0x120, 0x130, 0x140
+
+
+def bits(path):
+    """A sysfs capability bitmap (hex words, most significant first) -> int."""
+    try:
+        with open(path) as f:
+            words = f.read().split()
+    except OSError:
+        return 0
+    n = 0
+    for w in words:
+        n = (n << 64) | int(w, 16)
+    return n
+
+
+def in_range(n, lo, hi):
+    return (n >> lo) & ((1 << (hi - lo)) - 1) != 0
+
+
+def is_gamepad(hidraw):
+    hid = os.path.dirname(os.path.dirname(os.path.realpath(hidraw)))   # .../<hid device>/hidraw/hidrawN
+    for inp in glob.glob(os.path.join(hid, "input", "input*")):
+        key = bits(os.path.join(inp, "capabilities", "key"))
+        if in_range(key, BTN_GAMEPAD, BTN_DIGI):
+            return True
+        if in_range(key, BTN_JOYSTICK, BTN_GAMEPAD) and bits(os.path.join(inp, "capabilities", "abs")):
+            return True
+    return False
+
+
+if __name__ == "__main__":
+    sys.exit(0 if len(sys.argv) == 2 and is_gamepad(sys.argv[1]) else 1)

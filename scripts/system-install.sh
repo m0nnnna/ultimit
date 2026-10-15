@@ -117,6 +117,8 @@ sed "s|@SESSION@|$P/session/ultimit-session|g" "$P/session/ultimit.desktop" >/us
 	mode=644; [ -x "$f" ] && mode=755
 	install -D -m $mode "$f" "/$f"
 done )
+# controllers plugged in now get the new udev rules too (72-ultimit-gamepads.rules)
+udevadm control --reload 2>/dev/null && udevadm trigger --subsystem-match=hidraw 2>/dev/null || true
 # Ultimit commands on everyone's PATH (other apps open folders with ultimit-data, ...)
 for b in "$P"/shell/bin/*; do ln -sfn "$b" "/usr/local/bin/$(basename "$b")"; done
 # Ultimit apps in every app menu
@@ -137,6 +139,8 @@ fi
 # Where the login screen remembers the last user and session
 GU=$(getent passwd _greetd >/dev/null && echo _greetd || echo greeter)
 mkdir -p /var/lib/ultimit-greeter && chown "$GU" /var/lib/ultimit-greeter
+# and each user's monitor setup (session/ultimit-greeter-displays): anyone may add their own copy
+install -d -m 1777 /var/lib/ultimit-greeter/displays
 
 if $DESKTOP_NET; then
 	step "Handing networking to NetworkManager (as on Ubuntu Desktop)"
