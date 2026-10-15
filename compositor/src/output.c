@@ -244,6 +244,11 @@ static void output_destroy(struct wl_listener *listener, void *data) {
 	/* Unplugged: its windows go to the main display (the layout still has it here). */
 	output_remember_layout(server);
 	wlr_output_layout_remove(server->output_layout, output->wlr_output);
+	/* The scene output would otherwise live until after this signal (it's an addon), and
+	 * windows moved below could "enter" the dying output at its stale position: that adds
+	 * a bind listener nothing removes, and wlr_output_finish aborts. */
+	wlr_scene_output_destroy(output->scene_output);
+	output->scene_output = NULL;
 	struct ul_output *other;
 	wl_list_for_each(other, &server->outputs, link) {   /* auto-placed ones may have shifted */
 		if (other != output && in_layout(other)) output_arrange(other);
