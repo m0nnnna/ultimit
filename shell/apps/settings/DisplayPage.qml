@@ -217,6 +217,8 @@ Item {
                  "primary = " + !!o.primary + "\n";
         }
         SetSys.writeFile(SetSys.cfgPath("displays.conf"), t);
+        // the login screen's copy (it can't read home folders); after the write above lands
+        Quickshell.execDetached(["sh", "-c", "sleep 1; exec \"$0\"", Quickshell.shellPath("../session/ultimit-greeter-displays")]);
     }
 
     // ---------- read / apply / keep / revert ----------

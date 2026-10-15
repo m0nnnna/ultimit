@@ -1,5 +1,6 @@
 // GreeterSurface.qml - one full-screen greeter window (per output): wallpaper art dimmed, emblem,
-// big clock, [ ULTIMIT ] wordmark; the login panel is shown on the first screen only.
+// big clock, [ ULTIMIT ] wordmark; the login panel is shown on the main display only (mainScreen,
+// else the first screen).
 import QtQuick
 import QtQuick.Shapes
 import Quickshell
@@ -16,8 +17,9 @@ PanelWindow {
     WlrLayershell.namespace: "ultimit-greeter"
     WlrLayershell.keyboardFocus: primary ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
+    property string mainScreen: ""
     readonly property bool primary: screen !== null && Quickshell.screens.length > 0
-                                    && screen.name === Quickshell.screens[0].name
+        && screen.name === (Quickshell.screens.some(s => s.name === mainScreen) ? mainScreen : Quickshell.screens[0].name)
     readonly property real u: Math.max(.7, Math.min(width, height) / 800)
 
     SystemClock { id: clock; precision: SystemClock.Seconds }

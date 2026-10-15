@@ -1,0 +1,8 @@
+#!/bin/sh
+# Leave a copy of this user's monitor setup (Settings > Display, ~/.config/ultimit/displays.conf) where
+# the login screen finds it: the greeter can't read home folders. ultimit-greeter-session uses the copy
+# of the user who logged in last, and only if that user owns it. Run at session start and on every save.
+DIR=/var/lib/ultimit-greeter/displays
+src="${XDG_CONFIG_HOME:-$HOME/.config}/ultimit/displays.conf"
+[ -d "$DIR" ] && [ -f "$src" ] || exit 0
+install -m 644 "$src" "$DIR/$(id -un).conf" 2>/dev/null || true

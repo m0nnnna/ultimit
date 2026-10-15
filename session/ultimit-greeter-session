@@ -14,6 +14,17 @@ export QML_DISABLE_DISTANCEFIELD=1
 export XDG_CACHE_HOME="${XDG_RUNTIME_DIR:-/tmp}/ultimit-greeter/cache"
 export XDG_STATE_HOME=/var/lib/ultimit-greeter
 mkdir -p "$XDG_CACHE_HOME"
+# The monitor setup of the user who logged in last (their session leaves a copy here, see
+# ultimit-greeter-displays): which screen is the main one, modes, rotation. Only a copy that user owns.
+DISPLAYS=/var/lib/ultimit-greeter/displays
+mkdir -p "$DISPLAYS" 2>/dev/null && chmod 1777 "$DISPLAYS" 2>/dev/null
+last=$(sed -n 's/^user=//p' "$XDG_STATE_HOME/ultimit-greeter/state" 2>/dev/null | head -n 1)
+case "$last" in "" | */* | .*) last="" ;; esac
+if [ -n "$last" ] && [ -f "$DISPLAYS/$last.conf" ] && [ "$(stat -c %U "$DISPLAYS/$last.conf")" = "$last" ]; then
+	export XDG_CONFIG_HOME="${XDG_RUNTIME_DIR:-/tmp}/ultimit-greeter/config"
+	mkdir -p "$XDG_CONFIG_HOME/ultimit"
+	cp "$DISPLAYS/$last.conf" "$XDG_CONFIG_HOME/ultimit/displays.conf"
+fi
 # Hybrid laptops: draw on the GPU that drives the built-in panel (as ultimit-session does).
 if [ -z "${WLR_DRM_DEVICES:-}" ]; then
 	primary="" others=""
