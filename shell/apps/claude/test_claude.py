@@ -43,10 +43,10 @@ class ClaudeHelper(unittest.TestCase):
         self.assertTrue(ev[-1]["ok"], ev)
         return acc
 
-    def session(self, pid, chat, *sends, answer=None):
+    def session(self, pid, chat, *sends, answer=None, account=None):
         """Drive a chat like the window does: send each message once the previous turn has finished,
         answer permission asks with answer(ask) -> (allow, always), then close. Returns every event."""
-        p = subprocess.Popen([sys.executable, "-I", os.path.join(HERE, "claude.py"), "session", pid, chat],
+        p = subprocess.Popen([sys.executable, "-I", os.path.join(HERE, "claude.py"), "session", pid, chat] + ([account] if account else []),
                              stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, env=self.env)
         ev, todo = [], list(sends)
 
@@ -195,6 +195,39 @@ class ClaudeHelper(unittest.TestCase):
         self.assertFalse(os.path.exists(img["path"]))
         self.assertTrue(self.j("drop-image", png)["ok"])
         self.assertTrue(os.path.exists(png))
+
+    def test_chat_moves_to_another_account(self):
+        work, home = self.add_logged_in("Work"), self.add_logged_in("Home")
+        p = self.j("project-save", stdin=json.dumps({"name": "Game", "dir": self.proj_dir, "account": work["id"]}))["project"]
+        ev = self.session(p["id"], "new", {"op": "send", "text": "hello"})
+        chat = ev[0]["chat"]
+        m = self.j("chat-account", p["id"], chat, home["id"])
+        self.assertTrue(m["ok"], m)
+        self.assertEqual(m["meta"]["account"], home["id"])
+        # the same Claude Code session carries on, now in Home's config dir
+        ev = self.session(p["id"], chat, {"op": "send", "text": "again"})
+        self.assertEqual([e for e in ev if e["ev"] == "init"][0]["session"], m["meta"]["session"])
+        self.assertEqual([e for e in ev if e["ev"] == "text"][0]["text"].split()[0], "config=" + home["dir"])
+        self.assertFalse(self.j("chat-account", p["id"], chat, "nobody")["ok"])
+        # a new chat can start on another account than the project's
+        ev = self.session(p["id"], "new", {"op": "send", "text": "hi"}, account=home["id"])
+        self.assertEqual(ev[0]["meta"]["account"], home["id"])
+
+    def test_auto_compact(self):
+        acc = self.add_logged_in()
+        with open(os.path.join(acc["dir"], ".claude.json"), "w") as f:
+            json.dump({"autoCompactEnabled": False, "theme": "dark"}, f)
+        self.env["DISABLE_AUTO_COMPACT"] = "1"
+        p = self.j("project-save", stdin=json.dumps({"name": "Game", "dir": self.proj_dir, "account": acc["id"]}))["project"]
+        ev = self.session(p["id"], "new", {"op": "send", "text": "fill the context until it has to compact"})
+        with open(os.path.join(acc["dir"], ".claude.json")) as f:
+            self.assertEqual(json.load(f), {"autoCompactEnabled": True, "theme": "dark"})
+        self.assertTrue([e for e in ev if e["ev"] == "text"][0]["text"].endswith("autocompact=on"))
+        self.assertIn("Compacting the conversation", [e.get("text") for e in ev if e["ev"] == "status"])
+        done = [e for e in ev if e["ev"] == "compacted"]
+        self.assertEqual(done[0]["pre"], 167000)
+        notes = [i for i in self.j("chat", p["id"], ev[0]["chat"])["items"] if i["k"] == "note"]
+        self.assertIn("167K tokens", notes[0]["text"])
 
     def test_usage(self):
         acc = self.add_logged_in()

@@ -2,7 +2,9 @@
 // "This PC" is the built-in project for troubleshooting (the system summary goes with its first
 // message); every other project is a folder Claude works in, with its own account, model and notes.
 // The sidebar shows the account's plan limits; right-click a project, chat, message or the composer
-// for a menu. A normal xdg toplevel (the compositor draws the frame). Created by ClaudeApp.qml.
+// for a menu. A chat that is still working keeps running when you switch to another one (the chat
+// list marks it); click the account box to carry on the open chat with another account. A normal xdg
+// toplevel (the compositor draws the frame). Created by ClaudeApp.qml.
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -31,11 +33,12 @@ FloatingWindow {
     property bool withSysinfo: true     // the system summary goes with the next message
     property bool closing: false
     readonly property alias panel: ov.item  // the open overlay (AccountsPanel, ProjectPanel, ...)
-    readonly property alias session: chat
+    readonly property ChatSession session: chat
     property alias draft: input.text
 
     // The account this chat runs as: a saved chat keeps the one it started with.
-    readonly property string accountId: chat.chatId !== "" && chat.meta.account ? chat.meta.account : Claude.accountFor(proj)
+    readonly property string accountId: chat.chatId !== "" && chat.meta.account ? chat.meta.account
+                                        : (chat.account !== "" && Claude.account(chat.account) ? chat.account : Claude.accountFor(proj))
     readonly property var accountStatus: Claude.status[accountId] || {}
     readonly property bool ready: Claude.cliPath !== "" && Claude.accounts.length > 0
     readonly property bool canSend: ready && !chat.busy && !chat.loading && (input.text.trim() !== "" || attachments.length > 0)
@@ -64,11 +67,70 @@ FloatingWindow {
         });
     }
 
-    ChatSession { id: chat; onChanged: win.loadChats() }
+    // ---- the chat on screen, and the ones still working in the background ----
+    // Switching chats never stops a turn: a working chat moves to `background` and carries on; it is let
+    // go (its Claude Code stops) once it has nothing left to do. Switching back picks it up live.
+    property ChatSession chat: firstChat
+    property var background: []
+    ChatSession { id: firstChat; onChanged: win.loadChats(); onDone: win.letGo(firstChat) }
+    Component { id: chatC; ChatSession {} }
+    function showChat(pid, cid) {
+        if (cid !== "" && chat.projectId === pid && chat.chatId === cid) return;
+        const prev = chat;
+        let next = cid !== "" ? background.find(b => b.projectId === pid && b.chatId === cid) : null;
+        if (next) background = background.filter(b => b !== next);
+        else {
+            next = chatC.createObject(win);
+            next.changed.connect(win.loadChats);
+            next.done.connect(() => win.letGo(next));
+            next.load(pid, cid);
+        }
+        chat = next;
+        if (prev !== next) {
+            if (prev.working) { background = background.concat([prev]); loadChats(); }   // a new chat shows up in the list
+            else dropChat(prev);
+        }
+    }
+    function dropChat(c) { c.stopProc(); if (c !== firstChat) c.destroy(); }
+    function letGo(c) {
+        if (background.indexOf(c) < 0) return;
+        background = background.filter(b => b !== c);
+        dropChat(c);
+    }
+    // "working" / "needs you" for a chat running in the background, else ""
+    function chatState(pid, cid) {
+        const b = background.find(x => x.projectId === pid && x.chatId === cid);
+        return !b ? "" : b.ask !== null ? "needs you" : "working";
+    }
+    function stopChat(c) { c.stopProc(); c.busy = false; c.ask = null; c.askQueue = []; c.pending = []; }
+
+    // ---- the account the open chat uses ----
+    function accountMenu(from, x, y) {
+        const items = Claude.accounts.map(a => ({
+            id: "acc:" + a.id,
+            label: a.name + ((Claude.status[a.id] || {}).loggedIn ? "" : "  (not signed in)"),
+            hint: a.id === win.accountId ? "✓" : "",
+            disabled: a.id === win.accountId || chat.working }));
+        items.push({ kind: "sep" }, { id: "accounts", label: "Manage accounts…" });
+        popMenu(items, from, x, y, {});
+    }
+    function useAccount(aid) {
+        const c = chat;
+        if (c.chatId === "") { c.account = aid; return; }      // a new chat starts with it
+        if (c.working) return;
+        c.stopProc();                                           // the next message resumes with the new account
+        Claude.run(["chat-account", c.projectId, c.chatId, aid], o => {
+            if (o.ok) {
+                c.meta = o.meta;
+                c.addItem({ k: "note", kind: "account", text: "This chat now uses " + Claude.accountName(aid) + "." });
+                win.loadChats();
+            } else c.addItem({ k: "note", kind: "error", text: o.err || "Couldn't switch accounts." });
+        });
+    }
 
     function selectProject(id) {
         projectId = id;
-        chat.load(id, "");
+        showChat(id, "");
         withSysinfo = id === "system";
         chats = [];
         loadChats();
@@ -78,8 +140,8 @@ FloatingWindow {
         const pid = projectId;
         Claude.run(["chats", pid], o => { if (win.projectId === pid) win.chats = o.chats || []; });
     }
-    function openChat(c) { chat.load(projectId, c.id); withSysinfo = false; input.forceActiveFocus(); }
-    function newChat() { chat.load(projectId, ""); withSysinfo = projectId === "system"; input.forceActiveFocus(); }
+    function openChat(c) { showChat(projectId, c.id); withSysinfo = false; input.forceActiveFocus(); }
+    function newChat() { showChat(projectId, ""); withSysinfo = projectId === "system"; input.forceActiveFocus(); }
     function sendNow() {
         if (!canSend || !proj) return;
         const text = input.text, sys = withSysinfo, imgs = attachments.map(a => a.path);
@@ -185,6 +247,7 @@ FloatingWindow {
     function menuPicked(id) {
         const c = menuCtx || {};
         menuCtx = null;
+        if (id.startsWith("acc:")) { useAccount(id.substring(4)); return; }
         switch (id) {
         case "copysel": copy(c.sel); break;
         case "copymsg": copy(c.item.text); break;
@@ -203,6 +266,7 @@ FloatingWindow {
         }
         case "copyall": copy(conversationText()); break;
         case "newchat": newChat(); break;
+        case "accounts": overlay = "accounts"; break;
         case "undo": input.undo(); break;
         case "redo": input.redo(); break;
         case "cut": input.cut(); break;
@@ -249,7 +313,11 @@ FloatingWindow {
         function onProjectsChanged() { if (!Claude.project(win.projectId)) win.selectProject("system"); }
     }
 
-    function doClose() { closing = true; chat.stopProc(); visible = false; Claude.closeWin(); }
+    function doClose() {
+        closing = true;
+        for (const b of background) b.stopProc();
+        chat.stopProc(); visible = false; Claude.closeWin();
+    }
     onClosed: if (!closing) doClose()
 
     Shortcut { sequences: ["Ctrl+N"]; enabled: win.overlay === ""; onActivated: win.newChat() }
@@ -311,7 +379,7 @@ FloatingWindow {
                                 color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1
                             }
                         }
-                        MouseArea { id: accMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.overlay = "accounts" }
+                        MouseArea { id: accMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: mouse => win.accountMenu(accMa, mouse.x, mouse.y) }
                     }
                     UsageMeters {
                         Layout.fillWidth: true
@@ -362,8 +430,10 @@ FloatingWindow {
                             required property var modelData
                             width: ListView.view.width
                             text: modelData.title || "Chat"
-                            sub: win.when(modelData.updated) + (modelData.account && modelData.account !== win.proj.account
-                                 ? " · " + (Claude.accountName(modelData.account) || "removed account").toUpperCase() : "")
+                            readonly property string running: win.chatState(win.projectId, modelData.id)
+                            sub: (running !== "" ? running.toUpperCase() + " · " : "") + win.when(modelData.updated)
+                                 + (modelData.account && modelData.account !== win.proj.account
+                                    ? " · " + (Claude.accountName(modelData.account) || "removed account").toUpperCase() : "")
                             selected: modelData.id === chat.chatId
                             actions: true
                             onClicked: win.openChat(modelData)
@@ -769,8 +839,12 @@ FloatingWindow {
                                 const c = win.target;
                                 if (win.overlay === "rename")
                                     Claude.run(["chat-rename", win.projectId, c.id, nameEntry.text], () => win.loadChats());
-                                else
-                                    Claude.run(["chat-remove", win.projectId, c.id], () => { if (chat.chatId === c.id) win.newChat(); win.loadChats(); });
+                                else {
+                                    const b = win.background.find(x => x.projectId === win.projectId && x.chatId === c.id);
+                                    if (b) { win.stopChat(b); win.letGo(b); }
+                                    if (chat.chatId === c.id) { win.stopChat(chat); win.newChat(); }
+                                    Claude.run(["chat-remove", win.projectId, c.id], () => win.loadChats());
+                                }
                                 win.overlay = "";
                             }
                         }

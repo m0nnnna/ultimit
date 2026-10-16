@@ -1,6 +1,8 @@
 // ChatSession.qml - the chat on screen in a ClaudeWindow: its history (items), and while Claude works,
 // the running `claude.py session` (Claude Code in stream-json mode) with what it streams back.
 // load(project, chat) shows a chat ("" = a new one); send() starts or resumes Claude Code as needed.
+// The window keeps one per chat it has open or that is still working: switching chats leaves a
+// working one running (working); it says done() once it has nothing left to do, and is then let go.
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -27,9 +29,13 @@ Item {
     property var proc: null
     property var pending: []            // messages typed before Claude Code was ready
     property bool sysinfoUsed: false    // the system summary went with a message in this chat
+    property string account: ""         // a new chat: the account it starts with ("" = the project's)
+    // a turn running, a question waiting, or a message on its way: closing this would lose something
+    readonly property bool working: busy || ask !== null || pending.length > 0
 
     readonly property alias items: itemModel
     signal changed()                    // the chat list should reload (a new chat was saved, a title set)
+    signal done()                       // nothing running or waiting any more
 
     ListModel { id: itemModel }
 
@@ -100,7 +106,8 @@ Item {
     }
 
     function startProc() {
-        const p = Claude.stream(["session", projectId, chatId === "" ? "new" : chatId], o => root.handle(o));
+        const p = Claude.stream(["session", projectId, chatId === "" ? "new" : chatId].concat(chatId === "" && account !== "" ? [account] : []),
+                                o => root.handle(o));
         p.ready = false;
         proc = p;
     }
@@ -168,8 +175,12 @@ Item {
             if (o.denied) parts.push(o.denied + " declined");
             info = parts.join(" · ");
             root.changed();
+            if (!ask && pending.length === 0) root.done();
             break;
         }
+        case "compacted":
+            addItem({ k: "note", kind: "compact", text: o.text });
+            break;
         case "note":
             addItem({ k: "note", kind: "error", text: o.text });
             break;
@@ -178,6 +189,7 @@ Item {
             busy = false; thinking = false; liveText = ""; ask = null; askQueue = [];
             proc = null;
             root.changed();
+            root.done();
             break;
         }
     }

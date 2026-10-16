@@ -34,6 +34,8 @@ started with.
   claude.py chat <project> <chat>        JSON {ok, meta, items[]}
   claude.py chat-rename <project> <chat> <title>   JSON {ok}
   claude.py chat-remove <project> <chat>           JSON {ok}
+  claude.py chat-account <project> <chat> <account> JSON {ok, meta}  carry on the chat with another account
+                                         (its Claude Code session is copied into that account's folder)
   claude.py usage                        JSON {ok, accounts{id: usage}}  each account's plan limits as last
                                          reported (see Usage)
   claude.py sysinfo                      JSON {ok, text}         the system summary (Markdown)
@@ -44,13 +46,20 @@ started with.
                                          when the clipboard holds no image
   claude.py add-image <file>             JSON {ok, path, w, h} the same for a file (dropped on the window)
   claude.py drop-image <path>            JSON {ok} forget an image that wasn't sent
-  claude.py session <project> <chat|new> JSON lines (see Session); stdin: JSON commands
+  claude.py session <project> <chat|new> [account]
+                                         JSON lines (see Session; account: a new chat's, instead of the
+                                         project's); stdin: JSON commands
                                          {op:send,text,sysinfo,images[paths]} {op:permit,rid,allow,always}
                                          {op:interrupt} {op:close}
 
 Images: pasted or dropped images are kept in <data>/images (PNG or JPEG, at most 1568 px on the long
 side when Pillow is there: Claude scales anything bigger down to that anyway) and go to Claude Code as
 image blocks with the message. A chat's items name the images it sent; removing the chat removes them.
+
+Context: Claude Code compacts a chat by itself when its context fills (autoCompactEnabled, on unless
+switched off). Every run drops DISABLE_AUTO_COMPACT / DISABLE_COMPACT from the environment and turns
+autoCompactEnabled back on in the account's .claude.json if it was switched off, so a long chat never
+stops at a full context; the chat shows a note when it happens.
 
 Usage: Claude Code reports the plan's limits with every turn (rate_limit_event); the last report per
 account is kept in <data>/usage/<account>.json: {windows{five_hour|seven_day...: {used 0-1, resets}},
@@ -81,7 +90,7 @@ STATE = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.join(HOME, ".lo
 
 # Nothing Claude Code reads from the environment comes from the desktop: credentials (ANTHROPIC_API_KEY,
 # CLAUDE_CODE_OAUTH_TOKEN, ...), endpoints and options all belong to the account, in its own settings.json "env".
-DROP_PREFIXES = ("ANTHROPIC_", "CLAUDE_", "CLAUDECODE")
+DROP_PREFIXES = ("ANTHROPIC_", "CLAUDE_", "CLAUDECODE", "DISABLE_AUTO_COMPACT", "DISABLE_COMPACT")
 PERM_MODES = ("default", "acceptEdits", "plan", "auto", "bypassPermissions")
 SYSTEM_ID = "system"
 
@@ -210,6 +219,27 @@ def account_env(a):
     if local_bin not in env.get("PATH", "").split(":"):
         env["PATH"] = env.get("PATH", "/usr/bin:/bin") + ":" + local_bin
     return env
+
+
+def account_dir(a):
+    """The account's Claude Code configuration directory."""
+    return (a or {}).get("dir") or os.path.join(HOME, ".claude")
+
+
+def ensure_auto_compact(a):
+    """Auto-compact back on if the account switched it off (Claude Code's /config)."""
+    cfg = os.path.join(a["dir"], ".claude.json") if a and a.get("dir") else os.path.join(HOME, ".claude.json")
+    c = load_json(cfg, None)
+    if isinstance(c, dict) and c.get("autoCompactEnabled") is False:
+        c["autoCompactEnabled"] = True
+        tmp = cfg + ".ultimit-tmp"
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(c, f, indent=2)
+            os.chmod(tmp, os.stat(cfg).st_mode & 0o777)
+            os.replace(tmp, cfg)
+        except OSError:
+            pass
 
 
 def cmd_cli():
@@ -535,6 +565,49 @@ def chat_images(pid, cid):
     return [p for it in read_items(pid, cid) if it.get("k") == "user" for p in it.get("images") or []]
 
 
+def session_files(a, sid):
+    """The account's transcript of Claude Code session sid ([<dir>/projects/<cwd>/<sid>.jsonl] and the
+    folder of the same name beside it, subagents' transcripts), as (path, relative path) pairs."""
+    root = os.path.join(account_dir(a), "projects")
+    found = []
+    try:
+        dirs = os.listdir(root)
+    except OSError:
+        return found
+    for d in dirs:
+        for name in (sid + ".jsonl", sid):
+            p = os.path.join(root, d, name)
+            if os.path.exists(p):
+                found.append((p, os.path.join("projects", d, name)))
+    return found
+
+
+def cmd_chat_account(pid, cid, aid):
+    m = load_json(chat_meta_path(pid, cid), None)
+    if m is None:
+        return {"ok": False, "err": "No such chat"}
+    new, old = account(aid), account(m.get("account", ""))
+    if not new:
+        return {"ok": False, "err": "No such account"}
+    sid = m.get("session") or ""
+    if sid and old and old["id"] != new["id"]:
+        if not re.fullmatch(r"[A-Za-z0-9-]{1,80}", sid):
+            return {"ok": False, "err": "bad session id"}
+        files = session_files(old, sid)
+        if not files and not session_files(new, sid):
+            return {"ok": False, "err": "Claude Code's record of this chat is gone, so it can't move to another account"}
+        for src, rel in files:
+            dst = os.path.join(account_dir(new), rel)
+            os.makedirs(os.path.dirname(dst), mode=0o700, exist_ok=True)
+            if os.path.isdir(src):
+                shutil.copytree(src, dst, dirs_exist_ok=True)
+            else:
+                shutil.copy2(src, dst)
+    m["account"] = new["id"]
+    save_json(chat_meta_path(pid, cid), m)
+    return {"ok": True, "meta": m}
+
+
 def cmd_chat_remove(pid, cid):
     for p in chat_images(pid, cid):
         cmd_drop_image(p)
@@ -836,14 +909,14 @@ class Session:
     Out (one JSON per line): {ev: started|init|delta|thinking|status|text|tool|tool_result|ask|asked|result|
     retry|limit|usage|note|exit}. The window answers asks with {op: permit}."""
 
-    def __init__(self, pid, cid):
+    def __init__(self, pid, cid, aid=""):
         self.proj = project(pid)
         if not self.proj:
             raise ValueError("No such project")
         self.new = cid == "new"
         self.cid = new_id() if self.new else safe_id(cid)
         self.meta = {"id": self.cid, "project": pid, "title": "", "session": "", "created": time.time(),
-                     "updated": time.time(), "account": self.proj.get("account", "")}
+                     "updated": time.time(), "account": (aid if self.new and account(aid) else "") or self.proj.get("account", "")}
         if not self.new:
             m = load_json(chat_meta_path(pid, self.cid), None)
             if m is None:
@@ -895,6 +968,7 @@ class Session:
         if not self.acc:
             self.emit({"ev": "exit", "code": -1, "err": "This chat's account is gone; pick an account for the project"})
             return False
+        ensure_auto_compact(self.acc)
         perm = self.proj.get("perm") or "default"
         args = [b, "-p", "--output-format", "stream-json", "--input-format", "stream-json", "--verbose",
                 "--include-partial-messages", "--permission-prompt-tool", "stdio", "--permission-mode", perm,
@@ -979,6 +1053,15 @@ class Session:
                         self.save_meta()
                 self.emit({"ev": "init", "session": m.get("session_id", ""), "model": m.get("model", ""),
                            "mode": m.get("permissionMode", ""), "version": m.get("claude_code_version", "")})
+            elif st == "status" and m.get("status") == "compacting":
+                self.emit({"ev": "status", "text": "Compacting the conversation"})
+            elif st == "compact_boundary":
+                cm = m.get("compact_metadata") or {}
+                pre = cm.get("pre_tokens") or 0
+                text = ("Context compacted automatically" if cm.get("trigger") == "auto" else "Context compacted") + \
+                       (" (it was %dK tokens); Claude carries on from a summary" % round(pre / 1000) if pre else "")
+                self.record({"k": "note", "text": text, "kind": "compact"})
+                self.emit({"ev": "compacted", "text": text, "trigger": cm.get("trigger", ""), "pre": pre})
             elif st == "task_summary":
                 self.emit({"ev": "status", "text": m.get("detail") or ""})
             elif st == "api_retry":
@@ -1169,6 +1252,8 @@ def main(argv):
             out(cmd_chat(a[0], a[1]))
         elif c == "chat-rename":
             out(cmd_chat_rename(a[0], a[1], a[2]))
+        elif c == "chat-account":
+            out(cmd_chat_account(a[0], a[1], a[2]))
         elif c == "chat-remove":
             out(cmd_chat_remove(a[0], a[1]))
         elif c == "dirs":
@@ -1185,7 +1270,7 @@ def main(argv):
             out({"ok": True, "text": sysinfo()})
         elif c == "session":
             try:
-                s = Session(a[0], a[1])
+                s = Session(a[0], a[1], a[2] if len(a) > 2 else "")
             except ValueError as ex:
                 out({"ev": "exit", "code": -1, "err": str(ex)})
                 return 1

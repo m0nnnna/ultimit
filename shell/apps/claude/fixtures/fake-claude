@@ -52,6 +52,12 @@ if a[:2] == ["auth", "login"]:
 if "-p" not in a:
     sys.exit(2)
 session = a[a.index("--resume") + 1] if "--resume" in a else str(uuid.uuid4())
+# Like the real CLI: the transcript lives in the config dir, and --resume needs it there
+transcript = os.path.join(cfg, "projects", "".join(c if c.isalnum() else "-" for c in os.getcwd()), session + ".jsonl")
+if "--resume" in a and not os.path.exists(transcript):
+    out({"type": "result", "subtype": "error_during_execution", "is_error": True, "session_id": session,
+         "result": "No conversation found with session ID: " + session})
+    sys.exit(1)
 mode = a[a.index("--permission-mode") + 1] if "--permission-mode" in a else "default"
 if not os.path.exists(creds):
     pass  # the real CLI reports this as the result of the first turn
@@ -93,6 +99,9 @@ for line in sys.stdin:
     if isinstance(text, list):          # image blocks first, then the text (when there is any)
         images = sum(1 for b in text if b.get("type") == "image" and b["source"]["type"] == "base64" and b["source"]["data"])
         text = "".join(b.get("text", "") for b in text if b.get("type") == "text")
+    os.makedirs(os.path.dirname(transcript), exist_ok=True)
+    with open(transcript, "a") as f:
+        f.write(json.dumps({"prompt": text}) + "\n")
     out({"type": "system", "subtype": "task_summary", "detail": "Thinking it over", "session_id": session})
     if "write" in text.lower():
         out({"type": "assistant", "parent_tool_use_id": None, "session_id": session, "message": {"role": "assistant", "content": [
@@ -108,6 +117,11 @@ for line in sys.stdin:
                                                        "<system-summary>" in text, os.getcwd())
     if images:
         reply += " images=%d" % images
+    if "compact" in text.lower():       # the context filled: Claude Code compacts by itself
+        out({"type": "system", "subtype": "status", "status": "compacting", "session_id": session})
+        out({"type": "system", "subtype": "compact_boundary", "session_id": session,
+             "compact_metadata": {"trigger": "auto", "pre_tokens": 167000}})
+        reply += " autocompact=%s" % ("off" if os.environ.get("DISABLE_AUTO_COMPACT") else "on")
     for i in range(0, len(reply), 8):
         out({"type": "stream_event", "parent_tool_use_id": None, "session_id": session,
              "event": {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": reply[i:i + 8]}}})
