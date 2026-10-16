@@ -20,6 +20,9 @@ PanelWindow {
 
     // Headlines: real feed items (Feeds.qml) once any feed has loaded, else the built-in ones from Config.
     // { t: time label, h: headline, link: http(s) URL or "" }
+    // Paused while a fullscreen window covers this screen.
+    readonly property bool covered: Config.isCovered(win.screen ? win.screen.name : "")
+
     readonly property var entries: Feeds.hasItems ? Feeds.shown
         : Config.headlines.map(n => ({ t: n.t, h: n.h, link: "" }))
 
@@ -40,10 +43,11 @@ PanelWindow {
                 spacing: 0
                 x: Config.motion ? viewport.width : 16
 
-                // Constant speed (~48 px/s); restarts when the text or viewport changes. Paused while hovered.
+                // Constant speed (~48 px/s); restarts when the text or viewport changes. Paused while hovered
+                // or covered by a fullscreen window.
                 NumberAnimation on x {
                     running: Config.motion && viewport.width > 0
-                    paused: running && hover.containsMouse
+                    paused: running && (hover.containsMouse || win.covered)
                     from: viewport.width
                     to: -msg.implicitWidth
                     duration: Math.max(1000, (viewport.width + msg.implicitWidth) / 48 * 1000)

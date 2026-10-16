@@ -3,9 +3,8 @@
 // Port of genShards / genHex / drawWall from docs/design/mockup.html, including the
 // seeded PRNG, so the picture matches the mockup. Also hosts the Wordmark.
 //
-// Cost control: one Canvas, redrawn at most Config.wallpaperFps while Config.motion
-// is on and the timer is running; with motion off it paints once (and on resize /
-// skin change). Nothing runs when motion is off.
+// Cost control: WallpaperArt draws the moving parts on the GPU and the still parts once.
+// Nothing runs when motion is off, or while a fullscreen window covers this screen.
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
@@ -21,8 +20,10 @@ PanelWindow {
     WlrLayershell.namespace: "ultimit-wallpaper"
 
     // A picture when one is set and it loads; otherwise (or if the file is gone) the shards.
+    // A fullscreen window on this screen hides the wallpaper: stop animating it until it goes.
+    readonly property bool covered: Config.isCovered(win.screen ? win.screen.name : "")
     readonly property bool picture: Config.wallpaper !== "" && pic.status !== Image.Error
-    WallpaperArt { id: cv; anchors.fill: parent; visible: !win.picture; active: win.visible && !win.picture
+    WallpaperArt { id: cv; anchors.fill: parent; visible: !win.picture; active: win.visible && !win.picture && !win.covered
                    animate: Config.motion && Config.wallpaperMotion }
     Image {
         id: pic

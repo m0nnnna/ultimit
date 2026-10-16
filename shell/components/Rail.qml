@@ -181,6 +181,7 @@ PanelWindow {
                             required property var modelData
                             required property int index
                             phase: index * 52   // staggered so the icons don't turn in lockstep
+                            covered: !win.withLauncher && Config.isCovered(win.screen ? win.screen.name : "")
                             appId: modelData.builtin ? modelData.id : ""
                             label: modelData.label
                             iconSrc: modelData.builtin ? "" : (modelData.icon ? Icons.app(modelData.icon) : "")

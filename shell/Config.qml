@@ -65,6 +65,18 @@ Singleton {
         accessoryOpen = false;
         accessoryOpen = true;
     }
+    // Output names a fullscreen (not minimized) window currently covers. Nothing behind it is seen,
+    // so the wallpaper, news ticker and rail on those screens pause their animations.
+    readonly property var coveredScreens: {
+        const out = [];
+        for (const t of ToplevelManager.toplevels.values) {
+            if (!t.fullscreen || t.minimized) continue;
+            for (const s of t.screens)
+                if (s && out.indexOf(s.name) < 0) out.push(s.name);
+        }
+        return out;
+    }
+    function isCovered(name) { return name !== "" && coveredScreens.indexOf(name) >= 0; }
     // Bumped to ask Boot.qml to (re)play the boot overlay.
     property int bootRequest: 0
     function playBoot() { bootRequest++; }

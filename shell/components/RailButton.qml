@@ -23,11 +23,12 @@ Item {
     property real spinAngle: phase
     readonly property bool spinning: !framed && Config.motion && Config.railSpin !== "off"
         && (Config.railSpin === "always" || mouse.containsMouse || spinAngle % 360 !== 0)
+    property bool covered: false   // a fullscreen window hides the rail: hold the spin
     property real spinSpeed: mouse.containsMouse ? 200 : 36   // degrees per second
     Behavior on spinSpeed { NumberAnimation { duration: Config.dur(400); easing.type: Easing.OutCubic } }
     Timer {   // 30 steps a second: smooth enough, and the rail doesn't repaint at full refresh
         interval: 33; repeat: true
-        running: root.spinning && root.visible
+        running: root.spinning && root.visible && !root.covered
         onTriggered: {
             let a = root.spinAngle + root.spinSpeed * interval / 1000;
             // In hover-only mode, settle facing front once the pointer leaves.
