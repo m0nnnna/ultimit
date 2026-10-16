@@ -173,6 +173,33 @@ static void new_constraint(struct wl_listener *listener, void *data) {
 
 /* ---- cursor -------------------------------------------------------------- */
 
+/* The titlebar button (0 minimize, 1 maximize, 2 close) of view under the cursor, or -1. */
+static int button_at(struct ul_server *server, struct ul_view *view) {
+	if (!view) return -1;
+	switch (decoration_hit(view, server->cursor->x, server->cursor->y)) {
+	case UL_HIT_MINIMIZE: return 0;
+	case UL_HIT_MAXIMIZE: return 1;
+	case UL_HIT_CLOSE: return 2;
+	default: return -1;
+	}
+}
+
+/* Recheck which titlebar button is under the cursor after windows moved,
+ * resized or (un)minimized under a still cursor; otherwise the button that
+ * was clicked stays lit until the pointer moves. Only the chrome redraws:
+ * clients get no motion. */
+void input_update_hover(struct ul_server *server) {
+	if (server->cursor_mode != UL_CURSOR_PASSTHROUGH) {
+		decoration_set_hover(server, NULL, -1);
+		return;
+	}
+	double sx, sy;
+	struct ul_view *view;
+	struct wlr_surface *surface = surface_at(server, server->cursor->x, server->cursor->y,
+		&sx, &sy, &view, NULL);
+	decoration_set_hover(server, view, surface ? -1 : button_at(server, view));
+}
+
 void input_update_pointer_focus(struct ul_server *server, uint32_t time_msec) {
 	if (time_msec == 0) {
 		struct timespec now;
@@ -194,16 +221,7 @@ void input_update_pointer_focus(struct ul_server *server, uint32_t time_msec) {
 	struct ul_view *view;
 	struct wlr_surface *surface = surface_at(server, server->cursor->x, server->cursor->y,
 		&sx, &sy, &view, NULL);
-	int button = -1;
-	if (!surface && view) {
-		switch (decoration_hit(view, server->cursor->x, server->cursor->y)) {
-		case UL_HIT_MINIMIZE: button = 0; break;
-		case UL_HIT_MAXIMIZE: button = 1; break;
-		case UL_HIT_CLOSE: button = 2; break;
-		default: break;
-		}
-	}
-	decoration_set_hover(server, view, button);
+	decoration_set_hover(server, view, surface ? -1 : button_at(server, view));
 	if (surface) {
 		wlr_seat_pointer_notify_enter(server->seat, surface, sx, sy);
 		wlr_seat_pointer_notify_motion(server->seat, time_msec, sx, sy);

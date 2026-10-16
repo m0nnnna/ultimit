@@ -17,7 +17,9 @@
 #define UL_BRACKET_W       2
 #define UL_SHADOW_SIGMA    24.0f
 #define UL_RESIZE_MARGIN   (UL_BORDER + 5) /* past the content edge */
-#define UL_BUTTON_MIN_W    30 /* titlebar button hit cell */
+#define UL_BUTTON_W        30 /* titlebar button: hit cell (full titlebar height) */
+#define UL_BUTTON_H        22 /* its drawn box */
+#define UL_BUTTON_GLYPH    10 /* its icon */
 
 /* Mine palette. */
 #define UL_COLOR_BG            UL_RGBA(5, 6, 7, 1.0f)
@@ -35,6 +37,5 @@
 /* Fonts (installed from Google Fonts; fontconfig falls back if missing). */
 #define UL_FONT_TITLE   "Michroma 11.5"
 #define UL_FONT_SUB     "Share Tech Mono 8.5"
-#define UL_FONT_BUTTON  "Share Tech Mono 10.5"
 
 #endif

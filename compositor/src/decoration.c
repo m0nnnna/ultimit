@@ -220,33 +220,62 @@ struct wlr_buffer *decoration_titlebar_buffer(struct ul_view *view) {
 	cairo_paint(cr);
 	cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
 
-	/* Buttons, laid out from the right edge in equal cells. */
-	PangoLayout *button = pango_cairo_create_layout(cr);
-	PangoFontDescription *button_font = pango_font_description_from_string(UL_FONT_BUTTON);
-	pango_layout_set_font_description(button, button_font);
-	static const char *labels[3] = { "[ _ ]", "[ □ ]", "[ × ]" };
-	int cell = UL_BUTTON_MIN_W;
-	for (int i = 0; i < 3; i++) {
-		pango_layout_set_text(button, labels[i], -1);
-		int w = text_width(button) + 12;
-		cell = w > cell ? w : cell;
-	}
-	int x = width - 6;
+	/* Buttons, laid out from the right edge: minimize, maximize (restore when
+	 * maximized), close as small drawn icons. Each hit cell is the titlebar's
+	 * full height; the hovered one gets a box with accent corner brackets
+	 * (close: red), as in the shell. */
+	int x = width - 8;
+	double by = (height - UL_BUTTON_H) / 2.0;
+	double g = UL_BUTTON_GLYPH;
+	cairo_set_line_width(cr, 1.5);
+	cairo_set_line_cap(cr, CAIRO_LINE_CAP_SQUARE);
 	for (int i = 2; i >= 0; i--) {
-		x -= cell;
+		x -= UL_BUTTON_W;
 		deco->button_x[i] = x;
-		deco->button_w[i] = cell;
+		deco->button_w[i] = UL_BUTTON_W;
 		bool hot = deco->hover == i;
+		const float *tint = i == 2 ? k->bad : k->fg;
+		double bx = x + 2, bw = UL_BUTTON_W - 4;
 		if (hot) {
-			const float *tint = i == 2 ? k->bad : k->fg;
-			cairo_set_source_rgba(cr, tint[0], tint[1], tint[2], i == 2 ? 0.20 : 0.08);
-			cairo_rectangle(cr, x, 5, cell, height - 10);
+			cairo_set_source_rgba(cr, tint[0], tint[1], tint[2], i == 2 ? 0.30 : 0.16);
+			cairo_rectangle(cr, bx, by, bw, UL_BUTTON_H);
+			cairo_fill(cr);
+			/* Corner brackets: top-left and bottom-right, like the window frame's. */
+			set_source(cr, i == 2 ? k->bad : k->accent);
+			const double l = 5, t = 1.5;
+			cairo_rectangle(cr, bx, by, l, t);
+			cairo_rectangle(cr, bx, by, t, l);
+			cairo_rectangle(cr, bx + bw - l, by + UL_BUTTON_H - t, l, t);
+			cairo_rectangle(cr, bx + bw - t, by + UL_BUTTON_H - l, t, l);
 			cairo_fill(cr);
 		}
-		pango_layout_set_text(button, labels[i], -1);
-		set_source(cr, hot ? (i == 2 ? k->bad : k->fg) : k->dim);
-		draw_text(cr, button, x + (cell - text_width(button)) / 2.0, height);
+		/* Icon, centered on whole pixels so 1.5px strokes stay crisp. */
+		double cx = (int)(x + UL_BUTTON_W / 2.0), cy = (int)(height / 2.0);
+		double x0 = cx - g / 2 + 0.25, y0 = cy - g / 2 + 0.25;
+		const float *ic = hot ? tint : (focused ? k->fg : k->dim);
+		cairo_set_source_rgba(cr, ic[0], ic[1], ic[2], hot ? 1.0 : 0.75);
+		if (i == 0) {
+			cairo_move_to(cr, x0, y0 + g - 1);
+			cairo_line_to(cr, x0 + g, y0 + g - 1);
+		} else if (i == 1 && view->maximized) {
+			/* restore: two overlapping squares */
+			cairo_rectangle(cr, x0, y0 + 3, g - 3, g - 3);
+			cairo_move_to(cr, x0 + 3, y0 + 3);
+			cairo_line_to(cr, x0 + 3, y0);
+			cairo_line_to(cr, x0 + g, y0);
+			cairo_line_to(cr, x0 + g, y0 + g - 3);
+			cairo_line_to(cr, x0 + g - 3, y0 + g - 3);
+		} else if (i == 1) {
+			cairo_rectangle(cr, x0, y0, g, g);
+		} else {
+			cairo_move_to(cr, x0, y0);
+			cairo_line_to(cr, x0 + g, y0 + g);
+			cairo_move_to(cr, x0 + g, y0);
+			cairo_line_to(cr, x0, y0 + g);
+		}
+		cairo_stroke(cr);
 	}
+	x -= 2;
 	int buttons_left = x;
 
 	/* Accent square, as in the shell's window headers and labels. */
@@ -312,10 +341,8 @@ struct wlr_buffer *decoration_titlebar_buffer(struct ul_view *view) {
 
 	pango_font_description_free(title_font);
 	pango_font_description_free(sub_font);
-	pango_font_description_free(button_font);
 	g_object_unref(title);
 	g_object_unref(sub);
-	g_object_unref(button);
 	cairo_destroy(cr);
 	cairo_surface_flush(surface);
 
@@ -522,11 +549,13 @@ void decoration_update(struct ul_view *view) {
 		const char *title = view_title(view);
 		if (deco->drawn_width != fw || deco->drawn_focused != focused ||
 				deco->drawn_hover != deco->hover ||
+				deco->drawn_maximized != view->maximized ||
 				!deco->drawn_title || strcmp(deco->drawn_title, title) != 0) {
 			render_titlebar(view);
 			deco->drawn_width = fw;
 			deco->drawn_focused = focused;
 			deco->drawn_hover = deco->hover;
+			deco->drawn_maximized = view->maximized;
 			free(deco->drawn_title);
 			deco->drawn_title = strdup(title);
 		}

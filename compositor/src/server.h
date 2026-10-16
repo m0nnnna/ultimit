@@ -313,6 +313,7 @@ struct ul_decoration {
 	int drawn_width;
 	bool drawn_focused;
 	int drawn_hover;
+	bool drawn_maximized;
 	char *drawn_title;
 	int hover;       /* titlebar button under the cursor: 0..2, or -1 */
 };
@@ -463,6 +464,7 @@ struct wlr_scene_tree *layer_popup_parent(struct wlr_layer_surface_v1 *layer_sur
 
 /* input.c */
 void input_init(struct ul_server *server);
+void input_update_hover(struct ul_server *server);
 void input_update_pointer_focus(struct ul_server *server, uint32_t time_msec);
 void input_reapply_keyboards(struct ul_server *server);
 void input_focus_layer(struct ul_server *server, struct wlr_layer_surface_v1 *layer_surface);

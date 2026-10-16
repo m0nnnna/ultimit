@@ -12,8 +12,9 @@ tb_buttons() {
 scenario_titlebar_buttons() {
 	open_ssd_app || skip "neither foot nor xterm installed"
 	local id=$WID
-	ctl move "$id" 300 150 >/dev/null
-	assert_soon "box(W($id)['content'])[:2]==(300, 150)" "window moved to 300,150"
+	# Below the toasts (top right, ~920-1260 x 104-182 on the 1280x720 devbox): they cover a titlebar button there.
+	ctl move "$id" 150 250 >/dev/null
+	assert_soon "box(W($id)['content'])[:2]==(150, 250)" "window moved to 150,250"
 	assert_json "W($id)['ssd']" "$SSD_APP has a server-side titlebar"
 	local geo0; geo0=$(sj "box(W($id)['content'])")
 	tb_buttons "$id"

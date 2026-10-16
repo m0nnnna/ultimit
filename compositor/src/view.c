@@ -201,6 +201,7 @@ void view_update_size(struct ul_view *view, int width, int height) {
 	view->geo_y = geo.y;
 	view_set_position(view, view->x, view->y);
 	decoration_update(view);
+	input_update_hover(view->server);
 }
 
 static struct wlr_box output_box(struct ul_view *view, bool usable) {
@@ -360,6 +361,8 @@ void view_set_maximized(struct ul_view *view, bool maximized) {
 	if (view->foreign) {
 		wlr_foreign_toplevel_handle_v1_set_maximized(view->foreign, maximized);
 	}
+	decoration_update(view); /* maximize <-> restore icon */
+	input_update_hover(view->server);
 done:
 	if (view->type == UL_VIEW_XDG && view->xdg_toplevel->base->initialized) {
 		wlr_xdg_surface_schedule_configure(view->xdg_toplevel->base);
@@ -450,6 +453,7 @@ void view_set_minimized(struct ul_view *view, bool minimized) {
 	if (view->type == UL_VIEW_XWAYLAND) {
 		wlr_xwayland_surface_set_minimized(view->xwayland_surface, minimized);
 	}
+	input_update_hover(view->server);
 	if (view->foreign) {
 		wlr_foreign_toplevel_handle_v1_set_minimized(view->foreign, minimized);
 	}
