@@ -39,9 +39,18 @@ started with.
   claude.py sysinfo                      JSON {ok, text}         the system summary (Markdown)
   claude.py dirs <folder>                JSON {ok, dir, parent, dirs[{n, h}]}  the folders in a folder
                                          (the project folder picker; ~ works)
+  claude.py paste-image                  JSON {ok, path, w, h} the image on the clipboard (or an image
+                                         file copied in DATA), saved for sending; {ok:false, none:true}
+                                         when the clipboard holds no image
+  claude.py add-image <file>             JSON {ok, path, w, h} the same for a file (dropped on the window)
+  claude.py drop-image <path>            JSON {ok} forget an image that wasn't sent
   claude.py session <project> <chat|new> JSON lines (see Session); stdin: JSON commands
-                                         {op:send,text,sysinfo} {op:permit,rid,allow,always}
+                                         {op:send,text,sysinfo,images[paths]} {op:permit,rid,allow,always}
                                          {op:interrupt} {op:close}
+
+Images: pasted or dropped images are kept in <data>/images (PNG or JPEG, at most 1568 px on the long
+side when Pillow is there: Claude scales anything bigger down to that anyway) and go to Claude Code as
+image blocks with the message. A chat's items name the images it sent; removing the chat removes them.
 
 Usage: Claude Code reports the plan's limits with every turn (rate_limit_event); the last report per
 account is kept in <data>/usage/<account>.json: {windows{five_hour|seven_day...: {used 0-1, resets}},
@@ -51,6 +60,7 @@ turns} and context{used, window} (the last turn's prompt + reply, of the model's
 Environment: ULTIMIT_CLAUDE_HOME (data dir, default $XDG_DATA_HOME/ultimit/claude),
 ULTIMIT_CLAUDE_BIN (the claude binary), ULTIMIT_CLAUDE_FAKE_SYSINFO (text, for tests).
 """
+import base64
 import json
 import os
 import re
@@ -62,6 +72,7 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.parse
 
 HOME = os.path.expanduser("~")
 DATA = os.environ.get("ULTIMIT_CLAUDE_HOME") or os.path.join(
@@ -447,6 +458,10 @@ def cmd_project_remove(pid):
     if pid == SYSTEM_ID:
         return {"ok": False, "err": "This PC is built in"}
     save_projects([p for p in projects() if p["id"] != pid])
+    for f in os.listdir(path("chats", safe_id(pid))) if os.path.isdir(path("chats", safe_id(pid))) else []:
+        if f.endswith(".jsonl"):
+            for p in chat_images(pid, f[:-6]):
+                cmd_drop_image(p)
     shutil.rmtree(path("chats", safe_id(pid)), ignore_errors=True)
     return {"ok": True}
 
@@ -516,13 +531,159 @@ def cmd_chat_rename(pid, cid, title):
     return {"ok": True}
 
 
+def chat_images(pid, cid):
+    return [p for it in read_items(pid, cid) if it.get("k") == "user" for p in it.get("images") or []]
+
+
 def cmd_chat_remove(pid, cid):
+    for p in chat_images(pid, cid):
+        cmd_drop_image(p)
     for p in (chat_meta_path(pid, cid), chat_items_path(pid, cid)):
         try:
             os.unlink(p)
         except OSError:
             pass
     return {"ok": True}
+
+
+# ---------------------------------------------------------------------------------------- images
+IMAGE_TYPES = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif"}
+IMAGE_EXT = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "webp": "image/webp", "gif": "image/gif"}
+IMAGE_MAX_BYTES = 3750000          # the API takes 5 MB of base64 per image
+IMAGE_MAX_SIDE = 1568
+
+
+def image_dir():
+    return path("images")
+
+
+def image_size(data):
+    """(w, h) of PNG, GIF, JPEG or WebP bytes, or (0, 0)."""
+    if data[:8] == b"\x89PNG\r\n\x1a\n" and len(data) >= 24:
+        return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
+    if data[:6] in (b"GIF87a", b"GIF89a"):
+        return int.from_bytes(data[6:8], "little"), int.from_bytes(data[8:10], "little")
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        if data[12:16] == b"VP8X":
+            return int.from_bytes(data[24:27], "little") + 1, int.from_bytes(data[27:30], "little") + 1
+        if data[12:16] == b"VP8L":
+            b = int.from_bytes(data[21:25], "little")
+            return (b & 0x3FFF) + 1, ((b >> 14) & 0x3FFF) + 1
+        if data[12:16] == b"VP8 ":
+            return int.from_bytes(data[26:28], "little") & 0x3FFF, int.from_bytes(data[28:30], "little") & 0x3FFF
+    if data[:2] == b"\xff\xd8":
+        i = 2
+        while i + 9 < len(data):
+            if data[i] != 0xFF:
+                i += 1
+                continue
+            m = data[i + 1]
+            if m in (0xC0, 0xC1, 0xC2):
+                return int.from_bytes(data[i + 7:i + 9], "big"), int.from_bytes(data[i + 5:i + 7], "big")
+            i += 2 + int.from_bytes(data[i + 2:i + 4], "big")
+    return 0, 0
+
+
+def shrink_image(data, ext):
+    """Scale down to IMAGE_MAX_SIDE and keep it under IMAGE_MAX_BYTES, with Pillow if it's installed.
+    -> (data, ext)"""
+    w, h = image_size(data)
+    if max(w, h) <= IMAGE_MAX_SIDE and len(data) <= IMAGE_MAX_BYTES:
+        return data, ext
+    try:
+        import io
+        from PIL import Image
+    except ImportError:
+        return data, ext
+    try:
+        im = Image.open(io.BytesIO(data))
+        im.load()
+        im.thumbnail((IMAGE_MAX_SIDE, IMAGE_MAX_SIDE))
+        buf = io.BytesIO()
+        im.save(buf, "PNG", optimize=True)         # screenshots: text stays sharp
+        ext = "png"
+        if buf.tell() > IMAGE_MAX_BYTES:
+            buf = io.BytesIO()
+            im.convert("RGB").save(buf, "JPEG", quality=88)
+            ext = "jpg"
+        return buf.getvalue(), ext
+    except Exception:          # a file Pillow can't read: send it as it is
+        return data, ext
+
+
+def save_image(data, ext):
+    data, ext = shrink_image(data, ext)
+    if len(data) > IMAGE_MAX_BYTES:
+        return {"ok": False, "err": "That image is too big to send (%.1f MB; the limit is 3.7 MB)" % (len(data) / 1e6)}
+    w, h = image_size(data)
+    os.makedirs(image_dir(), mode=0o700, exist_ok=True)
+    p = os.path.join(image_dir(), new_id() + "." + ext)
+    with open(p, "wb") as f:
+        f.write(data)
+    return {"ok": True, "path": p, "w": w, "h": h}
+
+
+def cmd_add_image(f):
+    ext = os.path.splitext(f)[1].lower().lstrip(".")
+    if ext not in IMAGE_EXT:
+        return {"ok": False, "err": "Only PNG, JPEG, WebP and GIF images can be sent"}
+    try:
+        with open(os.path.expanduser(f), "rb") as fh:
+            data = fh.read(50 * 1000 * 1000)
+    except OSError as ex:
+        return {"ok": False, "err": ex.strerror or str(ex)}
+    return save_image(data, "jpg" if ext == "jpeg" else ext)
+
+
+def cmd_paste_image():
+    try:
+        types = subprocess.run(["wl-paste", "--list-types"], capture_output=True, text=True, timeout=5,
+                               stdin=subprocess.DEVNULL).stdout.split()
+    except (OSError, subprocess.TimeoutExpired):
+        return {"ok": False, "none": True}
+    for t, ext in IMAGE_TYPES.items():
+        if t in types:
+            try:
+                data = subprocess.run(["wl-paste", "--no-newline", "--type", t], capture_output=True, timeout=10,
+                                      stdin=subprocess.DEVNULL).stdout
+            except (OSError, subprocess.TimeoutExpired):
+                return {"ok": False, "err": "Could not read the clipboard"}
+            if data:
+                return save_image(data, ext)
+    if "text/uri-list" in types:         # an image file copied in DATA
+        try:
+            uris = subprocess.run(["wl-paste", "--no-newline", "--type", "text/uri-list"], capture_output=True,
+                                  text=True, timeout=5, stdin=subprocess.DEVNULL).stdout.split()
+        except (OSError, subprocess.TimeoutExpired):
+            uris = []
+        files = [urllib.parse.unquote(u[7:]) for u in uris if u.startswith("file://")]
+        if len(files) == 1 and os.path.splitext(files[0])[1].lower().lstrip(".") in IMAGE_EXT:
+            return cmd_add_image(files[0])
+    return {"ok": False, "none": True}
+
+
+def own_image(p):
+    """p if it is one of ours (in <data>/images), else None."""
+    d = os.path.realpath(image_dir())
+    r = os.path.realpath(p or "")
+    return r if os.path.dirname(r) == d and os.path.isfile(r) else None
+
+
+def cmd_drop_image(p):
+    r = own_image(p)
+    if r:
+        os.unlink(r)
+    return {"ok": True}
+
+
+def image_block(p):
+    r = own_image(p)
+    if not r:
+        return None
+    with open(r, "rb") as f:
+        data = f.read()
+    return {"type": "image", "source": {"type": "base64", "media_type": IMAGE_EXT.get(r.rsplit(".", 1)[-1], "image/png"),
+                                        "data": base64.b64encode(data).decode()}}
 
 
 # ---------------------------------------------------------------------------------------- system info
@@ -762,18 +923,32 @@ class Session:
             self.stderr = (self.stderr + [line.decode("utf-8", "replace").rstrip()])[-20:]
 
     # -- from the window
-    def send(self, text, with_sysinfo):
+    def send(self, text, with_sysinfo, images=()):
         body = text
         if with_sysinfo:
             body = "<system-summary>\n%s\n</system-summary>\n\n%s" % (sysinfo(), text)
+        blocks, sent = [], []
+        for p in images:
+            b = image_block(p)
+            if b:
+                blocks.append(b)
+                sent.append(own_image(p))
+        if not text.strip() and not blocks:
+            return
         if not self.meta.get("title"):
             t = " ".join(text.split())
-            self.meta["title"] = t[:60] + ("…" if len(t) > 60 else "") or "Chat"
+            self.meta["title"] = t[:60] + ("…" if len(t) > 60 else "") or ("Image" if blocks else "Chat")
             self.save_meta()
-        self.record({"k": "user", "text": text, "sysinfo": bool(with_sysinfo), "t": time.time()})
+        item = {"k": "user", "text": text, "sysinfo": bool(with_sysinfo), "t": time.time()}
+        if sent:
+            item["images"] = sent
+        self.record(item)
         self.busy = True
+        content = body
+        if blocks:
+            content = blocks + ([{"type": "text", "text": body}] if body.strip() else [])
         self.write({"type": "user", "session_id": "", "parent_tool_use_id": None,
-                    "message": {"role": "user", "content": body}})
+                    "message": {"role": "user", "content": content}})
 
     def permit(self, rid, allow, always):
         req = self.asks.pop(rid, None)
@@ -934,8 +1109,8 @@ class Session:
             except ValueError:
                 continue
             op = c.get("op")
-            if op == "send" and (c.get("text") or "").strip():
-                self.send(c["text"], bool(c.get("sysinfo")))
+            if op == "send" and ((c.get("text") or "").strip() or c.get("images")):
+                self.send(c.get("text") or "", bool(c.get("sysinfo")), [p for p in c.get("images") or [] if isinstance(p, str)])
             elif op == "permit":
                 self.permit(c.get("rid", ""), bool(c.get("allow")), bool(c.get("always")))
             elif op == "interrupt":
@@ -998,6 +1173,12 @@ def main(argv):
             out(cmd_chat_remove(a[0], a[1]))
         elif c == "dirs":
             out(cmd_dirs(a[0] if a else ""))
+        elif c == "paste-image":
+            out(cmd_paste_image())
+        elif c == "add-image":
+            out(cmd_add_image(a[0]))
+        elif c == "drop-image":
+            out(cmd_drop_image(a[0]))
         elif c == "usage":
             out(cmd_usage())
         elif c == "sysinfo":

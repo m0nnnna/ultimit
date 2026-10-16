@@ -169,6 +169,33 @@ class ClaudeHelper(unittest.TestCase):
         self.assertTrue(self.j("chat-remove", p["id"], chat)["ok"])
         self.assertEqual(self.j("chats", p["id"])["chats"], [])
 
+    def test_chat_with_images(self):
+        acc = self.add_logged_in()
+        p = self.j("project-save", stdin=json.dumps({"name": "Game", "dir": self.proj_dir, "account": acc["id"]}))["project"]
+        png = os.path.join(self.tmp.name, "shot.png")
+        with open(png, "wb") as f:          # a 1x1 PNG
+            f.write(bytes.fromhex("89504e470d0a1a0a0000000d4948445200000001000000010806000000"
+                                  "1f15c4890000000d49444154789c6360000002000154a24f5d0000000049454e44ae426082"))
+        img = self.j("add-image", png)
+        self.assertTrue(img["ok"], img)
+        self.assertEqual((img["w"], img["h"]), (1, 1))
+        self.assertFalse(self.j("add-image", os.path.join(self.tmp.name, "notes.txt"))["ok"])
+        # an image alone, then one with text; paths that aren't ours are left out
+        ev = self.session(p["id"], "new", {"op": "send", "text": "", "images": [img["path"]]},
+                          {"op": "send", "text": "what is this", "images": [img["path"], "/etc/passwd"]})
+        texts = [e["text"] for e in ev if e["ev"] == "text"]
+        self.assertTrue(texts[0].endswith("images=1"), texts)
+        self.assertTrue(texts[1].endswith("images=1"), texts)
+        chat = ev[0]["chat"]
+        self.assertEqual(self.j("chats", p["id"])["chats"][0]["title"], "Image")
+        users = [i for i in self.j("chat", p["id"], chat)["items"] if i["k"] == "user"]
+        self.assertEqual([u.get("images") for u in users], [[os.path.realpath(img["path"])]] * 2)
+        # removing the chat removes its images; files that aren't ours are never touched
+        self.assertTrue(self.j("chat-remove", p["id"], chat)["ok"])
+        self.assertFalse(os.path.exists(img["path"]))
+        self.assertTrue(self.j("drop-image", png)["ok"])
+        self.assertTrue(os.path.exists(png))
+
     def test_usage(self):
         acc = self.add_logged_in()
         p = self.j("project-save", stdin=json.dumps({"name": "Game", "dir": self.proj_dir, "account": acc["id"]}))["project"]

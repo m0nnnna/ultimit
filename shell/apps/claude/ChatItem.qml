@@ -1,7 +1,9 @@
 // ChatItem.qml - one entry in a CLAUDE chat: your message, Claude's reply (Markdown, selectable),
-// a tool Claude ran (click for its output), or a note (permission answers, errors). Right-click asks
+// a tool Claude ran (click for its output), or a note (permission answers, errors). Images you sent
+// show as thumbnails in your message; click one to open it in IMAGE. Right-click asks
 // for a menu: menu(x, y, link) in the item, with the link under the pointer if there is one.
 import QtQuick
+import Quickshell
 import "../.."
 
 Item {
@@ -14,6 +16,8 @@ Item {
     property string out: ""             // tool output
     property string kind: ""            // note: perm | error
     property bool sysinfo: false        // user: the system summary went with it
+    property string images: ""          // user: the images that went with it, one path per line
+    readonly property var imageList: images === "" ? [] : images.split("\n")
     property bool streaming: false
     property bool open: false
     signal menu(real x, real y, string link)
@@ -37,14 +41,42 @@ Item {
         id: userBox
         visible: root.k === "user"
         anchors.right: parent.right
-        width: userT.width + 28
-        height: userT.implicitHeight + 20 + (root.sysinfo ? 16 : 0)
+        width: Math.max(userT.visible ? userT.width : 0, thumbs.visible ? thumbs.width : 0) + 28
+        height: (thumbs.visible ? thumbs.height + (userT.visible ? 8 : 0) : 0) + (userT.visible ? userT.implicitHeight : 0)
+                + 20 + (root.sysinfo ? 16 : 0)
         color: Theme.panel2
         border.width: 1; border.color: Theme.line
         Rectangle { anchors.right: parent.right; width: 2; height: parent.height; color: Theme.accent }
+        Flow {
+            id: thumbs
+            visible: root.imageList.length > 0
+            x: 12; y: 10
+            width: Math.min(root.width * 0.82 - 28, root.imageList.length * 166 - 6)
+            spacing: 6
+            Repeater {
+                model: root.imageList
+                Rectangle {
+                    required property string modelData
+                    width: 160; height: 110
+                    color: Theme.bg1; border.width: 1; border.color: Theme.line
+                    Image {
+                        anchors.fill: parent; anchors.margins: 1
+                        source: "file://" + parent.modelData
+                        fillMode: Image.PreserveAspectFit
+                        sourceSize.width: 320; asynchronous: true
+                    }
+                    MouseArea {
+                        anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                        onClicked: Quickshell.execDetached([Quickshell.shellPath("bin/ultimit-image"), parent.modelData])
+                    }
+                }
+            }
+        }
         TextEdit {
             id: userT
-            x: 12; y: 10; width: Math.min(root.width * 0.82 - 28, measure.implicitWidth + 2)
+            visible: root.text !== ""
+            x: 12; y: thumbs.visible ? thumbs.y + thumbs.height + 8 : 10
+            width: Math.min(root.width * 0.82 - 28, measure.implicitWidth + 2)
             readOnly: true; selectByMouse: true; wrapMode: TextEdit.Wrap
             text: root.k === "user" ? root.text : ""
             color: Theme.fg; selectionColor: Theme.accent; selectedTextColor: Theme.onAccent

@@ -36,7 +36,7 @@ Item {
     function addItem(o) {
         itemModel.append({ k: o.k || "note", text: o.text || "", name: o.name || "", summary: o.summary || "",
                        status: o.status || "", out: o.out || "", tid: o.id || "", kind: o.kind || "",
-                       sysinfo: !!o.sysinfo });
+                       sysinfo: !!o.sysinfo, images: (o.images || []).join("\n") });
     }
     function toolResult(id, error, out) {
         for (let i = itemModel.count - 1; i >= 0; i--) {
@@ -73,13 +73,14 @@ Item {
     }
 
     // ---- talking to Claude Code ----
-    function send(text, withSysinfo) {
+    function send(text, withSysinfo, images) {
         text = text.trim();
-        if (text === "") return;
-        addItem({ k: "user", text: text, sysinfo: withSysinfo });
+        images = images || [];
+        if (text === "" && images.length === 0) return;
+        addItem({ k: "user", text: text, sysinfo: withSysinfo, images: images });
         if (withSysinfo) sysinfoUsed = true;
         busy = true; info = ""; statusText = ""; liveText = "";
-        const cmd = JSON.stringify({ op: "send", text: text, sysinfo: !!withSysinfo });
+        const cmd = JSON.stringify({ op: "send", text: text, sysinfo: !!withSysinfo, images: images });
         if (proc && proc.ready) proc.write(cmd + "\n");
         else { pending = pending.concat([cmd]); if (!proc) startProc(); }
     }

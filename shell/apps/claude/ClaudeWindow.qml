@@ -38,7 +38,31 @@ FloatingWindow {
     readonly property string accountId: chat.chatId !== "" && chat.meta.account ? chat.meta.account : Claude.accountFor(proj)
     readonly property var accountStatus: Claude.status[accountId] || {}
     readonly property bool ready: Claude.cliPath !== "" && Claude.accounts.length > 0
-    readonly property bool canSend: ready && !chat.busy && !chat.loading && input.text.trim() !== ""
+    readonly property bool canSend: ready && !chat.busy && !chat.loading && (input.text.trim() !== "" || attachments.length > 0)
+
+    // ---- images to send with the next message: [{path, w, h}] (claude.py keeps the files) ----
+    property var attachments: []
+    property string attachNote: ""          // why the last paste or drop didn't attach
+    function addAttachment(o) {
+        if (o.ok) { attachments = attachments.concat([{ path: o.path, w: o.w, h: o.h }]); attachNote = ""; }
+        else if (o.err) attachNote = o.err;
+    }
+    function removeAttachment(i) {
+        Claude.run(["drop-image", attachments[i].path], () => {});
+        attachments = attachments.filter((_, j) => j !== i);
+    }
+    function clearAttachments() {
+        for (const a of attachments) Claude.run(["drop-image", a.path], () => {});
+        attachments = [];
+        attachNote = "";
+    }
+    // Ctrl+V: an image on the clipboard (or an image file copied in DATA) attaches, anything else pastes
+    function pasteAny() {
+        Claude.run(["paste-image"], o => {
+            if (o.ok || !o.none) addAttachment(o);
+            else input.paste();
+        });
+    }
 
     ChatSession { id: chat; onChanged: win.loadChats() }
 
@@ -58,8 +82,8 @@ FloatingWindow {
     function newChat() { chat.load(projectId, ""); withSysinfo = projectId === "system"; input.forceActiveFocus(); }
     function sendNow() {
         if (!canSend || !proj) return;
-        const text = input.text, sys = withSysinfo;
-        const go = () => { chat.send(text, sys); input.text = ""; win.withSysinfo = false; };
+        const text = input.text, sys = withSysinfo, imgs = attachments.map(a => a.path);
+        const go = () => { chat.send(text, sys, imgs); input.text = ""; win.attachments = []; win.attachNote = ""; win.withSysinfo = false; };
         // a project without a usable account gets the one shown in the header, so its first chat can start
         if (chat.chatId === "" && !Claude.account(proj.account) && accountId !== "")
             Claude.saveProject({ id: proj.id, name: proj.name, dir: proj.dir, account: accountId, model: proj.model,
@@ -137,7 +161,7 @@ FloatingWindow {
                  { kind: "sep" },
                  { id: "cut", label: "Cut", hint: "Ctrl+X", disabled: !sel },
                  { id: "copyin", label: "Copy", hint: "Ctrl+C", disabled: !sel },
-                 { id: "paste", label: "Paste", hint: "Ctrl+V", disabled: !input.canPaste },
+                 { id: "paste", label: "Paste", hint: "Ctrl+V" },
                  { id: "delete", label: "Delete", hint: "Del", disabled: !sel },
                  { kind: "sep" },
                  { id: "selallin", label: "Select all", hint: "Ctrl+A", disabled: input.length === 0 },
@@ -183,7 +207,7 @@ FloatingWindow {
         case "redo": input.redo(); break;
         case "cut": input.cut(); break;
         case "copyin": input.copy(); break;
-        case "paste": input.paste(); break;
+        case "paste": pasteAny(); break;
         case "delete": input.remove(input.selectionStart, input.selectionEnd); break;
         case "selallin": input.selectAll(); break;
         case "send": sendNow(); break;
@@ -433,7 +457,7 @@ FloatingWindow {
                                 required property var model
                                 width: convo.width - 14
                                 k: model.k; text: model.text; name: model.name; summary: model.summary
-                                status: model.status; out: model.out; kind: model.kind; sysinfo: model.sysinfo
+                                status: model.status; out: model.out; kind: model.kind; sysinfo: model.sysinfo; images: model.images
                                 onMenu: (x, y, link) => win.itemMenu(chatItem, x, y, link)
                             }
                             footer: Column {
@@ -543,13 +567,71 @@ FloatingWindow {
                     // composer
                     Rectangle {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: Math.min(Math.max(input.contentHeight + 24, 48), 220) + 46
+                        Layout.preferredHeight: Math.min(Math.max(input.contentHeight + 24, 48), 220) + 46 + strip.height
                         color: Theme.panel
                         Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Theme.line }
 
+                        // images going with the next message, and why one couldn't be attached
+                        Item {
+                            id: strip
+                            x: 14; y: 12; width: parent.width - 28
+                            height: win.attachments.length > 0 || win.attachNote !== "" ? stripRow.height + 10 : 0
+                            visible: height > 0
+                            Row {
+                                id: stripRow
+                                spacing: 8
+                                Repeater {
+                                    model: win.attachments
+                                    Rectangle {
+                                        id: thumb
+                                        required property var modelData
+                                        required property int index
+                                        width: 84; height: 64
+                                        color: Theme.bg1; border.width: 1; border.color: Theme.lineStrong
+                                        Image {
+                                            anchors.fill: parent; anchors.margins: 1
+                                            source: "file://" + thumb.modelData.path
+                                            fillMode: Image.PreserveAspectCrop
+                                            sourceSize.width: 168; asynchronous: true
+                                        }
+                                        Rectangle {
+                                            anchors.right: parent.right; anchors.top: parent.top
+                                            width: 20; height: 20
+                                            color: rmHover.hovered ? Theme.bad : Qt.rgba(0, 0, 0, 0.6)
+                                            Text {
+                                                anchors.centerIn: parent; text: "×"
+                                                color: Theme.fg; font.family: Theme.ui; font.pixelSize: 14
+                                            }
+                                            HoverHandler { id: rmHover; cursorShape: Qt.PointingHandCursor }
+                                            TapHandler { onTapped: win.removeAttachment(thumb.index) }
+                                        }
+                                    }
+                                }
+                                Text {
+                                    visible: win.attachNote !== ""
+                                    height: 64; verticalAlignment: Text.AlignVCenter
+                                    text: win.attachNote
+                                    color: Theme.bad; font.family: Theme.mono; font.pixelSize: 11
+                                }
+                            }
+                        }
+
+                        // image files dropped on the composer attach like pasted ones
+                        DropArea {
+                            anchors.fill: parent
+                            keys: ["text/uri-list"]
+                            onDropped: drop => {
+                                for (const u of drop.urls) {
+                                    const f = decodeURIComponent(String(u).replace(/^file:\/\//, ""));
+                                    Claude.run(["add-image", f], o => win.addAttachment(o));
+                                }
+                                drop.accept();
+                            }
+                        }
+
                         Rectangle {
                             id: box
-                            x: 14; y: 12; width: parent.width - 28; height: parent.height - 52
+                            x: 14; y: 12 + strip.height; width: parent.width - 28; height: parent.height - 52 - strip.height
                             color: "transparent"
                             border.width: 1; border.color: input.activeFocus ? Theme.accent : Theme.lineStrong
                             ScrollView {
@@ -569,6 +651,11 @@ FloatingWindow {
                                     Keys.onPressed: e => {
                                         if ((e.key === Qt.Key_Return || e.key === Qt.Key_Enter) && !(e.modifiers & Qt.ShiftModifier)) {
                                             win.sendNow(); e.accepted = true;
+                                        } else if ((e.key === Qt.Key_V && (e.modifiers & Qt.ControlModifier) && !(e.modifiers & Qt.ShiftModifier))
+                                                   || (e.key === Qt.Key_Insert && (e.modifiers & Qt.ShiftModifier))) {
+                                            win.pasteAny(); e.accepted = true;
+                                        } else if (e.key === Qt.Key_Backspace && input.length === 0 && win.attachments.length > 0) {
+                                            win.removeAttachment(win.attachments.length - 1); e.accepted = true;
                                         } else if (e.key === Qt.Key_Menu || (e.key === Qt.Key_F10 && (e.modifiers & Qt.ShiftModifier))) {
                                             const r = input.cursorRectangle;
                                             win.inputMenu(r.x, r.y + r.height); e.accepted = true;
