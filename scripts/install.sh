@@ -150,7 +150,9 @@ if built quickshell "$QUICKSHELL_REF"; then note "already installed"; else
 		-DCRASH_HANDLER=OFF -DDISTRIBUTOR="Ultimit" >/dev/null
 	cmake --build "$d/build" -j "$JOBS"
 	sudo cmake --install "$d/build" >/dev/null
-	sudo strip --strip-unneeded "$PREFIX/bin/quickshell"   # its debug info is ~200 MB
+	# its debug info is ~200 MB; a new file renamed over the old one, as quickshell may be running
+	sudo strip --strip-unneeded -o "$PREFIX/bin/quickshell.stripped" "$PREFIX/bin/quickshell"
+	sudo mv -f "$PREFIX/bin/quickshell.stripped" "$PREFIX/bin/quickshell"
 	mark quickshell "$QUICKSHELL_REF"
 fi
 

@@ -80,7 +80,10 @@ fi
 rm -f "$PREFIX/bin/oo7-cli"
 if command -v strip >/dev/null; then
 	for b in "$PREFIX/bin/quickshell" "$PREFIX/bin/oo7-daemon" "$PREFIX/libexec/oo7-daemon-login" "$PREFIX/bin/ultimit"; do
-		[ -f "$b" ] && LC_ALL=C file "$b" | grep -q "not stripped" && strip --strip-unneeded "$b"
+		# a new file renamed over the old one: a running quickshell keeps its copy until it restarts
+		if [ -f "$b" ] && LC_ALL=C file "$b" | grep -q "not stripped"; then
+			strip --strip-unneeded -o "$b.stripped" "$b" && mv -f "$b.stripped" "$b"
+		fi
 	done
 fi
 chown -R root:root "$PREFIX"; chmod -R go-w,a+rX "$PREFIX"
