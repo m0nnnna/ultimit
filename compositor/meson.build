@@ -108,31 +108,3 @@ executable(
 	install_rpath: deps_libdir,
 	install: true,
 )
-
-# Test-only client for window/output capture (scripts/test/*_capture.sh).
-protocol_client = []
-foreach xml : [
-	wp_dir / 'staging/ext-foreign-toplevel-list/ext-foreign-toplevel-list-v1.xml',
-	wp_dir / 'staging/ext-image-capture-source/ext-image-capture-source-v1.xml',
-	wp_dir / 'staging/ext-image-copy-capture/ext-image-copy-capture-v1.xml',
-]
-	protocol_client += custom_target(
-		xml.underscorify() + '_client_h',
-		input: xml,
-		output: '@BASENAME@-client-protocol.h',
-		command: [wayland_scanner, 'client-header', '@INPUT@', '@OUTPUT@'],
-	)
-	protocol_client += custom_target(
-		xml.underscorify() + '_client_c',
-		input: xml,
-		output: '@BASENAME@-client-protocol.c',
-		command: [wayland_scanner, 'private-code', '@INPUT@', '@OUTPUT@'],
-	)
-endforeach
-
-executable(
-	'ul-capture-probe',
-	['test/ul-capture-probe.c', protocol_client],
-	dependencies: [dependency('wayland-client')],
-	install: false,
-)

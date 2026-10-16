@@ -11,7 +11,7 @@
 # (ultimitctl state), plus devbox.log and apps.log. Exit status is non-zero
 # if any scenario FAILs (XFAIL = known bug, SKIP = missing app: both OK).
 #
-# Needs: wlrctl wtype grim python3 (+ PIL for the popup check), dbus-run-session.
+# Needs: wlrctl wtype grim python3, dbus-run-session; foot for the window tests.
 # Runs nothing in your live session: it refuses to start if a devbox is
 # already running, only ever talks to the devbox socket, and only signals
 # processes it spawned itself.

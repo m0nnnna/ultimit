@@ -8,7 +8,6 @@
 
 STATE_PY="$ROOT/scripts/test/state.py"
 # GTK4/libadwaita test window owned by the repo (GNOME apps get purged).
-PROBE="python3 $ROOT/scripts/test/apps/gtk4-probe.py"
 
 # ---- bookkeeping -------------------------------------------------------------
 

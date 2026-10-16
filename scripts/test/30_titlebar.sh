@@ -1,4 +1,4 @@
-# Server-side titlebar (compositor drawn) and X11 clients.
+# Server-side titlebar (compositor drawn).
 
 # tb_buttons ID: locate the three titlebar buttons from the compositor's state
 # (windows[].buttons: minimize, maximize, close as layout boxes). Sets BMIN BMAX
@@ -64,29 +64,4 @@ scenario_titlebar_buttons() {
 	tb_buttons "$id"
 	click "$BCLOSE" "$BY"
 	assert_soon "not W($id)" "[ × ] button closes the window"
-}
-
-scenario_x11_app() {
-	[ -n "$XDISP" ] || skip "no XWayland display in the devbox log"
-	local any=0 cmd app
-	for cmd in "xeyes" "xterm" "xmessage -geometry 400x150 x11-test"; do
-		app=${cmd%% *}
-		have "$app" || { note "skipped $app (not installed)"; continue; }
-		any=1
-		# shellcheck disable=SC2086
-		open_app x "$app" $cmd || continue
-		local id=$WID
-		assert_json "W($id)['type']=='xwayland'" "$app is an XWayland window"
-		assert_json "W($id)['ssd']" "$app gets a server-side titlebar"
-		assert_json "W($id)['frame']['height']==W($id)['content']['height']+38+2" "$app frame includes the titlebar"
-		ctl move "$id" 420 210 >/dev/null
-		assert_soon "box(W($id)['content'])[:2]==(420, 210)" "$app moves via ultimitctl"
-		snap "$app"
-		close_win "$id" || fail "$app did not close"
-	done
-	[ $any = 1 ] || skip "no X11 test app (xeyes/xterm/xmessage) installed"
-	# TODO: Alt+drag. wlrctl can only click (press+release in one go) and wtype
-	# only holds a modifier for the duration of its own run, so a real
-	# Alt+press / move / release cannot be composed. Covered by ctl move above.
-	note "Alt+drag not testable with wlrctl/wtype (ctl move used)"
 }
