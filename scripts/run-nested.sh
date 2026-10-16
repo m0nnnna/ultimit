@@ -4,7 +4,7 @@
 #   scripts/run-nested.sh -s "ptyxis"     with a different startup command
 set -e
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-DEPS=${ULTIMIT_DEPS:-$HOME/.local/ultimit-deps}
+DEPS=${ULTIMIT_DEPS:-/opt/ultimit}   # scripts/install.sh builds wlroots, SceneFX and Quickshell there
 export PKG_CONFIG_PATH="$DEPS/lib/x86_64-linux-gnu/pkgconfig"
 export LD_LIBRARY_PATH="$DEPS/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export PATH="$DEPS/bin:$PATH"

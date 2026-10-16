@@ -6,7 +6,9 @@ Quickshell (QML) desktop shell for Ultimit, styled after `docs/design/mockup.htm
 
 Inside the Ultimit compositor (needs wlr-layer-shell; GNOME/Mutter will not work):
 
-    compositor/build/ultimit -s "~/.local/ultimit-deps/bin/qs -p $PWD/shell"
+    compositor/build/ultimit -s "/opt/ultimit/bin/qs -p $PWD/shell"
+
+or `scripts/devbox.sh start` for a headless one to test against.
 
 Headless smoke test: prefix with `WLR_BACKENDS=headless timeout -s INT 15`.
 Environment: `ULTIMIT_SKIN=mine|amber|silver|verdant`, `ULTIMIT_MOTION=0` (static wallpaper).

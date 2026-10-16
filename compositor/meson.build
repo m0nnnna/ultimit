@@ -73,7 +73,7 @@ endforeach
 
 # Ubuntu's wlroots is linked with -Bsymbolic-functions, so its scene helpers
 # would never call SceneFX's overrides. Ultimit uses a wlroots built without
-# it (scripts/build-deps.sh); point the runtime linker at that copy.
+# it (scripts/install.sh builds it into /opt/ultimit); point the runtime linker at that copy.
 deps_libdir = wlroots.get_variable(pkgconfig: 'libdir')
 
 executable(

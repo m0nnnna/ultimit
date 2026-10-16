@@ -75,6 +75,14 @@ elif [ -n "$TREE" ]; then
 	note "Ultimit $rev"
 fi
 [ -x "$PREFIX/bin/ultimit" ] && [ -d "$PREFIX/shell" ] || die "$PREFIX is incomplete (build with scripts/install.sh, or give --release)"
+# Debug info and tools nothing runs only take space (Quickshell's debug info alone is ~200 MB);
+# installs made before scripts/install.sh stripped them get it here
+rm -f "$PREFIX/bin/oo7-cli"
+if command -v strip >/dev/null; then
+	for b in "$PREFIX/bin/quickshell" "$PREFIX/bin/oo7-daemon" "$PREFIX/libexec/oo7-daemon-login" "$PREFIX/bin/ultimit"; do
+		[ -f "$b" ] && LC_ALL=C file "$b" | grep -q "not stripped" && strip --strip-unneeded "$b"
+	done
+fi
 chown -R root:root "$PREFIX"; chmod -R go-w,a+rX "$PREFIX"
 
 # ------------------------------------------------------------------------------------ packages

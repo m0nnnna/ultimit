@@ -13,7 +13,7 @@
 # changes get checked before anyone logs out and back in.
 set -e
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-DEPS=${ULTIMIT_DEPS:-$HOME/.local/ultimit-deps}
+DEPS=${ULTIMIT_DEPS:-/opt/ultimit}   # scripts/install.sh builds wlroots, SceneFX and Quickshell there
 STATE="${XDG_RUNTIME_DIR:-/tmp}/ultimit-devbox"
 mkdir -p "$STATE"
 

@@ -3,7 +3,7 @@
 # or GDM) from /usr/share/wayland-sessions/ultimit.desktop.
 ROOT=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
 # Installed (scripts/install.sh: /opt/ultimit, with bin/ and lib/ beside session/ and shell/) or
-# a development checkout (compositor/build/, deps in ~/.local/ultimit-deps from build-deps.sh).
+# a development checkout (compositor/build/, deps from ULTIMIT_DEPS, else ~/.local/ultimit-deps).
 if [ -x "$ROOT/bin/ultimit" ]; then
 	DEPS=${ULTIMIT_DEPS:-$ROOT}
 	COMPOSITOR=$ROOT/bin/ultimit

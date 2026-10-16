@@ -150,6 +150,7 @@ if built quickshell "$QUICKSHELL_REF"; then note "already installed"; else
 		-DCRASH_HANDLER=OFF -DDISTRIBUTOR="Ultimit" >/dev/null
 	cmake --build "$d/build" -j "$JOBS"
 	sudo cmake --install "$d/build" >/dev/null
+	sudo strip --strip-unneeded "$PREFIX/bin/quickshell"   # its debug info is ~200 MB
 	mark quickshell "$QUICKSHELL_REF"
 fi
 
@@ -163,9 +164,9 @@ if built oo7 "$OO7_REF"; then note "already installed"; else
 	fi
 	d=$(src oo7 "$OO7_URL" "$OO7_REF")
 	( cd "$d" && OO7_DAEMON_LOGIN_PATH="$PREFIX/libexec/oo7-daemon-login" \
-		"$CARGO_HOME/bin/cargo" build --release -q -j "$JOBS" -p oo7-daemon -p oo7-pam -p oo7-cli )
-	sudo install -D -m755 "$d/target/release/oo7-daemon" "$d/target/release/oo7-cli" -t "$PREFIX/bin/"
-	sudo install -D -m755 "$d/target/release/oo7-daemon-login" -t "$PREFIX/libexec/"
+		"$CARGO_HOME/bin/cargo" build --release -q -j "$JOBS" -p oo7-daemon -p oo7-pam )
+	sudo install -D -m755 -s "$d/target/release/oo7-daemon" -t "$PREFIX/bin/"
+	sudo install -D -m755 -s "$d/target/release/oo7-daemon-login" -t "$PREFIX/libexec/"
 	sudo install -D -m644 "$d/target/release/libpam_oo7.so" /usr/lib/x86_64-linux-gnu/security/pam_oo7.so
 	mark oo7 "$OO7_REF"
 fi

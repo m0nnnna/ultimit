@@ -12,7 +12,7 @@
 # installed; autoremove then only takes GNOME leftovers.
 #
 # Rollback: sudo apt install ubuntu-desktop-minimal gdm3 (then
-# scripts/switch-dm.sh gdm). The lists used are saved next to the log.
+# sudo systemctl enable --force gdm3). The lists used are saved next to the log.
 set -euo pipefail
 export LC_ALL=C   # sort and comm must agree on order
 

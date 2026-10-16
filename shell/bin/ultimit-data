@@ -8,7 +8,7 @@ case "$p" in file://*) p=$(python3 -c 'import sys, urllib.parse; print(urllib.pa
 [ -e "$p" ] && p="$(realpath -- "$p")"
 SHELL_DIR="${ULTIMIT_SHELL_DIR:-$(dirname "$(dirname "$(readlink -f "$0")")")}"
 # Started by D-Bus or the portal (a browser's "Show in folder"), PATH is systemd's,
-# without Ultimit's bin dir: look for qs where the installer and build-deps.sh put it.
+# without Ultimit's bin dir: look for qs where the installer puts it (or a development copy).
 QS=$(command -v qs) || for q in "$SHELL_DIR/../bin/qs" "${ULTIMIT_DEPS:-$HOME/.local/ultimit-deps}/bin/qs"; do
 	[ -x "$q" ] && QS=$q && break
 done
