@@ -132,6 +132,18 @@ sed "s|@SESSION@|$P/session/ultimit-session|g" "$P/session/ultimit.desktop" >/us
 	mode=644; [ -x "$f" ] && mode=755
 	install -D -m $mode "$f" "/$f"
 done )
+# umu-launcher's package (distro/debs.txt) links /etc/apparmor.d/bwrap-userns-restrict-umu to
+# extra-profiles/bwrap-userns-restrict, which Ubuntu 26.04 doesn't have (it ships that profile as
+# /etc/apparmor.d/bwrap-userns-restrict), so apparmor.service failed on every boot. Divert the link
+# out of /etc/apparmor.d, for umu updates too.
+umu_aa=/etc/apparmor.d/bwrap-userns-restrict-umu
+if [ ! -e /usr/share/apparmor/extra-profiles/bwrap-userns-restrict ] && ! dpkg-divert --list "$umu_aa" | grep -q .; then
+	mkdir -p /var/lib/ultimit
+	dpkg-divert --quiet --local --rename --divert /var/lib/ultimit/bwrap-userns-restrict-umu.diverted --add "$umu_aa"
+	if systemctl is-failed --quiet apparmor.service; then
+		systemctl reset-failed apparmor.service; systemctl restart apparmor.service || warn "AppArmor still fails to load a profile (journalctl -u apparmor)"
+	fi
+fi
 # controllers plugged in now get the new udev rules too (72-ultimit-gamepads.rules)
 udevadm control --reload 2>/dev/null && udevadm trigger --subsystem-match=hidraw 2>/dev/null || true
 # Ultimit commands on everyone's PATH (other apps open folders with ultimit-data, ...)
