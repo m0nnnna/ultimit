@@ -26,3 +26,7 @@ gnome-logs
 gnome-clocks
 gnome-characters
 firefox
+
+# Ubuntu server image parts a desktop doesn't use (crash dumps and their reserved RAM, cloud-init,
+# SAN/LVM disk tools, apport, modems, snapd, datacenter NIC firmware): scripts/trim-ubuntu.sh
+# (TRIM list there), run by scripts/system-install.sh. Kept when the PC uses them.

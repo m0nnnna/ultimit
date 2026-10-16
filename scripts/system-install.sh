@@ -111,6 +111,10 @@ if lspci -n 2>/dev/null | grep -qE ' 03(00|02): 10de:'; then
 	fi
 fi
 
+# ------------------------------------------------------------------------------------ trim
+step "Trimming Ubuntu's server parts (crash dumps, cloud, SAN disks, snapd...)"
+"$PREFIX/scripts/trim-ubuntu.sh" --yes || warn "Ubuntu's server parts were left in place (see above)"
+
 # ------------------------------------------------------------------------------------ system
 step "Setting up the system (fonts, session, keyring unlock, helpers, commands)"
 P=$PREFIX

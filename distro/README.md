@@ -10,7 +10,8 @@ top of Ubuntu 26.04 LTS. Keep them in step with what this dev machine runs.
   sha256
 - `system/`: config files installed as-is under / (mirrors the tree)
 - `flatpaks.txt`: Flathub apps installed system-wide
-- `snaps-remove.txt`: snaps Ubuntu preinstalls that Ultimit removes
+- `snaps-remove.txt`: snaps Ubuntu preinstalls that Ultimit removes (snapd itself goes too, unless
+  someone installed snaps of their own: scripts/trim-ubuntu.sh)
 
 Gaming: scripts/get-dxvk.sh installs the pinned, checksum-verified DXVK
 release (32- and 64-bit; Ubuntu ships only 64-bit) into /opt/ultimit/dxvk on
@@ -24,4 +25,4 @@ steam-installer package; its client downloads on each user's first launch.
 ProtonPlus installs Proton builds (GE-Proton, DW-Proton) into that Steam.
 
 Setup scripts used by both: scripts/purge-gnome.sh, scripts/setup-browser.sh,
-scripts/install-system.sh, scripts/switch-dm.sh greetd.
+scripts/trim-ubuntu.sh.

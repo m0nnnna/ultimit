@@ -157,7 +157,7 @@ def ultimit(tag):
         if os.path.basename(dm) != "greetd.service":
             args.append("--keep-login-screen")   # this PC uses another login screen: leave it
         shutil.rmtree(PREFIX + ".previous", ignore_errors=True)
-        steps = ["Unpacking", "Installing the packages", "Setting up the system", "Making the Ultimit login", "Checking"]
+        steps = ["Unpacking", "Installing the packages", "Trimming", "Setting up the system", "Making the Ultimit login", "Checking"]
         last = ""
         with open(UPDATE_LOG, "a") as log:
             log.write("\n==== %s  Ultimit %s from %s\n" % (time.strftime("%Y-%m-%d %H:%M:%S"), ver, repo))
