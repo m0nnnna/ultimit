@@ -454,14 +454,18 @@ Singleton {
     readonly property bool lockAvailable: true
     function lock() { Config.lock(); }
 
-    // Hibernate is offered only when logind says it can (swap big enough, resume set up);
-    // "challenge" means polkit will ask, which is fine too.
+    // Hibernate is offered only when logind says it can ("challenge" means polkit will ask,
+    // which is fine too) and swap can hold all of RAM. logind only compares swap with the
+    // memory in use right now, so an 8 GB swapfile on a 64 GB PC passes and then fails later.
     property bool canHibernate: false
     Process {
         running: true
-        command: ["busctl", "--system", "call", "org.freedesktop.login1", "/org/freedesktop/login1",
-                  "org.freedesktop.login1.Manager", "CanHibernate"]
-        stdout: StdioCollector { onStreamFinished: root.canHibernate = /"(yes|challenge)"/.test(text) }
+        command: ["sh", "-c", "busctl --system call org.freedesktop.login1 /org/freedesktop/login1 " +
+                  "org.freedesktop.login1.Manager CanHibernate; " +
+                  "awk '/^MemTotal:/{m=$2} /^SwapTotal:/{s=$2} END{print (s>=m ? \"swapfits\" : \"swapsmall\")}' /proc/meminfo"]
+        stdout: StdioCollector {
+            onStreamFinished: root.canHibernate = /"(yes|challenge)"/.test(text) && /swapfits/.test(text)
+        }
     }
 
     // ---------------- refresh while the panel is open ----------------

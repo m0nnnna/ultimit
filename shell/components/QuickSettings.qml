@@ -540,7 +540,7 @@ PanelWindow {
                             onArmedChanged: if (armed) { hibB.disarm(); rebB.disarm(); offB.disarm(); }
                         }
                         PowerButton {
-                            id: susB; text: "Suspend"
+                            id: susB; text: "Sleep"
                             onActivated: { SysState.closeQs(); SysState.exec(["systemctl", "suspend"]); }
                         }
                         PowerButton {
