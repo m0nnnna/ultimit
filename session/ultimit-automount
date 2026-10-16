@@ -1,0 +1,189 @@
+#!/usr/bin/env python3
+"""Mount data drives when the session starts and when they are plugged in.
+
+Ultimit has no gvfs/GNOME automounter, and udisks only mounts on request. Through udisks (so they land
+in /run/media/$USER/<label> and DATA lists them):
+  - removable / hotplug disks (USB sticks, SD cards) mount right away, no password;
+  - NTFS and exFAT partitions on internal disks (Windows drives, a second SSD, Windows dynamic disk
+    volumes from ultimit-ldm.service) are "system" disks to udisks, which wants the admin password,
+    so a notification asks "Mount your Windows drives?" first. Mount -> one password prompt
+    (auth_admin_keep) for all of them; "Don't ask again" -> never asks (DATA still lists them,
+    click to mount). Windows' EFI/recovery/reserved partitions are left alone.
+Each device is tried once while it is present, so one unmounted from DATA stays unmounted until it is
+plugged in again. "Don't ask again" is ~/.config/ultimit/automount containing "never"; delete it to undo.
+"""
+import html
+import json
+import os
+import select
+import subprocess
+import sys
+import threading
+import time
+
+SKIP_PARTTYPES = {
+    "c12a7328-f81f-11d2-ba4b-00a0c93ec93b",  # EFI system
+    "de94bba4-06d1-4d40-a16a-bfd50179d6ac",  # Windows recovery
+    "e3c9e316-0b5c-4db8-817d-f92df00215ae",  # Microsoft reserved
+    "5808c8aa-7e8f-42e0-85d2-e1e90434cfb3",  # LDM metadata
+    "af9b60a0-1431-4f62-bc68-3311714a69ad",  # LDM data (the volume inside is mapped instead)
+    "0x27", "0xef", "0x42",
+}
+INTERNAL = {"ntfs", "exfat"}
+REMOVABLE = INTERNAL | {"vfat", "ext4", "ext3", "ext2", "btrfs", "xfs", "f2fs", "iso9660", "udf", "hfsplus"}
+MIN_INTERNAL = 1 << 30  # small internal NTFS partitions are OEM/recovery leftovers
+CHOICE = os.path.join(os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")), "ultimit", "automount")
+
+
+def log(*a):
+    print("[automount]", *a, file=sys.stderr, flush=True)
+
+
+def never_ask():
+    try:
+        with open(CHOICE, encoding="utf-8") as f:
+            return f.read().strip() == "never"
+    except OSError:
+        return False
+
+
+def devices():
+    out = subprocess.run(["lsblk", "-J", "-b", "-o", "PATH,FSTYPE,PARTTYPE,MOUNTPOINTS,SIZE,TYPE,RM,HOTPLUG,UUID,LABEL"],
+                         capture_output=True, text=True).stdout
+    flat = []
+
+    def walk(nodes, removable):
+        for n in nodes:
+            rm = removable or bool(n.get("rm")) or bool(n.get("hotplug"))
+            flat.append((n, rm))
+            walk(n.get("children") or [], rm)
+    walk(json.loads(out or '{"blockdevices": []}')["blockdevices"], False)
+    return flat
+
+
+def mounted(n):
+    return any(m for m in (n.get("mountpoints") or []) if m)
+
+
+def wanted(n, removable):
+    fs = n.get("fstype") or ""
+    if n.get("type") not in ("part", "disk", "ldm", "dm") or mounted(n):
+        return False
+    if (n.get("parttype") or "").lower() in SKIP_PARTTYPES:
+        return False
+    if removable:
+        return fs in REMOVABLE
+    return fs in INTERNAL and int(n.get("size") or 0) >= MIN_INTERNAL
+
+
+def mount(path, interactive, fstype=""):
+    base = ["udisksctl", "mount"] + ([] if interactive else ["--no-user-interaction"])
+    r = subprocess.run(base + ["-b", path], capture_output=True, text=True)
+    msg = (r.stdout + r.stderr).strip()
+    if r.returncode != 0 and fstype == "ntfs" and "not authorized" not in msg.lower():
+        # Windows left it hibernated (Fast Startup) or dirty: ntfs3 refuses read-write and udisks only
+        # says "wrong fs type, bad option..." (the reason is in the kernel log). Read-only still works.
+        r = subprocess.run(base + ["-o", "ro", "-b", path], capture_output=True, text=True)
+        msg = (r.stdout + r.stderr).strip() + " (read-only: Windows Fast Startup / unclean shutdown)"
+    log(path, "->", msg.splitlines()[-1] if msg else r.returncode)
+
+
+asking = threading.Lock()
+
+
+def prompt(summary, body, actions):
+    """Notification with buttons, straight over D-Bus (notify-send wrongly falls back to no buttons
+    here). actions: [(id, text)]. Returns the id clicked, or "" if dismissed."""
+    import gi
+    gi.require_version("Gio", "2.0")
+    from gi.repository import Gio, GLib
+    bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+    loop, nid, picked = GLib.MainLoop(), [None], [""]
+
+    def on_signal(_c, _s, _p, _i, name, params):
+        args = params.unpack()
+        if args[0] != nid[0]:
+            return
+        if name == "ActionInvoked":
+            picked[0] = args[1]
+        loop.quit()  # ActionInvoked comes before NotificationClosed; either one ends the wait
+    for sig in ("ActionInvoked", "NotificationClosed"):
+        bus.signal_subscribe("org.freedesktop.Notifications", "org.freedesktop.Notifications", sig,
+                             "/org/freedesktop/Notifications", None, Gio.DBusSignalFlags.NONE, on_signal)
+    acts = [x for a in actions for x in a]
+    nid[0] = bus.call_sync("org.freedesktop.Notifications", "/org/freedesktop/Notifications",
+                           "org.freedesktop.Notifications", "Notify",
+                           GLib.Variant("(susssasa{sv}i)", ("Ultimit", 0, "drive-harddisk", summary, body,
+                                                            acts, {}, 0)),
+                           GLib.VariantType("(u)"), Gio.DBusCallFlags.NONE, -1, None).unpack()[0]
+    loop.run()
+    return picked[0]
+
+
+asking = threading.Lock()
+
+
+def ask(drives):
+    """Mount / Don't ask again; runs in its own thread so hotplug keeps working."""
+    if never_ask() or not asking.acquire(blocking=False):
+        return
+    try:
+        names = ", ".join(html.escape(n.get("label") or os.path.basename(n["path"])) for n in drives)
+        try:
+            choice = prompt("Mount your Windows drives?", names, [("mount", "Mount"), ("never", "Don't ask again")])
+        except Exception as ex:
+            log("can't ask:", ex)
+            return
+        if choice == "mount":
+            for n in drives:
+                mount(n["path"], True, n.get("fstype"))  # the first one asks for the password, the rest reuse it
+        elif choice == "never":
+            os.makedirs(os.path.dirname(CHOICE), exist_ok=True)
+            with open(CHOICE, "w", encoding="utf-8") as f:
+                f.write("never\n")
+            log("won't ask again (delete %s to undo)" % CHOICE)
+    finally:
+        asking.release()
+
+
+tried = set()
+
+
+def scan():
+    present, internal = set(), []
+    for n, rm in devices():
+        key = (n.get("path"), n.get("uuid"))
+        present.add(key)
+        if key in tried:
+            continue
+        if wanted(n, rm):
+            tried.add(key)
+            if rm:
+                mount(n["path"], False, n.get("fstype"))
+            else:
+                internal.append(n)
+        elif mounted(n):
+            tried.add(key)  # already mounted: leave it alone if it gets unmounted later
+    tried.intersection_update(present)  # unplugged: try again next time it shows up
+    if internal:
+        threading.Thread(target=ask, args=(internal,), daemon=True).start()
+
+
+def main():
+    time.sleep(3)  # let the shell's notification server, udisks and ultimit-ldm settle after login
+    scan()
+    mon = subprocess.Popen(["udevadm", "monitor", "--udev", "--subsystem-match=block"],
+                           stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+    while True:
+        select.select([mon.stdout], [], [])
+        if not mon.stdout.readline():
+            return
+        # drain the burst of events a plug-in makes, then look once
+        while select.select([mon.stdout], [], [], 1.5)[0]:
+            if not mon.stdout.readline():
+                return
+        scan()
+
+
+if __name__ == "__main__":
+    main()

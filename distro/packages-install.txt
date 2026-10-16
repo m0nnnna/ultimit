@@ -18,6 +18,7 @@ pipewire-audio
 pipewire-alsa
 bluez
 udisks2
+ldmtool
 power-profiles-daemon
 switcheroo-control
 gamemode

@@ -1,0 +1,8 @@
+# Started by 72-ultimit-ldm.rules when a Windows dynamic disk shows up.
+[Unit]
+Description=Map Windows dynamic disk (LDM) volumes
+ConditionPathExists=/usr/bin/ldmtool
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/ldmtool create all

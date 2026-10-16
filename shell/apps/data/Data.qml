@@ -1098,9 +1098,12 @@ Singleton {
     }
 
     // ---------------------------------------------------------------- drives (udisks, no gvfs)
-    // Removable / hotplug ones (mounted or not), and internal ones mounted where data drives go
-    // (/mnt, /media, /run/media); system mounts (/, /boot, /home, snaps...) never show.
+    // Removable / hotplug ones (mounted or not), internal ones mounted where data drives go
+    // (/mnt, /media, /run/media), and unmounted internal NTFS/exFAT ones (Windows drives; click mounts,
+    // udisks asks for the password); system mounts (/, /boot, /home, snaps...) never show.
     property var drives: []
+    readonly property var skipPartTypes: ["c12a7328-f81f-11d2-ba4b-00a0c93ec93b", "de94bba4-06d1-4d40-a16a-bfd50179d6ac",
+        "e3c9e316-0b5c-4db8-817d-f92df00215ae", "0x27", "0xef"]
     readonly property string fakeLsblk: Quickshell.env("ULTIMIT_FAKE_LSBLK")
     Timer {
         interval: 4000; repeat: true; triggeredOnStart: false
@@ -1110,7 +1113,7 @@ Singleton {
     Process {
         id: drivesProc
         command: root.fakeLsblk !== "" ? ["cat", root.fakeLsblk]
-               : ["lsblk", "-J", "-o", "NAME,LABEL,SIZE,MOUNTPOINTS,RM,HOTPLUG,FSTYPE,TYPE,PATH,PKNAME,MODEL,VENDOR"]
+               : ["lsblk", "-J", "-o", "NAME,LABEL,SIZE,MOUNTPOINTS,RM,HOTPLUG,FSTYPE,TYPE,PATH,PKNAME,MODEL,VENDOR,PARTTYPE"]
         stdout: StdioCollector {
             onStreamFinished: {
                 let d;
@@ -1122,7 +1125,10 @@ Singleton {
                     const mps = (n.mountpoints || (n.mountpoint ? [n.mountpoint] : [])).filter(m => m);
                     n.removable = removable;
                     const dataMount = mps.find(m => /^\/(mnt|media|run\/media)(\/|$)/.test(m)) || "";
-                    if ((removable || dataMount) && n.fstype && (n.type === "part" || n.type === "disk" || n.type === "crypt")) {
+                    // same picks as session/ultimit-automount: not EFI/recovery/reserved, not tiny
+                    const windows = !removable && !mps.length && (n.fstype === "ntfs" || n.fstype === "exfat")
+                        && !root.skipPartTypes.includes((n.parttype || "").toLowerCase()) && /^[\d.,]+[GTPE]$/.test(n.size || "");
+                    if ((removable || dataMount || windows) && n.fstype && (n.type === "part" || n.type === "disk" || n.type === "crypt" || n.type === "ldm")) {
                         out.push({
                             dev: n.path || ("/dev/" + n.name), name: n.name, size: n.size || "",
                             label: n.label || (removable ? n.model || (n.vendor ? n.vendor.trim() : "") : dataMount.substring(dataMount.lastIndexOf("/") + 1)) || n.name,
