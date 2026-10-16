@@ -17,7 +17,8 @@
 MTP env gates: ULTIMIT_FAKE_MTP=<json> fakes detection, ULTIMIT_FAKE_MTPFS=<script> replaces go-mtpfs
 (called as: script [-dev RE] MOUNTPOINT), ULTIMIT_DRY_RUN=1 only reports the command lines.
 
-Trash follows the freedesktop spec under $XDG_DATA_HOME/Trash (always the home trash).
+Trash follows the freedesktop spec: $XDG_DATA_HOME/Trash for the home filesystem, $topdir/.Trash/$uid or
+$topdir/.Trash-$uid on other drives, so trashing is always a rename (never a copy onto the home disk).
 """
 import sys, os, json, re, stat, shutil, time, pwd, grp, subprocess, urllib.parse, configparser
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -28,6 +29,7 @@ DATA_HOME = os.environ.get("XDG_DATA_HOME") or os.path.join(HOME, ".local", "sha
 TRASH = os.path.join(DATA_HOME, "Trash")
 TFILES = os.path.join(TRASH, "files")
 TINFO = os.path.join(TRASH, "info")
+UID = os.getuid()
 
 def out(o):
     sys.stdout.write(json.dumps(o, ensure_ascii=False) + "\n")
@@ -100,17 +102,94 @@ def iso_epoch(s):
     except Exception:
         return 0
 
+# ---------------------------------------------------------------- trash directories
+def mount_top(p):
+    """Mount point of the filesystem holding directory p."""
+    p = os.path.realpath(p)
+    dev = os.stat(p).st_dev
+    while p != "/":
+        up = os.path.dirname(p)
+        if os.stat(up).st_dev != dev:
+            return p
+        p = up
+    return p
+
+def drive_mounts():
+    """Mount points of local disks and tmpfs other than the home one (no network/FUSE: those may hang)."""
+    try:
+        home_dev = os.stat(HOME).st_dev
+    except OSError:
+        home_dev = None
+    mps = []
+    try:
+        with open("/proc/mounts", encoding="utf-8", errors="replace") as f:
+            for ln in f:
+                parts = ln.split()
+                if len(parts) < 3 or not (parts[0].startswith("/dev/") or parts[2] == "tmpfs"):
+                    continue
+                mp = parts[1].encode().decode("unicode_escape").encode("latin-1").decode("utf-8", "replace")
+                try:
+                    if os.stat(mp).st_dev != home_dev and mp not in mps:
+                        mps.append(mp)
+                except OSError:
+                    pass
+    except OSError:
+        pass
+    return mps
+
+def top_trash_dirs(top):
+    return [os.path.join(top, ".Trash", str(UID)), os.path.join(top, ".Trash-%d" % UID)]
+
+def trash_dirs():
+    """Every existing trash directory: (trash dir, topdir or None for the home trash)."""
+    ds = [(TRASH, None)]
+    for mp in drive_mounts():
+        for t in top_trash_dirs(mp):
+            if os.path.isdir(os.path.join(t, "files")) and not os.path.islink(t):
+                ds.append((t, mp))
+    return ds
+
+def trash_topdir(t):
+    """Topdir a non-home trash dir belongs to (relative Path= entries are relative to it)."""
+    if t == TRASH:
+        return None
+    return os.path.dirname(os.path.dirname(t)) if os.path.basename(os.path.dirname(t)) == ".Trash" else os.path.dirname(t)
+
+def is_trash_files(d):
+    d = os.path.abspath(d)
+    if d == os.path.abspath(TFILES):
+        return True
+    if os.path.basename(d) != "files":
+        return False
+    t = os.path.dirname(d)
+    return os.path.basename(t) == ".Trash-%d" % UID or (
+        os.path.basename(t) == str(UID) and os.path.basename(os.path.dirname(t)) == ".Trash")
+
+def info_of(p):
+    """.trashinfo path for an item inside some trash's files/ dir."""
+    t = os.path.dirname(os.path.dirname(os.path.abspath(p)))
+    return os.path.join(t, "info", os.path.basename(p) + ".trashinfo")
+
+def trash_orig(p):
+    orig, dt = parse_info(info_of(p))
+    if orig and not orig.startswith("/"):
+        top = trash_topdir(os.path.dirname(os.path.dirname(os.path.abspath(p))))
+        orig = os.path.join(top or "/", orig)
+    return orig, dt
+
 def cmd_ls(d):
     ents = []
     err = ""
     if d == "trash:":
-        try:
-            names = os.listdir(TFILES)
-        except OSError:
-            names = []
-        for nm in names:
-            p = os.path.join(TFILES, nm)
-            orig, dt = parse_info(os.path.join(TINFO, nm + ".trashinfo"))
+        items = []
+        for t, top in trash_dirs():
+            try:
+                items += [(os.path.join(t, "files", nm), top) for nm in os.listdir(os.path.join(t, "files"))]
+            except OSError:
+                pass
+        for p, top in items:
+            nm = os.path.basename(p)
+            orig, dt = trash_orig(p)
             n = os.path.basename(orig) if orig else nm
             try:
                 st = os.lstat(p)
@@ -119,7 +198,7 @@ def cmd_ls(d):
             isd = stat.S_ISDIR(st.st_mode)
             ents.append({"n": n, "p": p, "k": natkey(n), "s": -1 if isd else st.st_size,
                          "m": iso_epoch(dt) or st.st_mtime, "d": isd, "l": stat.S_ISLNK(st.st_mode),
-                         "t": "inode/directory" if isd else mime_of_name(n), "o": orig, "id": nm,
+                         "t": "inode/directory" if isd else mime_of_name(n), "o": orig, "id": nm, "dr": top or "",
                          "h": n.startswith(".")})
         out({"path": d, "entries": ents, "err": ""})
         return
@@ -375,11 +454,13 @@ class Job:
         if op == "restore":
             self.restore(s); return
         if op == "emptytrash":
-            for n in os.listdir(TFILES) if os.path.isdir(TFILES) else []:
-                remove_any(os.path.join(TFILES, n))
-            for n in os.listdir(TINFO) if os.path.isdir(TINFO) else []:
-                try: os.unlink(os.path.join(TINFO, n))
-                except OSError: pass
+            for t, _ in trash_dirs():
+                fd, idir = os.path.join(t, "files"), os.path.join(t, "info")
+                for n in os.listdir(fd) if os.path.isdir(fd) else []:
+                    remove_any(os.path.join(fd, n))
+                for n in os.listdir(idir) if os.path.isdir(idir) else []:
+                    try: os.unlink(os.path.join(idir, n))
+                    except OSError: pass
             return
         if op == "extract":
             arc.do_extract(self, it); return
@@ -421,39 +502,65 @@ class Job:
     def size_hint(self, s, d):
         return 0
 
-    def trash(self, s):
+    def trash_dir_for(self, s):
+        """(trash dir, topdir or None) on the same filesystem as s, created if needed."""
+        parent = os.path.dirname(s)
+        dev = os.stat(parent).st_dev
         os.makedirs(TFILES, mode=0o700, exist_ok=True)
         os.makedirs(TINFO, mode=0o700, exist_ok=True)
+        if os.stat(TRASH).st_dev == dev:
+            return TRASH, None
+        top = mount_top(parent)
+        shared = os.path.join(top, ".Trash")
+        try:
+            st = os.lstat(shared)
+            ok = stat.S_ISDIR(st.st_mode) and st.st_mode & stat.S_ISVTX     # spec: shared .Trash must be sticky, no symlink
+        except OSError:
+            ok = False
+        cands = top_trash_dirs(top) if ok else top_trash_dirs(top)[1:]
+        why = None
+        for t in cands:
+            try:
+                os.makedirs(os.path.join(t, "files"), mode=0o700, exist_ok=True)
+                os.makedirs(os.path.join(t, "info"), mode=0o700, exist_ok=True)
+                if not os.path.islink(t) and os.stat(t).st_dev == dev:
+                    return t, top
+            except OSError as ex:
+                why = ex
+        if why is not None and why.errno == 30:     # EROFS
+            raise OSError("the drive is read-only")
+        raise OSError("this drive has no Trash (%s); Shift+Del deletes for good" %
+                      (why.strerror if why is not None else "cannot create one"))
+
+    def trash(self, s):
         s = os.path.abspath(s)
+        t, top = self.trash_dir_for(s)
+        tinfo, tfiles = os.path.join(t, "info"), os.path.join(t, "files")
         base = os.path.basename(s)
         n, k = base, 0
         while True:
             try:
-                fd = os.open(os.path.join(TINFO, n + ".trashinfo"), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+                fd = os.open(os.path.join(tinfo, n + ".trashinfo"), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
                 break
             except FileExistsError:
                 k += 1
                 b, e = os.path.splitext(base)
                 n = "%s.%d%s" % (b, k, e)
+        rel = os.path.relpath(s, top) if top else s     # relative on drives: survives a new mount point
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write("[Trash Info]\nPath=%s\nDeletionDate=%s\n" % (
-                urllib.parse.quote(s, safe="/"), time.strftime("%Y-%m-%dT%H:%M:%S")))
-        dst = os.path.join(TFILES, n)
+                urllib.parse.quote(rel, safe="/"), time.strftime("%Y-%m-%dT%H:%M:%S")))
         try:
-            try:
-                os.rename(s, dst)
-            except OSError:
-                self.copyany(s, dst)
-                remove_any(s)
+            os.rename(s, os.path.join(tfiles, n))       # same filesystem by construction: never a copy
         except BaseException:
-            try: os.unlink(os.path.join(TINFO, n + ".trashinfo"))
+            try: os.unlink(os.path.join(tinfo, n + ".trashinfo"))
             except OSError: pass
             raise
 
     def restore(self, tp):
         n = os.path.basename(tp)
-        info = os.path.join(TINFO, n + ".trashinfo")
-        orig, _ = parse_info(info)
+        info = info_of(tp)
+        orig, _ = trash_orig(tp)
         if not orig:
             raise OSError("no .trashinfo for '%s'" % n)
         os.makedirs(os.path.dirname(orig), exist_ok=True)
@@ -471,8 +578,8 @@ class Job:
 
     def delete_trash_info(self, p):
         # permanently deleting an item inside the trash also removes its info file
-        if os.path.dirname(os.path.abspath(p)) == os.path.abspath(TFILES):
-            try: os.unlink(os.path.join(TINFO, os.path.basename(p) + ".trashinfo"))
+        if is_trash_files(os.path.dirname(os.path.abspath(p))):
+            try: os.unlink(info_of(p))
             except OSError: pass
 
     def run(self):

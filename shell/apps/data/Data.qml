@@ -1038,7 +1038,10 @@ Singleton {
     }
     function emptyTrash() {
         if (!isTrash || !entries.length) return;
-        confirm("Empty Trash", "All " + entries.length + " items in the Trash will be deleted for good.", "Empty Trash",
+        const drives = [];   // other drives keep their own Trash (<drive>/.Trash-<uid>): say which ones get emptied
+        for (const e of entries) if (e.dr && drives.indexOf(e.dr) < 0) drives.push(e.dr);
+        const where = drives.length ? " This includes the Trash on " + drives.map(d => "“" + (basename(d) || d) + "”").join(", ") + "." : "";
+        confirm("Empty Trash", "All " + entries.length + " items in the Trash will be deleted for good." + where, "Empty Trash",
                 () => enqueue({ title: "Emptying Trash", items: [{ op: "emptytrash" }], done: "Trash emptied" }), true);
     }
     function dragPaths(e) {   // what a drag starting on entry e carries
