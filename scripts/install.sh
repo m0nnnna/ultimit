@@ -179,6 +179,10 @@ ninja -C "$WORK/compositor" -j "$JOBS"
 sudo install -D -m755 "$WORK/compositor/ultimit" "$PREFIX/bin/ultimit"
 [ "$(ldd "$PREFIX/bin/ultimit" | grep -c "not found")" = 0 ] || die "the compositor can't find a library: $(ldd "$PREFIX/bin/ultimit" | grep 'not found')"
 
+step "Building NekoMail (the mail app)"
+# (pinned in scripts/build-nekomail.sh; a failure leaves the rest of the install going)
+"$ROOT/scripts/build-nekomail.sh" "$WORK" "$PREFIX" || warn "NekoMail didn't build (see above); MAILER opens STORE until it does"
+
 # ------------------------------------------------------------------------------------ the desktop
 # Everything that needs root from here on (shared with the ISO installer): scripts/system-install.sh
 flags=(--tree "$ROOT")

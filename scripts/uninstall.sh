@@ -34,6 +34,12 @@ sudo sh -e -c '
 	rm -rf /usr/share/fonts/truetype/ultimit /var/lib/ultimit-greeter
 	for l in /usr/local/bin/ultimit*; do [ "$(readlink "$l" 2>/dev/null | cut -c1-${#P})" = "$P" ] && rm -f "$l"; done
 	for d in "$P"/shell/apps/*/ultimit-*.desktop; do rm -f "/usr/share/applications/$(basename "$d")"; done
+	# NekoMail (system-install.sh); mail stays in each home, ~/.config/nekomail, ~/.local/share/nekomail
+	if [ "$(readlink /usr/local/bin/nekomail 2>/dev/null | cut -c1-${#P})" = "$P" ]; then
+		rm -f /usr/local/bin/nekomail /usr/share/applications/nekomail.desktop /usr/lib/systemd/user/nekomail.service \
+			/usr/share/icons/hicolor/scalable/apps/nekomail.svg /usr/share/icons/hicolor/192x192/apps/nekomail.png \
+			/usr/share/icons/hicolor/512x512/apps/nekomail.png
+	fi
 	if [ -d "$P/distro/system" ]; then
 		cd "$P/distro/system" && find . -type f | while read -r f; do rm -f "/$f"; done
 	fi

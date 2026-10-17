@@ -179,9 +179,9 @@ Singleton {
           appIds: ["steam", "lutris", "heroic", "com.heroicgameslauncher.hgl", "net.lutris.lutris"] },
         { id: "mailer",    label: "MAILER",
           tryCmds: [
-              // NekoMail (Ultimit's own mail app, ~/code/nekomail ultimit branch): the `nekomail`
+              // NekoMail (Ultimit's own mail app, /opt/ultimit/nekomail, scripts/build-nekomail.sh): the `nekomail`
               // window command (single instance; starts its background service if needed).
-              // ~/.local/bin is where its installer puts it, which a session PATH may lack.
+              // ~/.local/bin is where a per-user install from the NekoMail repo puts it, which a session PATH may lack.
               { bin: "nekomail", cmd: "$(command -v nekomail || echo \"$HOME/.local/bin/nekomail\")",
                 check: "command -v nekomail >/dev/null 2>&1 || [ -x \"$HOME/.local/bin/nekomail\" ]" },
               { bin: "thunderbird", cmd: "thunderbird" },

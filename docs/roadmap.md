@@ -126,6 +126,6 @@ Done:
 - [x] Session runs the installed shell (fallback is the last good copy, no git needed)
   - [ ] Themes, icons and cursors still generated per user at each login (works, a little slow)
 - [x] greetd config for any user, no autologin (keyring unlocks with the typed password)
-  - [ ] NekoMail packaged (MAILER falls back to STORE until then)
+  - [x] NekoMail packaged (built into /opt/ultimit/nekomail by scripts/build-nekomail.sh; mailto: handler)
 - [x] distro/ manifest: packages-build.txt, packages-core.txt, packages-install.txt; fonts vendored
   - [ ] snap removal list complete (cups, snap-store, firmware-updater...)

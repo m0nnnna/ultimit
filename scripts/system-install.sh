@@ -152,6 +152,19 @@ for b in "$P"/shell/bin/*; do ln -sfn "$b" "/usr/local/bin/$(basename "$b")"; do
 for d in "$P"/shell/apps/*/ultimit-*.desktop; do
 	sed "s|^Exec=ultimit-|Exec=$P/shell/bin/ultimit-|" "$d" >"/usr/share/applications/$(basename "$d")"
 done
+# NekoMail, the mail app (built into $P/nekomail by scripts/build-nekomail.sh): the nekomail
+# command, its menu entry (the mailto: handler; ultimit-session makes it the default when none is
+# set), icon, and the user unit that syncs mail in the background (ultimit-session starts it)
+if [ -x "$P/nekomail/bin/nekomail" ]; then
+	ln -sfn "$P/nekomail/bin/nekomail" /usr/local/bin/nekomail
+	install -D -m644 "$P/nekomail/share/nekomail.desktop" /usr/share/applications/nekomail.desktop
+	install -D -m644 "$P/nekomail/share/nekomail.service" /usr/lib/systemd/user/nekomail.service
+	install -D -m644 "$P/nekomail/share/nekomail.svg" /usr/share/icons/hicolor/scalable/apps/nekomail.svg
+	install -D -m644 "$P/nekomail/share/nekomail-192.png" /usr/share/icons/hicolor/192x192/apps/nekomail.png
+	install -D -m644 "$P/nekomail/share/nekomail-512.png" /usr/share/icons/hicolor/512x512/apps/nekomail.png
+	gtk-update-icon-cache -q /usr/share/icons/hicolor 2>/dev/null || true
+	update-desktop-database -q /usr/share/applications 2>/dev/null || true
+fi
 # Unlock the keyring (oo7) with the password typed at the login screen
 if ! grep -q pam_oo7 /etc/pam.d/greetd 2>/dev/null; then
 	printf "\n# Ultimit: unlock the oo7 keyring with the login password.\nauth     optional pam_oo7.so\nsession  optional pam_oo7.so auto_start\n" >>/etc/pam.d/greetd

@@ -127,6 +127,18 @@ if [ ! -e "$img_mark" ]; then
 	) &
 fi
 
+# mailto: links open NekoMail when no mail app is set, or the one set was uninstalled
+# (Settings > Default apps changes it)
+if [ -e /usr/share/applications/nekomail.desktop ] || [ -e "$HOME/.local/share/applications/nekomail.desktop" ]; then
+	(
+		v=$(xdg-mime query default x-scheme-handler/mailto 2>/dev/null) keep=""
+		for d in "$HOME/.local/share" $(echo "${XDG_DATA_DIRS:-/usr/local/share:/usr/share}" | tr : ' '); do
+			[ -n "$v" ] && [ -e "$d/applications/$v" ] && keep=1
+		done
+		[ -n "$keep" ] || xdg-mime default nekomail.desktop x-scheme-handler/mailto 2>/dev/null
+	) &
+fi
+
 # Keep a log of the last session for debugging; the previous one is kept too.
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/ultimit"
 mkdir -p "$LOG_DIR"

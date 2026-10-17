@@ -9,6 +9,10 @@ pkg-config
 meson
 ninja-build
 cmake
+# NekoMail (scripts/build-nekomail.sh): its web frontend and Python venv
+nodejs
+npm
+python3-venv
 # wlroots / SceneFX / compositor
 wayland-protocols
 libwayland-dev
