@@ -273,6 +273,11 @@ add("apps", "ultimit-claude",
     P("M6 13L11 8H42V31L37 36H20L12 42V36H6Z", A, "fill"),
     SOL("M24 13L26.2 19.8L33 22L26.2 24.2L24 31L21.8 24.2L15 22L21.8 19.8Z", F),
     SOL("M35 12h3v3h-3z", A))
+add("apps", "ultimit-ember",
+    # Ember, the assistant: a wireframe head with straight-cut bangs, long hair and a bow at the collar
+    P("M10 42V15L16 7L22 5H26L32 7L38 15V42H33V22L29 17H19L15 22V42Z", A, "fill"),
+    S("M15 22V30L20 36H28L33 30V22", F), S("M19 17V22M24 16V22M29 17V22", D),
+    S("M18.5 26.5H22M26 26.5H29.5", F), SOL("M20 39L24 41.5L28 39V44L24 41.5L20 44Z", A))
 add("apps", "ultimit-settings",
     P(cp(7, 7, 34, 34, 5, ("tl", "br")), A, "fill"),
     S("M13 17H35M13 24H35M13 31H35", D),

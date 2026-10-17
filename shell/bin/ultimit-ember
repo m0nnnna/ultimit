@@ -1,0 +1,24 @@
+#!/bin/sh
+# ultimit-ember [TEXT] - open EMBER, the Ultimit desktop assistant; TEXT goes into her message box.
+# EMBER is its own quickshell process (ember-shell.qml), started here when not yet running; it exits
+# when its window closes.
+shell="${ULTIMIT_SHELL_DIR:-$(dirname "$(dirname "$(readlink -f "$0")")")}"
+cfg="$shell/ember-shell.qml"
+# Started from a launcher, PATH can lack Ultimit's bin dir: find qs like ultimit-claude.
+QS=$(command -v qs) || for q in "$shell/../bin/qs" "${ULTIMIT_DEPS:-$HOME/.local/ultimit-deps}/bin/qs"; do
+	[ -x "$q" ] && QS=$q && break
+done
+QS=${QS:-qs}
+
+ember() { "$QS" -p "$cfg" ipc call ember "$@" >/dev/null 2>&1; }
+
+if ! ember state; then
+	"$QS" -p "$cfg" -n -d >/dev/null 2>&1
+	i=0
+	until ember state; do
+		i=$((i + 1)); [ $i -gt 50 ] && { echo "ultimit-ember: EMBER did not start" >&2; exit 1; }
+		sleep 0.2
+	done
+fi
+
+if [ $# -gt 0 ]; then ember ask "$*"; else ember open; fi

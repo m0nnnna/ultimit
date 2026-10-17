@@ -1,0 +1,6 @@
+singleton Ember 1.0 Ember.qml
+EmberApp 1.0 EmberApp.qml
+EmberWindow 1.0 EmberWindow.qml
+EmberFace 1.0 EmberFace.qml
+EmberItem 1.0 EmberItem.qml
+SettingsPanel 1.0 SettingsPanel.qml

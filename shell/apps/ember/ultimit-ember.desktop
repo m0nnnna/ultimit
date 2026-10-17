@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=EMBER
+GenericName=Desktop Assistant
+Comment=Ember, your AI assistant: plug in Claude, GPT, Grok or a local model and she works your PC for you
+Exec=ultimit-ember
+Icon=ultimit-ember
+Terminal=false
+Categories=Utility;
+Keywords=ember;ai;assistant;chat;gpt;grok;claude;ollama;local;help;
