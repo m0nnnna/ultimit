@@ -60,6 +60,18 @@ ShellRoot {
         function get(): string { return JSON.stringify({ wallpaper: Config.wallpaper, fit: Config.wallpaperFit }); }
     }
 
+    IpcHandler {   // photo frames on the desktop: qs ipc call frames add <file> [screen] | list | lock <id> | unlock <id> | remove <id>
+        target: "frames"
+        function add(path: string, screen: string): string {
+            if (!Frames.isImage(path)) return "error: give the absolute path of a picture";
+            return Frames.add(path, screen, -1, -1);
+        }
+        function list(): string { return JSON.stringify(Frames.list); }
+        function lock(id: string): string { return Frames.setLocked(id, true) ? "ok" : "error: no such frame"; }
+        function unlock(id: string): string { return Frames.setLocked(id, false) ? "ok" : "error: no such frame"; }
+        function remove(id: string): string { return Frames.remove(id) ? "ok" : "error: no such frame"; }
+    }
+
     IpcHandler {   // your own accent on every skin: qs ipc call accent set <#rrggbb> | reset | get
         target: "accent"
         function set(hex: string): string {

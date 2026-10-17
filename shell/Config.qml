@@ -116,10 +116,11 @@ Singleton {
     property string uiScreen: ""
     property real menuX: 0
     property real menuY: 0
+    property string menuFrame: ""   // the photo frame (Frames.qml) the menu was opened on, "" = the desktop
     function openLauncher(screenName) { menuOpen = false; uiScreen = screenName || ""; launcherOpen = true; }
     function closeLauncher() { launcherOpen = false; }
     function toggleLauncher(screenName) { if (launcherOpen) closeLauncher(); else openLauncher(screenName); }
-    function openMenu(screenName, x, y) { launcherOpen = false; uiScreen = screenName || ""; menuX = x; menuY = y; menuOpen = true; }
+    function openMenu(screenName, x, y, frame) { launcherOpen = false; uiScreen = screenName || ""; menuX = x; menuY = y; menuFrame = frame || ""; menuOpen = true; }
     function closeMenu() { menuOpen = false; }
     function isUiScreen(name) {
         if (uiScreen !== "") return uiScreen === name;

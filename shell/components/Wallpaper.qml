@@ -1,7 +1,7 @@
 // Wallpaper.qml - the desktop background (layer: background, no exclusive zone): a picture
 // (Config.wallpaper, fitted per Config.wallpaperFit) or the generative shards.
 // Port of genShards / genHex / drawWall from docs/design/mockup.html, including the
-// seeded PRNG, so the picture matches the mockup. Also hosts the Wordmark.
+// seeded PRNG, so the picture matches the mockup. Also hosts the Wordmark and the photo frames.
 //
 // Cost control: WallpaperArt draws the moving parts on the GPU and the still parts once.
 // Nothing runs when motion is off, or while a fullscreen window covers this screen.
@@ -49,5 +49,18 @@ PanelWindow {
         anchors.rightMargin: 30
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 50
+    }
+
+    Item {   // photo frames on this screen (Frames.qml), over the picture, under every window
+        anchors.fill: parent
+        Repeater {
+            model: Frames.ids
+            PhotoFrame {
+                required property string modelData
+                frameId: modelData
+                screenName: win.screen ? win.screen.name : ""
+                visible: f !== null && f.screen === screenName
+            }
+        }
     }
 }

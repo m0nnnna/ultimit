@@ -2,6 +2,7 @@
 // Overlay-layer full-screen transparent window: click-outside / Escape closes, exclusive
 // keyboard focus for arrow-key navigation. The panel opens at the cursor and is clamped
 // on screen; "Skin" opens a side panel (flips left when there is no room on the right).
+// Opened on a photo frame (Config.menuFrame) it lists that frame's items instead.
 // Styled like the mockup popups: panel fill, 1px line, accent hover row, small mono labels.
 import QtQuick
 import Quickshell
@@ -32,16 +33,31 @@ PanelWindow {
         { id: "silver", n: "Silver" }, { id: "verdant", n: "Verdant" }
     ]
     // kind: "item" | "sep"
-    readonly property var items: [
+    readonly property var desktopItems: [
         { id: "term",    label: "Open Terminal" },
         { id: "files",   label: "Files" },
         { id: "launch",  label: "App launcher" },
         { id: "acc",     label: "Accessory" },
         { id: "skin",    label: "Skin", sub: true },
         { kind: "sep" },
+        { id: "frame",   label: "Add photo frame…" },
         { id: "motion",  label: "Animate shards", check: true },
         { id: "boot",    label: "Play boot sequence" }
     ]
+    readonly property var frameItems: [
+        { id: "flock",   label: "Lock in place", check: true },
+        { id: "fopen",   label: "Open in IMAGE" },
+        { id: "fpic",    label: "Change picture…" },
+        { kind: "sep" },
+        { id: "fremove", label: "Remove frame" }
+    ]
+    readonly property var items: Config.menuFrame !== "" ? frameItems : desktopItems
+    readonly property int skinIndex: items.findIndex(it => it.id === "skin")
+    function checked(it) {
+        if (it.id === "motion") return Config.motion;
+        if (it.id === "flock") { const f = Frames.byId(Config.menuFrame); return !!(f && f.locked); }
+        return false;
+    }
     readonly property int menuH: {
         let h = 12;
         for (const it of items) h += it.kind === "sep" ? 9 : rowH;
@@ -65,6 +81,11 @@ PanelWindow {
         case "launch": Config.openLauncher(win.screenName); return;
         case "acc": close(); Config.openSettings(""); return;
         case "boot": close(); Config.playBoot(); return;
+        case "frame": close(); Frames.pick(win.screenName, Config.menuX, Config.menuY, ""); return;
+        case "flock": { const f = Frames.byId(Config.menuFrame); if (f) Frames.setLocked(f.id, !f.locked); break; }
+        case "fopen": Frames.openInImage(Config.menuFrame); break;
+        case "fpic": Frames.pick(win.screenName, -1, -1, Config.menuFrame); break;
+        case "fremove": Frames.remove(Config.menuFrame); break;
         }
         close();
     }
@@ -154,8 +175,9 @@ PanelWindow {
                     visible: !row.sep
                     anchors.right: parent.right; anchors.rightMargin: 14
                     anchors.verticalCenter: parent.verticalCenter
-                    text: row.modelData.sub ? "▸" : (row.modelData.check && Config.motion ? "■" : (row.modelData.check ? "□" : ""))
-                    color: row.modelData.check && Config.motion ? Theme.accent : Theme.dim
+                    readonly property bool on: !!row.modelData.check && win.checked(row.modelData)
+                    text: row.modelData.sub ? "▸" : (on ? "■" : (row.modelData.check ? "□" : ""))
+                    color: on ? Theme.accent : Theme.dim
                     font.family: Theme.mono; font.pixelSize: 11
                 }
                 MouseArea {
@@ -178,7 +200,7 @@ PanelWindow {
     Rectangle {
         id: sub
         visible: win.subOpen
-        readonly property real skinRowY: menu.y + win.rowY(4)
+        readonly property real skinRowY: menu.y + win.rowY(Math.max(0, win.skinIndex))
         readonly property bool flip: menu.x + menu.width + width + 4 > win.width
         x: flip ? menu.x - width - 2 : menu.x + menu.width + 2
         y: Math.max(8, Math.min(skinRowY - 6, win.height - height - 8))

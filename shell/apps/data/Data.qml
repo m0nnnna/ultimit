@@ -1412,6 +1412,15 @@ Singleton {
         return true;
     }
 
+    // The one selected picture goes on the desktop in a photo frame (Frames.qml), mid main screen.
+    function putInFrame() {
+        const t = targets();
+        if (t.length !== 1 || t[0].d || !Frames.isImage(t[0].p)) return false;
+        Frames.add(t[0].p, "", -1, -1);
+        toast("Photo frame", "“" + t[0].n + "” is on the desktop. Right-click it to lock it in place.");
+        return true;
+    }
+
     // ---------------------------------------------------------------- scripted control (IPC "data run")
     function act(name, arg) {
         switch (name) {
@@ -1439,6 +1448,7 @@ Singleton {
         case "props": showProps(); return "ok";
         case "openwith": showOpenWith(); return "ok";
         case "wallpaper": return setWallpaper() ? "ok" : "not one image";
+        case "frame": return putInFrame() ? "ok" : "not one image";
         case "confirm": acceptDialog(); return "ok";
         case "cancel": closeDialog(); return "ok";
         case "conflict": answerConflict(arg, false); return "ok";

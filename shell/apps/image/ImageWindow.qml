@@ -123,6 +123,11 @@ FloatingWindow {
         Quickshell.execDetached([Quickshell.shellPath("bin/ultimit-wallpaper"), path]);
         say("Set as wallpaper");
     }
+    function putInFrame() {
+        if (path === "") return;
+        Quickshell.execDetached([Quickshell.shellPath("bin/ultimit-frame"), path]);
+        say("On the desktop in a frame");
+    }
     function showInFolder() { if (path !== "") Quickshell.execDetached([Quickshell.shellPath("bin/ultimit-data"), "--reveal", path]); }
     function trash() {
         const p = path;
@@ -201,6 +206,7 @@ FloatingWindow {
                     ChamferButton { visible: win.anim; implicitHeight: 30; text: animPic.paused ? "Play" : "Pause"; onClicked: animPic.paused = !animPic.paused }
                     Item { width: 8; height: 1 }
                     ChamferButton { implicitHeight: 30; text: "Wallpaper"; onClicked: win.setWallpaper() }
+                    ChamferButton { implicitHeight: 30; text: "Frame"; onClicked: win.putInFrame() }
                     ChamferButton { implicitHeight: 30; text: "Show in folder"; onClicked: win.showInFolder() }
                     ChamferButton { implicitHeight: 30; text: "Copy"; onClicked: win.copyImage() }
                     ChamferButton { implicitHeight: 30; text: "Delete"; onClicked: if (win.path !== "") win.overlay = "trash" }

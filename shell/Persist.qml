@@ -1,4 +1,4 @@
-// Persist.qml - loads/saves user settings (skin, accent, motion, shard density, wallpaper, boot-on-start, rail pins, news feeds)
+// Persist.qml - loads/saves user settings (skin, accent, motion, shard density, wallpaper, photo frames, boot-on-start, rail pins, news feeds)
 // to ~/.config/ultimit/shell.json using FileView + JsonAdapter, and syncs them
 // with the Theme / Config singletons in both directions.
 // Env overrides (ULTIMIT_SKIN, ULTIMIT_MOTION, ULTIMIT_BOOT) win over the file for that run.
@@ -45,6 +45,7 @@ Scope {
         if (!root.envLock) Config.lockAfter = a.lockAfter;
         if (!root.envSuspend) Config.suspendAfter = a.suspendAfter;
         if (!root.envSuspendAC) Config.suspendOnAC = a.suspendOnAC;
+        Frames.set(Frames.clean(a.frames));
         root.applyRailNews();
     }
     function applyRailNews() {
@@ -82,6 +83,7 @@ Scope {
         if (!root.envSuspendAC && a.suspendOnAC !== Config.suspendOnAC) { a.suspendOnAC = Config.suspendOnAC; changed = true; }
         if (!root.envPins && JSON.stringify(a.pins) !== JSON.stringify(Pins.specs)) { a.pins = Pins.specs; changed = true; }
         if (!root.envFeeds && JSON.stringify(a.feeds) !== JSON.stringify(Feeds.urls)) { a.feeds = Feeds.urls; changed = true; }
+        if (JSON.stringify(a.frames) !== JSON.stringify(Frames.list)) { a.frames = Frames.list; changed = true; }
         if (changed) save.restart();
     }
 
@@ -161,6 +163,10 @@ Scope {
         target: Feeds
         function onUrlsChanged() { root.push(); }
     }
+    Connections {
+        target: Frames
+        function onListChanged() { root.push(); }
+    }
 
     // Debounce: the density slider fires continuously.
     Timer { id: save; interval: 400; onTriggered: store.writeAdapter() }
@@ -201,6 +207,7 @@ Scope {
                 { id: "data", label: "DATA", icon: "data" }, { id: "accessory", label: "ACCESSORY", icon: "accessory" }
             ]
             property var feeds: ["https://meowops.net/feed.xml"]   // news ticker feeds; [] = built-in headlines
+            property var frames: []   // photo frames on the desktop (see Frames.qml)
         }
     }
 }

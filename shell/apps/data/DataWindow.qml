@@ -112,6 +112,7 @@ FloatingWindow {
             }
             if (one && !one.d) items.push({ id: "openwith", label: "Open with…" });
             if (one && !one.d && one.p.startsWith("/") && /\.(jpe?g|png|webp)$/i.test(one.n)) items.push({ id: "wallpaper", label: "Set as wallpaper" });
+            if (one && !one.d && Frames.isImage(one.p)) items.push({ id: "frame", label: "Put on desktop in a frame" });
             if (one && one.d) items.push({ id: "openterm", label: "Open terminal here" });
             if (one && one.d && !Data.onMtp && one.p.startsWith("/")) items.push({ id: "sharenet", label: "Share on network\u2026" });
             items.push({ kind: "sep" });
@@ -244,6 +245,7 @@ FloatingWindow {
             Data.openTerminalHere(); break;
         }
         case "wallpaper": Data.setWallpaper(); break;
+        case "frame": Data.putInFrame(); break;
         case "sharenet": { const t = Data.targets(); if (t.length === 1 && t[0].d) Quickshell.execDetached([Quickshell.shellPath("bin/ultimit-shares"), "--new", t[0].p]); break; }
         case "cut": Data.cutSel(); break;
         case "copy": Data.copySel(); break;

@@ -23,6 +23,7 @@ StatusTray 1.0 StatusTray.qml
 StatusIcon 1.0 StatusIcon.qml
 TrayMenu 1.0 TrayMenu.qml
 WallpaperArt 1.0 WallpaperArt.qml
+PhotoFrame 1.0 PhotoFrame.qml
 LockSurface 1.0 LockSurface.qml
 PopupMenu 1.0 PopupMenu.qml
 RailMenu 1.0 RailMenu.qml

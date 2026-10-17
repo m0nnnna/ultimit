@@ -1,0 +1,12 @@
+#!/bin/sh
+# ultimit-frame FILE [SCREEN] | --list | --lock ID | --unlock ID | --remove ID - put a picture on the
+# desktop in a photo frame (mid SCREEN, default the main one), or list / lock / unlock / remove frames.
+# IMAGE's "Frame" button runs this.
+shell="${ULTIMIT_SHELL_DIR:-$(dirname "$(dirname "$(readlink -f "$0")")")}"
+case "$1" in
+    "" | -h | --help) sed -n '2,4p' "$0" | sed 's/^# //'; exit 2 ;;
+    --list) exec qs -p "$shell" ipc call frames list ;;
+    --lock | --unlock | --remove) exec qs -p "$shell" ipc call frames "${1#--}" "$2" ;;
+esac
+file=$(readlink -f "$1") && [ -f "$file" ] || { echo "ultimit-frame: no such file: $1" >&2; exit 1; }
+exec qs -p "$shell" ipc call frames add "$file" "${2:-}"
