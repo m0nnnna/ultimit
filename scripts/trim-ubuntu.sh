@@ -73,7 +73,8 @@ if [ -n "$(comm -23 "$w/final" "$w/expected")" ]; then
 	exit 1
 fi
 cmdline_crash=false; grep -q crashkernel= /proc/cmdline && cmdline_crash=true
-DEBIAN_FRONTEND=noninteractive apt-get purge --autoremove -y -q "${installed[@]}" >/dev/null
+# No terminal: under sudo-rs's pty apt-get could get job-control stopped here and hang the update
+DEBIAN_FRONTEND=noninteractive apt-get purge --autoremove -y -q "${installed[@]}" </dev/null >/dev/null
 if printf '%s\n' "${installed[@]}" | grep -qx snapd; then
 	printf 'Package: snapd\nPin: release a=*\nPin-Priority: -10\n' >/etc/apt/preferences.d/ultimit-no-snapd
 	rm -rf /var/cache/snapd /snap 2>/dev/null || true
