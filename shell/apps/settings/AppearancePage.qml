@@ -10,6 +10,7 @@ Page {
 
     // Picture mode chosen but no picture picked yet (Config.wallpaper still "").
     property bool pictureMode: false
+    property var accentHover: null   // accent swatch under the pointer, named below the row
     // Candidate pictures: Pictures/Wallpapers, Pictures (two levels down), the system backgrounds.
     property var pictures: []
     Cmd {
@@ -49,6 +50,58 @@ Page {
                 onClicked: Theme.skin = modelData.id
             }
         }
+    }
+
+    // ---- accent: the one colour that marks state (focused window, selection, toggles, cursor) ----
+    SectionLabel { text: "Accent" }
+    Text {
+        Layout.fillWidth: true; wrapMode: Text.WordWrap
+        text: "The colour that marks what's focused, selected or on, on every skin."
+        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+    }
+    Flow {
+        Layout.fillWidth: true
+        spacing: 8
+        Repeater {
+            model: [{ n: "Skin's own", c: "" }].concat(Theme.accentPresets)
+            delegate: Rectangle {
+                required property var modelData
+                readonly property bool sel: Theme.accentOverride === modelData.c
+                width: 34; height: 34
+                color: "transparent"
+                border.width: sel ? 2 : 1
+                border.color: sel ? Theme.fg : (sw.hovered ? Theme.lineStrong : Theme.line)
+                Rectangle {
+                    anchors.fill: parent; anchors.margins: 5
+                    color: parent.modelData.c === "" ? Theme.cur.accent : parent.modelData.c
+                }
+                HoverHandler {
+                    id: sw; cursorShape: Qt.PointingHandCursor
+                    onHoveredChanged: pg.accentHover = hovered ? parent.modelData : null
+                }
+                TapHandler { onTapped: Theme.accentOverride = parent.modelData.c }
+            }
+        }
+        TextEntry {
+            id: hex
+            width: 104; height: 34
+            placeholder: "#rrggbb"
+            text: Theme.accentOverride
+            onAccepted: {
+                const t = text.trim().toLowerCase(), v = t.startsWith("#") ? t : "#" + t;
+                if (Theme.validAccent(v)) Theme.accentOverride = v;
+                else text = Theme.accentOverride;
+            }
+            Connections { target: Theme; function onAccentOverrideChanged() { hex.text = Theme.accentOverride; } }
+        }
+    }
+    Text {
+        Layout.fillWidth: true
+        // the swatch under the pointer, else the current accent
+        readonly property var shown: pg.accentHover
+            || Theme.accentPresets.find(p => p.c === Theme.accentOverride) || { n: "", c: Theme.accentOverride }
+        text: shown.c === "" ? "SKIN'S OWN" : (shown.n ? shown.n.toUpperCase() + " · " : "") + shown.c
+        color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 2.2
     }
 
     SectionLabel { text: "Wallpaper" }

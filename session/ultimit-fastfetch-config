@@ -16,6 +16,10 @@ case "$skin" in
 	verdant) accent="185;255;140"; dim="140;170;140" ;;
 	*)       skin=mine; accent="212;235;255"; dim="141;148;158" ;;
 esac
+# Your own accent (Settings > Appearance) wins over the skin's.
+own=$(sed -n 's/.*"accent"[[:space:]]*:[[:space:]]*"#\([0-9a-fA-F]\{6\}\)".*/\1/p' \
+	"${XDG_CONFIG_HOME:-$HOME/.config}/ultimit/shell.json" 2>/dev/null | head -n1)
+[ -n "$own" ] && accent="$(printf '%d;%d;%d' "0x$(echo "$own" | cut -c1-2)" "0x$(echo "$own" | cut -c3-4)" "0x$(echo "$own" | cut -c5-6)")"
 Skin=$(printf '%s' "$skin" | sed 's/./\U&/')
 mkdir -p "$DST"
 cp "$SRC/ultimit-logo.txt" "$DST/ultimit-logo.txt"

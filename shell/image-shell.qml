@@ -9,7 +9,7 @@ import "apps/image"
 ShellRoot {
     settings.watchFiles: false
 
-    // Follow the desktop skin (read-only; the desktop shell's Persist owns shell.json).
+    // Follow the desktop skin and accent (read-only; the desktop shell's Persist owns shell.json).
     FileView {
         id: skinFile
         path: Quickshell.env("HOME") + "/.config/ultimit/shell.json"
@@ -17,8 +17,7 @@ ShellRoot {
         watchChanges: true
         onFileChanged: reload()
         onLoaded: {
-            if (Quickshell.env("ULTIMIT_SKIN")) return;
-            try { const s = JSON.parse(text()).skin; if (s in Theme.skins) Theme.skin = s; } catch (e) {}
+            try { Theme.load(JSON.parse(text())); } catch (e) {}
         }
     }
     ImageApp {}

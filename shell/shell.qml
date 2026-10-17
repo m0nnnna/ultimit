@@ -60,6 +60,18 @@ ShellRoot {
         function get(): string { return JSON.stringify({ wallpaper: Config.wallpaper, fit: Config.wallpaperFit }); }
     }
 
+    IpcHandler {   // your own accent on every skin: qs ipc call accent set <#rrggbb> | reset | get
+        target: "accent"
+        function set(hex: string): string {
+            const v = hex.startsWith("#") ? hex : "#" + hex;
+            if (!Theme.validAccent(v)) return "error: give a colour as #rrggbb";
+            Theme.accentOverride = v.toLowerCase();
+            return "ok";
+        }
+        function reset(): void { Theme.accentOverride = ""; }
+        function get(): string { return Theme.accentOverride === "" ? "skin" : Theme.accentOverride; }
+    }
+
     IpcHandler {   // keyboard shortcut sheet: qs ipc call shortcuts toggle | open | close
         target: "shortcuts"
         function toggle(): void { Config.shortcutsOpen = !Config.shortcutsOpen; }

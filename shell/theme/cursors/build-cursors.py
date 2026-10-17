@@ -11,6 +11,7 @@ Original artwork in the desktop's language: two-tone crystal shards (lit face
 in the skin's accent, shadow face sunk toward its panel colour), hairlines,
 chamfered chips and corner brackets, with one thin contrast outline.
 """
+import json
 import math
 import os
 import re
@@ -64,6 +65,16 @@ def load_skins(path):
             fill = "#%02x%02x%02x" % tuple(int(v) for v in pan.groups()) if pan else "#14181d"
         out[name] = dict(accent=acc.group(1).lower(), fill=fill)
     return out or dict(SKINS)
+
+
+def user_accent():
+    """Your own accent ("accent" in shell.json, Settings > Appearance), lit on every skin."""
+    p = os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"), "ultimit", "shell.json")
+    try:
+        a = json.load(open(p)).get("accent", "")
+    except Exception:
+        return None
+    return a.lower() if isinstance(a, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", a) else None
 
 
 # ---------------------------------------------------------------- helpers
@@ -625,6 +636,9 @@ def main(argv):
     sheets = None
     theme = argv[argv.index("--theme") + 1] if "--theme" in argv else THEME_QML
     found = load_skins(theme)
+    acc = user_accent()
+    for v in found.values():
+        v["accent"] = acc or v["accent"]
     SKINS.clear()
     SKINS.update(found)
     skins = list(SKINS)

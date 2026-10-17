@@ -69,6 +69,39 @@ Singleton {
     // (Aero-strength), so these alphas are the tint over that blur, not a plain see-through.
     readonly property var cur: skins[skin]
 
+    // Your own accent (Settings > Appearance, "accent" in shell.json), "" = the skin's own.
+    // It replaces the accent on every skin: focus frames, selections, toggles, the cursor.
+    // The text on it turns dark or light by its brightness, and "bad" moves to orange when
+    // the accent is red-ish so close/error never reads as the accent. Same rules as
+    // accented() in theme/gtk/build-gtk.py, which colours GTK, Discord and the cursor.
+    property string accentOverride: ""
+    readonly property var accentPresets: [
+        { n: "Pink", c: "#ff3d7f" }, { n: "Vermilion", c: "#ff5a36" }, { n: "Gold", c: "#ffc23d" },
+        { n: "Acid", c: "#c6ff3d" }, { n: "Mint", c: "#3dffb0" }, { n: "Cyan", c: "#3dd8ff" },
+        { n: "Blue", c: "#4d7cff" }, { n: "Violet", c: "#a66bff" }
+    ]
+    function validAccent(a) { return typeof a === "string" && /^#[0-9a-fA-F]{6}$/.test(a); }
+    readonly property var eff: _accented(cur, accentOverride)
+    function _accented(s, a) {
+        if (!validAccent(a)) return { accent: s.accent, onAccent: s.onAccent, bad: s.bad };
+        const ch = i => parseInt(a.substr(i, 2), 16) / 255;
+        const lin = c => c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+        const lum = 0.2126 * lin(ch(1)) + 0.7152 * lin(ch(3)) + 0.0722 * lin(ch(5));
+        const q = Qt.color(a), h = q.hsvHue;
+        const reddish = h >= 0 && (h <= 20 / 360 || h >= 330 / 360) && q.hsvSaturation >= 0.4;
+        return {
+            accent: a.toLowerCase(),
+            onAccent: lum > 0.18 ? "#08090b" : "#ffffff",
+            bad: reddish ? (s.light ? "#b35400" : "#ff9a52") : s.bad
+        };
+    }
+
+    // Settings from shell.json for the apps that run as their own process (MEMO, CLAUDE...).
+    function load(o) {
+        if (!Quickshell.env("ULTIMIT_SKIN") && o.skin in skins) skin = o.skin;
+        accentOverride = validAccent(o.accent) ? o.accent.toLowerCase() : "";
+    }
+
     function _rgba(a) { return Qt.rgba(a[0] / 255, a[1] / 255, a[2] / 255, a[3]); }
 
     // ---- colors ----
@@ -81,11 +114,11 @@ Singleton {
     readonly property color dim: cur.dim
     readonly property color line: _rgba(cur.line)
     readonly property color lineStrong: _rgba(cur.lineStrong)
-    readonly property color accent: cur.accent
-    readonly property color onAccent: cur.onAccent
+    readonly property color accent: eff.accent
+    readonly property color onAccent: eff.onAccent
     readonly property color ok: cur.ok
     readonly property color warn: cur.warn
-    readonly property color bad: cur.bad
+    readonly property color bad: eff.bad
 
     // ---- wallpaper palette (see components/Wallpaper.qml) ----
     readonly property string shard: cur.shard
@@ -101,7 +134,7 @@ Singleton {
 
     // Window-chrome colors for the compositor ("ultimitctl skin ..."), as
     // #rrggbbaa: panel fg dim line lineStrong accent bad.
-    readonly property var chromeArgs: [cur.panel, cur.fg, cur.dim, cur.line, cur.lineStrong, cur.accent, cur.bad].map(_hex)
+    readonly property var chromeArgs: [cur.panel, cur.fg, cur.dim, cur.line, cur.lineStrong, eff.accent, eff.bad].map(_hex)
     function _hex(v) {
         if (typeof v === "string") return v;
         return "#" + [v[0], v[1], v[2], Math.round(v[3] * 255)].map(n => n.toString(16).padStart(2, "0")).join("");

@@ -18,7 +18,7 @@ With --flatpak the GTK4 themes import upstream libadwaita's stylesheet
 
 Usage: build-gtk.py OUT_DIR [--alias SKIN] [--only SKIN] [--flatpak]
 """
-import json, os, re, sys
+import colorsys, json, os, re, sys
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 TPL = os.path.join(HERE, "templates")
@@ -77,8 +77,34 @@ def tr(c):
     return "rgba(%d,%d,%d,0)" % p[:3]
 
 
+def user_accent():
+    """Your own accent ("accent": "#rrggbb" in shell.json), or None for the skin's own."""
+    p = os.path.expanduser("~/.config/ultimit/shell.json")
+    try:
+        a = json.load(open(p)).get("accent", "")
+    except Exception:
+        return None
+    return a.lower() if isinstance(a, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", a) else None
+
+
+def accented(s, a):
+    """Skin palette s with accent a ("#rrggbb"): the text on it turns dark or light by its
+    brightness, "bad" moves to orange when the accent is red-ish. Mirrors Theme.qml."""
+    if not a:
+        return s
+    c = tuple(int(a[i:i + 2], 16) for i in (1, 3, 5))
+    lin = [v / 255 / 12.92 if v / 255 <= 0.04045 else ((v / 255 + 0.055) / 1.055) ** 2.4 for v in c]
+    lum = 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+    h, sat, _ = colorsys.rgb_to_hsv(*(v / 255 for v in c))
+    reddish = sat >= 0.4 and (h <= 20 / 360 or h >= 330 / 360)
+    s = dict(s, accent=c, on_acc=(8, 9, 11) if lum > 0.18 else (255, 255, 255))
+    if reddish:
+        s["bad"] = (179, 84, 0) if s["light"] else (255, 154, 82)
+    return s
+
+
 def palette(name):
-    s = SKINS[name]
+    s = accented(SKINS[name], user_accent())
     light = s["light"]
     panel, fg, accent = s["panel"], s["fg"], s["accent"]
     black, white = (0, 0, 0), (255, 255, 255)

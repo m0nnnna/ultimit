@@ -1,4 +1,4 @@
-// Persist.qml - loads/saves user settings (skin, motion, shard density, wallpaper, boot-on-start, rail pins, news feeds)
+// Persist.qml - loads/saves user settings (skin, accent, motion, shard density, wallpaper, boot-on-start, rail pins, news feeds)
 // to ~/.config/ultimit/shell.json using FileView + JsonAdapter, and syncs them
 // with the Theme / Config singletons in both directions.
 // Env overrides (ULTIMIT_SKIN, ULTIMIT_MOTION, ULTIMIT_BOOT) win over the file for that run.
@@ -31,6 +31,7 @@ Scope {
     function apply() {
         const a = store.adapter;
         if (!root.envSkin && a.skin in Theme.skins) Theme.skin = a.skin;
+        Theme.accentOverride = Theme.validAccent(a.accent) ? a.accent.toLowerCase() : "";
         if (!root.envMotion) Config.motion = a.motion;
         Config.railSpin = a.railSpin;
         Config.appIcons = a.appIcons === "original" ? "original" : "letters";
@@ -65,6 +66,7 @@ Scope {
         const a = store.adapter;
         let changed = false;
         if (!root.envSkin && a.skin !== Theme.skin) { a.skin = Theme.skin; changed = true; }
+        if (a.accent !== Theme.accentOverride) { a.accent = Theme.accentOverride; changed = true; }
         if (!root.envMotion && a.motion !== Config.motion) { a.motion = Config.motion; changed = true; }
         if (a.railSpin !== Config.railSpin) { a.railSpin = Config.railSpin; changed = true; }
         if (a.appIcons !== Config.appIcons) { a.appIcons = Config.appIcons; changed = true; }
@@ -104,8 +106,25 @@ Scope {
             Quickshell.execDetached([Quickshell.shellPath("bin/ultimit-discord"), "theme"]);
         }
     }
+    // A new accent: the GTK themes and cursors are rebuilt with it (both read shell.json, so after
+    // it is written), the cursor is reloaded, then fastfetch and Discord follow.
+    Timer {
+        id: accentTimer
+        interval: 1500
+        onTriggered: {
+            const name = "UltimitCursor-" + Theme.skin.charAt(0).toUpperCase() + Theme.skin.slice(1);
+            Quickshell.execDetached(["sh", "-c", "\"$1\" >/dev/null 2>&1; \"$2\" && ultimitctl cursor-theme " + name + " >/dev/null", "sh",
+                Quickshell.shellPath("theme/install-gtk-theme.sh"), Quickshell.shellPath("theme/cursors/install-cursors.sh")]);
+            fastfetchTimer.restart();
+        }
+    }
     Connections {
         target: Theme
+        function onAccentOverrideChanged() {
+            root.push();
+            root.pushChrome();
+            if (root.ready) accentTimer.restart();   // at login the session already built them
+        }
         function onSkinChanged() {
             root.push();
             root.pushChrome();
@@ -162,6 +181,7 @@ Scope {
 
         adapter: JsonAdapter {
             property string skin: "mine"
+            property string accent: ""   // "#rrggbb" = your own accent on every skin, "" = the skin's
             property bool motion: true
             property string railSpin: "always"
             property string appIcons: "letters"
