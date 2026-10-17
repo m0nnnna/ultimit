@@ -81,6 +81,19 @@ class Shapes(unittest.TestCase):
         self.assertIn("timed out", text)
         self.assertIn("note.txt", ember.run_tool("list_dir", {"path": TMP}, stop)[1])
 
+    def test_persona(self):
+        self.assertIn("tsundere", ember.system_prompt())
+        ember.write_json(ember.CONF, {})
+        with open(ember.MY_PERSONA, "w") as f:
+            f.write("You are Ember, but cheerful, {user}.")
+        try:
+            p = ember.system_prompt()
+            self.assertTrue(p.startswith("You are Ember, but cheerful, "))
+            self.assertNotIn("{user}", p)
+            self.assertIn("# Care", p)                       # the rules stay whatever the persona
+        finally:
+            os.remove(ember.MY_PERSONA)
+
     def test_html_text(self):
         self.assertEqual(ember.html_text("<style>x</style><p>Hi &amp; bye</p><script>y</script>"), "Hi & bye")
 

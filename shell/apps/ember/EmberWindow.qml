@@ -48,8 +48,8 @@ FloatingWindow {
     readonly property string moodText: !Ember.loaded ? "WAKING"
         : !Ember.ready && !busy ? "PLUG IN AN AI TO BEGIN"
         : ({ asking: "AWAITING YOUR WORD", working: "WORKING · " + tool.replace(/_/g, " ").toUpperCase(),
-             speaking: "SPEAKING", thinking: "THINKING", happy: "AT YOUR SERVICE", error: "SOMETHING WENT AMISS",
-             idle: "AT YOUR SERVICE" })[mood]
+             speaking: "SPEAKING", thinking: "THINKING", happy: "NOT THAT I CARE", error: "...THAT WASN'T MY FAULT",
+             idle: "WHAT DO YOU WANT" })[mood]
     readonly property bool canSend: Ember.ready && !busy && !loading && input.text.trim() !== ""
 
     Timer { id: speakTimer; interval: 450; onTriggered: win.speaking = false }
@@ -382,14 +382,14 @@ FloatingWindow {
                         visible: items.count === 0 && !win.busy && !win.loading
                         Text {
                             width: parent.width; horizontalAlignment: Text.AlignHCenter
-                            text: "GOOD " + (new Date().getHours() < 12 ? "MORNING" : new Date().getHours() < 18 ? "AFTERNOON" : "EVENING")
+                            text: "OH. IT'S YOU."
                             color: Theme.dim; font.family: Theme.mono; font.pixelSize: 12; font.letterSpacing: 2
                         }
                         Text {
                             width: parent.width; horizontalAlignment: Text.AlignHCenter; wrapMode: Text.Wrap
                             text: Ember.ready
-                                ? "How may I be of help? I can look into this PC, open your applications, find things on the web and take care of small chores - I'll ask before I change anything."
-                                : "I need a mind to think with. Open Settings and plug in Claude, GPT, Grok or a local model."
+                                ? "Well? I can poke around this PC, open your apps, look things up and do the chores you can't be bothered with. I'll even ask before I change anything. Not that you deserve the courtesy."
+                                : "Hmph. I can't think without a brain, dummy. Open Settings and plug in Claude, GPT, Grok or a local model."
                             color: Theme.fg; font.family: Theme.ui; font.pixelSize: 14
                         }
                         Flow {
