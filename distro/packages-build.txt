@@ -13,6 +13,12 @@ cmake
 nodejs
 npm
 python3-venv
+# NekoPlayer (scripts/build-nekoplayer.sh): Flutter's Linux build and its mpv audio backend
+clang
+xz-utils
+libgtk-3-dev
+libmpv-dev
+liblzma-dev
 # wlroots / SceneFX / compositor
 wayland-protocols
 libwayland-dev

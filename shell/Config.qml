@@ -200,6 +200,11 @@ Singleton {
           appIds: ["firefox", "org.mozilla.firefox", "google-chrome", "chromium", "brave-browser"] },
         { id: "audio",     label: "AUDIO",
           tryCmds: [
+              // NekoPlayer (Ultimit's own music player, /opt/ultimit/nekoplayer,
+              // scripts/build-nekoplayer.sh); one window per user. ~/.local/bin: a per-user
+              // install from the NekoPlayer repo.
+              { bin: "nekoplayer", cmd: "$(command -v nekoplayer || echo \"$HOME/.local/bin/nekoplayer\")",
+                check: "command -v nekoplayer >/dev/null 2>&1 || [ -x \"$HOME/.local/bin/nekoplayer\" ]" },
               { bin: "rhythmbox",  cmd: "rhythmbox" },
               { bin: "lollypop",   cmd: "lollypop" },
               { bin: "amberol",    cmd: "amberol" },
@@ -211,7 +216,7 @@ Singleton {
                 check: "command -v gtk-launch >/dev/null && [ -n \"$(xdg-mime query default audio/mpeg 2>/dev/null)\" ]" }
           ],
           hint: { what: "No music app installed", store: "music player" },
-          appIds: ["rhythmbox", "org.gnome.rhythmbox3", "spotify", "lollypop", "io.bassi.amberol", "org.gnome.music"] },
+          appIds: ["nekoplayer", "rhythmbox", "org.gnome.rhythmbox3", "spotify", "lollypop", "io.bassi.amberol", "org.gnome.music"] },
         { id: "data",      label: "DATA", own: true, appIds: [] },   // apps/data
         { id: "accessory", label: "ACCESSORY", own: true,
           appIds: ["gnome-control-center", "org.gnome.settings"] }

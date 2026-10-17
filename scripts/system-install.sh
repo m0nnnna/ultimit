@@ -165,6 +165,16 @@ if [ -x "$P/nekomail/bin/nekomail" ]; then
 	gtk-update-icon-cache -q /usr/share/icons/hicolor 2>/dev/null || true
 	update-desktop-database -q /usr/share/applications 2>/dev/null || true
 fi
+# NekoPlayer, the music player (built into $P/nekoplayer by scripts/build-nekoplayer.sh): the
+# nekoplayer command, its menu entry (it opens audio files; ultimit-session makes it the player
+# for audio types that have none) and icon
+if [ -x "$P/nekoplayer/nekoplayer" ]; then
+	ln -sfn "$P/nekoplayer/nekoplayer" /usr/local/bin/nekoplayer
+	install -D -m644 "$P/nekoplayer/share/nekoplayer.desktop" /usr/share/applications/nekoplayer.desktop
+	install -D -m644 "$P/nekoplayer/share/nekoplayer.svg" /usr/share/icons/hicolor/scalable/apps/nekoplayer.svg
+	gtk-update-icon-cache -q /usr/share/icons/hicolor 2>/dev/null || true
+	update-desktop-database -q /usr/share/applications 2>/dev/null || true
+fi
 # Unlock the keyring (oo7) with the password typed at the login screen
 if ! grep -q pam_oo7 /etc/pam.d/greetd 2>/dev/null; then
 	printf "\n# Ultimit: unlock the oo7 keyring with the login password.\nauth     optional pam_oo7.so\nsession  optional pam_oo7.so auto_start\n" >>/etc/pam.d/greetd

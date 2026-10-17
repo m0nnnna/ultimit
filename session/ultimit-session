@@ -139,6 +139,28 @@ if [ -e /usr/share/applications/nekomail.desktop ] || [ -e "$HOME/.local/share/a
 	) &
 fi
 
+# Music opens in NekoPlayer, once per user (in the background: xdg-mime is slow): every audio
+# type whose player is unset, uninstalled or mpv (Ultimit's player before NekoPlayer; it stays
+# the video player). After that the choices in Settings > Default apps stand.
+aud_mark="$HOME/.local/state/ultimit/audio-default"
+if [ ! -e "$aud_mark" ] && { [ -e /usr/share/applications/nekoplayer.desktop ] || [ -e "$HOME/.local/share/applications/nekoplayer.desktop" ]; }; then
+	(
+		set_types=""
+		for t in audio/mpeg audio/mp3 audio/flac audio/x-flac audio/ogg audio/x-vorbis+ogg audio/opus audio/x-opus+ogg \
+			audio/wav audio/x-wav audio/vnd.wave audio/aac audio/mp4 audio/x-m4a; do
+			v=$(xdg-mime query default "$t" 2>/dev/null) keep=""
+			case "$v" in "" | mpv.desktop | io.mpv.Mpv.desktop) ;; *)
+				for d in "$HOME/.local/share" $(echo "${XDG_DATA_DIRS:-/usr/local/share:/usr/share}" | tr : ' '); do
+					[ -e "$d/applications/$v" ] && keep=1
+				done ;;
+			esac
+			[ -n "$keep" ] || set_types="$set_types $t"
+		done
+		[ -z "$set_types" ] || xdg-mime default nekoplayer.desktop $set_types 2>/dev/null
+		mkdir -p "$(dirname "$aud_mark")" && touch "$aud_mark"
+	) &
+fi
+
 # Keep a log of the last session for debugging; the previous one is kept too.
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/ultimit"
 mkdir -p "$LOG_DIR"

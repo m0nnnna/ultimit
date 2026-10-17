@@ -84,7 +84,7 @@ yaru-theme-gnome-shell. Follow with `apt autoremove` (review its list).
 ## Phase 5: everyday completeness (from docs/audit-2026-10-11.md)
 Done:
 - [x] Tray flyouts: network, sound, Bluetooth, battery, clock/notifications
-- [x] Video/music player + codecs + video thumbnails (mpv, ffmpeg, ffmpegthumbnailer); MIME defaults (mailto -> NekoMail still open)
+- [x] Video/music player + codecs + video thumbnails (mpv, ffmpeg, ffmpegthumbnailer); MIME defaults (mailto -> NekoMail, music -> NekoPlayer)
 - [x] Firewall on by default (ufw deny incoming) and the FIREWALL app
 - [x] Window snapping (Super+Left/Right/Up/Down, drag to edges) and Alt+Tab overlay
 - [x] Shortcuts: Super+D/E/R/Tab, one key table (keys.c, `ultimitctl keys`, docs/keybindings.md)

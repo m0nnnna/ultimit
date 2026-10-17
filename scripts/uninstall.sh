@@ -40,6 +40,9 @@ sudo sh -e -c '
 			/usr/share/icons/hicolor/scalable/apps/nekomail.svg /usr/share/icons/hicolor/192x192/apps/nekomail.png \
 			/usr/share/icons/hicolor/512x512/apps/nekomail.png
 	fi
+	if [ "$(readlink /usr/local/bin/nekoplayer 2>/dev/null | cut -c1-${#P})" = "$P" ]; then
+		rm -f /usr/local/bin/nekoplayer /usr/share/applications/nekoplayer.desktop /usr/share/icons/hicolor/scalable/apps/nekoplayer.svg
+	fi
 	if [ -d "$P/distro/system" ]; then
 		cd "$P/distro/system" && find . -type f | while read -r f; do rm -f "/$f"; done
 	fi

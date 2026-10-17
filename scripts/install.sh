@@ -183,6 +183,10 @@ step "Building NekoMail (the mail app)"
 # (pinned in scripts/build-nekomail.sh; a failure leaves the rest of the install going)
 "$ROOT/scripts/build-nekomail.sh" "$WORK" "$PREFIX" || warn "NekoMail didn't build (see above); MAILER opens STORE until it does"
 
+step "Building NekoPlayer (the music player)"
+# (pinned in scripts/build-nekoplayer.sh, with its own Flutter SDK in $WORK)
+"$ROOT/scripts/build-nekoplayer.sh" "$WORK" "$PREFIX" || warn "NekoPlayer didn't build (see above); AUDIO opens STORE until it does"
+
 # ------------------------------------------------------------------------------------ the desktop
 # Everything that needs root from here on (shared with the ISO installer): scripts/system-install.sh
 flags=(--tree "$ROOT")
