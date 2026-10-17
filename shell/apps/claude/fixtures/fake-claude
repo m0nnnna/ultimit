@@ -121,7 +121,11 @@ for line in sys.stdin:
         out({"type": "system", "subtype": "status", "status": "compacting", "session_id": session})
         out({"type": "system", "subtype": "compact_boundary", "session_id": session,
              "compact_metadata": {"trigger": "auto", "pre_tokens": 167000}})
-        reply += " autocompact=%s" % ("off" if os.environ.get("DISABLE_AUTO_COMPACT") else "on")
+        reply += " window=%s autocompact=%s" % (os.environ.get("CLAUDE_CODE_AUTO_COMPACT_WINDOW", "auto"),
+                                                "off" if os.environ.get("DISABLE_AUTO_COMPACT") else "on")
+    if "subagent" in text.lower():
+        sp = a[a.index("--append-system-prompt") + 1] if "--append-system-prompt" in a else ""
+        reply += " sonnet-subagents=%s" % ('model "sonnet"' in sp)
     for i in range(0, len(reply), 8):
         out({"type": "stream_event", "parent_tool_use_id": None, "session_id": session,
              "event": {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": reply[i:i + 8]}}})

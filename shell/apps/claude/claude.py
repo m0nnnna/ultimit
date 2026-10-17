@@ -59,7 +59,14 @@ image blocks with the message. A chat's items name the images it sent; removing 
 Context: Claude Code compacts a chat by itself when its context fills (autoCompactEnabled, on unless
 switched off). Every run drops DISABLE_AUTO_COMPACT / DISABLE_COMPACT from the environment and turns
 autoCompactEnabled back on in the account's .claude.json if it was switched off, so a long chat never
-stops at a full context; the chat shows a note when it happens.
+stops at a full context; the chat shows a note when it happens. Chats compact at COMPACT_WINDOW tokens
+(CLAUDE_CODE_AUTO_COMPACT_WINDOW), not at the edge of the model's window (1M for Opus): every turn sends the
+whole context again, so a chat left to grow to several hundred thousand tokens spends the plan's limits
+several times faster. An account's settings.json "env" can set its own window.
+
+Subagents: when a project's model is not already Sonnet or Haiku, the system prompt lets Claude hand big
+read-heavy jobs (sweeping many files or logs, bulk mechanical edits) to a Sonnet subagent, so the file dumps
+stay out of the Opus chat and run on the cheaper model; small jobs stay inline.
 
 Usage: Claude Code reports the plan's limits with every turn (rate_limit_event); the last report per
 account is kept in <data>/usage/<account>.json: {windows{five_hour|seven_day...: {used 0-1, resets}},
@@ -90,6 +97,7 @@ STATE = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.join(HOME, ".lo
 
 # Nothing Claude Code reads from the environment comes from the desktop: credentials (ANTHROPIC_API_KEY,
 # CLAUDE_CODE_OAUTH_TOKEN, ...), endpoints and options all belong to the account, in its own settings.json "env".
+COMPACT_WINDOW = "200000"   # chats compact at this many tokens (a plain number: Claude Code reads "200k" as 100k)
 DROP_PREFIXES = ("ANTHROPIC_", "CLAUDE_", "CLAUDECODE", "DISABLE_AUTO_COMPACT", "DISABLE_COMPACT")
 PERM_MODES = ("default", "acceptEdits", "plan", "auto", "bypassPermissions")
 SYSTEM_ID = "system"
@@ -863,6 +871,13 @@ Where things are on this PC:
 - Install and update logs: ~/.local/state/ultimit/install-*.log, /var/log/ultimit-update.log"""
 
 
+SUBAGENT_PROMPT = """The person allows Sonnet subagents to save their plan's limits: for a big read-heavy job (searching or \
+reading across many files, sweeping long logs, bulk mechanical edits to a known pattern), use the Agent tool with \
+model "sonnet" and a self-contained prompt, and ask for a short answer back (the findings, paths and line numbers, \
+not file dumps). A subagent starts with none of this chat's context, so don't use one for a quick lookup, a single \
+file, or work that needs this chat's reasoning; do those yourself."""
+
+
 def system_prompt(proj):
     parts = [ULTIMIT_PROMPT]
     if proj["id"] == SYSTEM_ID:
@@ -871,6 +886,8 @@ def system_prompt(proj):
                      "and say what you changed and how to undo it.")
     else:
         parts.append('This chat belongs to the project "%s" in %s.' % (proj["name"], proj["dir"]))
+    if (proj.get("model") or "").lower() not in ("sonnet", "haiku"):
+        parts.append(SUBAGENT_PROMPT)
     if (proj.get("notes") or "").strip():
         parts.append("Project notes from the person (keep to them):\n" + proj["notes"].strip())
     return "\n\n".join(parts)
@@ -978,9 +995,11 @@ class Session:
         if self.meta.get("session"):
             args += ["--resume", self.meta["session"]]
         cwd = self.proj["dir"] if os.path.isdir(self.proj["dir"]) else HOME
+        env = account_env(self.acc)
+        env["CLAUDE_CODE_AUTO_COMPACT_WINDOW"] = COMPACT_WINDOW
         try:
             self.child = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                          cwd=cwd, env=account_env(self.acc), start_new_session=True)
+                                          cwd=cwd, env=env, start_new_session=True)
         except OSError as ex:
             self.emit({"ev": "exit", "code": -1, "err": str(ex)})
             return False

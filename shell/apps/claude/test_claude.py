@@ -222,12 +222,21 @@ class ClaudeHelper(unittest.TestCase):
         ev = self.session(p["id"], "new", {"op": "send", "text": "fill the context until it has to compact"})
         with open(os.path.join(acc["dir"], ".claude.json")) as f:
             self.assertEqual(json.load(f), {"autoCompactEnabled": True, "theme": "dark"})
-        self.assertTrue([e for e in ev if e["ev"] == "text"][0]["text"].endswith("autocompact=on"))
+        self.assertTrue([e for e in ev if e["ev"] == "text"][0]["text"].endswith("window=200000 autocompact=on"))
         self.assertIn("Compacting the conversation", [e.get("text") for e in ev if e["ev"] == "status"])
         done = [e for e in ev if e["ev"] == "compacted"]
         self.assertEqual(done[0]["pre"], 167000)
         notes = [i for i in self.j("chat", p["id"], ev[0]["chat"])["items"] if i["k"] == "note"]
         self.assertIn("167K tokens", notes[0]["text"])
+
+    def test_sonnet_subagents_only_for_bigger_models(self):
+        acc = self.add_logged_in()
+        for model, offered in (("", True), ("opus", True), ("sonnet", False), ("haiku", False)):
+            p = self.j("project-save", stdin=json.dumps({"name": "M" + model, "dir": self.proj_dir,
+                                                          "account": acc["id"], "model": model}))["project"]
+            ev = self.session(p["id"], "new", {"op": "send", "text": "may you use a subagent?"})
+            self.assertTrue([e for e in ev if e["ev"] == "text"][0]["text"].endswith("sonnet-subagents=%s" % offered),
+                            model)
 
     def test_usage(self):
         acc = self.add_logged_in()
