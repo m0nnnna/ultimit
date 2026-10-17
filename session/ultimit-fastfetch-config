@@ -21,8 +21,12 @@ own=$(sed -n 's/.*"accent"[[:space:]]*:[[:space:]]*"#\([0-9a-fA-F]\{6\}\)".*/\1/
 	"${XDG_CONFIG_HOME:-$HOME/.config}/ultimit/shell.json" 2>/dev/null | head -n1)
 [ -n "$own" ] && accent="$(printf '%d;%d;%d' "0x$(echo "$own" | cut -c1-2)" "0x$(echo "$own" | cut -c3-4)" "0x$(echo "$own" | cut -c5-6)")"
 Skin=$(printf '%s' "$skin" | sed 's/./\U&/')
+# The installed version (VERSION is written by every install and update, edge
+# builds included): "v0.1.6" -> "0.1.6", "v0.1.6-34-g89004e3" -> "0.1.6-34-g89004e3".
+version=$(sed -n '1{s/^v//;p;}' "$ROOT/VERSION" 2>/dev/null)
+[ -n "$version" ] || version=0.1
 mkdir -p "$DST"
 cp "$SRC/ultimit-logo.txt" "$DST/ultimit-logo.txt"
-sed -e "s/{ACCENT}/38;2;$accent/g" -e "s/{DIM}/38;2;$dim/g" -e "s/{SKIN}/$Skin/g" \
+sed -e "s/{ACCENT}/38;2;$accent/g" -e "s/{DIM}/38;2;$dim/g" -e "s/{SKIN}/$Skin/g" -e "s/{VERSION}/$version/g" \
 	-e "s/{GTK}/Ultimit-$Skin/g" -e "s/{ICONS}/Ultimit-$Skin/g" \
 	"$SRC/config.jsonc" >"$CFG.tmp" && mv "$CFG.tmp" "$CFG"
