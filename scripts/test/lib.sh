@@ -187,8 +187,9 @@ close_win() { # ID: ask nicely, wait for it to go
 
 # An app that gets server-side decorations: foot, else xterm. Sets WID and
 # SSD_APP; returns 1 (no window) if neither is installed or it failed to map.
+# foot opens at a fixed 80x24 so the user's foot.ini size can't push it off the 1280x720 devbox.
 open_ssd_app() {
-	if have foot; then SSD_APP=foot; open_app wl foot foot
+	if have foot; then SSD_APP=foot; open_app wl foot foot -o initial-window-size-chars=80x24
 	elif have xterm && [ -n "${XDISP:-}" ]; then SSD_APP=xterm; open_app x xterm xterm
 	elif have xmessage && [ -n "${XDISP:-}" ]; then SSD_APP=xmessage; open_app x Xmessage xmessage -geometry 500x200 "ultimit test window"
 	else return 1; fi

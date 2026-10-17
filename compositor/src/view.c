@@ -224,23 +224,24 @@ static void view_set_tiled(struct ul_view *view, enum ul_snap side) {
 	wlr_xdg_toplevel_set_tiled(view->xdg_toplevel, edges);
 }
 
-/* Frame box (content + titlebar + border) of a snapped window: half, third
- * or two thirds of the area, flush with the left or right edge. Left and
- * right halves are floor/ceil so together they cover the area exactly. */
-struct wlr_box view_snap_frame(struct wlr_box area, enum ul_snap side, int step) {
-	int w;
-	switch (step) {
-	case 1: w = area.width / 3; break;
-	case 2: w = area.width - area.width / 3; break;
-	default: w = side == UL_SNAP_LEFT ? area.width / 2 : area.width - area.width / 2; break;
-	}
+double view_snap_width(struct ul_server *server, int step) {
+	int n = server->config.snap_count > 0 ? server->config.snap_count : 1;
+	return server->config.snap_widths[(step % n + n) % n];
+}
+
+/* Frame box (content + titlebar + border) of a snapped window: `width` (a
+ * fraction) of the area, flush with the left or right edge. Rounded so a left
+ * window at w and a right one at 1 - w cover the area exactly. */
+struct wlr_box view_snap_frame(struct wlr_box area, enum ul_snap side, double width) {
+	int w = side == UL_SNAP_LEFT ? (int)(area.width * width + 0.5)
+		: area.width - (int)(area.width * (1 - width) + 0.5);
 	return (struct wlr_box){ side == UL_SNAP_LEFT ? area.x : area.x + area.width - w,
 		area.y, w, area.height };
 }
 
 static void view_apply_snap(struct ul_view *view) {
 	struct wlr_box area = output_box(view, true);
-	struct wlr_box f = view_snap_frame(area, view->snapped, view->snap_step);
+	struct wlr_box f = view_snap_frame(area, view->snapped, view_snap_width(view->server, view->snap_step));
 	int bar = view->ssd ? UL_TITLEBAR_H : 0;
 	view_set_position(view, f.x + UL_BORDER, f.y + bar + UL_BORDER);
 	view_request_size(view, f.width - 2 * UL_BORDER, f.height - bar - 2 * UL_BORDER);
@@ -271,7 +272,7 @@ void view_snap(struct ul_view *view, enum ul_snap side, int step) {
 		}
 	}
 	view->snapped = side;
-	view->snap_step = step % UL_SNAP_STEPS;
+	view->snap_step = step % (view->server->config.snap_count > 0 ? view->server->config.snap_count : 1);
 	view_apply_snap(view);
 }
 

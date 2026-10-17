@@ -16,15 +16,15 @@ documentation only; their behaviour is implemented elsewhere (input.c, alttab.c)
 | Super+Shift+Tab | Switch windows, backwards |
 | Escape | Cancel the window switcher (while it is open) |
 | Alt+F4 | Close window |
-| Super+Left | Snap left (repeat: 1/2, 1/3, 2/3; Super+Right restores) |
-| Super+Right | Snap right (repeat: 1/2, 1/3, 2/3; Super+Left restores) |
+| Super+Left | Snap left (repeat: next snap width, Settings > Windows; Super+Right restores) |
+| Super+Right | Snap right (repeat: next snap width, Settings > Windows; Super+Left restores) |
 | Super+Up | Maximize |
 | Super+Down | Restore a snapped/maximized window, otherwise minimize |
 | Alt+F10 | Maximize / restore |
 | Alt+F11 | Fullscreen |
 | Super+F | Fullscreen |
 | Super+D | Show desktop (minimize all; press again to restore) |
-| Drag titlebar to a screen edge | Snap to that half; the top edge maximizes |
+| Drag titlebar to a screen edge | Snap to that side (first snap width); the top edge maximizes |
 | Alt/Super + left drag | Move a window from anywhere |
 | Alt/Super + right drag | Resize a window from anywhere |
 

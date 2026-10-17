@@ -78,9 +78,9 @@ static const struct binding bindings[] = {
 		"Cancel the window switcher (while it is open)", KB_DOC },
 	{ ALT, XKB_KEY_F4, 0, ACT_CLOSE, NULL, NULL, "Windows", "close", "Close window", 0 },
 	{ SUPER, XKB_KEY_Left, 0, ACT_SNAP_LEFT, NULL, NULL, "Windows", "snap-left",
-		"Snap left (repeat: 1/2, 1/3, 2/3; Super+Right restores)", 0 },
+		"Snap left (repeat: next snap width, Settings > Windows; Super+Right restores)", 0 },
 	{ SUPER, XKB_KEY_Right, 0, ACT_SNAP_RIGHT, NULL, NULL, "Windows", "snap-right",
-		"Snap right (repeat: 1/2, 1/3, 2/3; Super+Left restores)", 0 },
+		"Snap right (repeat: next snap width, Settings > Windows; Super+Left restores)", 0 },
 	{ SUPER, XKB_KEY_Up, 0, ACT_MAXIMIZE, NULL, NULL, "Windows", "maximize", "Maximize", 0 },
 	{ SUPER, XKB_KEY_Down, 0, ACT_DOWN, NULL, NULL, "Windows", "restore-minimize",
 		"Restore a snapped/maximized window, otherwise minimize", 0 },
@@ -91,7 +91,7 @@ static const struct binding bindings[] = {
 	{ SUPER, XKB_KEY_d, 0, ACT_SHOW_DESKTOP, NULL, NULL, "Windows", "show-desktop",
 		"Show desktop (minimize all; press again to restore)", 0 },
 	{ 0, 0, 0, ACT_NONE, NULL, "Drag titlebar to a screen edge", "Windows", "drag-snap",
-		"Snap to that half; the top edge maximizes", KB_DOC },
+		"Snap to that side (first snap width); the top edge maximizes", KB_DOC },
 	{ 0, 0, 0, ACT_NONE, NULL, "Alt/Super + left drag", "Windows", "drag-move",
 		"Move a window from anywhere", KB_DOC },
 	{ 0, 0, 0, ACT_NONE, NULL, "Alt/Super + right drag", "Windows", "drag-resize",
@@ -155,7 +155,7 @@ static void snap_key(struct ul_view *view, enum ul_snap side) {
 		return;
 	}
 	if (view->snapped == side) {
-		view_snap(view, side, (view->snap_step + 1) % UL_SNAP_STEPS);
+		view_snap(view, side, view->snap_step + 1);
 	} else if (view->snapped) {
 		view_restore(view); /* the opposite side */
 	} else {

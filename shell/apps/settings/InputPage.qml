@@ -1,6 +1,6 @@
 // Input: touchpad / pointer / keyboard settings. Writes ~/.config/ultimit/compositor.ini (format in
-// compositor/src/config.c) and runs `ultimitctl reload` so they apply live. Keys the page does not
-// manage (e.g. keyboard options) are kept from the existing file.
+// compositor/src/config.c) and runs `ultimitctl reload` so they apply live. Only its own keys are
+// written (SetSys.iniSet): other keys and sections (numlock, [windows]...) stay as they are.
 import QtQuick
 import QtQuick.Layouts
 import "../.."
@@ -46,20 +46,12 @@ Page {
             }
         }
     }
-    function iniText() {
-        return "# Written by Ultimit Settings. Re-read with: ultimitctl reload\n" +
-            "[pointer]\n" +
-            "tap = " + tap + "\n" +
-            "natural_scroll = " + natural + "\n" +
-            "accel_speed = " + accel.toFixed(2) + "\n" +
-            "disable_while_typing = " + dwt + "\n" +
-            "left_handed = " + leftHanded + "\n\n" +
-            "[keyboard]\n" +
-            "layout = " + layout + "\n" +
-            "variant = " + variant + "\n" +
-            "options = " + options + "\n" +
-            "repeat_rate = " + repeatRate + "\n" +
-            "repeat_delay = " + repeatDelay + "\n";
+    function iniText(old) {
+        let t = old.trim() === "" ? "# Written by Ultimit Settings. Re-read with: ultimitctl reload\n" : old;
+        t = SetSys.iniSet(t, "pointer", { tap: tap, natural_scroll: natural, accel_speed: accel.toFixed(2),
+                                           disable_while_typing: dwt, left_handed: leftHanded });
+        return SetSys.iniSet(t, "keyboard", { layout: layout, variant: variant, options: options,
+                                              repeat_rate: repeatRate, repeat_delay: repeatDelay });
     }
     function changed() { if (loaded) save.restart(); }
     onTapChanged: changed(); onNaturalChanged: changed(); onAccelChanged: changed()
@@ -69,7 +61,7 @@ Page {
     Timer {
         id: save
         interval: 350
-        onTriggered: { SetSys.writeFile(SetSys.cfgPath("compositor.ini"), pg.iniText()); reload.start(); }
+        onTriggered: { ini.saving = true; ini.go(); }   // re-read first: another page may have written it
     }
     Timer { id: reload; interval: 150; onTriggered: SetSys.reloadCompositor() }
 
@@ -77,7 +69,11 @@ Page {
     Cmd {
         id: ini
         argv: ["sh", "-c", 'cat "$1" 2>/dev/null || cat "$2" 2>/dev/null; true', "sh", SetSys.cfgPath("compositor.ini"), SetSys.home + "/.config/ultimit/compositor.ini"]
-        onDone: out => { pg.applyIni(out); pg.loaded = true; varCmd.go(); }
+        property bool saving: false
+        onDone: out => {
+            if (saving) { saving = false; SetSys.writeFile(SetSys.cfgPath("compositor.ini"), pg.iniText(out)); reload.start(); return; }
+            pg.applyIni(out); pg.loaded = true; varCmd.go();
+        }
     }
     Cmd {
         id: layoutsCmd

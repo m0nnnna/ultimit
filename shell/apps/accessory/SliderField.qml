@@ -8,6 +8,7 @@ Item {
     property int from: 0
     property int to: 100
     property int value: 50
+    property string valueText: ""    // shown instead of the number when set
     signal moved(int value)
 
     implicitHeight: 48
@@ -36,7 +37,7 @@ Item {
         }
         Text {
             id: valueText
-            text: root.value
+            text: root.valueText !== "" ? root.valueText : root.value
             color: Theme.fg
             font.family: Theme.mono; font.pixelSize: 10
         }

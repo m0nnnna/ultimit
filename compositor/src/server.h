@@ -58,7 +58,7 @@ enum ul_snap_zone {
 	UL_ZONE_MAXIMIZE,
 };
 
-#define UL_SNAP_STEPS 3        /* widths cycled by repeating Super+Left/Right: 1/2, 1/3, 2/3 */
+#define UL_SNAP_MAX 8          /* most widths in the Super+Left/Right cycle ([windows] snap_widths) */
 #define UL_SNAP_EDGE 6         /* px from the screen edge that arms drag-to-snap */
 #define UL_ALTTAB_MAX 64
 #define UL_ALTTAB_DELAY_MS 150 /* a quicker Alt+Tab never shows the overlay */
@@ -83,6 +83,8 @@ struct ul_config {
 	int repeat_rate;
 	int repeat_delay;
 	bool numlock; /* Num Lock on when a keyboard is plugged in or at login */
+	double snap_widths[UL_SNAP_MAX]; /* widths cycled by repeating Super+Left/Right, of the usable area */
+	int snap_count;                  /* at least 1 */
 };
 
 /* One [connector] section of ~/.config/ultimit/displays.conf (config.c),
@@ -356,7 +358,7 @@ struct ul_view {
 	int geo_x, geo_y;  /* last seen xdg geometry offset (invisible margins) */
 	struct wlr_box saved; /* content box before maximize/snap/fullscreen */
 	enum ul_snap snapped;
-	int snap_step;        /* index into the 1/2, 1/3, 2/3 width cycle */
+	int snap_step;        /* index into config.snap_widths */
 
 	struct wl_event_source *anim_timer;
 	uint32_t anim_start;
@@ -490,7 +492,8 @@ void view_snap(struct ul_view *view, enum ul_snap side, int step);
 void view_clear_snap(struct ul_view *view);
 void view_restore(struct ul_view *view); /* un-snap or un-maximize */
 void view_refit(struct ul_view *view);   /* re-fit a snapped/maximized window after the usable area changed */
-struct wlr_box view_snap_frame(struct wlr_box area, enum ul_snap side, int step);
+struct wlr_box view_snap_frame(struct wlr_box area, enum ul_snap side, double width);
+double view_snap_width(struct ul_server *server, int step); /* the cycle's width at step */
 void view_clamp_into(struct ul_view *view, struct wlr_box area);
 struct ul_view *view_by_id(struct ul_server *server, unsigned id);
 void view_show_desktop(struct ul_server *server);

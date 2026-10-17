@@ -22,6 +22,7 @@ Scope {
         { id: "rail",       n: "Rail",         file: "RailPage.qml" },
         { id: "news",       n: "News",         file: "NewsPage.qml" },
         { id: "display",    n: "Display",      file: "DisplayPage.qml" },
+        { id: "windows",    n: "Windows",      file: "WindowsPage.qml" },
         { id: "sound",      n: "Sound",        file: "SoundPage.qml" },
         { id: "network",    n: "Network",      file: "NetworkPage.qml" },
         { id: "bluetooth",  n: "Bluetooth",    file: "BluetoothPage.qml" },

@@ -1,4 +1,5 @@
-# Windows-style window management: Super+D show desktop, and the keybinding list.
+# Windows-style window management: Super+D show desktop, Super+Left/Right snap widths, and the
+# keybinding list.
 # Needs foot.
 
 scenario_wm_show_desktop() {
@@ -25,6 +26,29 @@ scenario_wm_show_desktop() {
 	assert_soon "W($a)['minimized']" "Super+D with something visible hides it again"
 	keys -M logo -k d -m logo
 	assert_soon "not W($a)['minimized'] and not W($c)['minimized']" "and the next press brings back the whole set"
+}
+
+# Repeating Super+Left/Right steps through [windows] snap_widths (compositor.ini; whatever the
+# devbox's config says, defaults 1/2, 1/3, 2/3) and wraps around; the other side restores.
+scenario_wm_snap_widths() {
+	open_app wl foot foot || return; local a=$WID
+	ctl focus "$a" >/dev/null; wait_json "W($a)['focused']" 3
+	local n; n=$(sj "len(s['snap_widths'])")
+	assert_json "$n >= 1" "state lists the snap widths"
+	local i
+	for i in $(seq 0 "$n"); do
+		local step=$((i % n))
+		keys -M logo -k Left -m logo
+		assert_soon "W($a)['snapped']=='left' and W($a)['snap_step']==$step and not W($a)['animating'] and \
+abs(W($a)['frame']['width'] - usable['width']*s['snap_widths'][$step]) <= 1 and W($a)['frame']['x']==usable['x']" \
+			"Super+Left press $((i + 1)): width $step of the cycle, flush left"
+	done
+	snap
+	keys -M logo -k Right -m logo
+	assert_soon "W($a)['snapped'] is None" "Super+Right on a left-snapped window restores it"
+	keys -M logo -k Right -m logo
+	assert_soon "W($a)['snapped']=='right' and W($a)['snap_step']==0 and not W($a)['animating'] and \
+W($a)['frame']['x'] + W($a)['frame']['width'] == usable['x'] + usable['width']" "Super+Right snaps flush right"
 }
 
 scenario_wm_keys() {

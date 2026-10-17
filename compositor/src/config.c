@@ -10,6 +10,12 @@
  *   disable_while_typing = false  repeat_rate = 25
  *   left_handed = false           repeat_delay = 600
  *
+ *   [windows]
+ *   snap_widths = 1/2, 1/3, 2/3   widths Super+Left/Right cycles through, as
+ *                                 fractions (2/3), percentages (40%) or
+ *                                 decimals (0.4) of the screen, 10-90%;
+ *                                 the first is also the drag-to-edge width
+ *
  * Missing file or keys fall back to these defaults.
  */
 
@@ -45,6 +51,8 @@ static void set_defaults(struct ul_config *c) {
 		.repeat_rate = 25,
 		.repeat_delay = 600,
 		.numlock = true,
+		.snap_widths = { 1.0 / 2, 1.0 / 3, 2.0 / 3 },
+		.snap_count = 3,
 	};
 	snprintf(c->layout, sizeof(c->layout), "us");
 }
@@ -58,6 +66,33 @@ static char *trim(char *s) {
 
 static bool parse_bool(const char *v) {
 	return strcmp(v, "true") == 0 || strcmp(v, "1") == 0 || strcmp(v, "yes") == 0;
+}
+
+/* "1/2, 1/3, 40%, 0.75": the widths that parse and fall in 10-90%, in order.
+ * Nothing usable keeps the defaults. */
+static void parse_snap_widths(struct ul_config *c, char *val) {
+	double w[UL_SNAP_MAX];
+	int n = 0;
+	for (char *tok = strtok(val, ", "); tok && n < UL_SNAP_MAX; tok = strtok(NULL, ", ")) {
+		char *end;
+		double v = strtod(tok, &end);
+		if (end == tok) continue;
+		if (*end == '/') {
+			char *den = end + 1;
+			double d = strtod(den, &end);
+			if (end == den || d <= 0) continue;
+			v /= d;
+		} else if (*end == '%') {
+			v /= 100;
+			end++;
+		}
+		if (*end != '\0' || v < 0.1 - 1e-9 || v > 0.9 + 1e-9) continue;
+		w[n++] = v;
+	}
+	if (n > 0) {
+		memcpy(c->snap_widths, w, n * sizeof(w[0]));
+		c->snap_count = n;
+	}
 }
 
 void config_load(struct ul_server *server) {
@@ -99,6 +134,8 @@ void config_load(struct ul_server *server) {
 			else if (strcmp(key, "repeat_rate") == 0) c->repeat_rate = atoi(val);
 			else if (strcmp(key, "repeat_delay") == 0) c->repeat_delay = atoi(val);
 			else if (strcmp(key, "numlock") == 0) c->numlock = parse_bool(val);
+		} else if (strcmp(section, "windows") == 0) {
+			if (strcmp(key, "snap_widths") == 0) parse_snap_widths(c, val);
 		}
 	}
 	fclose(f);
@@ -175,8 +212,9 @@ void config_reload(struct ul_server *server) {
 		config_apply_pointer(server, p->device);
 	}
 	input_reapply_keyboards(server);
-	wlr_log(WLR_INFO, "Config reloaded (tap=%d natural_scroll=%d layout=%s)",
-		server->config.tap, server->config.natural_scroll, server->config.layout);
+	wlr_log(WLR_INFO, "Config reloaded (tap=%d natural_scroll=%d layout=%s snap_widths=%d)",
+		server->config.tap, server->config.natural_scroll, server->config.layout,
+		server->config.snap_count);
 }
 
 /*

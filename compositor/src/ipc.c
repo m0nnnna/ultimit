@@ -3,7 +3,7 @@
  *
  * Socket: $XDG_RUNTIME_DIR/ultimit-$WAYLAND_DISPLAY.sock, one command per
  * line, one JSON reply per line:
- *   state                  outputs, windows (geometry, chrome, flags), layers
+ *   state                  outputs, windows (geometry, chrome, flags), layers, snap_widths
  *   focus ID | close ID    act on a window by id
  *   move ID X Y            place a window's content top-left
  *   resize ID W H          ask a window for a new content size
@@ -11,7 +11,7 @@
  *   reload                 re-read ~/.config/ultimit/compositor.ini
  *   keys                   every keybinding (keys.c) as JSON, for cheat sheets
  *   snap ID left|right|restore|maximize   tile a window (view.c); repeating
- *                          left/right cycles 1/2, 1/3, 2/3 like Super+Left/Right
+ *                          left/right steps through the snap widths like Super+Left/Right
  *   subscribe              keep the connection open and receive events, one
  *                          JSON line each: {"event":"alttab","action":"show"|
  *                          "move"|"hide","index":N,"items":[...]} (alttab.c),
@@ -150,9 +150,13 @@ static void write_state(struct ul_server *server, struct out *o) {
 			}
 		}
 	}
-	put(o, "],\"focused_layer\":%s,\"locked\":%s,\"idle_inhibitors\":%d,\"motion\":%s}",
+	put(o, "],\"focused_layer\":%s,\"locked\":%s,\"idle_inhibitors\":%d,\"motion\":%s,\"snap_widths\":[",
 		server->focused_layer ? "true" : "false", server->locked ? "true" : "false",
 		server->idle_inhibitors, anim_motion() ? "true" : "false");
+	for (int i = 0; i < server->config.snap_count; i++) {
+		put(o, "%s%.4f", i ? "," : "", server->config.snap_widths[i]);
+	}
+	put(o, "]}");
 }
 
 /* ---- commands ------------------------------------------------------------ */
@@ -284,7 +288,7 @@ static void run_command(struct ul_server *server, char *line, struct out *o) {
 		}
 		if (!strcmp(what, "left") || !strcmp(what, "right")) {
 			enum ul_snap side = !strcmp(what, "left") ? UL_SNAP_LEFT : UL_SNAP_RIGHT;
-			view_snap(v, side, v->snapped == side ? (v->snap_step + 1) % UL_SNAP_STEPS : 0);
+			view_snap(v, side, v->snapped == side ? v->snap_step + 1 : 0);
 		} else if (!strcmp(what, "restore")) {
 			view_restore(v);
 		} else if (!strcmp(what, "maximize")) {

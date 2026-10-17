@@ -301,7 +301,8 @@ static void update_snap_zone(struct ul_server *server) {
 	server->snap_zone_output = out;
 	struct wlr_box box = out->usable_area;
 	if (zone != UL_ZONE_MAXIMIZE) {
-		box = view_snap_frame(box, zone == UL_ZONE_LEFT ? UL_SNAP_LEFT : UL_SNAP_RIGHT, 0);
+		box = view_snap_frame(box, zone == UL_ZONE_LEFT ? UL_SNAP_LEFT : UL_SNAP_RIGHT,
+			view_snap_width(server, 0));
 	}
 	preview_rects(server, box);
 }
