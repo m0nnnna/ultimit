@@ -229,14 +229,15 @@ class ClaudeHelper(unittest.TestCase):
         notes = [i for i in self.j("chat", p["id"], ev[0]["chat"])["items"] if i["k"] == "note"]
         self.assertIn("167K tokens", notes[0]["text"])
 
-    def test_sonnet_subagents_only_for_bigger_models(self):
+    def test_scaling_subagents_and_effort(self):
         acc = self.add_logged_in()
-        for model, offered in (("", True), ("opus", True), ("sonnet", False), ("haiku", False)):
-            p = self.j("project-save", stdin=json.dumps({"name": "M" + model, "dir": self.proj_dir,
-                                                          "account": acc["id"], "model": model}))["project"]
+        for model, effort, want in (("", "", "medium"), ("opus", "low", "low"), ("sonnet", "high", "high"), ("haiku", "", "medium")):
+            p = self.j("project-save", stdin=json.dumps({"name": "M" + model, "dir": self.proj_dir, "account": acc["id"],
+                                                          "model": model, "effort": effort}))["project"]
             ev = self.session(p["id"], "new", {"op": "send", "text": "may you use a subagent?"})
-            self.assertTrue([e for e in ev if e["ev"] == "text"][0]["text"].endswith("sonnet-subagents=%s" % offered),
-                            model)
+            self.assertTrue([e for e in ev if e["ev"] == "text"][0]["text"].endswith(
+                "agents=expert,scout,worker effort=%s scaling=True" % want), model)
+        self.assertFalse(self.j("project-save", stdin=json.dumps({"name": "X", "dir": self.proj_dir, "effort": "huge"}))["ok"])
 
     def test_usage(self):
         acc = self.add_logged_in()

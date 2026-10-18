@@ -125,7 +125,9 @@ for line in sys.stdin:
                                                 "off" if os.environ.get("DISABLE_AUTO_COMPACT") else "on")
     if "subagent" in text.lower():
         sp = a[a.index("--append-system-prompt") + 1] if "--append-system-prompt" in a else ""
-        reply += " sonnet-subagents=%s" % ('model "sonnet"' in sp)
+        agents = json.loads(a[a.index("--agents") + 1]) if "--agents" in a else {}
+        reply += " agents=%s effort=%s scaling=%s" % (",".join(sorted(agents)), a[a.index("--effort") + 1] if "--effort" in a else "",
+                                                     '"expert"' in sp)
     for i in range(0, len(reply), 8):
         out({"type": "stream_event", "parent_tool_use_id": None, "session_id": session,
              "event": {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": reply[i:i + 8]}}})

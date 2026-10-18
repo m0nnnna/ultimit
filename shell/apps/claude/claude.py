@@ -64,9 +64,11 @@ stops at a full context; the chat shows a note when it happens. Chats compact at
 whole context again, so a chat left to grow to several hundred thousand tokens spends the plan's limits
 several times faster. An account's settings.json "env" can set its own window.
 
-Subagents: when a project's model is not already Sonnet or Haiku, the system prompt lets Claude hand big
-read-heavy jobs (sweeping many files or logs, bulk mechanical edits) to a Sonnet subagent, so the file dumps
-stay out of the Opus chat and run on the cheaper model; small jobs stay inline.
+Scaling: every chat gets three subagents (--agents, SUBAGENTS): scout (Haiku, low effort, finds and reads),
+worker (Sonnet, medium effort, bulk mechanical work) and expert (Opus, high effort, the hard problems), and
+the system prompt tells Claude to scale down to them for grunt work, so file dumps stay out of the chat and
+run on cheaper models, and to scale up to expert instead of looping on a hard problem. The chat itself runs
+at the project's effort (--effort, DEFAULT_EFFORT unless the project picks one).
 
 Usage: Claude Code reports the plan's limits with every turn (rate_limit_event); the last report per
 account is kept in <data>/usage/<account>.json: {windows{five_hour|seven_day...: {used 0-1, resets}},
@@ -100,6 +102,8 @@ STATE = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.join(HOME, ".lo
 COMPACT_WINDOW = "200000"   # chats compact at this many tokens (a plain number: Claude Code reads "200k" as 100k)
 DROP_PREFIXES = ("ANTHROPIC_", "CLAUDE_", "CLAUDECODE", "DISABLE_AUTO_COMPACT", "DISABLE_COMPACT")
 PERM_MODES = ("default", "acceptEdits", "plan", "auto", "bypassPermissions")
+EFFORTS = ("low", "medium", "high", "xhigh", "max")
+DEFAULT_EFFORT = "medium"   # the chat's own effort; subagents set theirs in SUBAGENTS
 SYSTEM_ID = "system"
 
 
@@ -177,7 +181,7 @@ def plan_usage(r):
 
 def system_project():
     return {"id": SYSTEM_ID, "name": "This PC", "dir": HOME, "account": "", "model": "", "perm": "default",
-            "notes": "", "builtin": True}
+            "effort": "", "notes": "", "builtin": True}
 
 
 def projects():
@@ -186,7 +190,7 @@ def projects():
     rest = []
     for p in stored:
         if p.get("id") == SYSTEM_ID:   # the user's choices for the built-in one (account, model, notes)
-            for k in ("account", "model", "perm", "notes"):
+            for k in ("account", "model", "perm", "effort", "notes"):
                 if k in p:
                     sysp[k] = p[k]
         else:
@@ -469,9 +473,11 @@ def cmd_logout(aid):
 def cmd_project_save(o):
     ps = projects()
     pid = o.get("id") or ""
+    if o.get("effort") and o["effort"] not in EFFORTS:
+        return {"ok": False, "err": "Unknown effort level"}
     if pid == SYSTEM_ID:
         p = ps[0]
-        for k in ("account", "model", "perm", "notes"):
+        for k in ("account", "model", "perm", "effort", "notes"):
             if k in o:
                 p[k] = o[k]
     else:
@@ -482,7 +488,7 @@ def cmd_project_save(o):
             return {"ok": False, "err": "Unknown permission mode"}
         p = {"id": pid, "name": (o.get("name") or os.path.basename(d) or "Project").strip(), "dir": d,
              "account": o.get("account", ""), "model": o.get("model", ""), "perm": o.get("perm", "default"),
-             "notes": o.get("notes", "")}
+             "effort": o.get("effort", ""), "notes": o.get("notes", "")}
         if pid and any(x["id"] == pid for x in ps):
             ps = [p if x["id"] == pid else x for x in ps]
         else:
@@ -871,11 +877,42 @@ Where things are on this PC:
 - Install and update logs: ~/.local/state/ultimit/install-*.log, /var/log/ultimit-update.log"""
 
 
-SUBAGENT_PROMPT = """The person allows Sonnet subagents to save their plan's limits: for a big read-heavy job (searching or \
-reading across many files, sweeping long logs, bulk mechanical edits to a known pattern), use the Agent tool with \
-model "sonnet" and a self-contained prompt, and ask for a short answer back (the findings, paths and line numbers, \
-not file dumps). A subagent starts with none of this chat's context, so don't use one for a quick lookup, a single \
-file, or work that needs this chat's reasoning; do those yourself."""
+SUBAGENTS = {
+    "scout": {"description": "Cheap and fast (Haiku, low effort). Finds and reads: locating files or code, grepping, "
+                             "sweeping long logs or journals, checking state or versions. Answers in a few lines.",
+              "prompt": "You find things for another Claude. Search and read only what the brief needs, change nothing, "
+                        "and answer in a few lines: the facts, paths and line numbers, short quotes of the lines that "
+                        "matter. No file dumps, no advice unless asked.",
+              "model": "haiku", "effort": "low", "tools": ["Read", "Grep", "Glob", "Bash"]},
+    "worker": {"description": "Mid-tier (Sonnet, medium effort). Bulk or mechanical work to a known pattern: edits "
+                              "across many files, reading many files to summarise them, running tests or builds and "
+                              "reporting what failed.",
+               "prompt": "You do a well-defined job for another Claude. Follow the brief exactly; if it turns out wrong "
+                         "or unclear, stop and say so rather than guessing. Finish with a short report: what you "
+                         "changed (paths), what you ran and the result, anything left undone. No file dumps.",
+               "model": "sonnet", "effort": "medium"},
+    "expert": {"description": "Top tier (Opus, high effort), costly: only for a problem that has resisted a couple of "
+                              "attempts, or needs deep reasoning across a lot of code (a subtle bug, a tricky design).",
+               "prompt": "Another Claude hands you a hard problem with a brief. Work it out properly, check your "
+                         "reasoning against the code or logs, and answer with the cause or design, the evidence, and "
+                         "the concrete fix. Keep the answer tight.",
+               "model": "opus", "effort": "high"},
+}
+
+SUBAGENT_PROMPT = """The person wants this chat to save their plan's limits and is fine with work taking longer for \
+it. Scale the effort to the job instead of running at one pace:
+- Scale down: hand grunt work to a subagent with the Agent tool, so the file dumps stay out of this chat and run on a \
+cheaper model. subagent_type "scout" (Haiku) for finding and reading: locating code, grepping, sweeping logs, \
+checking state. "worker" (Sonnet) for bulk mechanical edits to a known pattern, summarising many files, running \
+tests or builds. Give a self-contained brief (a subagent knows nothing of this chat) and ask for a short answer: \
+facts, paths, line numbers. Don't re-read what a subagent already reported unless you need the exact lines to edit.
+- Stay inline for a quick lookup, a single file, or anything that needs this chat's reasoning: a subagent costs a \
+cold start, so it only pays off for jobs bigger than that.
+- Scale up: when a problem resists two honest attempts, or needs deep reasoning over a lot of code, give it to \
+"expert" (Opus, high effort) with a tight brief of what you know and what you tried, rather than looping on it here. \
+It is costly; use it rarely.
+- Run independent subagents in parallel; run one in the background when you have other work meanwhile.
+- Keep your own replies short and don't restate what the person can already see."""
 
 
 def system_prompt(proj):
@@ -886,8 +923,7 @@ def system_prompt(proj):
                      "and say what you changed and how to undo it.")
     else:
         parts.append('This chat belongs to the project "%s" in %s.' % (proj["name"], proj["dir"]))
-    if (proj.get("model") or "").lower() not in ("sonnet", "haiku"):
-        parts.append(SUBAGENT_PROMPT)
+    parts.append(SUBAGENT_PROMPT)
     if (proj.get("notes") or "").strip():
         parts.append("Project notes from the person (keep to them):\n" + proj["notes"].strip())
     return "\n\n".join(parts)
@@ -989,7 +1025,8 @@ class Session:
         perm = self.proj.get("perm") or "default"
         args = [b, "-p", "--output-format", "stream-json", "--input-format", "stream-json", "--verbose",
                 "--include-partial-messages", "--permission-prompt-tool", "stdio", "--permission-mode", perm,
-                "--append-system-prompt", system_prompt(self.proj)]
+                "--append-system-prompt", system_prompt(self.proj),
+                "--effort", self.proj.get("effort") or DEFAULT_EFFORT, "--agents", json.dumps(SUBAGENTS)]
         if self.proj.get("model"):
             args += ["--model", self.proj["model"]]
         if self.meta.get("session"):

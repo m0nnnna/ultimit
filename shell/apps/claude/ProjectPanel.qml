@@ -18,6 +18,7 @@ Rectangle {
     property string account: project && project.account ? project.account : Claude.accountFor(null)
     property string model: project && project.model ? project.model : ""
     property string perm: project && project.perm ? project.perm : "default"
+    property string effort: project && project.effort ? project.effort : ""
     property string err: ""
     property bool confirmRemove: false
 
@@ -28,7 +29,7 @@ Rectangle {
 
     function save() {
         const o = { id: isNew ? "" : project.id, name: nameE.text, dir: dirE.text.replace(/^~(?=\/|$)/, Quickshell.env("HOME")),
-                    account: account, model: modelE.text.trim(), perm: perm, notes: notes.text };
+                    account: account, model: modelE.text.trim(), perm: perm, effort: effort, notes: notes.text };
         Claude.saveProject(o, r => {
             if (!r.ok) { root.err = r.err; return; }
             root.host.overlay = "";
@@ -102,6 +103,28 @@ Rectangle {
                 }
             }
             Entry { id: modelE; width: 200; mono: true; text: root.model; placeholder: "or a full model name" }
+        }
+
+        Label_ { text: "Effort" }
+        Flow {
+            Layout.fillWidth: true
+            spacing: 6
+            Repeater {
+                model: [{ id: "", label: "Default" }, { id: "low", label: "Low" }, { id: "medium", label: "Medium" },
+                        { id: "high", label: "High" }, { id: "xhigh", label: "Extra high" }, { id: "max", label: "Max" }]
+                delegate: Chip {
+                    required property var modelData
+                    text: modelData.label; sel: root.effort === modelData.id
+                    onClicked: root.effort = modelData.id
+                }
+            }
+        }
+        Text {
+            Layout.fillWidth: true; wrapMode: Text.Wrap
+            text: "How hard the chat itself thinks (Default is medium). Either way Claude hands grunt work to cheaper "
+                  + "Haiku and Sonnet helpers and scales up to an Opus helper only for hard problems."
+            color: Theme.dim
+            font.family: Theme.ui; font.pixelSize: 12
         }
 
         Label_ { text: "Without asking, Claude may" }
