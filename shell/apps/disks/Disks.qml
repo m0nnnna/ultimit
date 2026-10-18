@@ -36,6 +36,44 @@ Singleton {
     property string busy: ""                // action running ("" = idle): mount | unmount | eject | power-off | format | trash
     property string note: ""
     property string noteKind: "info"        // info | error
+
+    // ---- progress of the running action (BusyBar): UDisks jobs polled every second while busy ----
+    signal submitRequested()                // ipc submitDialog (tests): press the open dialog's main button
+    property real busySince: 0
+    property int elapsed: 0                 // seconds
+    property var jobs: []
+    property bool sawJob: false             // a job showed up, so the password (if any) was given
+    readonly property var job: {
+        for (const j of jobs) if (j.progress !== null) return j;
+        return jobs.length > 0 ? jobs[0] : null;
+    }
+    readonly property string busyText: job ? job.text + (job.devices.length > 0 ? " on " + job.devices[0] : "") + "…"
+        : sawJob || busy === "trash" ? note || "Working…" : "Starting… enter your password if asked."
+    readonly property string busyDetail: {
+        const m = Math.floor(elapsed / 60), s = elapsed % 60;
+        let t = m + ":" + (s < 10 ? "0" : "") + s;
+        if (job && job.progress !== null) t = Math.floor(job.progress * 100) + "% · " + t;
+        if (job && job.left !== null && job.left > 0)
+            t += " · about " + (job.left < 90 ? job.left + " s" : Math.round(job.left / 60) + " min") + " left";
+        return t;
+    }
+    onBusyChanged: {
+        jobs = []; sawJob = false; elapsed = 0;
+        if (busy !== "") busySince = Date.now();
+    }
+    Timer {
+        interval: 1000; repeat: true
+        running: root.busy !== ""
+        onTriggered: {
+            root.elapsed = Math.round((Date.now() - root.busySince) / 1000);
+            if (root.busy === "trash") return;
+            root.run(["jobs"], o => {
+                if (root.busy === "" || !o.ok) return;
+                root.jobs = o.jobs;
+                if (o.jobs.length > 0) root.sawJob = true;
+            });
+        }
+    }
     property bool refreshing: false
 
     readonly property var drives: st.drives || []
@@ -318,7 +356,7 @@ Singleton {
     }
 
     function dump() {
-        return JSON.stringify({ loaded: loaded, open: open, tab: tab, overlay: overlay, busy: busy, note: note, fake: fake,
+        return JSON.stringify({ loaded: loaded, open: open, tab: tab, overlay: overlay, busy: busy, note: note, busyText: busyText, busyDetail: busyDetail, fake: fake,
             drives: drives.map(d => d.id + ":" + d.kind + ":" + d.partitions.length), selDrive: drive ? drive.id : "", selDev: selDev, selFree: selFree,
             health: healthShown, usageRoot: usageRoot, usagePath: usagePath, scanning: scanning, usageView: usageView,
             listing: listing ? listing.entries.length : -1, noCache: noCache });

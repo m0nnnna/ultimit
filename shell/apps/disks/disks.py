@@ -17,6 +17,7 @@ state needs none. The D-Bus-to-JSON step (`convert`) is a pure function over a G
   disks.py children PATH                 (from the cache) the biggest direct children of PATH
   disks.py largest ROOT [N]              (from the cache) the biggest files under ROOT
   disks.py peek PATH                     first names on a mounted volume (for the format warning)
+  disks.py jobs                          what UDisks is doing right now (operation, progress, time left)
   disks.py trash PATH                    move an item of a scanned tree to the trash (gio trash), update the cache
 
 A dismissed password prompt is {ok:false, cancelled:true}, not an error. DISKS_FAKE=1 runs against the fake
@@ -654,8 +655,9 @@ class Fake:
         return d
 
     def save(self):
-        with open(self.path, "w") as f:
+        with open(self.path + ".tmp", "w") as f:
             json.dump(self.data, f)
+        os.replace(self.path + ".tmp", self.path)
 
     def objects(self):
         return self.data["objects"]
@@ -700,7 +702,21 @@ class Fake:
 
     power_off = eject
 
+    def _slow_job(self, op, block):
+        """DISKS_FAKE_SLOW=<seconds>: a pretend UDisks job that takes that long, so the progress bar can be seen."""
+        secs = float(os.environ.get("DISKS_FAKE_SLOW") or 0)
+        jp = "/org/freedesktop/UDisks2/jobs/fake"
+        t0 = time.time()
+        while time.time() - t0 < secs:
+            done = (time.time() - t0) / secs
+            self.data["objects"][jp] = {UD + ".Job": {"Operation": op, "Objects": [block], "Progress": done, "ProgressValid": done > 0.3,
+                                                      "ExpectedEndTime": int((t0 + secs) * 1e6)}}
+            self.save()
+            time.sleep(0.5)
+        self.data["objects"].pop(jp, None)
+
     def format(self, block, fs, label):
+        self._slow_job("format-mkfs", block)
         b = self.data["objects"][block][UD + ".Block"]
         b["IdType"], b["IdLabel"] = fs, label
         self.data.setdefault("usage", {})[bstr(b["Device"])] = [b.get("Size", 0), 4 << 20]
@@ -1656,6 +1672,44 @@ def peek(path, limit=12):
     return {"ok": True, "total": len(ents), "names": [{"name": e.name, "dir": e.is_dir(follow_symlinks=False)} for e in ents[:limit]]}
 
 
+# ---------------------------------------------------------------- running jobs (for the progress bar)
+
+JOB_TEXT = {
+    "format-erase": "Erasing", "format-mkfs": "Creating the file system", "partition-create": "Creating the partition",
+    "partition-delete": "Deleting the partition", "partition-modify": "Changing the partition",
+    "partition-resize": "Resizing the partition", "filesystem-resize": "Resizing the file system",
+    "filesystem-check": "Checking the file system", "filesystem-repair": "Checking the file system",
+    "filesystem-mount": "Mounting", "filesystem-unmount": "Unmounting", "filesystem-modify": "Renaming",
+    "drive-eject": "Ejecting", "drive-power-off": "Powering off", "ata-smart-update": "Reading health data",
+    "cleanup": "Cleaning up", "loop-setup": "Attaching the image", "cleanup-loop": "Detaching the image",
+}
+
+
+def convert_jobs(objs, now_us=None):
+    """UDisks2 Job objects -> [{op, text, devices, progress (0..1 or null), rate, left (seconds or null)}]."""
+    now_us = now_us if now_us is not None else int(time.time() * 1e6)
+    dev = {p: bstr(i[UD + ".Block"].get("Device")) for p, i in objs.items() if UD + ".Block" in i}
+    res = []
+    for p, i in sorted(objs.items()):
+        j = i.get(UD + ".Job")
+        if not j:
+            continue
+        op = j.get("Operation", "")
+        valid = bool(j.get("ProgressValid"))
+        end = int(j.get("ExpectedEndTime", 0) or 0)
+        res.append({"op": op, "text": JOB_TEXT.get(op, op.replace("-", " ").capitalize() or "Working"),
+                    "devices": [dev.get(o, "") for o in j.get("Objects", []) if dev.get(o)],
+                    "progress": float(j.get("Progress", 0)) if valid else None,
+                    "rate": int(j.get("Rate", 0) or 0),
+                    "left": max(0, (end - now_us) // 1000000) if end > now_us else None})
+    return res
+
+
+def jobs(be=None):
+    be = be or backend()
+    return {"ok": True, "jobs": convert_jobs(be.objects())}
+
+
 # ---------------------------------------------------------------- CLI
 
 def main(argv):
@@ -1695,8 +1749,10 @@ def main(argv):
             out(peek(args[0]))
         elif cmd == "trash" and len(args) == 1:
             out(trash(args[0]))
+        elif cmd == "jobs":
+            out(jobs())
         else:
-            out({"ok": False, "error": "usage: disks.py state|health|mount|unmount|eject|power-off|format|create-partition|delete-partition|resize-partition|new-table|set-label|scan|children|largest|peek|trash"})
+            out({"ok": False, "error": "usage: disks.py state|health|mount|unmount|eject|power-off|format|create-partition|delete-partition|resize-partition|new-table|set-label|jobs|scan|children|largest|peek|trash"})
             return 2
     except Exception as e:   # never leave the UI without JSON
         out({"ok": False, "error": "%s: %s" % (type(e).__name__, e)})

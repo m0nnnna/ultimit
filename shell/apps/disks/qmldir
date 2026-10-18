@@ -9,3 +9,4 @@ UsageView 1.0 UsageView.qml
 UsageRow 1.0 UsageRow.qml
 GSlider 1.0 GSlider.qml
 ManageDialog 1.0 ManageDialog.qml
+BusyBar 1.0 BusyBar.qml

@@ -22,6 +22,7 @@ Scope {
         function dialog(mode: string): void { Disks.overlay = mode; }     // create | resize | delete | table | label | format
         function selectFree(driveId: string, offset: string): void { Disks.select(driveId, ""); Disks.selectFree(Number(offset)); }
         function closeDialogs(): void { Disks.overlay = ""; }
+        function submitDialog(): void { Disks.submitRequested(); }
         function closeWindow(): void { Disks.open = false; }
     }
     DisksWindow {}

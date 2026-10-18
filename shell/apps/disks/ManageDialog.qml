@@ -57,7 +57,8 @@ Item {
         else if (!destructive) nameField.input.forceActiveFocus();
         else root.forceActiveFocus();
     }
-    function close() { visible = false; closed(); }
+    Connections { target: Disks; function onSubmitRequested() { if (root.visible) root.submit(); } }
+    function close() { if (Disks.busy !== "") return; visible = false; closed(); }    // not while it runs: the progress is here
     function submit() {
         if (!valid) return;
         const cb = o => { if (o.ok || o.cancelled) root.close(); };
@@ -246,10 +247,11 @@ Item {
                     }
                 }
 
+                BusyBar { width: parent.width }
                 Row {
                     spacing: 10
                     anchors.right: parent.right
-                    GButton { text: "Cancel"; onClicked: root.close() }
+                    GButton { text: "Cancel"; enabled: Disks.busy === ""; onClicked: root.close() }
                     GButton {
                         visible: !root.destructive
                         primary: true

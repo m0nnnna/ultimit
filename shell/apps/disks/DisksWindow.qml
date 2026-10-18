@@ -72,13 +72,21 @@ FloatingWindow {
             font.family: Theme.ui; font.pixelSize: 12
             visible: Disks.note !== ""
         }
+        // progress of an action started outside a dialog (mount, eject, ...); dialogs show their own
+        BusyBar {
+            id: busyLine
+            x: 20; anchors.top: noteLine.bottom; anchors.topMargin: visible ? 6 : 0
+            width: parent.width - 40
+            visible: Disks.busy !== "" && Disks.overlay === ""
+            height: visible ? implicitHeight : 0
+        }
 
         // ---------------- DRIVES ----------------
         Item {
             id: drivesTab
             visible: Disks.tab === "drives" && Disks.loaded
             x: 20
-            anchors.top: noteLine.bottom; anchors.topMargin: 8
+            anchors.top: busyLine.bottom; anchors.topMargin: 8
             anchors.bottom: parent.bottom; anchors.bottomMargin: 16
             width: parent.width - 40
 
@@ -438,7 +446,7 @@ FloatingWindow {
         UsageView {
             visible: Disks.tab === "usage"
             x: 20
-            anchors.top: noteLine.bottom; anchors.topMargin: 8
+            anchors.top: busyLine.bottom; anchors.topMargin: 8
             anchors.bottom: parent.bottom; anchors.bottomMargin: 16
             width: parent.width - 40
         }

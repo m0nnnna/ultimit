@@ -52,6 +52,19 @@ class Recorder:
     def can_resize(self, fs): return dk.FAKE_CAN_RESIZE.get(fs, (False, 0, ""))
 
 
+class Jobs(unittest.TestCase):
+    def test_convert_jobs(self):
+        UD = dk.UD
+        objs = {"/b/sdc1": {UD + ".Block": {"Device": list(b"/dev/sdc1\0")}},
+                "/j/1": {UD + ".Job": {"Operation": "format-mkfs", "Objects": ["/b/sdc1"], "Progress": 0.4,
+                                       "ProgressValid": True, "ExpectedEndTime": 30_000_000}},
+                "/j/2": {UD + ".Job": {"Operation": "something-new", "Objects": [], "ProgressValid": False}}}
+        j = dk.convert_jobs(objs, now_us=10_000_000)
+        self.assertEqual(j[0], {"op": "format-mkfs", "text": "Creating the file system", "devices": ["/dev/sdc1"],
+                                "progress": 0.4, "rate": 0, "left": 20})
+        self.assertEqual((j[1]["text"], j[1]["progress"], j[1]["left"]), ("Something new", None, None))
+
+
 class Convert(unittest.TestCase):
     def test_four_drives(self):
         ds = drives()
