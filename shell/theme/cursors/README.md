@@ -10,9 +10,12 @@ Design: the desktop's own language rather than a classic pointer. Solid shapes a
 crystal shards like the wallpaper's (lit face in the skin's accent, shadow face sunk toward its
 panel colour); everything else is accent hairlines, chamfered chips (badges) and corner brackets
 (grab), with hex rings for wait/progress and not-allowed. No cartoon hands: the link pointer is an
-upright shard. One thin outline in the skin's contrast colour (near-black, white on Silver).
-Drawn as vector paths with pycairo at 24 (nominal), 32 and 48 px; wait/progress are animated
-12-frame hex rings (60 ms/frame).
+upright shard with a tap burst over its tip (the hotspot), so it is not mistaken for the arrow.
+Badges (copy, alias, no-drop, help, context menu, dnd-move) are chips big enough to read at 24 px.
+One outline in the skin's contrast colour (near-black, white on Silver) keeps them readable on
+white and grey. Drawn as vector paths with pycairo at 24 (nominal), 32, 36, 48 and 64 px (so
+1.5x and HiDPI scales get a drawn size, not a scaled one); wait/progress are animated 12-frame hex
+rings (60 ms/frame) with one bright segment running round.
 
 Coverage: all CSS cursor-shape-v1 names (files) plus X11 and hash-named aliases (symlinks).
 

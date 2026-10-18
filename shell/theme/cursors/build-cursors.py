@@ -3,7 +3,7 @@
 
 Usage: build-cursors.py OUTDIR [--sheets DIR] [--skins Mine,Amber,...] [--theme Theme.qml]
 
-Draws every cursor with pycairo as vector paths at 24/32/48 px (no bitmap
+Draws every cursor with pycairo as vector paths at 24/32/36/48/64 px (no bitmap
 downscaling) and writes the Xcursor files itself (no xcursorgen needed).
 The skins and their accent colours are read from shell/Theme.qml, so the
 cursor follows Settings > Appearance; a new skin gets a cursor of its own.
@@ -21,7 +21,7 @@ import sys
 
 import cairo
 
-SIZES = (24, 32, 48)
+SIZES = (24, 32, 36, 48, 64)
 NOMINAL = 24
 U = 52.0            # drawing canvas in design units
 C = 26.0            # centre
@@ -124,7 +124,7 @@ def L(pts, w=1.8, color="accent", alpha=1.0, close=False, cap="butt", outline=Fa
 # readable on any background.
 ARROW = [(5, 3), (5, 44), (15.5, 34), (32, 33)]
 ARROW_HS = (5, 3)
-BC = (40.0, 40.0)    # badge centre
+BC = (38.0, 38.0)    # badge centre
 LW = 3.0             # line weight (design units; ~1.4 px at 24 px)
 
 
@@ -158,7 +158,7 @@ def arrowhead(angle, tip, back=8.5, half=6.5, c=(C, C)):
     return shard(turned(pts, angle, c), turned(lit, angle, c))
 
 
-def chip(c=BC, r=7.0, k=2.5):
+def chip(c=BC, r=8.5, k=3.0):
     """Ultimit's chamfered chip (corners cut top-left and bottom-right)."""
     return P(at([(-r + k, -r), (r, -r), (r, r - k), (r - k, r), (-r, r), (-r, -r + k)], c),
              fill="fill", edge=True)
@@ -177,7 +177,7 @@ def hex_segments(cx, cy, r, intens, w):
         g = 0.14
         a2 = (a[0] + (b[0] - a[0]) * g, a[1] + (b[1] - a[1]) * g)
         b2 = (b[0] + (a[0] - b[0]) * g, b[1] + (a[1] - b[1]) * g)
-        out.append(L([a2, b2], w=w, alpha=0.35 + 0.65 * intens[i], outline=True))
+        out.append(L([a2, b2], w=w, alpha=0.16 + 0.84 * intens[i], outline=True))
     return out
 
 
@@ -186,13 +186,23 @@ def intensities(frame, n=12):
     out = []
     for i in range(6):
         d = (head_ - i) % 6
-        out.append(max(0.0, 1.0 - d / 3.4) ** 1.3)
+        out.append(max(0.0, 1.0 - d / 2.6) ** 1.5)
     return out
 
 
+POINTER_HS = (19, 13)
+
+
 def pointer():
-    # An upright crystal spike: pointing, without a cartoon hand.
-    return [shard([(18, 2), (29.5, 36), (18, 28.5), (6.5, 36)], [(18, 2), (18, 28.5), (6.5, 36)])]
+    # An upright crystal spike with a tap burst over its tip: pointing, without a
+    # cartoon hand, and not mistaken for the tilted arrow.
+    tx, ty = POINTER_HS
+    spike = shard([(tx, ty), (tx + 10.5, ty + 29), (tx, ty + 22.5), (tx - 10.5, ty + 29)],
+                  [(tx, ty), (tx, ty + 22.5), (tx - 10.5, ty + 29)])
+    rays = [L([(tx + 4.5 * math.cos(math.radians(a)), ty + 4.5 * math.sin(math.radians(a))),
+               (tx + 9 * math.cos(math.radians(a)), ty + 9 * math.sin(math.radians(a)))],
+              w=LW, outline=True) for a in (-90, -150, -30)]
+    return rays + [spike]
 
 
 def brackets(r, arm):
@@ -273,11 +283,11 @@ def pencil():
 
 
 def wait_frames(n=12):
-    return [hex_segments(C, C, 17, intensities(f, n), 3.6) + [diamond(3.2)] for f in range(n)]
+    return [hex_segments(C, C, 18, intensities(f, n), 4.6) + [diamond(3.2)] for f in range(n)]
 
 
 def progress_frames(n=12):
-    return [arrow_shapes() + [chip()] + hex_segments(BC[0], BC[1], 4.6, intensities(f, n), 2.0)
+    return [arrow_shapes() + [chip()] + hex_segments(BC[0], BC[1], 5.4, intensities(f, n), 2.8)
             for f in range(n)]
 
 
@@ -288,7 +298,8 @@ def plus_big():
 
 def badge_cursor(kind):
     s = arrow_shapes() + [chip()]
-    g = lambda pts, w=2.0: L(at(pts), w=w)
+    # glyphs drawn on a 7 x 7 grid, scaled up to the chip
+    g = lambda pts, w=2.0: L(at([(x * 1.3, y * 1.3) for x, y in pts]), w=w * 1.35)
     if kind == "copy":
         s += [g([(-3.6, 0), (3.6, 0)]), g([(0, -3.6), (0, 3.6)])]
     elif kind == "alias":
@@ -302,7 +313,7 @@ def badge_cursor(kind):
     elif kind == "nodrop":
         s += [g([(-3.6, 3.6), (3.6, -3.6)])]
     elif kind == "dndmove":
-        s += [P(at([(0, -3.4), (3.4, 0), (0, 3.4), (-3.4, 0)]), fill="accent", edge=False, outline=False)]
+        s += [P(at([(0, -4.6), (4.6, 0), (0, 4.6), (-4.6, 0)]), fill="accent", edge=False, outline=False)]
     return s
 
 
@@ -319,7 +330,7 @@ def build_registry():
     add("default", arrow_shapes(), ARROW_HS, ["left_ptr", "arrow", "top_left_arrow", "right_ptr", "center_ptr"])
     add("text", ibeam(), ctr, ["xterm", "ibeam"])
     add("vertical-text", ibeam(90), ctr, ["vertical_text"])
-    add("pointer", pointer(), (18, 2),
+    add("pointer", pointer(), POINTER_HS,
         ["hand1", "hand2", "pointing_hand", "hand",
          "9d800788f1b08800ae810202380a0822", "e29285e634086352946a0e7090d73106"])
     add("wait", wait_frames(), ctr, ["watch"], anim=True)
@@ -416,7 +427,7 @@ def render(skin, shapes, hs, size, pad=0):
     px = 1.0 / k
     s = size / NOMINAL
     edge_w = (0.85 * s + 0.25) * px
-    out_w = 1.0 * s * px
+    out_w = 1.2 * s * px
     c.set_miter_limit(3)
 
     # pass 1: dark outer outline
