@@ -276,12 +276,14 @@ int main(int argc, char *argv[]) {
 		wl_list_remove(&server.new_xwayland_surface.link);
 		wlr_xwayland_destroy(server.xwayland);
 	}
+	/* Outputs before the scene: output_destroy frees each output's scene output and blur
+	 * node, which destroying the scene would already have freed (a crash at every exit). */
+	wlr_backend_destroy(server.backend);
 	wlr_scene_node_destroy(&server.scene->tree.node);
 	wlr_xcursor_manager_destroy(server.cursor_mgr);
 	wlr_cursor_destroy(server.cursor);
 	wlr_allocator_destroy(server.allocator);
 	wlr_renderer_destroy(server.renderer);
-	wlr_backend_destroy(server.backend);
 	wl_display_destroy(server.display);
 	return 0;
 }
