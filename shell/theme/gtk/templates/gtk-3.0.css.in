@@ -115,19 +115,20 @@ headerbar .subtitle, .titlebar .subtitle {
 headerbar entry, headerbar spinbutton, .titlebar entry { margin: 4px 0; }
 headerbar separator, .titlebar separator { background-color: @u_line; min-width: 1px; margin: 8px 3px; }
 
-/* Window controls: Ultimit's  [ _ ]  [ □ ]  [ × ]  drawn as SVG, no circles */
+/* Window controls: the compositor titlebar's small drawn icons as SVG, no circles;
+ * the hover box and its corner brackets are part of the SVG */
 headerbar button.titlebutton, .titlebar button.titlebutton, headerbar.titlebar button.titlebutton {
-  min-width: 42px; min-height: 28px; padding: 0; margin: 0;
+  min-width: 30px; min-height: 22px; padding: 0; margin: 0;
   border-radius: 0; border: none; background-color: transparent;
   box-shadow: none; text-shadow: none; -gtk-icon-shadow: none; outline-offset: -2px;
   color: @u_dim;
 }
 headerbar button.titlebutton:hover, headerbar button.titlebutton:active, headerbar button.titlebutton:checked,
 .titlebar button.titlebutton:hover, .titlebar button.titlebutton:active {
-  background-color: alpha(@u_fg, 0.08); border: none; box-shadow: none;
+  background-color: transparent; border: none; box-shadow: none;
 }
 headerbar button.titlebutton.close:hover, .titlebar button.titlebutton.close:hover,
-headerbar button.titlebutton.close:active, .titlebar button.titlebutton.close:active { background-color: alpha(@u_bad, 0.20); }
+headerbar button.titlebutton.close:active, .titlebar button.titlebutton.close:active { background-color: transparent; }
 headerbar button.titlebutton image, .titlebar button.titlebutton image {
   min-width: 0; min-height: 0; padding: 0; margin: 0; background: none; box-shadow: none; opacity: 0;
   color: transparent; -gtk-icon-shadow: none; border: none; border-radius: 0;

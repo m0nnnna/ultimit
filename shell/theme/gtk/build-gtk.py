@@ -190,11 +190,14 @@ def hb_bg(accent, line2, line):
     return layers(bracket(accent), rule)
 
 
+# Same geometry as the compositor's titlebar buttons (compositor/src/decoration.c,
+# theme.h): a 30x22 cell, a 10 px icon in 1.5 px strokes on whole-pixel centres.
+BTN_W, BTN_H = 30, 22
 GLYPHS = {
-    "min": "<path d='M16 11.5H26'/>",
-    "max": "<rect x='16.5' y='4.5' width='9' height='7'/>",
-    "restore": "<path d='M18.5 6.5V4.5H25.5V9.5H23.5'/><rect x='16.5' y='6.5' width='7' height='5'/>",
-    "close": "<path d='M17 4.5L25 11.5M25 4.5L17 11.5'/>",
+    "min": "<path d='M10.25 15.25H20.25'/>",
+    "max": "<rect x='10.25' y='6.25' width='10' height='10'/>",
+    "restore": "<rect x='10.25' y='9.25' width='7' height='7'/><path d='M13.25 9.25V6.25H20.25V13.25H17.25'/>",
+    "close": "<path d='M10.25 6.25L20.25 16.25M20.25 6.25L10.25 16.25'/>",
 }
 
 
@@ -203,36 +206,43 @@ WCB = "button.image-button:not(.raised):not(.suggested-action):not(.destructive-
 ASSETS = {}   # filename -> svg text, written next to each gtk.css by build()
 
 
-def svg_btn(kind, color):
-    """Ultimit-style bracketed window button '[ x ]' as an SVG asset file.
+def svg_btn(kind, color, opacity=1.0, hover=None):
+    """A window button as an SVG asset file, drawn like the compositor's: the icon,
+    and when `hover` is (tint, tint_alpha, bracket) a tinted box with corner
+    brackets top-left and bottom-right.
     (GTK3's CSS parser does not load data: URIs, so it is a relative file.)"""
-    svg = ("<svg xmlns='http://www.w3.org/2000/svg' width='42' height='16' viewBox='0 0 42 16' "
-           "fill='none' stroke='%s' stroke-width='1.2' stroke-linecap='square'>"
-           "<path d='M7.5 2.5H4.5V13.5H7.5M34.5 2.5H37.5V13.5H34.5'/>%s</svg>"
-           % (hexc(parse_css(color)) if color.startswith(("#", "rgb")) else color, GLYPHS[kind]))
-    name = "btn-%s-%s.svg" % (kind, hexc(parse_css(color))[1:])
+    c = hexc(parse_css(color))
+    box = ""
+    if hover:
+        tint, alpha, brk = (hexc(parse_css(v)) if isinstance(v, str) else v for v in hover)
+        box = ("<rect x='2' y='0' width='26' height='22' fill='%s' fill-opacity='%.2f'/>"
+               "<path fill='%s' d='M2 0h5v1.5H3.5V5H2zM28 22h-5v-1.5h3.5V17H28z'/>" % (tint, alpha, brk))
+    svg = ("<svg xmlns='http://www.w3.org/2000/svg' width='%d' height='%d' viewBox='0 0 %d %d'>%s"
+           "<g fill='none' stroke='%s' stroke-opacity='%.2f' stroke-width='1.5' stroke-linecap='square'>%s</g></svg>"
+           % (BTN_W, BTN_H, BTN_W, BTN_H, box, c, opacity, GLYPHS[kind]))
+    name = "btn-%s-%s%s.svg" % (kind, c[1:], "-hover-" + brk[1:] if hover else "")
     ASSETS[name] = svg
     return 'url("assets/%s")' % name
 
 
 def titlebuttons(ns, roots, btn="button"):
-    """CSS giving each window-control button its bracketed SVG per state.
+    """CSS giving each window-control button its SVG per state.
     GtkImage ignores -gtk-icon-source when it has an icon-name, so the glyph is
     the button's background-image and the stock icon is made invisible.
     roots: container selectors ('headerbar', '.titlebar', 'windowcontrols')."""
     out = []
-    rules = (("", ns["dim"]), (":hover", ns["fg"]), (":active", ns["accent"]),
-             (":backdrop", ns["line2_solid"]))
-    tail = "background-repeat: no-repeat; background-position: center; background-size: 42px 16px;"
+    tail = "background-repeat: no-repeat; background-position: center; background-size: %dpx %dpx;" % (BTN_W, BTN_H)
     for kind, cls in (("min", "minimize"), ("max", "maximize"), ("close", "close")):
-        for suffix, color in rules:
-            if cls == "close" and suffix == ":hover":
-                color = ns["bad"]
+        tint, alpha, brk = (ns["bad"], .30, ns["bad"]) if cls == "close" else (ns["fg"], .16, ns["accent"])
+        hot = lambda k: svg_btn(k, tint, 1.0, (tint, alpha, brk))
+        rules = (("", lambda k: svg_btn(k, ns["fg"], .75)), (":hover", hot), (":active", hot),
+                 (":backdrop", lambda k: svg_btn(k, ns["dim"], .75)), (":backdrop:hover", hot))
+        for suffix, draw in rules:
             sel = ", ".join("%s %s.%s%s" % (r, btn, cls, suffix) for r in roots)
-            out.append("%s { background-image: %s; %s }" % (sel, svg_btn(kind, color), tail))
+            out.append("%s { background-image: %s; %s }" % (sel, draw(kind), tail))
             if cls == "maximize":
                 sel = ", ".join(".maximized %s %s.maximize%s" % (r, btn, suffix) for r in roots)
-                out.append("%s { background-image: %s; %s }" % (sel, svg_btn("restore", color), tail))
+                out.append("%s { background-image: %s; %s }" % (sel, draw("restore"), tail))
     return "\n".join(out)
 
 

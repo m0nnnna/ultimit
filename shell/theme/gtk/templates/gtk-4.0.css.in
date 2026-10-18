@@ -194,18 +194,19 @@ headerbar .subtitle, windowtitle .subtitle {
 headerbar:backdrop .title { color: @u_dim; background-image: linear-gradient(@u_dim, @u_dim); }
 headerbar separator { background-color: @u_line; min-width: 1px; margin: 8px 3px; }
 
-/* Window controls: Ultimit's  [ _ ]  [ □ ]  [ × ]  as SVG, no circles.
+/* Window controls: the compositor titlebar's small drawn icons as SVG, no circles
+ * (the hover box and its corner brackets are part of the SVG).
  * (selectors are over-qualified to beat libadwaita's and our generic button rules) */
-windowcontrols { margin: 0; border-spacing: 4px; }
+windowcontrols { margin: 0; border-spacing: 0; }
 windowcontrols > {{WCB}} {
-  min-width: 42px; min-height: 28px; padding: 0; margin: 0;
+  min-width: 30px; min-height: 22px; padding: 0; margin: 0;
   border-radius: 0; border: none; background-color: transparent;
   box-shadow: none; outline-offset: -2px; color: @u_dim;
 }
 windowcontrols > {{WCB}}:hover, windowcontrols > {{WCB}}:active, windowcontrols > {{WCB}}:checked {
-  background-color: alpha(@u_fg, 0.08); box-shadow: none; border: none;
+  background-color: transparent; box-shadow: none; border: none;
 }
-windowcontrols > {{WCB}}.close:hover, windowcontrols > {{WCB}}.close:active { background-color: alpha(@u_bad, 0.20); }
+windowcontrols > {{WCB}}.close:hover, windowcontrols > {{WCB}}.close:active { background-color: transparent; }
 windowcontrols > button > image { min-width: 0; min-height: 0; padding: 0; margin: 0; background: none;
   border-radius: 0; box-shadow: none; border: none; opacity: 0; }
 {{titlebuttons(["windowcontrols >"], WCB)}}

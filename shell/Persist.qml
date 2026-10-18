@@ -147,6 +147,13 @@ Scope {
             const name = "UltimitCursor-" + Theme.skin.charAt(0).toUpperCase() + Theme.skin.slice(1);
             Quickshell.execDetached(["sh", "-c", "[ -e \"$HOME/.local/share/icons/" + name + "/cursors/default\" ] && ultimitctl cursor-theme " + name + " && gsettings set org.gnome.desktop.interface cursor-theme " + name
                 + " && { ! command -v flatpak >/dev/null || flatpak override --user --env=XCURSOR_THEME=" + name + "; }"]);
+            // GTK apps started from now on, and Flatpak apps (the browser), take the skin's GTK
+            // theme and colour scheme; already open ones keep theirs until restarted.
+            const gtk = "Ultimit-" + Theme.skin.charAt(0).toUpperCase() + Theme.skin.slice(1);
+            const scheme = Theme.skin === "silver" ? "prefer-light" : "prefer-dark";
+            Quickshell.execDetached(["sh", "-c", "gsettings set org.gnome.desktop.interface gtk-theme " + gtk
+                + "; gsettings set org.gnome.desktop.interface color-scheme " + scheme
+                + "; ! command -v flatpak >/dev/null || flatpak override --user --env=GTK_THEME=" + gtk + " --env=ADW_DEBUG_COLOR_SCHEME=" + scheme]);
             // fastfetch and Discord colours follow the skin too (after shell.json is written).
             fastfetchTimer.restart();
         }
