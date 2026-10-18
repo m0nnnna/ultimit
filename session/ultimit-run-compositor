@@ -7,7 +7,8 @@
 #   - its log becomes a crash report in LOG_DIR/crashes/ (the newest 10 are kept)
 #   - LOG_DIR/last-crash says what happened (JSON); the shell shows it on its next start
 #   - if it had been up for 20 s or more, it starts again right away, without the login screen
-#     (open apps are lost either way); 3 crashes within 10 minutes end the login instead.
+#     but locked (ULTIMIT_START_LOCKED=1), so a crash never skips the lock screen (open apps are
+#     lost either way); 3 crashes within 10 minutes end the login instead.
 # A clean exit or a logout (SIGTERM/SIGHUP) is not a crash; either way the whole login session is
 # ended, so nothing it started (tray applets, helpers) lingers and holds it open as "closing".
 # Core dumps (apport keeps them in /var/lib/apport/coredump/) are on for the compositor only, max 512 MB.
@@ -50,6 +51,7 @@ while :; do
 	printf '{"time":%s,"what":"%s","uptime":%s,"report":"%s","restarted":%s}\n' \
 		"$now" "$what" "$up" "$report" "$restart" >"$LOG_DIR/last-crash"
 	$restart || end_session 1
+	export ULTIMIT_START_LOCKED=1
 	mv "$LOG_DIR/session.log" "$LOG_DIR/session.log.old"
 	sleep 1
 done

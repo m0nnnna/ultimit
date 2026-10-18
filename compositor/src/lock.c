@@ -9,6 +9,7 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_idle_notify_v1.h>
 #include <wlr/types/wlr_session_lock_v1.h>
@@ -199,7 +200,14 @@ static void new_inhibitor(struct wl_listener *listener, void *data) {
 void lock_init(struct ul_server *server) {
 	static const float cover[4] = UL_COLOR_BG;
 	server->lock_cover = wlr_scene_rect_create(server->layers[UL_LAYER_LOCK], 0, 0, cover);
-	wlr_scene_node_set_enabled(&server->lock_cover->node, false);
+	/* Restarted after a crash (ultimit-run-compositor): start covered and locked, as if the lock
+	 * client had gone away, so a crash can't skip the lock screen. The shell locks on start. */
+	const char *start_locked = getenv("ULTIMIT_START_LOCKED");
+	server->locked = start_locked && strcmp(start_locked, "1") == 0;
+	wlr_scene_node_set_enabled(&server->lock_cover->node, server->locked);
+	if (server->locked) {
+		wlr_log(WLR_INFO, "Starting locked (restarted after a crash)");
+	}
 
 	server->lock_manager = wlr_session_lock_manager_v1_create(server->display);
 	server->new_lock.notify = new_lock;

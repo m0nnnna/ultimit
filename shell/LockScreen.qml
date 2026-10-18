@@ -5,6 +5,8 @@
 //  * IPC `qs ipc call lock lock`, Config.lock() (quick settings / launcher buttons).
 //  * IdleMonitor (ext-idle-notify-v1): dim -> lock -> suspend, timings in Config
 //    (dimAfter / lockAfter / suspendAfter / suspendOnAC). Inhibitors are respected.
+//  * After a compositor crash it is restarted with ULTIMIT_START_LOCKED=1 and already covered:
+//    lock at once so there's a password prompt to get back in.
 //  * logind: lock on PrepareForSleep(true) (suspend, lid close) holding a delay inhibitor until
 //    the lock is up, and on `loginctl lock-session`.
 //
@@ -48,6 +50,9 @@ Scope {
     Connections {
         target: Config
         function onLockRequestChanged() { root.lock(); }
+    }
+    Component.onCompleted: {
+        if (Quickshell.env("ULTIMIT_START_LOCKED") === "1") { console.log("[lock] restarted after a crash: locking"); root.lock(); }
     }
     IpcHandler {
         target: "lock"
