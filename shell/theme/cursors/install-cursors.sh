@@ -12,10 +12,12 @@ LOG="${XDG_STATE_HOME:-$HOME/.local/state}/ultimit/cursors.log"
 SKINS=$(sed -n 's/^[[:space:]]*\([a-z][a-z]*\)[[:space:]]*:[[:space:]]*{.*/\1/p' "$THEME" \
 	| while read -r s; do printf '%s%s\n' "$(printf %s "$s" | cut -c1 | tr a-z A-Z)" "$(printf %s "$s" | cut -c2-)"; done)
 [ -n "$SKINS" ] || SKINS="Mine Amber Silver Verdant"
-# Your own accent (shell.json "accent") is drawn into every skin's cursor, so it is part of the stamp.
-ACCENT=$(sed -n 's/.*"accent"[[:space:]]*:[[:space:]]*"\(#[0-9a-fA-F]\{6\}\)".*/\1/p' \
-	"${XDG_CONFIG_HOME:-$HOME/.config}/ultimit/shell.json" 2>/dev/null | head -n 1)
-SUM=$({ cat "$HERE/build-cursors.py" "$THEME"; echo "$ACCENT"; } | sha256sum | cut -d' ' -f1)
+# Your own accent (shell.json "accent") is drawn into every skin's cursor, and the cursor style
+# ("cursorStyle") picks the set, so both are part of the stamp.
+CONF="${XDG_CONFIG_HOME:-$HOME/.config}/ultimit/shell.json"
+ACCENT=$(sed -n 's/.*"accent"[[:space:]]*:[[:space:]]*"\(#[0-9a-fA-F]\{6\}\)".*/\1/p' "$CONF" 2>/dev/null | head -n 1)
+STYLE=$(sed -n 's/.*"cursorStyle"[[:space:]]*:[[:space:]]*"\([a-z]*\)".*/\1/p' "$CONF" 2>/dev/null | head -n 1)
+SUM=$({ cat "$HERE/build-cursors.py" "$THEME"; echo "$ACCENT"; echo "$STYLE"; } | sha256sum | cut -d' ' -f1)
 
 fresh=1
 for s in $SKINS; do

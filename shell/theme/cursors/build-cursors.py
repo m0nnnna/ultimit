@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Build the Ultimit "Shard" Xcursor theme set (UltimitCursor-<Skin>).
+"""Build the Ultimit Xcursor theme set (Izy or Shard style) (UltimitCursor-<Skin>).
 
 Usage: build-cursors.py OUTDIR [--sheets DIR] [--skins Mine,Amber,...] [--theme Theme.qml]
+                          [--style izy|shard]
 
 Draws every cursor with pycairo as vector paths at 24/32/36/48/64 px (no bitmap
 downscaling) and writes the Xcursor files itself (no xcursorgen needed).
@@ -10,6 +11,11 @@ cursor follows Settings > Appearance; a new skin gets a cursor of its own.
 Original artwork in the desktop's language: two-tone crystal shards (lit face
 in the skin's accent, shadow face sunk toward its panel colour), hairlines,
 chamfered chips and corner brackets, with one thin contrast outline.
+
+The default style, "izy" ("cursorStyle" in shell.json, or --style), draws a
+white two-tone dart with an accent rim and an accent wedge, plain badges (no
+chips) and round busy rings. The other cursors (text, resize, move, ...) keep
+the Shard shapes, drawn white with an accent rim. "shard" is the original set.
 """
 import json
 import math
@@ -26,6 +32,10 @@ NOMINAL = 24
 U = 52.0            # drawing canvas in design units
 C = 26.0            # centre
 OUTLINE = "#050607"
+STYLES = ("izy", "shard")
+STYLE = "izy"
+LIGHT = "#f4f6f9"   # izy: lit face of the white shapes
+MID = "#b3bac4"     # izy: their shadow face
 
 THEME_QML = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "Theme.qml")
 
@@ -75,6 +85,16 @@ def user_accent():
     except Exception:
         return None
     return a.lower() if isinstance(a, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", a) else None
+
+
+def user_style():
+    """Cursor style ("cursorStyle" in shell.json); Izy when unset or unknown."""
+    p = os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"), "ultimit", "shell.json")
+    try:
+        v = json.load(open(p)).get("cursorStyle", "")
+    except Exception:
+        return "izy"
+    return v if v in STYLES else "izy"
 
 
 # ---------------------------------------------------------------- helpers
@@ -129,11 +149,26 @@ LW = 3.0             # line weight (design units; ~1.4 px at 24 px)
 
 
 def shard(pts, lit):
-    """Two-tone shard: silhouette `pts`, `lit` is the lit face (rest is shadow)."""
+    """Two-tone shard: silhouette `pts`, `lit` is the lit face (rest is shadow).
+    Izy: white faces with an accent rim."""
+    if STYLE == "izy":
+        return P(pts, fill="mid", shade=lit, edge=True, lit=True, litc="light")
     return P(pts, fill="shade", shade=lit, edge=False, lit=True)
 
 
+# Izy dart: tip, left wing, notch, right wing. The accent wedge sits in the
+# notch, across the dart's axis, so it is a few pixels wide even at 24 px.
+DART = [(7, 6), (11.5, 46), (19.5, 33.5), (35, 29)]
+
+
 def arrow_shapes():
+    if STYLE == "izy":
+        t, lw, n, rw = DART
+        ax = lambda f: (t[0] + (n[0] - t[0]) * f, t[1] + (n[1] - t[1]) * f)
+        on = lambda a, b, f: (a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f)
+        wedge = [on(n, t, 0.06), on(n, lw, 0.30), ax(0.62), on(n, rw, 0.16)]
+        return [P(DART, fill="light", shade=[t, rw, on(n, rw, 0.5)], edge=True, lit=True, litc="mid", ew=1.15),
+                P(wedge, fill="accent", edge=False, outline=False)]
     return [shard(ARROW, ARROW[:3])]
 
 
@@ -273,7 +308,7 @@ def zoom(plus):
 
 
 def pencil():
-    T = (5, 47)
+    T = (6, 46) if STYLE == "izy" else (5, 47)
     d = (math.sqrt(.5), -math.sqrt(.5))
     n = (math.sqrt(.5), math.sqrt(.5))
     p = lambda a, b: (T[0] + d[0] * a + n[0] * b, T[1] + d[1] * a + n[1] * b)
@@ -317,6 +352,78 @@ def badge_cursor(kind):
     return s
 
 
+# ---------------------------------------------------------------- izy
+def arc(cx, cy, r, a0, a1, n=10):
+    return [(cx + r * math.cos(math.radians(a0 + (a1 - a0) * i / n)),
+             cy + r * math.sin(math.radians(a0 + (a1 - a0) * i / n))) for i in range(n + 1)]
+
+
+def stadium(c, length, r, angle):
+    """Closed outline of a rounded link, centred on c, long axis at `angle`."""
+    h = length / 2 - r
+    pts = rel(arc(h, 0, r, -90, 90, 8) + arc(-h, 0, r, 90, 270, 8), (0, 0))
+    return turned(pts + [pts[0]], angle, c)
+
+
+def ring_segments(cx, cy, r, intens, w, n=8):
+    """A dashed ring, one dash per value in intens (0..1 brightness)."""
+    out = []
+    for i in range(n):
+        a = -90 + 360.0 * i / n
+        span = 360.0 / n * 0.56
+        out.append(L(arc(cx, cy, r, a - span / 2, a + span / 2, 4), w=w,
+                     alpha=0.22 + 0.78 * intens[i], outline=True))
+    return out
+
+
+def ring_intensities(frame, frames=12, n=8):
+    head_ = frame * float(n) / frames
+    return [max(0.0, 1.0 - ((head_ - i) % n) / 3.2) ** 1.5 for i in range(n)]
+
+
+def izy_badge(kind, c=BC):
+    """Izy badges: a plain accent glyph next to the dart, no chip."""
+    g = lambda pts, w=2.4: L(at(pts, c), w=w, outline=True)
+    if kind == "link":
+        return [L(stadium((c[0] - 2.6, c[1] + 2.6), 12, 3.3, -45), w=2.2, outline=True),
+                L(stadium((c[0] + 2.6, c[1] - 2.6), 12, 3.3, -45), w=2.2, outline=True)]
+    if kind == "copy":
+        return [g([(-7, 0), (7, 0)], 2.8), g([(0, -7), (0, 7)], 2.8)]
+    if kind == "alias":
+        return [g([(-6, 6), (-6, -1), (5, -1)]), g([(1, -5.5), (5.5, -1), (1, 3.5)])]
+    if kind == "help":
+        return [g(arc(0, -3, 5, 180, 360, 8) + arc(0, -3, 5, 0, 70, 4) + [(0, 3.5)], 2.4),
+                g([(0, 6.2), (0, 8.6)], 2.6)]
+    if kind == "menu":
+        return [g([(-7, -5), (7, -5)], 2.4), g([(-7, 0), (7, 0)], 2.4), g([(-7, 5), (3, 5)], 2.4)]
+    if kind == "nodrop":
+        return [L(arc(c[0], c[1], 7, 0, 360, 20), w=2.2, outline=True),
+                g([(-4.9, 4.9), (4.9, -4.9)], 2.2)]
+    if kind == "dndmove":
+        k = 2.5
+        return [g([(-7 + k, -7), (7, -7), (7, 7 - k), (7 - k, 7), (-7, 7), (-7, -7 + k), (-7 + k, -7)], 2.2)]
+    return []
+
+
+def izy_badge_cursor(kind):
+    return arrow_shapes() + izy_badge(kind)
+
+
+def izy_wait_frames(n=12):
+    return [ring_segments(C, C, 16, ring_intensities(f, n), 4.4) + [diamond(3.2)] for f in range(n)]
+
+
+def izy_progress_frames(n=12):
+    return [arrow_shapes() + ring_segments(BC[0], BC[1], 7.5, ring_intensities(f, n), 3.0)
+            for f in range(n)]
+
+
+def izy_forbidden():
+    d = 17 * math.sqrt(.5)
+    return [L(arc(C, C, 17, 0, 360, 36), w=LW + 0.6, outline=True),
+            L([(C - d, C + d), (C + d, C - d)], w=LW + 0.6, outline=True)]
+
+
 # ---------------------------------------------------------------- registry
 # name -> dict(frames=[shapes,...], hs=(ux,uy), delay=ms)
 def build_registry():
@@ -327,39 +434,42 @@ def build_registry():
         R[name] = dict(frames=frames, hs=hs, delay=60 if anim else 0, aliases=list(aliases))
 
     ctr = (C, C)
-    add("default", arrow_shapes(), ARROW_HS, ["left_ptr", "arrow", "top_left_arrow", "right_ptr", "center_ptr"])
+    izy = STYLE == "izy"
+    arrow_hs = DART[0] if izy else ARROW_HS
+    badge = izy_badge_cursor if izy else badge_cursor
+    add("default", arrow_shapes(), arrow_hs, ["left_ptr", "arrow", "top_left_arrow", "right_ptr", "center_ptr"])
     add("text", ibeam(), ctr, ["xterm", "ibeam"])
     add("vertical-text", ibeam(90), ctr, ["vertical_text"])
-    add("pointer", pointer(), POINTER_HS,
+    add("pointer", izy_badge_cursor("link") if izy else pointer(), arrow_hs if izy else POINTER_HS,
         ["hand1", "hand2", "pointing_hand", "hand",
          "9d800788f1b08800ae810202380a0822", "e29285e634086352946a0e7090d73106"])
-    add("wait", wait_frames(), ctr, ["watch"], anim=True)
-    add("progress", progress_frames(), ARROW_HS,
+    add("wait", izy_wait_frames() if izy else wait_frames(), ctr, ["watch"], anim=True)
+    add("progress", izy_progress_frames() if izy else progress_frames(), arrow_hs,
         ["left_ptr_watch", "half-busy", "08e8e1c95fe2fc01f976f1e063a24ccd",
          "3ecb610c1bf2410f44200f48c40d3599"], anim=True)
     add("crosshair", crosshair(), ctr, ["cross", "tcross"])
-    add("move", fleur(), ctr, ["fleur", "size_all", "4498f0e0c1937ffe01fd06f973665830",
+    add("move", fleur(tip=20 if izy else 22), ctr, ["fleur", "size_all", "4498f0e0c1937ffe01fd06f973665830",
                                "9081237383d90e509aa00f00170e968f"])
     add("all-scroll", fleur(tip=19, diamond_=True), ctr, ["all_scroll"])
     add("grab", brackets(14, 7) + [diamond(2.4)], ctr, ["openhand", "9141b49c8149039304290b508d208c40"])
     add("grabbing", brackets(9, 5) + [diamond(4.2)], ctr, ["closedhand", "08ffe1cb5fe6fc01f906f1c063814ccf"])
-    add("not-allowed", forbidden(), ctr,
+    add("not-allowed", izy_forbidden() if izy else forbidden(), ctr,
         ["crossed_circle", "forbidden", "circle", "03b6e0fcb3499374a867c041f52298f0"])
-    add("no-drop", badge_cursor("nodrop"), ARROW_HS, ["dnd-none", "dnd_none", "dnd_no_drop"])
-    add("help", badge_cursor("help"), ARROW_HS,
+    add("no-drop", badge("nodrop"), arrow_hs, ["dnd-none", "dnd_none", "dnd_no_drop"])
+    add("help", badge("help"), arrow_hs,
         ["question_arrow", "left_ptr_help", "whats_this", "d9ce0ab605698f320427677b458ad60b"])
-    add("context-menu", badge_cursor("menu"), ARROW_HS, ["context_menu"])
-    add("copy", badge_cursor("copy"), ARROW_HS,
+    add("context-menu", badge("menu"), arrow_hs, ["context_menu"])
+    add("copy", badge("copy"), arrow_hs,
         ["dnd-copy", "dnd_copy", "1081e37283d90000800003c07f3ef6bf",
          "6407b0e94181790501fd1e167b474872", "b66166c04f8c3109214a4fbd64a50fc8"])
-    add("alias", badge_cursor("alias"), ARROW_HS,
+    add("alias", badge("alias"), arrow_hs,
         ["dnd-link", "dnd_link", "link", "3085a0e285430894940527032f8b26df",
          "640fb0e74195791501fd1ed57b41487f", "a2a266d0498c3104214a47bd64ab0fc8"])
-    add("dnd-move", badge_cursor("dndmove"), ARROW_HS, [])
+    add("dnd-move", badge("dndmove"), arrow_hs, [])
     add("cell", plus_big(), ctr, ["plus"])
     add("zoom-in", zoom(True), (21, 21), ["zoom_in"])
     add("zoom-out", zoom(False), (21, 21), ["zoom_out"])
-    add("pencil", pencil(), (5, 47), ["draft", "draft_large", "draft_small"])
+    add("pencil", pencil(), (6, 46) if izy else (5, 47), ["draft", "draft_large", "draft_small"])
     # resize family
     for name, ang in (("e-resize", 0), ("se-resize", 45), ("s-resize", 90), ("sw-resize", 135),
                       ("w-resize", 180), ("nw-resize", 225), ("n-resize", 270), ("ne-resize", 315)):
@@ -391,15 +501,22 @@ class Skin:
         self.accent = rgb(s["accent"])
         self.fill = rgb(s["fill"])
         light = sum(self.fill) / 3 > 0.5
-        # Contrast outline: near-black on dark skins, white on light ones.
-        self.outline = (1.0, 1.0, 1.0) if light else rgb(OUTLINE)
+        # Contrast outline: near-black on dark skins, white on light ones. The
+        # izy shapes are white, so they always get the dark one.
+        self.outline = (1.0, 1.0, 1.0) if light and STYLE != "izy" else rgb(OUTLINE)
+        self.light, self.mid = rgb(LIGHT), rgb(MID)
+        # Izy hairlines: the accent, or white when the accent is too dark to
+        # read on a dark window (Silver); the rims keep the accent.
+        lum = 0.2126 * self.accent[0] + 0.7152 * self.accent[1] + 0.0722 * self.accent[2]
+        self.line = self.light if STYLE == "izy" and lum < 0.4 else self.accent
         # Shadow face of a shard: the accent sunk toward the panel colour.
         self.shade = mix(self.accent, self.fill, 0.42)
 
     def colour(self, key):
         if isinstance(key, tuple):
             return mix(self.fill, self.accent, key[1])
-        return {"fill": self.fill, "accent": self.accent, "shade": self.shade}[key]
+        return {"fill": self.fill, "accent": self.accent, "shade": self.shade,
+                "light": self.light, "mid": self.mid}[key]
 
 
 def trace(c, shape):
@@ -440,7 +557,7 @@ def render(skin, shapes, hs, size, pad=0):
         if sh["kind"] == "poly":
             trace(c, sh)
             c.set_fill_rule(cairo.FILL_RULE_EVEN_ODD if sh["rule"] == "evenodd" else cairo.FILL_RULE_WINDING)
-            c.set_line_width((edge_w if sh["edge"] else 0) + 2 * out_w)
+            c.set_line_width((edge_w * sh.get("ew", 1.0) if sh["edge"] else 0) + 2 * out_w)
             c.stroke()
         else:
             c.move_to(*sh["pts"][0])
@@ -466,7 +583,7 @@ def render(skin, shapes, hs, size, pad=0):
                 for p in sh["shade"][1:]:
                     c.line_to(*p)
                 c.close_path()
-                c.set_source_rgb(*(skin.accent if sh.get("lit") else skin.shade))
+                c.set_source_rgb(*(skin.colour(sh.get("litc", "accent")) if sh.get("lit") else skin.shade))
                 c.fill()
                 c.restore()
             if sh["facets"]:
@@ -487,7 +604,7 @@ def render(skin, shapes, hs, size, pad=0):
                 trace(c, sh)
                 c.set_source_rgba(*skin.accent, sh["ea"])
                 c.set_line_join(cairo.LINE_JOIN_MITER)
-                c.set_line_width(edge_w)
+                c.set_line_width(edge_w * sh.get("ew", 1.0))
                 c.stroke()
         else:
             c.move_to(*sh["pts"][0])
@@ -495,7 +612,8 @@ def render(skin, shapes, hs, size, pad=0):
                 c.line_to(*p)
             if sh["close"]:
                 c.close_path()
-            c.set_source_rgba(*skin.colour(sh["color"]), sh["alpha"])
+            col = skin.line if sh["color"] == "accent" else skin.colour(sh["color"])
+            c.set_source_rgba(*col, sh["alpha"])
             c.set_line_cap(cairo.LINE_CAP_SQUARE if sh["cap"] == "square" else cairo.LINE_CAP_BUTT)
             c.set_line_join(cairo.LINE_JOIN_MITER)
             c.set_line_width(max(sh["w"], 0.95 * s * px))
@@ -566,9 +684,9 @@ def build_theme(skin_name, outdir, registry, keep=None, warn=None):
                 os.unlink(dst)
             os.symlink(name, dst)
     with open(os.path.join(tdir, "index.theme"), "w") as f:
-        f.write("[Icon Theme]\nName=%s\nComment=Ultimit Shard cursors (%s skin): "
-                "two-tone crystal shards and accent hairlines\n"
-                "Inherits=Adwaita\n" % (tname, skin_name))
+        desc = ("Ultimit Izy cursors (%s skin): white darts with an accent rim" if STYLE == "izy"
+                else "Ultimit Shard cursors (%s skin): two-tone crystal shards and accent hairlines")
+        f.write("[Icon Theme]\nName=%s\nComment=%s\nInherits=Adwaita\n" % (tname, desc % skin_name))
     if keep is not None:
         keep.update(rendered)
     return tdir
@@ -646,6 +764,11 @@ def main(argv):
     outdir = argv[1]
     sheets = None
     theme = argv[argv.index("--theme") + 1] if "--theme" in argv else THEME_QML
+    global STYLE
+    STYLE = argv[argv.index("--style") + 1] if "--style" in argv else user_style()
+    if STYLE not in STYLES:
+        print("unknown style %r (want %s)" % (STYLE, "|".join(STYLES)), file=sys.stderr)
+        return 2
     found = load_skins(theme)
     acc = user_accent()
     for v in found.values():

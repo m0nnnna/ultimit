@@ -37,6 +37,8 @@ Singleton {
     // skin's colours, "original" shows the app's own icon (Settings > Appearance). Ultimit's apps,
     // and apps the Ultimit theme draws, always keep their skin icons.
     property string appIcons: "letters"
+    // Mouse cursor style (theme/cursors), Settings > Appearance: "izy" white darts, "shard" crystal shards.
+    property string cursorStyle: "izy"
     // UI animation duration scale: 0 when motion is off (reduced motion), else 1.
     readonly property real motionScale: motion ? 1 : 0
     function dur(ms) { return Math.round(ms * motionScale); }

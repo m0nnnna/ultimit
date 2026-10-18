@@ -198,6 +198,14 @@ Page {
         onPicked: id => Config.appIcons = id
     }
 
+    SectionLabel { text: "Mouse cursor" }
+    Chips {
+        Layout.fillWidth: true
+        options: [{ id: "izy", label: "Izy" }, { id: "shard", label: "Shard" }]
+        current: Config.cursorStyle
+        onPicked: id => Config.cursorStyle = id
+    }
+
     SectionLabel { text: "System" }
     // Reduced motion when off: window open/close/minimize, the focus sweep, panel transitions,
     // shard and rail-icon motion, the boot and lock animations.

@@ -35,6 +35,7 @@ Scope {
         if (!root.envMotion) Config.motion = a.motion;
         Config.railSpin = a.railSpin;
         Config.appIcons = a.appIcons === "original" ? "original" : "letters";
+        Config.cursorStyle = a.cursorStyle === "shard" ? "shard" : "izy";
         Config.wallpaperMotion = a.wallpaperMotion;
         if (!root.envBoot) Config.bootOnStart = a.bootOnStart;
         Config.shardDensity = clampDensity(a.shardDensity);
@@ -71,6 +72,7 @@ Scope {
         if (!root.envMotion && a.motion !== Config.motion) { a.motion = Config.motion; changed = true; }
         if (a.railSpin !== Config.railSpin) { a.railSpin = Config.railSpin; changed = true; }
         if (a.appIcons !== Config.appIcons) { a.appIcons = Config.appIcons; changed = true; }
+        if (a.cursorStyle !== Config.cursorStyle) { a.cursorStyle = Config.cursorStyle; changed = true; }
         if (a.wallpaperMotion !== Config.wallpaperMotion) { a.wallpaperMotion = Config.wallpaperMotion; changed = true; }
         if (a.shardDensity !== Config.shardDensity) { a.shardDensity = Config.shardDensity; changed = true; }
         if (a.wallpaper !== Config.wallpaper) { a.wallpaper = Config.wallpaper; changed = true; }
@@ -120,6 +122,17 @@ Scope {
             fastfetchTimer.restart();
         }
     }
+    // A new cursor style: the cursors are rebuilt in it (install-cursors.sh reads shell.json, so
+    // after it is written) and reloaded.
+    Timer {
+        id: cursorTimer
+        interval: 1500
+        onTriggered: {
+            const name = "UltimitCursor-" + Theme.skin.charAt(0).toUpperCase() + Theme.skin.slice(1);
+            Quickshell.execDetached(["sh", "-c", "\"$1\" && ultimitctl cursor-theme " + name + " >/dev/null", "sh",
+                Quickshell.shellPath("theme/cursors/install-cursors.sh")]);
+        }
+    }
     Connections {
         target: Theme
         function onAccentOverrideChanged() {
@@ -143,6 +156,10 @@ Scope {
         function onMotionChanged() { root.push(); Quickshell.execDetached(["ultimitctl", "motion", Config.motion ? "on" : "off"]); }
         function onRailSpinChanged() { root.push(); }
         function onAppIconsChanged() { root.push(); }
+        function onCursorStyleChanged() {
+            root.push();
+            if (root.ready) cursorTimer.restart();
+        }
         function onWallpaperMotionChanged() { root.push(); }
         function onShardDensityChanged() { root.push(); }
         function onWallpaperChanged() { root.push(); }
@@ -191,6 +208,7 @@ Scope {
             property bool motion: true
             property string railSpin: "always"
             property string appIcons: "letters"
+            property string cursorStyle: "izy"
             property bool wallpaperMotion: true
             property int shardDensity: 34
             property string wallpaper: ""
