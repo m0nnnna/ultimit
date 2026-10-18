@@ -56,6 +56,7 @@ enum ul_snap_zone {
 	UL_ZONE_LEFT,
 	UL_ZONE_RIGHT,
 	UL_ZONE_MAXIMIZE,
+	UL_ZONE_VERTICAL, /* resizing the top/bottom edge to the screen edge: full height */
 };
 
 #define UL_SNAP_MAX 8          /* most widths in the Super+Left/Right cycle ([windows] snap_widths) */

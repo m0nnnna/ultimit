@@ -77,35 +77,78 @@ static struct wlr_surface *surface_at(struct ul_server *server, double lx, doubl
 	return scene_surface ? scene_surface->surface : NULL;
 }
 
-/* Edges of a view the cursor is grabbing, if it's just outside the content. */
-static uint32_t resize_edges_at(struct ul_view *view, double lx, double ly) {
-	if (!view || !view->mapped || view->fullscreen || view->maximized) {
+/* Edges of a view the cursor is grabbing: the drawn frame border plus a band
+ * just outside it, with wider corners so they are easy to hit. *inside is
+ * set when the point is anywhere within the view's frame + band. */
+#define UL_RESIZE_OUTSIDE 8  /* grab band past the drawn frame */
+#define UL_RESIZE_CORNER  20 /* corner grab length along each side */
+static uint32_t resize_edges_at(struct ul_view *view, double lx, double ly, bool *inside) {
+	*inside = false;
+	if (!view || !view->mapped || view->fullscreen) {
 		return 0;
 	}
 	int bar = view->ssd ? UL_TITLEBAR_H : 0;
-	int m = UL_RESIZE_MARGIN;
-	double left = view->x, right = view->x + view->width;
-	double top = view->y - bar, bottom = view->y + view->height;
-	if (lx < left - m || lx > right + m || ly < top - m || ly > bottom + m) {
+	int o = UL_RESIZE_OUTSIDE;
+	double left = view->x - UL_BORDER, right = view->x + view->width + UL_BORDER;
+	double top = view->y - bar - UL_BORDER, bottom = view->y + view->height + UL_BORDER;
+	if (lx < left - o || lx >= right + o || ly < top - o || ly >= bottom + o) {
 		return 0;
 	}
+	*inside = true;
+	if (view->maximized) {
+		return 0;
+	}
+	/* Band: outside the frame, or on its border (the strip around the content;
+	 * along the top, just the titlebar's top few pixels). */
+	int in = UL_BORDER;
+	bool l = lx < left + in, r = lx >= right - in;
+	bool t = ly < top + in, b = ly >= bottom - in;
+	if (!(l || r || t || b)) {
+		return 0;
+	}
+	/* Near a corner, grab both edges. */
+	int c = UL_RESIZE_CORNER;
+	if (l || r) {
+		t = t || ly < top + c;
+		b = b || ly >= bottom - c;
+	}
+	if (t || b) {
+		l = l || lx < left + c;
+		r = r || lx >= right - c;
+	}
 	uint32_t edges = 0;
-	if (lx < left + 1) edges |= WLR_EDGE_LEFT;
-	else if (lx > right - 1) edges |= WLR_EDGE_RIGHT;
-	if (ly < top + 1) edges |= WLR_EDGE_TOP;
-	else if (ly > bottom - 1) edges |= WLR_EDGE_BOTTOM;
+	if (l) edges |= WLR_EDGE_LEFT;
+	else if (r) edges |= WLR_EDGE_RIGHT;
+	if (t) edges |= WLR_EDGE_TOP;
+	else if (b) edges |= WLR_EDGE_BOTTOM;
 	return edges;
 }
 
+/* The topmost view whose frame (+ grab band) holds the point, if the point is
+ * on its resize band: a window on top hides the edges of those under it. */
 static struct ul_view *view_edge_at(struct ul_server *server, double lx, double ly,
 		uint32_t *edges) {
+	*edges = 0;
 	struct ul_view *view;
 	wl_list_for_each(view, &server->views, link) {
 		if (view->minimized) continue;
-		*edges = resize_edges_at(view, lx, ly);
+		bool inside;
+		*edges = resize_edges_at(view, lx, ly, &inside);
 		if (*edges) return view;
+		if (inside) return NULL;
 	}
 	return NULL;
+}
+
+/* A resize band applies unless the cursor is over a surface that isn't a
+ * managed window (a shell panel, a menu). */
+static struct ul_view *edge_under_cursor(struct ul_server *server,
+		struct wlr_surface *surface, struct ul_view *view, uint32_t *edges) {
+	*edges = 0;
+	if (surface && !view) {
+		return NULL;
+	}
+	return view_edge_at(server, server->cursor->x, server->cursor->y, edges);
 }
 
 static const char *edge_cursor(uint32_t edges) {
@@ -221,13 +264,13 @@ void input_update_pointer_focus(struct ul_server *server, uint32_t time_msec) {
 	struct ul_view *view;
 	struct wlr_surface *surface = surface_at(server, server->cursor->x, server->cursor->y,
 		&sx, &sy, &view, NULL);
-	decoration_set_hover(server, view, surface ? -1 : button_at(server, view));
-	if (surface) {
+	uint32_t edges = 0;
+	edge_under_cursor(server, surface, view, &edges);
+	decoration_set_hover(server, view, surface || edges ? -1 : button_at(server, view));
+	if (surface && !edges) {
 		wlr_seat_pointer_notify_enter(server->seat, surface, sx, sy);
 		wlr_seat_pointer_notify_motion(server->seat, time_msec, sx, sy);
 	} else {
-		uint32_t edges = 0;
-		view_edge_at(server, server->cursor->x, server->cursor->y, &edges);
 		wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr, edge_cursor(edges));
 		/* notify_: a drag in progress also leaves the surface it was over. */
 		wlr_seat_pointer_notify_clear_focus(server->seat);
@@ -326,6 +369,50 @@ static void apply_snap_zone(struct ul_server *server) {
 	}
 }
 
+/* Resizing the top or bottom edge onto the screen's top or bottom edge (one
+ * not shared with another output) arms a full-height stretch, as on Windows. */
+static void update_resize_zone(struct ul_server *server) {
+	struct ul_view *view = server->grabbed_view;
+	double cx = server->cursor->x, cy = server->cursor->y;
+	struct ul_output *out = output_at(server, cx, cy);
+	uint32_t edges = server->resize_edges;
+	bool armed = false;
+	if (out && view && !view->fullscreen) {
+		struct wlr_box a = out->full_area;
+		if (edges & WLR_EDGE_TOP) {
+			armed = cy <= a.y + UL_SNAP_EDGE && !output_at(server, cx, a.y - 1);
+		} else if (edges & WLR_EDGE_BOTTOM) {
+			armed = cy >= a.y + a.height - 1 - UL_SNAP_EDGE &&
+				!output_at(server, cx, a.y + a.height);
+		}
+	}
+	if (!armed) {
+		if (server->snap_zone != UL_ZONE_NONE) input_snap_preview_hide(server);
+		return;
+	}
+	server->snap_zone = UL_ZONE_VERTICAL;
+	server->snap_zone_output = out;
+	struct wlr_box u = out->usable_area;
+	preview_rects(server, (struct wlr_box){ view->x - UL_BORDER, u.y,
+		view->width + 2 * UL_BORDER, u.height });
+}
+
+static void end_interactive(struct ul_server *server);
+
+static void apply_resize_zone(struct ul_server *server) {
+	struct ul_view *view = server->grabbed_view;
+	struct ul_output *out = server->snap_zone_output;
+	bool armed = server->snap_zone == UL_ZONE_VERTICAL;
+	end_interactive(server); /* stop anchoring the grabbed edge first */
+	if (!armed || !view || !out || !view->mapped || view->fullscreen) {
+		return;
+	}
+	int bar = view->ssd ? UL_TITLEBAR_H : 0;
+	struct wlr_box u = out->usable_area;
+	view_set_position(view, view->x, u.y + bar + UL_BORDER);
+	view_request_size(view, view->width, u.height - bar - 2 * UL_BORDER);
+}
+
 static void process_move(struct ul_server *server) {
 	struct ul_view *view = server->grabbed_view;
 	if (server->restore_on_drag) {
@@ -370,6 +457,7 @@ static void process_resize(struct ul_server *server) {
 		view->y = top;
 	}
 	view_request_size(view, right - left, bottom - top);
+	update_resize_zone(server);
 }
 
 static void process_motion(struct ul_server *server, uint32_t time_msec) {
@@ -446,6 +534,9 @@ static void end_interactive(struct ul_server *server) {
 static void finish_grab(struct ul_server *server) {
 	if (server->cursor_mode == UL_CURSOR_MOVE) {
 		apply_snap_zone(server);
+	} else if (server->cursor_mode == UL_CURSOR_RESIZE) {
+		apply_resize_zone(server);
+		return;
 	}
 	end_interactive(server);
 }
@@ -520,6 +611,18 @@ static void cursor_button(struct wl_listener *listener, void *data) {
 		}
 	}
 
+	/* A window's resize band wins over whatever is under it, its own titlebar
+	 * included. Checked before focusing, which restacks. */
+	if (event->button == BTN_LEFT && !alt_held(server)) {
+		uint32_t edges = 0;
+		struct ul_view *edge_view = edge_under_cursor(server, surface, view, &edges);
+		if (edge_view) {
+			view_focus(edge_view);
+			view_begin_interactive(edge_view, UL_CURSOR_RESIZE, edges);
+			return;
+		}
+	}
+
 	if (view) {
 		view_focus(view);
 		/* Alt/Super + drag moves, Alt/Super + right-drag resizes. */
@@ -561,17 +664,6 @@ static void cursor_button(struct wl_listener *listener, void *data) {
 			case UL_HIT_NONE:
 				break;
 			}
-		}
-	}
-
-	if (!surface && event->button == BTN_LEFT) {
-		uint32_t edges = 0;
-		struct ul_view *edge_view = view_edge_at(server, server->cursor->x,
-			server->cursor->y, &edges);
-		if (edge_view) {
-			view_focus(edge_view);
-			view_begin_interactive(edge_view, UL_CURSOR_RESIZE, edges);
-			return;
 		}
 	}
 
