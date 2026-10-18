@@ -299,6 +299,11 @@ add("apps", "ultimit-store",
 add("apps", "ultimit-firewall",
     P("M24 5L40 11V24L24 43L8 24V11Z", A, "fill"), S("M8 24H40M16 15V24M32 15V24M24 24V34", F),
     S("M8 15H40", A))
+add("apps", "ultimit-disks",
+    # a drive seen from above: chamfered body, a platter hex with its hub, and a usage bar along the bottom
+    P(cp(6, 7, 36, 34, 5, ("tl", "br")), A, "fill"),
+    P(poly(24, 20, 8, 6, -90), F), SOL(poly(24, 20, 2.4, 6, -90), A),
+    S("M11 33H37", D), S("M11 33H27", A), SOL("M33 36h4v2h-4z", F))
 add("apps", "ultimit-terminal",
     P(cp(5, 8, 38, 32, 4, ("tr", "bl")), A, "fill"), S("M5 16H43", A),
     S("M12 22L18 27L12 32", F), S("M22 33H32", A), SOL("M8 11h3v2H8z", F))

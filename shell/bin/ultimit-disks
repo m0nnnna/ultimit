@@ -1,0 +1,30 @@
+#!/bin/sh
+# ultimit-disks [--usage [PATH]] - open DISKS, the disks manager and disk-usage checker. --usage opens it on the
+# USAGE tab and, given a PATH, scans that folder. DISKS is its own quickshell process (disks-shell.qml), started
+# here when not yet running; it exits when its window closes.
+shell="${ULTIMIT_SHELL_DIR:-$(dirname "$(dirname "$(readlink -f "$0")")")}"
+cfg="$shell/disks-shell.qml"
+
+disks() { qs -p "$cfg" ipc call disks "$@" >/dev/null 2>&1; }
+
+if ! disks state; then
+    qs -p "$cfg" -n -d >/dev/null 2>&1
+    i=0
+    until disks state; do
+        i=$((i + 1)); [ $i -gt 50 ] && { echo "ultimit-disks: DISKS did not start" >&2; exit 1; }
+        sleep 0.2
+    done
+fi
+
+if [ "$1" = "--usage" ]; then
+    if [ -n "$2" ]; then
+        p="$2"
+        case "$p" in file://*) p=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.unquote(sys.argv[1]))' "${p#file://}");; esac
+        [ -e "$p" ] && p="$(realpath -- "$p")"
+        disks usage "$p"
+    else
+        disks usage ""
+    fi
+else
+    disks open
+fi

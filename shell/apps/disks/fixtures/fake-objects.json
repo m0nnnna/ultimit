@@ -1,0 +1,470 @@
+{
+ "health": {
+  "Fake_HDD_8TB": {
+   "attrs": [
+    [
+     5,
+     "reallocated-sector-count",
+     0,
+     98,
+     98,
+     36,
+     8,
+     1,
+     {}
+    ],
+    [
+     197,
+     "current-pending-sector",
+     0,
+     100,
+     100,
+     0,
+     2,
+     1,
+     {}
+    ]
+   ],
+   "props": {
+    "SmartEnabled": true,
+    "SmartFailing": false,
+    "SmartNumAttributesFailing": 0,
+    "SmartNumBadSectors": 10,
+    "SmartPowerOnSeconds": 147600000,
+    "SmartSelftestStatus": "success",
+    "SmartSupported": true,
+    "SmartTemperature": 315.0,
+    "SmartUpdated": 1
+   }
+  },
+  "Fake_NVMe_1TB": {
+   "attrs": {
+    "avail_spare": 100,
+    "media_errors": 0,
+    "percent_used": 4,
+    "spare_thresh": 10
+   },
+   "props": {
+    "SmartCriticalWarning": [],
+    "SmartPowerOnHours": 7908,
+    "SmartSelftestStatus": "success",
+    "SmartTemperature": 322,
+    "SmartUpdated": 1
+   }
+  },
+  "Fake_SATA_SSD_2TB": {
+   "attrs": [
+    [
+     5,
+     "reallocated-sector-count",
+     0,
+     100,
+     100,
+     10,
+     0,
+     1,
+     {}
+    ],
+    [
+     197,
+     "current-pending-sector",
+     0,
+     100,
+     100,
+     0,
+     0,
+     1,
+     {}
+    ]
+   ],
+   "props": {
+    "SmartEnabled": true,
+    "SmartFailing": false,
+    "SmartNumAttributesFailing": 0,
+    "SmartNumBadSectors": 0,
+    "SmartPowerOnSeconds": 43200000,
+    "SmartSelftestStatus": "success",
+    "SmartSupported": true,
+    "SmartTemperature": 306.0,
+    "SmartUpdated": 1
+   }
+  }
+ },
+ "objects": {
+  "/org/freedesktop/UDisks2/block_devices/nvme0n1": {
+   "org.freedesktop.UDisks2.Block": {
+    "CryptoBackingDevice": "/",
+    "Device": "/dev/nvme0n1",
+    "Drive": "/org/freedesktop/UDisks2/drives/Fake_NVMe_1TB",
+    "IdLabel": "",
+    "IdType": "",
+    "IdUUID": "",
+    "ReadOnly": false,
+    "Size": 1000000000000
+   },
+   "org.freedesktop.UDisks2.PartitionTable": {
+    "Type": "gpt"
+   }
+  },
+  "/org/freedesktop/UDisks2/block_devices/nvme0n1p1": {
+   "org.freedesktop.UDisks2.Block": {
+    "CryptoBackingDevice": "/",
+    "Device": "/dev/nvme0n1p1",
+    "Drive": "/org/freedesktop/UDisks2/drives/Fake_NVMe_1TB",
+    "IdLabel": "",
+    "IdType": "vfat",
+    "IdUUID": "E8B695EB-0001",
+    "ReadOnly": false,
+    "Size": 536870912
+   },
+   "org.freedesktop.UDisks2.Filesystem": {
+    "MountPoints": [
+     "/boot/efi"
+    ]
+   },
+   "org.freedesktop.UDisks2.Partition": {
+    "IsContained": false,
+    "IsContainer": false,
+    "Name": "EFI system partition",
+    "Number": 1,
+    "Offset": 1048576,
+    "Size": 536870912,
+    "Table": "/org/freedesktop/UDisks2/block_devices/nvme0n1",
+    "Type": "c12a7328-f81f-11d2-ba4b-00a0c93ec93b"
+   }
+  },
+  "/org/freedesktop/UDisks2/block_devices/nvme0n1p2": {
+   "org.freedesktop.UDisks2.Block": {
+    "CryptoBackingDevice": "/",
+    "Device": "/dev/nvme0n1p2",
+    "Drive": "/org/freedesktop/UDisks2/drives/Fake_NVMe_1TB",
+    "IdLabel": "",
+    "IdType": "ext4",
+    "IdUUID": "0A9C4B57-0002",
+    "ReadOnly": false,
+    "Size": 400000000000
+   },
+   "org.freedesktop.UDisks2.Filesystem": {
+    "MountPoints": [
+     "/"
+    ]
+   },
+   "org.freedesktop.UDisks2.Partition": {
+    "IsContained": false,
+    "IsContainer": false,
+    "Name": "",
+    "Number": 2,
+    "Offset": 537919488,
+    "Size": 400000000000,
+    "Table": "/org/freedesktop/UDisks2/block_devices/nvme0n1",
+    "Type": "0fc63daf-8483-4772-8e79-3d69d8477de4"
+   }
+  },
+  "/org/freedesktop/UDisks2/block_devices/nvme0n1p3": {
+   "org.freedesktop.UDisks2.Block": {
+    "CryptoBackingDevice": "/",
+    "Device": "/dev/nvme0n1p3",
+    "Drive": "/org/freedesktop/UDisks2/drives/Fake_NVMe_1TB",
+    "IdLabel": "home",
+    "IdType": "ext4",
+    "IdUUID": "A423B8A3-0003",
+    "ReadOnly": false,
+    "Size": 300000000000
+   },
+   "org.freedesktop.UDisks2.Filesystem": {
+    "MountPoints": [
+     "/home"
+    ]
+   },
+   "org.freedesktop.UDisks2.Partition": {
+    "IsContained": false,
+    "IsContainer": false,
+    "Name": "",
+    "Number": 3,
+    "Offset": 400537919488,
+    "Size": 300000000000,
+    "Table": "/org/freedesktop/UDisks2/block_devices/nvme0n1",
+    "Type": "0fc63daf-8483-4772-8e79-3d69d8477de4"
+   }
+  },
+  "/org/freedesktop/UDisks2/block_devices/nvme0n1p4": {
+   "org.freedesktop.UDisks2.Block": {
+    "CryptoBackingDevice": "/",
+    "Device": "/dev/nvme0n1p4",
+    "Drive": "/org/freedesktop/UDisks2/drives/Fake_NVMe_1TB",
+    "IdLabel": "",
+    "IdType": "swap",
+    "IdUUID": "5CF5ADE6-0004",
+    "ReadOnly": false,
+    "Size": 16000000000
+   },
+   "org.freedesktop.UDisks2.Partition": {
+    "IsContained": false,
+    "IsContainer": false,
+    "Name": "",
+    "Number": 4,
+    "Offset": 700537919488,
+    "Size": 16000000000,
+    "Table": "/org/freedesktop/UDisks2/block_devices/nvme0n1",
+    "Type": "0657fd6d-a4ab-43c4-84e5-0933c84b4f4f"
+   },
+   "org.freedesktop.UDisks2.Swapspace": {
+    "Active": true
+   }
+  },
+  "/org/freedesktop/UDisks2/block_devices/sda": {
+   "org.freedesktop.UDisks2.Block": {
+    "CryptoBackingDevice": "/",
+    "Device": "/dev/sda",
+    "Drive": "/org/freedesktop/UDisks2/drives/Fake_SATA_SSD_2TB",
+    "IdLabel": "",
+    "IdType": "",
+    "IdUUID": "",
+    "ReadOnly": false,
+    "Size": 2000000000000
+   },
+   "org.freedesktop.UDisks2.PartitionTable": {
+    "Type": "gpt"
+   }
+  },
+  "/org/freedesktop/UDisks2/block_devices/sda1": {
+   "org.freedesktop.UDisks2.Block": {
+    "CryptoBackingDevice": "/",
+    "Device": "/dev/sda1",
+    "Drive": "/org/freedesktop/UDisks2/drives/Fake_SATA_SSD_2TB",
+    "IdLabel": "Games",
+    "IdType": "ntfs",
+    "IdUUID": "7B2B3113-0001",
+    "ReadOnly": false,
+    "Size": 1999997902848
+   },
+   "org.freedesktop.UDisks2.Filesystem": {
+    "MountPoints": [
+     "/run/media/fake/Games"
+    ]
+   },
+   "org.freedesktop.UDisks2.Partition": {
+    "IsContained": false,
+    "IsContainer": false,
+    "Name": "",
+    "Number": 1,
+    "Offset": 1048576,
+    "Size": 1999997902848,
+    "Table": "/org/freedesktop/UDisks2/block_devices/sda",
+    "Type": "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7"
+   }
+  },
+  "/org/freedesktop/UDisks2/block_devices/sdb": {
+   "org.freedesktop.UDisks2.Block": {
+    "CryptoBackingDevice": "/",
+    "Device": "/dev/sdb",
+    "Drive": "/org/freedesktop/UDisks2/drives/Fake_HDD_8TB",
+    "IdLabel": "",
+    "IdType": "",
+    "IdUUID": "",
+    "ReadOnly": false,
+    "Size": 8000000000000
+   },
+   "org.freedesktop.UDisks2.PartitionTable": {
+    "Type": "gpt"
+   }
+  },
+  "/org/freedesktop/UDisks2/block_devices/sdb1": {
+   "org.freedesktop.UDisks2.Block": {
+    "CryptoBackingDevice": "/",
+    "Device": "/dev/sdb1",
+    "Drive": "/org/freedesktop/UDisks2/drives/Fake_HDD_8TB",
+    "IdLabel": "Archive",
+    "IdType": "ntfs",
+    "IdUUID": "D61060AC-0001",
+    "ReadOnly": false,
+    "Size": 6000000000000
+   },
+   "org.freedesktop.UDisks2.Filesystem": {
+    "MountPoints": []
+   },
+   "org.freedesktop.UDisks2.Partition": {
+    "IsContained": false,
+    "IsContainer": false,
+    "Name": "",
+    "Number": 1,
+    "Offset": 1048576,
+    "Size": 6000000000000,
+    "Table": "/org/freedesktop/UDisks2/block_devices/sdb",
+    "Type": "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7"
+   }
+  },
+  "/org/freedesktop/UDisks2/block_devices/sdb2": {
+   "org.freedesktop.UDisks2.Block": {
+    "CryptoBackingDevice": "/",
+    "Device": "/dev/sdb2",
+    "Drive": "/org/freedesktop/UDisks2/drives/Fake_HDD_8TB",
+    "IdLabel": "Backups",
+    "IdType": "ext4",
+    "IdUUID": "C7970E25-0002",
+    "ReadOnly": false,
+    "Size": 1500000000000
+   },
+   "org.freedesktop.UDisks2.Filesystem": {
+    "MountPoints": []
+   },
+   "org.freedesktop.UDisks2.Partition": {
+    "IsContained": false,
+    "IsContainer": false,
+    "Name": "",
+    "Number": 2,
+    "Offset": 6000001048576,
+    "Size": 1500000000000,
+    "Table": "/org/freedesktop/UDisks2/block_devices/sdb",
+    "Type": "0fc63daf-8483-4772-8e79-3d69d8477de4"
+   }
+  },
+  "/org/freedesktop/UDisks2/block_devices/sdc": {
+   "org.freedesktop.UDisks2.Block": {
+    "CryptoBackingDevice": "/",
+    "Device": "/dev/sdc",
+    "Drive": "/org/freedesktop/UDisks2/drives/Fake_USB_64GB",
+    "IdLabel": "",
+    "IdType": "",
+    "IdUUID": "",
+    "ReadOnly": false,
+    "Size": 64000000000
+   },
+   "org.freedesktop.UDisks2.PartitionTable": {
+    "Type": "dos"
+   }
+  },
+  "/org/freedesktop/UDisks2/block_devices/sdc1": {
+   "org.freedesktop.UDisks2.Block": {
+    "CryptoBackingDevice": "/",
+    "Device": "/dev/sdc1",
+    "Drive": "/org/freedesktop/UDisks2/drives/Fake_USB_64GB",
+    "IdLabel": "STICK",
+    "IdType": "vfat",
+    "IdUUID": "A7F0C24A-0001",
+    "ReadOnly": false,
+    "Size": 63998951424
+   },
+   "org.freedesktop.UDisks2.Filesystem": {
+    "MountPoints": []
+   },
+   "org.freedesktop.UDisks2.Partition": {
+    "IsContained": false,
+    "IsContainer": false,
+    "Name": "",
+    "Number": 1,
+    "Offset": 1048576,
+    "Size": 63998951424,
+    "Table": "/org/freedesktop/UDisks2/block_devices/sdc",
+    "Type": "0x0c"
+   }
+  },
+  "/org/freedesktop/UDisks2/drives/Fake_HDD_8TB": {
+   "org.freedesktop.UDisks2.Drive": {
+    "CanPowerOff": false,
+    "ConnectionBus": "",
+    "Ejectable": false,
+    "Media": "",
+    "MediaAvailable": true,
+    "MediaRemovable": false,
+    "Model": "Fake HDD 8TB",
+    "Optical": false,
+    "Removable": false,
+    "RotationRate": -1,
+    "Size": 8000000000000,
+    "SortKey": "00coldplug/00fixed/sd____b",
+    "Vendor": ""
+   },
+   "org.freedesktop.UDisks2.Drive.Ata": {
+    "SmartEnabled": true,
+    "SmartSupported": true
+   }
+  },
+  "/org/freedesktop/UDisks2/drives/Fake_NVMe_1TB": {
+   "org.freedesktop.UDisks2.Drive": {
+    "CanPowerOff": false,
+    "ConnectionBus": "",
+    "Ejectable": false,
+    "Media": "",
+    "MediaAvailable": true,
+    "MediaRemovable": false,
+    "Model": "Fake NVMe 1TB",
+    "Optical": false,
+    "Removable": false,
+    "RotationRate": 0,
+    "Size": 1000000000000,
+    "SortKey": "00coldplug/00fixed/nvme0",
+    "Vendor": ""
+   },
+   "org.freedesktop.UDisks2.NVMe.Controller": {}
+  },
+  "/org/freedesktop/UDisks2/drives/Fake_SATA_SSD_2TB": {
+   "org.freedesktop.UDisks2.Drive": {
+    "CanPowerOff": false,
+    "ConnectionBus": "",
+    "Ejectable": false,
+    "Media": "",
+    "MediaAvailable": true,
+    "MediaRemovable": false,
+    "Model": "Fake SATA SSD 2TB",
+    "Optical": false,
+    "Removable": false,
+    "RotationRate": 0,
+    "Size": 2000000000000,
+    "SortKey": "00coldplug/00fixed/sd____a",
+    "Vendor": ""
+   },
+   "org.freedesktop.UDisks2.Drive.Ata": {
+    "SmartEnabled": true,
+    "SmartSupported": true
+   }
+  },
+  "/org/freedesktop/UDisks2/drives/Fake_USB_64GB": {
+   "org.freedesktop.UDisks2.Drive": {
+    "CanPowerOff": true,
+    "ConnectionBus": "usb",
+    "Ejectable": true,
+    "Media": "",
+    "MediaAvailable": true,
+    "MediaRemovable": true,
+    "Model": "Cruzer Blade",
+    "Optical": false,
+    "Removable": true,
+    "RotationRate": 0,
+    "Size": 64000000000,
+    "SortKey": "01hotplug/usb1",
+    "Vendor": "SanDisk"
+   }
+  }
+ },
+ "usage": {
+  "/dev/nvme0n1p1": [
+   536870912,
+   41943040
+  ],
+  "/dev/nvme0n1p2": [
+   400000000000,
+   160000000000
+  ],
+  "/dev/nvme0n1p3": [
+   300000000000,
+   120000000000
+  ],
+  "/dev/sda1": [
+   1999997902848,
+   1210000000000
+  ],
+  "/dev/sdb1": [
+   6000000000000,
+   4300000000000
+  ],
+  "/dev/sdb2": [
+   1500000000000,
+   900000000000
+  ],
+  "/dev/sdc1": [
+   63998951424,
+   8000000000
+  ]
+ }
+}

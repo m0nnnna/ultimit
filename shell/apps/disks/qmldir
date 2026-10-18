@@ -1,0 +1,11 @@
+singleton Disks 1.0 Disks.qml
+DisksApp 1.0 DisksApp.qml
+DisksWindow 1.0 DisksWindow.qml
+DriveRow 1.0 DriveRow.qml
+PartBar 1.0 PartBar.qml
+DButton 1.0 DButton.qml
+FormatDialog 1.0 FormatDialog.qml
+UsageView 1.0 UsageView.qml
+UsageRow 1.0 UsageRow.qml
+GSlider 1.0 GSlider.qml
+ManageDialog 1.0 ManageDialog.qml

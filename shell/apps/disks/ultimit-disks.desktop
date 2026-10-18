@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=DISKS
+GenericName=Disks
+Comment=Drives, partitions, health and what takes up space
+Exec=ultimit-disks
+Icon=ultimit-disks
+Terminal=false
+Categories=System;Utility;
+Keywords=disk usage;partition;format;smart;mount;storage;drive;usb;baobab;space;
