@@ -149,7 +149,7 @@ FloatingWindow {
         // a project without a usable account gets the one shown in the header, so its first chat can start
         if (chat.chatId === "" && !Claude.account(proj.account) && accountId !== "")
             Claude.saveProject({ id: proj.id, name: proj.name, dir: proj.dir, account: accountId, model: proj.model,
-                                 perm: proj.perm, notes: proj.notes }, o => { if (o.ok) go(); });
+                                 perm: proj.perm, effort: proj.effort, notes: proj.notes }, o => { if (o.ok) go(); });
         else go();
     }
     function editProject(p) { editing = p ? JSON.parse(JSON.stringify(p)) : ({}); overlay = "project"; }
@@ -294,6 +294,27 @@ FloatingWindow {
         if (Claude.wantProject !== "") { selectProject(Claude.wantProject); Claude.wantProject = ""; }
         else selectProject("system");
         if (Claude.wantDir !== "") takeDir();
+        takeHandoff();
+    }
+    // EXPAND in the corner panel: carry on its chat here, still running
+    function takeHandoff() {
+        const h = Claude.handoff;
+        Claude.handoff = null;
+        if (!h) return;
+        const c = h.chat, prev = chat;
+        projectId = c.projectId;
+        withSysinfo = false;
+        chats = [];
+        c.changed.connect(win.loadChats);
+        c.done.connect(() => win.letGo(c));
+        chat = c;
+        if (prev !== c) {
+            if (prev.working) background = background.concat([prev]);
+            else dropChat(prev);
+        }
+        if (h.draft !== "") input.text = h.draft;
+        loadChats();
+        input.forceActiveFocus();
     }
     // "open this folder": its project, or a new one for it
     function takeDir() {
@@ -308,6 +329,7 @@ FloatingWindow {
         function onRaiseChanged() {
             if (Claude.wantProject !== "") { win.selectProject(Claude.wantProject); Claude.wantProject = ""; }
             if (Claude.wantDir !== "") win.takeDir();
+            win.takeHandoff();
             input.forceActiveFocus();
         }
         function onProjectsChanged() { if (!Claude.project(win.projectId)) win.selectProject("system"); }

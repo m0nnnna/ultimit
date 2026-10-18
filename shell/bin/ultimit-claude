@@ -1,5 +1,6 @@
 #!/bin/sh
-# ultimit-claude [--troubleshoot | FOLDER] - open CLAUDE, the Ultimit Claude app. --troubleshoot opens the
+# ultimit-claude [--troubleshoot | --mini [SCREEN] | FOLDER] - open CLAUDE, the Ultimit Claude app. --mini toggles
+# the small chat in the bottom-right corner of SCREEN (the tray's Claude button). --troubleshoot opens the
 # built-in "This PC" project (troubleshooting, with the system summary); FOLDER opens the project for that
 # folder, or offers to make one. CLAUDE is its own quickshell process (claude-shell.qml), started here
 # when not yet running; it exits when its window closes.
@@ -24,6 +25,7 @@ fi
 
 case "$1" in
 --troubleshoot) claude troubleshoot ;;
+--mini) claude mini "${2:-}" ;;
 "") claude open ;;
 *)
 	p=$1

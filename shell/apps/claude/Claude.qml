@@ -70,11 +70,33 @@ Singleton {
     function open() { quitTimer.stop(); if (ids.length === 0) ids = [1]; else raise++; }
     function openProject(id) { wantProject = id; open(); }
     function openDir(d) { wantDir = d; open(); }
-    function closeWin() { ids = []; quitTimer.restart(); }
-    function stateJson() { return JSON.stringify({ open: ids.length > 0, cli: cliVersion, accounts: accounts.length, projects: projects.length }); }
+    function closeWin() { ids = []; maybeQuit(); }
+    function stateJson() { return JSON.stringify({ open: ids.length > 0, mini: miniShown, cli: cliVersion, accounts: accounts.length, projects: projects.length }); }
 
-    // CLAUDE runs as its own quickshell process; it exits shortly after its window closes.
-    Timer { id: quitTimer; interval: 800; onTriggered: if (root.ids.length === 0) Qt.quit() }
+    // ---- the corner panel (MiniPanel.qml, from the tray's Claude button) ----
+    property bool miniMade: false       // created on first use, then kept while the process lives
+    property bool miniShown: false
+    property bool miniWorking: false    // its chat is running, so hiding it doesn't end the process
+    property int miniRaise: 0
+    property string miniScreen: ""      // the output it sits on (the bottom bar's)
+    function showMini(screen) {
+        quitTimer.stop();
+        if (screen) miniScreen = screen;
+        miniMade = true; miniShown = true; miniRaise++;
+    }
+    function toggleMini(screen) { if (miniShown) hideMini(); else showMini(screen); }
+    function hideMini() { miniShown = false; maybeQuit(); }
+    // EXPAND: the full window takes over the mini's chat (still running) and its draft
+    property var handoff: null          // { chat: ChatSession, draft }
+    function expand(chat, draft) { handoff = { chat: chat, draft: draft || "" }; miniShown = false; open(); }
+
+    // CLAUDE runs as its own quickshell process; it exits shortly after its window and corner panel close
+    // and nothing is left running.
+    function maybeQuit() { quitTimer.restart(); }
+    Timer {
+        id: quitTimer; interval: 800
+        onTriggered: if (root.ids.length === 0 && !root.miniShown && !root.miniWorking) Qt.quit()
+    }
 
     Component.onCompleted: { checkCli(); reload(); loadUsage(); }
 

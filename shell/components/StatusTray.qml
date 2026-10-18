@@ -313,6 +313,23 @@ Item {
                 }
             }
 
+            // ---- Claude: the small chat in the corner (left), the full window (right / middle) ----
+            StatusButton {
+                name: "Claude"
+                tip: "CLAUDE\nCLICK: CHAT HERE  RIGHT-CLICK: FULL WINDOW"
+                width: 28
+                onClicked: button => Quickshell.execDetached(button === Qt.LeftButton
+                    ? [Quickshell.shellPath("bin/ultimit-claude"), "--mini", root.screenName]
+                    : [Quickshell.shellPath("bin/ultimit-claude")])
+                Image {
+                    anchors.centerIn: parent
+                    width: 16; height: 16
+                    sourceSize: Qt.size(32, 32)
+                    source: Icons.app("ultimit-claude")
+                    smooth: true
+                }
+            }
+
             Item {   // separator before the clock
                 width: 9; height: root.height
                 Rectangle { anchors.centerIn: parent; width: 1; height: 14; color: Theme.line }
