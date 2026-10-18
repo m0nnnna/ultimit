@@ -22,7 +22,8 @@ PanelWindow {
 
     SystemClock {
         id: clock
-        precision: SystemClock.Seconds
+        // Minutes (and no seconds shown) while a fullscreen game runs: no per-second redraw.
+        precision: Config.desktopPaused ? SystemClock.Minutes : SystemClock.Seconds
     }
 
     readonly property var days: ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
@@ -36,7 +37,7 @@ PanelWindow {
 
         Text {
             anchors.right: parent.right
-            text: ((win.now.getHours() % 12) || 12) + ":" + win.p2(win.now.getMinutes()) + ":" + win.p2(win.now.getSeconds()) + (win.now.getHours() < 12 ? " AM" : " PM")
+            text: ((win.now.getHours() % 12) || 12) + ":" + win.p2(win.now.getMinutes()) + (Config.desktopPaused ? "" : ":" + win.p2(win.now.getSeconds())) + (win.now.getHours() < 12 ? " AM" : " PM")
             color: hit.containsMouse || SysState.qsOpen ? Theme.accent : Theme.fg
             font.family: Theme.mono; font.pixelSize: 26
             font.letterSpacing: 1.56

@@ -44,10 +44,10 @@ PanelWindow {
                 x: Config.motion ? viewport.width : 16
 
                 // Constant speed (~48 px/s); restarts when the text or viewport changes. Paused while hovered
-                // or covered by a fullscreen window.
+                // or while a fullscreen window is up on any screen.
                 NumberAnimation on x {
                     running: Config.motion && viewport.width > 0
-                    paused: running && (hover.containsMouse || win.covered)
+                    paused: running && (hover.containsMouse || win.covered || Config.desktopPaused)
                     from: viewport.width
                     to: -msg.implicitWidth
                     duration: Math.max(1000, (viewport.width + msg.implicitWidth) / 48 * 1000)

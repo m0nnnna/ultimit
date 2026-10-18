@@ -28,7 +28,7 @@ Item {
     Behavior on spinSpeed { NumberAnimation { duration: Config.dur(400); easing.type: Easing.OutCubic } }
     Timer {   // 30 steps a second: smooth enough, and the rail doesn't repaint at full refresh
         interval: 33; repeat: true
-        running: root.spinning && root.visible && !root.covered
+        running: root.spinning && root.visible && !root.covered && !Config.desktopPaused
         onTriggered: {
             let a = root.spinAngle + root.spinSpeed * interval / 1000;
             // In hover-only mode, settle facing front once the pointer leaves.

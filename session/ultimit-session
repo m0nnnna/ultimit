@@ -165,6 +165,14 @@ fi
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/ultimit"
 mkdir -p "$LOG_DIR"
 [ -f "$LOG_DIR/session.log" ] && mv "$LOG_DIR/session.log" "$LOG_DIR/session.log.old"
+# NVIDIA: DLSS in Proton games uses NVIDIA's newest DLSS (the driver's updater fetches it) and its
+# newest preset instead of the old one a game ships; an old one can drop meshes (AION 2's legs).
+# Steam inherits these. A game that misbehaves opts out with PROTON_DISABLE_NVAPI=1 %command%.
+if [ -d /proc/driver/nvidia ]; then
+	export PROTON_ENABLE_NGX_UPDATER="${PROTON_ENABLE_NGX_UPDATER:-1}"
+	export DXVK_NVAPI_DRS_NGX_DLSS_SR_OVERRIDE="${DXVK_NVAPI_DRS_NGX_DLSS_SR_OVERRIDE:-on}"
+	export DXVK_NVAPI_DRS_NGX_DLSS_SR_OVERRIDE_RENDER_PRESET_SELECTION="${DXVK_NVAPI_DRS_NGX_DLSS_SR_OVERRIDE_RENDER_PRESET_SELECTION:-render_preset_latest}"
+fi
 # Flatpak apps: NVIDIA's graphics libraries for the running driver (else no GPU in Chromium).
 ("$ROOT/session/ultimit-flatpak-gpu" >"$LOG_DIR/flatpak-gpu.log" 2>&1 &)
 # Ungoogled Chromium: spell-check dictionaries (it can't download its own, so nothing gets underlined).

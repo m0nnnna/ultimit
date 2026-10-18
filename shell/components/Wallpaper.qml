@@ -20,10 +20,10 @@ PanelWindow {
     WlrLayershell.namespace: "ultimit-wallpaper"
 
     // A picture when one is set and it loads; otherwise (or if the file is gone) the shards.
-    // A fullscreen window on this screen hides the wallpaper: stop animating it until it goes.
+    // A fullscreen window on any screen stops the animation until it goes (Config.desktopPaused).
     readonly property bool covered: Config.isCovered(win.screen ? win.screen.name : "")
     readonly property bool picture: Config.wallpaper !== "" && pic.status !== Image.Error
-    WallpaperArt { id: cv; anchors.fill: parent; visible: !win.picture; active: win.visible && !win.picture && !win.covered
+    WallpaperArt { id: cv; anchors.fill: parent; visible: !win.picture; active: win.visible && !win.picture && !win.covered && !Config.desktopPaused
                    animate: Config.motion && Config.wallpaperMotion }
     Image {
         id: pic

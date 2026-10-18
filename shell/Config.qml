@@ -79,6 +79,10 @@ Singleton {
         return out;
     }
     function isCovered(name) { return name !== "" && coveredScreens.indexOf(name) >= 0; }
+    // A fullscreen window on any screen (a game, mostly): every screen's desktop animations stop
+    // (wallpaper shards and hex flicker, news ticker, rail spin, the clock's seconds), so they
+    // take nothing from the GPU while it plays. Window animations are not affected.
+    readonly property bool desktopPaused: coveredScreens.length > 0
     // Bumped to ask Boot.qml to (re)play the boot overlay.
     property int bootRequest: 0
     function playBoot() { bootRequest++; }
