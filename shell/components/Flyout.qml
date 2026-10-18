@@ -18,7 +18,7 @@ PanelWindow {
 
     readonly property bool shown: FlyoutState.open && FlyoutState.screen === screenName
     property real reveal: shown ? 1 : 0
-    Behavior on reveal { NumberAnimation { duration: Config.dur(180); easing.type: Easing.OutCubic } }
+    ShowBehavior on reveal { ms: 180 }
     property real swap: 1          // quick re-fade when switching icons while open
     NumberAnimation { id: swapAnim; target: win; property: "swap"; from: 0; to: 1; duration: Config.dur(140); easing.type: Easing.OutCubic }
     Connections {

@@ -33,8 +33,8 @@ PanelWindow {
         color: Theme.panel
         border.color: Theme.lineStrong
         opacity: win.shown ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: Config.dur(140) } }
-        transform: Translate { y: win.shown ? 0 : 12; Behavior on y { NumberAnimation { duration: Config.dur(160); easing.type: Easing.OutCubic } } }
+        ShowBehavior on opacity { ms: 160 }
+        transform: Translate { y: win.shown ? 0 : 12; ShowBehavior on y { ms: 160; hidden: 12 } }
         MouseArea { anchors.fill: parent }   // clicks inside don't close
 
         // corner brackets, as on windows

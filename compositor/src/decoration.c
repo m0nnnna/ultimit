@@ -437,8 +437,17 @@ static int sweep_tick(void *data) {
 	wlr_scene_node_set_position(&deco->sweep->node, x0, -UL_BORDER - 1);
 	wlr_scene_node_raise_to_top(&deco->sweep->node);
 	wlr_scene_node_set_enabled(&deco->sweep->node, x1 > x0);
-	wl_event_source_timer_update(deco->sweep_timer, 16);
+	wl_event_source_timer_update(deco->sweep_timer, 33); /* fallback: output frames step it (anim_frame) */
 	return 0;
+}
+
+/* One step of a running sweep from an output frame; true while it runs. */
+bool decoration_sweep_frame(struct ul_view *view) {
+	if (!view->deco.sweep_timer) {
+		return false;
+	}
+	sweep_tick(view);
+	return view->deco.sweep_timer != NULL;
 }
 
 void decoration_focus_sweep(struct ul_view *view) {

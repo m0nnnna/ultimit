@@ -17,7 +17,7 @@ PanelWindow {
 
     // Keep the window mapped while the close animation plays.
     property real reveal: SysState.qsOpen ? 1 : 0
-    Behavior on reveal { NumberAnimation { duration: Config.dur(180); easing.type: Easing.OutCubic } }
+    ShowBehavior on reveal { ms: 180 }
 
     visible: (SysState.qsOpen || reveal > 0) && SysState.isQsScreen(screenName)
     anchors { left: true; right: true; top: true; bottom: true }

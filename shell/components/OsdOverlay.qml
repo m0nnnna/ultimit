@@ -38,8 +38,8 @@ PanelWindow {
         color: Theme.panel
         border.width: 1; border.color: Theme.lineStrong
         opacity: Osd.shown ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: Config.dur(200); easing.type: Easing.OutCubic } }
-        transform: Translate { y: Osd.shown ? 0 : 6; Behavior on y { NumberAnimation { duration: Config.dur(200); easing.type: Easing.OutCubic } } }
+        ShowBehavior on opacity { ms: 200 }
+        transform: Translate { y: Osd.shown ? 0 : 6; ShowBehavior on y { ms: 200; hidden: 6 } }
         Brackets { size: 8 }
 
         Item {

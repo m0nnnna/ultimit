@@ -3,6 +3,12 @@
  * outward from the center of the frame's top edge, then the frame appears
  * and the content wipes down from the top. Skipped for windows that map
  * fullscreen (games) and when ULTIMIT_ANIMATIONS=0.
+ *
+ * Every animation here is stepped by the outputs' frame events
+ * (anim_frame, just before an output renders), so it advances once per
+ * displayed frame at the monitor's own rate (144, 180 Hz...) instead of on
+ * a timer that beats against the refresh. The per-animation timers only
+ * keep things going when no frame comes (all outputs off).
  */
 
 #include <limits.h>
@@ -13,9 +19,10 @@
 #include "server.h"
 #include "theme.h"
 
-#define LINE_MS 140
-#define WIPE_MS 240
-#define TICK_MS 8
+#define LINE_MS 120  /* the accent line draws out from the centre */
+#define WIPE_AT 70   /* the content starts wiping down: the line is ~93 % out by then */
+#define WIPE_MS 220
+#define FALLBACK_MS 33 /* ticks when no output frame comes */
 
 static uint32_t now_ms(void) {
 	struct timespec ts;
@@ -67,19 +74,21 @@ static int tick(void *data) {
 	int fy = -bar - UL_BORDER;
 	int fw = view->width + 2 * UL_BORDER;
 
-	if (elapsed < LINE_MS) {
-		int w = fw * ease(elapsed / (double)LINE_MS);
-		if (w < 2) w = 2;
+	/* The line keeps drawing out while the content already wipes in. */
+	int w = fw * ease(elapsed / (double)LINE_MS);
+	if (w < 2) w = 2;
+	if (elapsed < WIPE_AT) {
 		wlr_scene_rect_set_size(deco->line, w, UL_BRACKET_W);
 		wlr_scene_node_set_position(&deco->line->node, fx + (fw - w) / 2, fy);
 		wlr_scene_node_set_enabled(&deco->line->node, true);
 		wlr_scene_node_set_enabled(&deco->shadow->node, false);
 		set_chrome_enabled(view, false);
 		wlr_scene_node_set_enabled(&view->content->node, false);
-	} else if (elapsed < LINE_MS + WIPE_MS) {
-		double p = ease((elapsed - LINE_MS) / (double)WIPE_MS);
-		wlr_scene_rect_set_size(deco->line, fw, UL_BRACKET_W);
-		wlr_scene_node_set_position(&deco->line->node, fx, fy);
+	} else if (elapsed < WIPE_AT + WIPE_MS) {
+		double p = ease((elapsed - WIPE_AT) / (double)WIPE_MS);
+		wlr_scene_rect_set_size(deco->line, w, UL_BRACKET_W);
+		wlr_scene_node_set_position(&deco->line->node, fx + (fw - w) / 2, fy);
+		wlr_scene_node_set_enabled(&deco->line->node, true);
 		set_chrome_enabled(view, true);
 		wlr_scene_node_set_enabled(&view->content->node, true);
 		struct wlr_box clip = { geo.x, geo.y, view->width, (int)(view->height * p) };
@@ -100,7 +109,7 @@ static int tick(void *data) {
 		finish(view);
 		return 0;
 	}
-	wl_event_source_timer_update(view->anim_timer, TICK_MS);
+	wl_event_source_timer_update(view->anim_timer, FALLBACK_MS);
 	return 0;
 }
 
@@ -137,13 +146,19 @@ bool anim_running(struct ul_view *view) {
  *   minimize  the window shrinks into its WINDOWS entry on the rail (the
  *             rectangle the shell gives through foreign-toplevel) and fades
  *   restore   the same, backwards; the real window shows when it lands
+ *   morph     maximize, restore and snap: the window stretches from its old
+ *             box to the new one; the real window (resized by then) shows
+ *             underneath near the end and the copy fades into it
  */
 
-#define CLOSE_WIPE_MS 180
-#define CLOSE_LINE_MS 120
+/* Leaving is quicker than arriving. */
+#define CLOSE_WIPE_MS 150
+#define CLOSE_LINE_MS 100
 #define MINIMIZE_MS 220
+#define MORPH_MS 200
+#define MORPH_SHOW 0.6 /* fraction of MORPH_MS: the real window shows, the copy starts to fade */
 
-enum ghost_kind { GHOST_CLOSE, GHOST_MINIMIZE, GHOST_RESTORE };
+enum ghost_kind { GHOST_CLOSE, GHOST_MINIMIZE, GHOST_RESTORE, GHOST_MORPH };
 
 struct ghost_elem {
 	struct wlr_scene_node *node;
@@ -158,7 +173,7 @@ struct ghost_elem {
 struct ul_ghost {
 	struct wl_list link; /* ul_server.ghosts */
 	struct ul_server *server;
-	struct ul_view *view; /* restore only: shown when done; NULL if gone */
+	struct ul_view *view; /* restore/morph: shown when done; NULL if gone */
 	enum ghost_kind kind;
 	struct wlr_scene_tree *tree;
 	struct ghost_elem *elems;
@@ -166,7 +181,7 @@ struct ul_ghost {
 	int bufs_seen, bufs_copied, bufs_readback; /* diagnostics */
 	struct wlr_scene_rect *line;
 	struct wlr_box frame;  /* frame box relative to content origin */
-	struct wlr_box target; /* layout coords: rail entry (minimize/restore) */
+	struct wlr_box target; /* layout coords: rail entry (minimize/restore), new frame (morph) */
 	int origin_x, origin_y; /* layout position of the content origin */
 	int content_y, content_h;
 	struct wl_event_source *timer;
@@ -289,6 +304,11 @@ static void ghost_destroy(struct ul_ghost *g) {
 		wl_event_source_remove(g->timer);
 	}
 	if (g->view) {
+		/* A morph ended early (another morph, close...): the real window
+		 * shows again unless it was meanwhile minimized or unmapped. */
+		if (g->kind == GHOST_MORPH && g->view->mapped && !g->view->minimized) {
+			wlr_scene_node_set_enabled(&g->view->tree->node, true);
+		}
 		if (g->view->ghost == g) g->view->ghost = NULL;
 		if (g->view->closing == g) g->view->closing = NULL;
 	}
@@ -298,10 +318,10 @@ static void ghost_destroy(struct ul_ghost *g) {
 	free(g);
 }
 
-/* Place every element scaled by s around the frame's top-left, with the
- * frame's top-left at layout (fx, fy), faded to alpha a, and content cut
+/* Place every element scaled by (sx, sy) around the frame's top-left, with
+ * the frame's top-left at layout (fx, fy), faded to alpha a, and content cut
  * off below layout-relative y `cut` (content coords; INT_MAX = no cut). */
-static void ghost_layout(struct ul_ghost *g, double fx, double fy, double s,
+static void ghost_layout(struct ul_ghost *g, double fx, double fy, double sx, double sy,
 		double a, int cut, bool chrome, int frame_dy) {
 	int frame_mid = g->frame.y + g->frame.height / 2;
 	for (size_t i = 0; i < g->n; i++) {
@@ -342,9 +362,9 @@ static void ghost_layout(struct ul_ghost *g, double fx, double fy, double s,
 			h = vis;
 		}
 		wlr_scene_node_set_enabled(e->node, true);
-		int x = (int)(fx + (e->box.x - g->frame.x) * s);
-		int y = (int)(fy + (ey - g->frame.y) * s);
-		int sw = (int)(w * s), sh = (int)(h * s);
+		int x = (int)(fx + (e->box.x - g->frame.x) * sx);
+		int y = (int)(fy + (ey - g->frame.y) * sy);
+		int sw = (int)(w * sx), sh = (int)(h * sy);
 		if (sw < 1) sw = 1;
 		if (sh < 1) sh = 1;
 		wlr_scene_node_set_position(e->node, x, y);
@@ -353,8 +373,8 @@ static void ghost_layout(struct ul_ghost *g, double fx, double fy, double s,
 			wlr_scene_rect_set_size(r, sw, sh);
 			if (!wlr_box_empty(&e->clip.area)) {
 				struct clipped_region c = clip;
-				c.area = (struct wlr_box){ (int)(c.area.x * s), (int)(c.area.y * s),
-					(int)(c.area.width * s), (int)(c.area.height * s) };
+				c.area = (struct wlr_box){ (int)(c.area.x * sx), (int)(c.area.y * sy),
+					(int)(c.area.width * sx), (int)(c.area.height * sy) };
 				wlr_scene_rect_set_clipped_region(r, c);
 			}
 			float c[4] = { e->color[0] * a, e->color[1] * a, e->color[2] * a, e->color[3] * a };
@@ -388,10 +408,10 @@ static int ghost_tick(void *data) {
 			double p = ease(elapsed / (double)CLOSE_WIPE_MS);
 			int removed = (int)(g->content_h * p);
 			int cut = g->content_y + g->content_h - removed;
-			ghost_layout(g, fx0, fy0, 1, 1, cut, true, removed);
+			ghost_layout(g, fx0, fy0, 1, 1, 1, cut, true, removed);
 		} else if (elapsed < CLOSE_WIPE_MS + CLOSE_LINE_MS) {
 			double p = ease((elapsed - CLOSE_WIPE_MS) / (double)CLOSE_LINE_MS);
-			ghost_layout(g, fx0, fy0, 1, 1, INT_MIN / 2, false, 0);
+			ghost_layout(g, fx0, fy0, 1, 1, 1, INT_MIN / 2, false, 0);
 			int w = (int)(fw * (1 - p));
 			if (w < 2) w = 2;
 			wlr_scene_rect_set_size(g->line, w, UL_BRACKET_W);
@@ -401,6 +421,22 @@ static int ghost_tick(void *data) {
 			ghost_destroy(g);
 			return 0;
 		}
+	} else if (g->kind == GHOST_MORPH) {
+		if (elapsed >= MORPH_MS) {
+			ghost_destroy(g); /* shows the real window */
+			return 0;
+		}
+		double t = elapsed / (double)MORPH_MS;
+		double p = ease(t);
+		struct ul_view *view = g->view;
+		if (t >= MORPH_SHOW && view && view->mapped && !view->minimized) {
+			wlr_scene_node_set_enabled(&view->tree->node, true);
+		}
+		double sx = 1 + (g->target.width / (double)g->frame.width - 1) * p;
+		double sy = 1 + (g->target.height / (double)g->frame.height - 1) * p;
+		double a = t < MORPH_SHOW ? 1 : 1 - (t - MORPH_SHOW) / (1 - MORPH_SHOW);
+		ghost_layout(g, fx0 + (g->target.x - fx0) * p, fy0 + (g->target.y - fy0) * p,
+			sx, sy, a, INT_MAX, true, 0);
 	} else {
 		if (elapsed >= MINIMIZE_MS) {
 			struct ul_view *view = g->view;
@@ -420,9 +456,9 @@ static int ghost_tick(void *data) {
 		double tx = g->target.x + (g->target.width - g->frame.width * se) / 2;
 		double ty = g->target.y + (g->target.height - g->frame.height * se) / 2;
 		double a = 1 - p * p;
-		ghost_layout(g, fx0 + (tx - fx0) * p, fy0 + (ty - fy0) * p, s, a, INT_MAX, true, 0);
+		ghost_layout(g, fx0 + (tx - fx0) * p, fy0 + (ty - fy0) * p, s, s, a, INT_MAX, true, 0);
 	}
-	wl_event_source_timer_update(g->timer, TICK_MS);
+	wl_event_source_timer_update(g->timer, FALLBACK_MS);
 	return 0;
 }
 
@@ -575,6 +611,31 @@ void anim_minimize(struct ul_view *view, bool minimize) {
 	ghost_tick(g);
 }
 
+/* Maximize, restore or snap is about to move the window into `frame` (layout
+ * coords, frame = content + titlebar + border): stretch a copy of it there
+ * while the client resizes, with the real window hidden until near the end. */
+void anim_morph(struct ul_view *view, struct wlr_box frame) {
+	if (view->ghost) {
+		ghost_destroy(view->ghost); /* a restore or morph still in flight */
+	}
+	if (!animations_enabled() || view->fullscreen || view->minimized || !view->mapped ||
+			!view->content || !view->tree->node.enabled || anim_running(view) ||
+			frame.width < 1 || frame.height < 1) {
+		return;
+	}
+	struct ul_ghost *g = ghost_create(view, GHOST_MORPH);
+	g->target = frame;
+	g->view = view;
+	view->ghost = g;
+	if (g->frame.width < 1 || g->frame.height < 1) {
+		ghost_destroy(g);
+		return;
+	}
+	wlr_scene_node_set_enabled(&view->tree->node, false);
+	place_ghost(g, view);
+	ghost_tick(g);
+}
+
 void anim_view_destroyed(struct ul_view *view) {
 	anim_track_commits(view, false);
 	if (view->closing) {
@@ -584,6 +645,30 @@ void anim_view_destroyed(struct ul_view *view) {
 		view->ghost->view = NULL;
 		view->ghost = NULL;
 	}
+}
+
+/* Step every running animation; each output calls this just before it
+ * renders. Several outputs stepping in the same frame is harmless: every
+ * step is computed from the clock. True while anything is still moving. */
+bool anim_frame(struct ul_server *server) {
+	bool busy = false;
+	struct ul_view *view;
+	wl_list_for_each(view, &server->views, link) {
+		if (view->anim_timer) {
+			tick(view);
+			busy |= view->anim_timer != NULL;
+		}
+		busy |= decoration_sweep_frame(view);
+	}
+	struct ul_ghost *g, *tmp;
+	wl_list_for_each_safe(g, tmp, &server->ghosts, link) {
+		if (g->pending) {
+			continue; /* waiting for the client, not moving */
+		}
+		busy = true;
+		ghost_tick(g); /* may destroy g */
+	}
+	return busy;
 }
 
 void anim_finish_all(struct ul_server *server) {

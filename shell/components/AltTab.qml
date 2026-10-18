@@ -42,7 +42,7 @@ PanelWindow {
         border.width: 1
         border.color: Theme.lineStrong
         opacity: win.shown ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: Config.dur(120); easing.type: Easing.OutCubic } }
+        ShowBehavior on opacity { ms: 120 }
         Brackets {}
 
         Text {

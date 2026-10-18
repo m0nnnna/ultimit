@@ -239,10 +239,22 @@ struct wlr_box view_snap_frame(struct wlr_box area, enum ul_snap side, double wi
 		area.y, w, area.height };
 }
 
-static void view_apply_snap(struct ul_view *view) {
+/* The frame box (content + titlebar + border) for a window placed at content
+ * (x, y) with size w x h. */
+static struct wlr_box frame_of(struct ul_view *view, int x, int y, int w, int h) {
+	int bar = view->ssd ? UL_TITLEBAR_H : 0;
+	return (struct wlr_box){ x - UL_BORDER, y - bar - UL_BORDER, w + 2 * UL_BORDER, h + bar + 2 * UL_BORDER };
+}
+
+static void set_maximized(struct ul_view *view, bool maximized, bool animate);
+
+static void view_apply_snap(struct ul_view *view, bool animate) {
 	struct wlr_box area = output_box(view, true);
 	struct wlr_box f = view_snap_frame(area, view->snapped, view_snap_width(view->server, view->snap_step));
 	int bar = view->ssd ? UL_TITLEBAR_H : 0;
+	if (animate) {
+		anim_morph(view, f);
+	}
 	view_set_position(view, f.x + UL_BORDER, f.y + bar + UL_BORDER);
 	view_request_size(view, f.width - 2 * UL_BORDER, f.height - bar - 2 * UL_BORDER);
 	view_set_tiled(view, view->snapped);
@@ -273,7 +285,7 @@ void view_snap(struct ul_view *view, enum ul_snap side, int step) {
 	}
 	view->snapped = side;
 	view->snap_step = step % (view->server->config.snap_count > 0 ? view->server->config.snap_count : 1);
-	view_apply_snap(view);
+	view_apply_snap(view, true);
 }
 
 /* Forget the snap without moving or resizing (the user resized the window,
@@ -295,6 +307,7 @@ void view_restore(struct ul_view *view) {
 		view_set_maximized(view, false);
 	} else if (view->snapped) {
 		view_clear_snap(view);
+		anim_morph(view, frame_of(view, view->saved.x, view->saved.y, view->saved.width, view->saved.height));
 		view_set_position(view, view->saved.x, view->saved.y);
 		view_request_size(view, view->saved.width, view->saved.height);
 	}
@@ -304,10 +317,10 @@ void view_refit(struct ul_view *view) {
 	if (view->maximized) {
 		struct wlr_box saved = view->saved;
 		view->maximized = false;
-		view_set_maximized(view, true);
+		set_maximized(view, true, false);
 		view->saved = saved;
 	} else if (view->snapped && !view->fullscreen) {
-		view_apply_snap(view);
+		view_apply_snap(view, false);
 	}
 }
 
@@ -331,7 +344,7 @@ struct ul_view *view_by_id(struct ul_server *server, unsigned id) {
 	return NULL;
 }
 
-void view_set_maximized(struct ul_view *view, bool maximized) {
+static void set_maximized(struct ul_view *view, bool maximized, bool animate) {
 	if (view->fullscreen || view->maximized == maximized) {
 		goto done;
 	}
@@ -347,10 +360,12 @@ void view_set_maximized(struct ul_view *view, bool maximized) {
 		struct wlr_box area = output_box(view, true);
 		int bar = view->ssd ? UL_TITLEBAR_H : 0;
 		view->maximized = true;
+		if (animate) anim_morph(view, area);
 		view_set_position(view, area.x + UL_BORDER, area.y + bar + UL_BORDER);
 		view_request_size(view, area.width - 2 * UL_BORDER, area.height - bar - 2 * UL_BORDER);
 	} else {
 		view->maximized = false;
+		if (animate) anim_morph(view, frame_of(view, view->saved.x, view->saved.y, view->saved.width, view->saved.height));
 		view_set_position(view, view->saved.x, view->saved.y);
 		view_request_size(view, view->saved.width, view->saved.height);
 	}
@@ -368,6 +383,10 @@ done:
 	if (view->type == UL_VIEW_XDG && view->xdg_toplevel->base->initialized) {
 		wlr_xdg_surface_schedule_configure(view->xdg_toplevel->base);
 	}
+}
+
+void view_set_maximized(struct ul_view *view, bool maximized) {
+	set_maximized(view, maximized, true);
 }
 
 static void set_backdrop_blur(struct wlr_scene_buffer *buffer, int sx, int sy, void *data) {
@@ -411,11 +430,12 @@ void view_set_fullscreen(struct ul_view *view, bool fullscreen) {
 	} else {
 		view->fullscreen = false;
 		wlr_scene_node_reparent(&view->tree->node, server->layers[UL_LAYER_VIEWS]);
+		/* Back from fullscreen (a game) without the morph. */
 		if (view->maximized) {
 			view->maximized = false;
-			view_set_maximized(view, true);
+			set_maximized(view, true, false);
 		} else if (view->snapped) {
-			view_apply_snap(view);
+			view_apply_snap(view, false);
 		} else {
 			view_set_position(view, view->saved.x, view->saved.y);
 			view_request_size(view, view->saved.width, view->saved.height);

@@ -198,11 +198,15 @@ static void output_frame(struct wl_listener *listener, void *data) {
 	struct wlr_output *wlr_output = output->wlr_output;
 	struct wlr_scene_output *scene_output = output->scene_output;
 
+	/* Window animations step here, right before the frame is built, so
+	 * they move once per frame at this monitor's rate. */
+	bool moving = anim_frame(output->server);
+	struct ul_view *game = fullscreen_view_on(output);
+
 	if (wlr_scene_output_needs_frame(scene_output)) {
 		struct wlr_output_state state;
 		wlr_output_state_init(&state);
 
-		struct ul_view *game = fullscreen_view_on(output);
 		bool want_vrr = game != NULL || output->vrr_always;
 		bool vrr_on = wlr_output->adaptive_sync_status == WLR_OUTPUT_ADAPTIVE_SYNC_ENABLED;
 		bool vrr_change = wlr_output->adaptive_sync_supported && want_vrr != vrr_on;
@@ -230,6 +234,13 @@ static void output_frame(struct wl_listener *listener, void *data) {
 	struct timespec now;
 	clock_gettime(CLOCK_MONOTONIC, &now);
 	wlr_scene_output_send_frame_done(scene_output, &now);
+
+	/* Keep frames coming while something moves, also through steps that
+	 * change no pixel (an ease flattening out). Not on a game's output:
+	 * its frames are paced by the game. */
+	if (moving && !game) {
+		wlr_output_schedule_frame(wlr_output);
+	}
 }
 
 static void output_request_state(struct wl_listener *listener, void *data) {

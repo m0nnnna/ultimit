@@ -14,3 +14,4 @@ singleton Feeds 1.0 Feeds.qml
 singleton Frames 1.0 Frames.qml
 singleton AppSearch 1.0 AppSearch.qml
 singleton AltTabState 1.0 AltTabState.qml
+ShowBehavior 1.0 ShowBehavior.qml

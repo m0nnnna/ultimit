@@ -103,11 +103,11 @@ PanelWindow {
         Brackets {}
 
         opacity: win.shown ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: Config.dur(180); easing.type: Easing.OutCubic } }
+        ShowBehavior on opacity { ms: 180 }
         // Slides out of / back into the rail.
         transform: Translate {
             x: win.shown ? 0 : -14
-            Behavior on x { NumberAnimation { duration: Config.dur(180); easing.type: Easing.OutCubic } }
+            ShowBehavior on x { ms: 180; hidden: -14 }
         }
 
         Column {

@@ -519,8 +519,10 @@ struct wlr_buffer *decoration_titlebar_buffer(struct ul_view *view);
 struct wlr_buffer *buffer_from_texture(struct wlr_texture *texture);
 void anim_track_commits(struct ul_view *view, bool track);
 void anim_minimize(struct ul_view *view, bool minimize);
+void anim_morph(struct ul_view *view, struct wlr_box frame);
 void anim_view_destroyed(struct ul_view *view);
 void anim_finish_all(struct ul_server *server);
+bool anim_frame(struct ul_server *server);
 
 /* decoration.c */
 void decoration_create(struct ul_view *view);
@@ -532,6 +534,7 @@ bool skin_parse(struct ul_skin *skin, const char *args);
 void decoration_restyle_all(struct ul_server *server);
 void decoration_set_hover(struct ul_server *server, struct ul_view *view, int button);
 void decoration_focus_sweep(struct ul_view *view);
+bool decoration_sweep_frame(struct ul_view *view);
 void decoration_finish(struct ul_view *view);
 
 /* capture.c */
