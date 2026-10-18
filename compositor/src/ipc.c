@@ -115,13 +115,14 @@ static void write_state(struct ul_server *server, struct out *o) {
 		put(o, ",\"geometry_offset\":");
 		put_box(o, view_geometry_offset(view));
 		put(o, ",\"ssd\":%s,\"focused\":%s,\"mapped\":%s,\"minimized\":%s,"
-			"\"maximized\":%s,\"fullscreen\":%s,\"animating\":%s,\"snapped\":%s,\"snap_step\":%d,\"tiled\":%u}",
+			"\"maximized\":%s,\"fullscreen\":%s,\"above\":%s,\"animating\":%s,\"snapped\":%s,\"snap_step\":%d,\"tiled\":%u}",
 			view->ssd ? "true" : "false",
 			server->focused_view == view ? "true" : "false",
 			view->mapped ? "true" : "false",
 			view->minimized ? "true" : "false",
 			view->maximized ? "true" : "false",
 			view->fullscreen ? "true" : "false",
+			view->above ? "true" : "false",
 			anim_running(view) ? "true" : "false",
 			view->snapped == UL_SNAP_LEFT ? "\"left\"" :
 			view->snapped == UL_SNAP_RIGHT ? "\"right\"" : "null",

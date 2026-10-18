@@ -38,6 +38,7 @@ enum ul_layer {
 	                  * next window (and raising it) can't cover them */
 	UL_LAYER_TOP,
 	UL_LAYER_FULLSCREEN,
+	UL_LAYER_ABOVE, /* "keep above" windows (TASKS): over fullscreen ones, under shell menus */
 	UL_LAYER_OVERLAY,
 	UL_LAYER_LOCK, /* lock screen; covers everything while locked */
 	UL_LAYER_COUNT,
@@ -355,6 +356,7 @@ struct ul_view {
 	bool maximized;
 	bool fullscreen;
 	bool minimized;
+	bool above; /* kept above everything, fullscreen windows included (TASKS) */
 	int x, y;          /* layout position of the content's top-left */
 	int width, height; /* content size */
 	int geo_x, geo_y;  /* last seen xdg geometry offset (invisible margins) */
@@ -505,6 +507,7 @@ void view_set_minimized(struct ul_view *view, bool minimized);
 void view_close(struct ul_view *view);
 void view_begin_interactive(struct ul_view *view, enum ul_cursor_mode mode, uint32_t edges);
 void view_update_title(struct ul_view *view);
+void view_restack_layer(struct ul_view *view);
 void view_set_ssd(struct ul_view *view, bool ssd);
 void view_init_foreign(struct ul_view *view);
 bool view_wants_tearing(struct ul_view *view);

@@ -304,6 +304,11 @@ add("apps", "ultimit-disks",
     P(cp(6, 7, 36, 34, 5, ("tl", "br")), A, "fill"),
     P(poly(24, 20, 8, 6, -90), F), SOL(poly(24, 20, 2.4, 6, -90), A),
     S("M11 33H37", D), S("M11 33H27", A), SOL("M33 36h4v2h-4z", F))
+add("apps", "ultimit-tasks",
+    # a chamfered window with a title rule, three process rows (name bar + usage bar) and a pulse line over them
+    P(cp(6, 7, 36, 34, 5, ("tl", "br")), A, "fill"), S("M6 15H42", A),
+    S("M11 22H19M11 29H19M11 36H19", F), S("M23 22H37", D), S("M23 22H31", A), S("M23 29H37", D), S("M23 29H35", A),
+    S("M23 36H37", D), S("M23 36H27", A), SOL("M38 9h3v3h-3z", F))
 add("apps", "ultimit-terminal",
     P(cp(5, 8, 38, 32, 4, ("tr", "bl")), A, "fill"), S("M5 16H43", A),
     S("M12 22L18 27L12 32", F), S("M22 33H32", A), SOL("M8 11h3v2H8z", F))

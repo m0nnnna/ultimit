@@ -48,6 +48,7 @@ documentation only; their behaviour is implemented elsewhere (input.c, alttab.c)
 | Super+Shift+R | Record a region (press again to stop and save) |
 | Super+Alt+R | Record the screen (press again to stop and save) |
 | PrtSc | Screenshot the screen |
+| Ctrl+Alt+Delete | Open TASKS, the task manager |
 | Ctrl+Alt+Backspace | Quit Ultimit (log out) |
 | Ctrl+Alt+F1..F12 | Switch virtual terminal |
 

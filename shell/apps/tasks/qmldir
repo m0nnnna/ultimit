@@ -1,0 +1,10 @@
+singleton Tasks 1.0 Tasks.qml
+TasksApp 1.0 TasksApp.qml
+TasksWindow 1.0 TasksWindow.qml
+DButton 1.0 DButton.qml
+ProcessesView 1.0 ProcessesView.qml
+ProcRow 1.0 ProcRow.qml
+HeaderCell 1.0 HeaderCell.qml
+PerformanceView 1.0 PerformanceView.qml
+StatCard 1.0 StatCard.qml
+Graph 1.0 Graph.qml

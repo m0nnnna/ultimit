@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=TASKS
+GenericName=Task Manager
+Comment=Running programs, what they use, and how busy the computer is
+Exec=ultimit-tasks
+Icon=ultimit-tasks
+Terminal=false
+Categories=System;Monitor;
+Keywords=htop;top;process;kill;cpu;memory;gpu;system monitor;task manager;performance;ram;

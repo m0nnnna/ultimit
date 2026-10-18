@@ -59,7 +59,7 @@ Singleton {
         if (title === "IMAGE" || title.endsWith("\u2014 IMAGE")) return "ultimit-image";   // "<name> - IMAGE"
         if (title === "CLAUDE" || title.endsWith("\u2014 CLAUDE")) return "ultimit-claude";   // "<chat> - CLAUDE"
         if (title === "EMBER" || title.endsWith("\u2014 EMBER")) return "ultimit-ember";     // "<chat> - EMBER"
-        const own = { DATA: "ultimit-data", CALC: "ultimit-calc", SHARES: "ultimit-shares", FIREWALL: "ultimit-firewall", DISKS: "ultimit-disks",
+        const own = { DATA: "ultimit-data", CALC: "ultimit-calc", SHARES: "ultimit-shares", FIREWALL: "ultimit-firewall", DISKS: "ultimit-disks", TASKS: "ultimit-tasks",
                       BROADCAST: "ultimit-broadcast", STORE: "ultimit-store" };
         return own[title] || "";
     }

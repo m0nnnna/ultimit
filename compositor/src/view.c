@@ -61,6 +61,21 @@ static void view_set_activated(struct ul_view *view, bool activated) {
 	}
 }
 
+/* The scene layer a window lives in: keep-above windows over everything, fullscreen ones
+ * over the panels, the rest with the normal windows. */
+static enum ul_layer view_layer(struct ul_view *view) {
+	return view->above ? UL_LAYER_ABOVE : view->fullscreen ? UL_LAYER_FULLSCREEN : UL_LAYER_VIEWS;
+}
+
+/* Moves the window into its layer (a no-op when it is there). view_focus() steps unfocused
+ * fullscreen windows down itself, so a fullscreen window not yet in its layer stays out. */
+void view_restack_layer(struct ul_view *view) {
+	struct wlr_scene_tree *layer = view->server->layers[view_layer(view)];
+	if (view->tree->node.parent != layer) {
+		wlr_scene_node_reparent(&view->tree->node, layer);
+	}
+}
+
 void view_focus(struct ul_view *view) {
 	if (!view || !view->mapped || view->server->locked) {
 		return;
@@ -82,9 +97,7 @@ void view_focus(struct ul_view *view) {
 			wlr_scene_node_reparent(&other->tree->node, server->layers[UL_LAYER_VIEWS]);
 		}
 	}
-	if (view->fullscreen && view->tree->node.parent != server->layers[UL_LAYER_FULLSCREEN]) {
-		wlr_scene_node_reparent(&view->tree->node, server->layers[UL_LAYER_FULLSCREEN]);
-	}
+	view_restack_layer(view);
 	wlr_scene_node_raise_to_top(&view->tree->node);
 	server->focused_view = view; /* for the restack below; also set further down */
 	xwayland_restack_unmanaged(server);
@@ -424,12 +437,12 @@ void view_set_fullscreen(struct ul_view *view, bool fullscreen) {
 		view->fullscreen = true;
 		/* Above panels, and nothing drawn over it, so a game's buffer can be
 		 * scanned out directly. */
-		wlr_scene_node_reparent(&view->tree->node, server->layers[UL_LAYER_FULLSCREEN]);
+		view_restack_layer(view);
 		view_set_position(view, area.x, area.y);
 		view_request_size(view, area.width, area.height);
 	} else {
 		view->fullscreen = false;
-		wlr_scene_node_reparent(&view->tree->node, server->layers[UL_LAYER_VIEWS]);
+		view_restack_layer(view);
 		/* Back from fullscreen (a game) without the morph. */
 		if (view->maximized) {
 			view->maximized = false;
@@ -568,7 +581,24 @@ void view_begin_interactive(struct ul_view *view, enum ul_cursor_mode mode, uint
 	}
 }
 
+/* TASKS (the task manager) stays above every window, fullscreen games included, so Ctrl+Alt+Delete
+ * always shows it. Matched by app id and title; the title can arrive after the window is mapped,
+ * so this runs whenever either changes. Only Wayland toplevels: an X11 window can't claim it. */
+static void update_above(struct ul_view *view) {
+	bool above = view->type == UL_VIEW_XDG && strcmp(view_app_id(view), "org.quickshell") == 0 &&
+		strcmp(view_title(view), "TASKS") == 0;
+	if (view->above == above) {
+		return;
+	}
+	view->above = above;
+	view_restack_layer(view);
+	if (view->mapped) {
+		wlr_scene_node_raise_to_top(&view->tree->node);
+	}
+}
+
 void view_update_title(struct ul_view *view) {
+	update_above(view);
 	if (view->foreign) {
 		wlr_foreign_toplevel_handle_v1_set_title(view->foreign, view_title(view));
 		wlr_foreign_toplevel_handle_v1_set_app_id(view->foreign, view_app_id(view));

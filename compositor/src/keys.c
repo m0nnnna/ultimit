@@ -28,6 +28,7 @@ enum act {
 	ACT_NONE,
 	ACT_QUIT,
 	ACT_TERMINAL,
+	ACT_TASKS,
 	ACT_SPAWN,
 	ACT_LAUNCHER,
 	ACT_LOCK,
@@ -117,6 +118,8 @@ static const struct binding bindings[] = {
 		"record-full", "Record the screen (press again to stop and save)", 0 },
 	{ 0, XKB_KEY_Print, 0, ACT_SPAWN, "ultimit-screenshot full", NULL, "Session",
 		"screenshot-full", "Screenshot the screen", KB_ANY_MODS },
+	{ CTRL | ALT, XKB_KEY_Delete, 0, ACT_TASKS, NULL, NULL, "Session", "tasks",
+		"Open TASKS, the task manager", 0 },
 	{ CTRL | ALT, XKB_KEY_BackSpace, 0, ACT_QUIT, NULL, NULL, "Session", "quit",
 		"Quit Ultimit (log out)", 0 },
 	{ CTRL | ALT, 0, 0, ACT_NONE, NULL, "Ctrl+Alt+F1..F12", "Session", "vt",
@@ -163,6 +166,26 @@ static void snap_key(struct ul_view *view, enum ul_snap side) {
 	}
 }
 
+/* Ctrl+Alt+Delete: TASKS is a keep-above window, so when it is already open bring it back (from
+ * minimized too) onto the output under the cursor and focus it; otherwise start it. */
+static void tasks_open(struct ul_server *server) {
+	struct ul_view *view;
+	wl_list_for_each(view, &server->views, link) {
+		if (!view->above || !view->mapped) {
+			continue;
+		}
+		struct ul_output *out = output_at(server, server->cursor->x, server->cursor->y);
+		if (out && out != output_for_view(view) && !view->fullscreen) {
+			struct wlr_box a = out->usable_area;
+			view_set_position(view, a.x + (a.width - view->width) / 2,
+				a.y + (a.height - view->height) / 2);
+		}
+		view_focus(view);
+		return;
+	}
+	server_spawn("ultimit-tasks");
+}
+
 static void run(struct ul_server *server, const struct binding *b, uint32_t mods) {
 	struct ul_view *view = server->focused_view;
 	switch (b->act) {
@@ -177,6 +200,9 @@ static void run(struct ul_server *server, const struct binding *b, uint32_t mods
 			"command -v \"${t%% *}\" >/dev/null && exec $t; done");
 		break;
 	}
+	case ACT_TASKS:
+		tasks_open(server);
+		break;
 	case ACT_SPAWN:
 		server_spawn(b->arg);
 		break;
