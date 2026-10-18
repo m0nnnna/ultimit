@@ -81,6 +81,12 @@ bool xwayland_focus_unmanaged(struct ul_server *server, struct wlr_surface *surf
 	if (!xs || !xs->override_redirect) {
 		return false;
 	}
+	/* Menus, tooltips and dropdowns (Steam's CEF menus) close as soon as
+	 * their parent window is deactivated, before the click's release picks
+	 * an item. Leave focus where it is and just deliver the click. */
+	if (!wlr_xwayland_surface_override_redirect_wants_focus(xs)) {
+		return true;
+	}
 	struct ul_view *fv = server->focused_view;
 	if (fv && fv->type == UL_VIEW_XWAYLAND) {
 		wlr_xwayland_surface_activate(fv->xwayland_surface, false);
