@@ -3,6 +3,7 @@
 // keyboard focus; the glass panel sits beside the rail, top-left, with mockup corner brackets.
 // Apps come from Quickshell's DesktopEntries (NoDisplay entries skipped).
 import QtQuick
+import QtQuick.Layouts
 import QtQuick.Shapes
 import Quickshell
 import Quickshell.Wayland
@@ -314,30 +315,35 @@ PanelWindow {
             height: pflow.height
             function disarmAll() { lockB.disarm(); outB.disarm(); hibB.disarm(); rebB.disarm(); offB.disarm(); }
             Rectangle { x: 0; y: -8; width: parent.width; height: 1; color: Theme.line }
-            Flow {
+            // One line: compact buttons, stretched to share the width.
+            RowLayout {
                 id: pflow
                 width: parent.width
-                spacing: 8
-                PowerButton { id: lockB; text: "Lock"; onActivated: { Config.closeLauncher(); Config.lock(); } }
+                spacing: 4
+                PowerButton { id: lockB; compact: true; Layout.fillWidth: true; text: "Lock"; onActivated: { Config.closeLauncher(); Config.lock(); } }
                 PowerButton {
-                    id: outB; text: "Log out"; confirm: true
+                    id: outB; compact: true; Layout.fillWidth: true
+                    text: "Log out"; confirm: true
                     onActivated: win.power("loginctl terminate-session \"$XDG_SESSION_ID\"")
                     onArmedChanged: if (armed) { hibB.disarm(); rebB.disarm(); offB.disarm(); }
                 }
-                PowerButton { id: susB; text: "Sleep"; onActivated: win.power("systemctl suspend") }
+                PowerButton { id: susB; compact: true; Layout.fillWidth: true; text: "Sleep"; onActivated: win.power("systemctl suspend") }
                 PowerButton {
-                    id: hibB; text: "Hibernate"; confirm: true
+                    id: hibB; compact: true; Layout.fillWidth: true
+                    text: "Hibernate"; confirm: true
                     visible: SysState.canHibernate
                     onActivated: win.power("systemctl hibernate")
                     onArmedChanged: if (armed) { outB.disarm(); rebB.disarm(); offB.disarm(); }
                 }
                 PowerButton {
-                    id: rebB; text: "Restart"; confirm: true
+                    id: rebB; compact: true; Layout.fillWidth: true
+                    text: "Restart"; confirm: true
                     onActivated: win.power("systemctl reboot")
                     onArmedChanged: if (armed) { outB.disarm(); hibB.disarm(); offB.disarm(); }
                 }
                 PowerButton {
-                    id: offB; text: "Shut down"; confirm: true
+                    id: offB; compact: true; Layout.fillWidth: true
+                    text: "Shut down"; confirm: true
                     onActivated: win.power("systemctl poweroff")
                     onArmedChanged: if (armed) { outB.disarm(); hibB.disarm(); rebB.disarm(); }
                 }

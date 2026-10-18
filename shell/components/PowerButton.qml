@@ -12,7 +12,9 @@ Item {
     signal activated()
     signal disarmed()
 
-    implicitWidth: lbl.implicitWidth + 24
+    // Tighter padding and lettering where a row of them must fit one line (the launcher's power row).
+    property bool compact: false
+    implicitWidth: lbl.implicitWidth + (compact ? 12 : 24)
     implicitHeight: 28
     opacity: enabled ? 1 : 0.4
     readonly property real c: 6
@@ -49,7 +51,7 @@ Item {
         text: (root.armed ? "Sure?" : root.text).toUpperCase()
         color: root.armed ? Theme.warn : Theme.fg
         font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: 10
-        font.letterSpacing: 1.6
+        font.letterSpacing: root.compact ? 0.6 : 1.6
     }
     activeFocusOnTab: false
     MouseArea {
