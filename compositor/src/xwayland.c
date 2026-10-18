@@ -5,6 +5,7 @@
  * drawn as-is above everything at the position X asked for.
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include "server.h"
 #include "theme.h"
@@ -478,10 +479,26 @@ static void new_surface(struct wl_listener *listener, void *data) {
 	}
 }
 
+/* Mark the main display primary in XWayland's RandR. Without it Wine/Proton takes the first
+ * output as the primary monitor, and a fullscreen game renders at that screen's size (a portrait
+ * side monitor gives a squashed 1080x1920 picture). XWayland rebuilds its outputs on hotplug and
+ * layout changes and drops the flag, so this runs again then; the sleep lets it catch up first. */
+void xwayland_sync_primary(struct ul_server *server) {
+	if (!server->xwayland || !server->xwayland_is_ready) return;
+	struct ul_output *main = output_primary(server);
+	if (!main) return;
+	char cmd[256];
+	snprintf(cmd, sizeof(cmd), "sleep 0.5; DISPLAY=%s xrandr --output '%s' --primary",
+		server->xwayland->display_name, main->wlr_output->name);
+	server_spawn(cmd);
+}
+
 static void ready(struct wl_listener *listener, void *data) {
 	struct ul_server *server = wl_container_of(listener, server, xwayland_ready);
 	wlr_xwayland_set_seat(server->xwayland, server->seat);
 	wlr_log(WLR_INFO, "XWayland ready on DISPLAY=%s", server->xwayland->display_name);
+	server->xwayland_is_ready = true;
+	xwayland_sync_primary(server);
 }
 
 void xwayland_init(struct ul_server *server) {

@@ -486,6 +486,7 @@ static void output_manager_test(struct wl_listener *listener, void *data) {
 static void layout_change(struct wl_listener *listener, void *data) {
 	struct ul_server *server = wl_container_of(listener, server, layout_change);
 	update_output_manager(server);
+	xwayland_sync_primary(server);
 }
 
 void output_finish(struct ul_server *server) {

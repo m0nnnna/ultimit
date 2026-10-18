@@ -11,3 +11,4 @@ Launch Options.
 | Game | Store | Compatibility tool | Launch options | Notes | Tested on | Date |
 |---|---|---|---|---|---|---|
 | Neverness to Everness (NTE) | Steam | DW-Proton (ProtonPlus) | `PROTON_DISABLE_NVAPI=1 %command%` | Works. | RTX 4070, NVIDIA driver | 2026-10-14 |
+| MapleStory Worlds | Steam | Proton Experimental | Default | Works, no tweaks needed. | RTX 4070, NVIDIA driver | 2026-10-18 |

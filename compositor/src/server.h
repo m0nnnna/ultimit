@@ -165,6 +165,7 @@ struct ul_server {
 
 	struct wlr_xwayland *xwayland;
 	struct wl_listener xwayland_ready;
+	bool xwayland_is_ready;
 	struct wl_listener new_xwayland_surface;
 
 	struct wl_list views; /* ul_view.link, most recently focused first */
@@ -550,5 +551,6 @@ bool xdg_kde_wants_ssd(struct ul_server *server, struct wlr_surface *surface);
 
 /* xwayland.c */
 void xwayland_init(struct ul_server *server);
+void xwayland_sync_primary(struct ul_server *server);
 
 #endif

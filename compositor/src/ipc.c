@@ -210,6 +210,7 @@ static void run_command(struct ul_server *server, char *line, struct out *o) {
 		wl_list_for_each(out, &server->outputs, link) {
 			out->primary = out == hit;
 		}
+		xwayland_sync_primary(server);
 		put(o, "{\"ok\":true}");
 		return;
 	}

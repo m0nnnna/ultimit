@@ -8,6 +8,7 @@ mesa-vulkan-drivers
 # Login screen and session
 greetd
 xwayland
+x11-xserver-utils   # xrandr: the compositor marks the main display primary for X11 games
 dbus-user-session
 polkitd
 pkexec
