@@ -73,6 +73,9 @@ void output_relocate_views(struct ul_server *server, struct ul_output *gone) {
 		}
 	}
 	server->relayout = false;   /* from here on, re-fitting below is wanted */
+	/* No screen left to move to (all of them coming back from suspend, say): windows keep
+	 * their place, which is theirs again when the monitors return. */
+	if (!primary) return;
 	struct ul_view *view;
 	wl_list_for_each(view, &server->views, link) {
 		if (!view->mapped && !view->minimized) continue;
