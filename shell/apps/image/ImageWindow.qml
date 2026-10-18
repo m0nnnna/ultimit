@@ -1,5 +1,6 @@
 // ImageWindow.qml - one IMAGE window: a picture and the others in its folder (or the set it was opened
-// with), with zoom, pan and rotate. A normal xdg toplevel (the compositor draws the frame).
+// with), with zoom, pan and rotate; or the library (Gallery.qml), a folder as thumbnails, which is
+// where IMAGE starts without a file. A normal xdg toplevel (the compositor draws the frame).
 // Created by ImageApp.qml through a Variants over Viewer.ids.
 import QtQuick
 import QtQuick.Layouts
@@ -22,8 +23,13 @@ FloatingWindow {
     readonly property string ext: path.substring(path.lastIndexOf(".") + 1).toLowerCase()
     readonly property bool anim: ext === "gif" || ext === "webp"   // AnimatedImage plays them (one frame is fine too)
 
-    title: (name !== "" ? name + " — " : "") + "IMAGE"
-    implicitWidth: 1040
+    // "view": one picture; "grid": the library. A window opened on a file has no grid until G asks for it.
+    property string mode: "view"
+    property bool hasGrid: false
+
+    title: mode === "grid" ? (gallery.dirName !== "" ? gallery.dirName + " — " : "") + "IMAGE"
+                           : (name !== "" ? name + " — " : "") + "IMAGE"
+    implicitWidth: 1120
     implicitHeight: 720
     minimumSize: Qt.size(420, 300)
     color: "transparent"   // the Theme.panel glass below fills it
@@ -60,6 +66,7 @@ FloatingWindow {
     }
     Component.onCompleted: {
         const req = Viewer.requests[winId] || {};
+        if (req.gallery !== undefined) { showGrid(req.gallery, ""); return; }
         if (req.set) Viewer.run(["set"].concat(req.set), show);
         else Viewer.run(["list", req.path || ""], show);
     }
@@ -80,6 +87,26 @@ FloatingWindow {
         index = (index + d + files.length) % files.length;
     }
     function goTo(i) { if (files.length && overlay === "") index = Math.max(0, Math.min(files.length - 1, i)); }
+
+    // ---- library ----
+    function showGrid(d, focus) {
+        hasGrid = true;
+        mode = "grid";
+        gallery.load(d, focus);
+    }
+    // Back to the grid from the picture (refreshed: the picture may have gone to the Trash).
+    // A window opened on a file gets the grid of that file's folder.
+    function backToGrid() {
+        showGrid(gallery.dir !== "" ? gallery.dir : (path.substring(0, path.lastIndexOf("/")) || "/"), path);
+    }
+    function openFromGrid(list, i) {
+        listing = false;
+        err = "";
+        files = list;
+        index = i;
+        mode = "view";
+        keys.forceActiveFocus();
+    }
 
     // ---- zoom ----
     function clampZoom(z) { return Math.max(0.02, Math.min(32, z)); }
@@ -135,7 +162,7 @@ FloatingWindow {
         Viewer.run(["trash", p], o => {
             if (!o.ok) { win.say("Not moved: " + o.err); return; }
             const f = win.files.filter(e => e.p !== p);
-            if (f.length === 0) { win.doClose(); return; }
+            if (f.length === 0) { if (win.hasGrid) win.backToGrid(); else win.doClose(); return; }
             const i = Math.min(win.index, f.length - 1);
             win.files = f;
             win.index = i;
@@ -156,7 +183,7 @@ FloatingWindow {
         id: keys
         width: 0; height: 0
         focus: true
-        readonly property bool active: win.overlay === ""
+        readonly property bool active: win.overlay === "" && win.mode === "view"
         Shortcut { sequences: ["Right", "Space", "PgDown", "N"]; enabled: keys.active; onActivated: win.go(1) }
         Shortcut { sequences: ["Left", "Backspace", "PgUp", "P"]; enabled: keys.active; onActivated: win.go(-1) }
         Shortcut { sequences: ["Home"]; enabled: keys.active; onActivated: win.goTo(0) }
@@ -171,7 +198,9 @@ FloatingWindow {
         Shortcut { sequences: ["Delete"]; enabled: keys.active && win.path !== ""; onActivated: win.overlay = "trash" }
         Shortcut { sequences: ["Tab"]; enabled: keys.active; onActivated: win.bars = !win.bars }
         Shortcut { sequences: ["K"]; enabled: keys.active && win.anim; onActivated: animPic.paused = !animPic.paused }
-        Shortcut { sequences: ["Escape", "Ctrl+W", "Q"]; enabled: keys.active; onActivated: win.doClose() }
+        Shortcut { sequences: ["G"]; enabled: keys.active; onActivated: win.backToGrid() }
+        Shortcut { sequences: ["Escape"]; enabled: keys.active; onActivated: win.hasGrid ? win.backToGrid() : win.doClose() }
+        Shortcut { sequences: ["Ctrl+W", "Q"]; enabled: keys.active; onActivated: win.doClose() }
     }
 
     // ---- UI ----
@@ -182,6 +211,7 @@ FloatingWindow {
         ColumnLayout {
             anchors.fill: parent
             spacing: 0
+            visible: win.mode === "view"
 
             // toolbar
             Rectangle {
@@ -193,6 +223,8 @@ FloatingWindow {
                     id: tbFlow
                     x: 10; y: 7; width: parent.width - 20
                     spacing: 6
+                    ChamferButton { implicitHeight: 30; text: "Grid"; onClicked: win.backToGrid() }
+                    Item { width: 8; height: 1 }
                     ChamferButton { implicitHeight: 30; text: "Prev"; onClicked: win.go(-1) }
                     ChamferButton { implicitHeight: 30; text: "Next"; onClicked: win.go(1) }
                     Item { width: 8; height: 1 }
@@ -351,6 +383,14 @@ FloatingWindow {
                     font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 0.8
                 }
             }
+        }
+
+        Gallery {
+            id: gallery
+            anchors.fill: parent
+            visible: win.mode === "grid"
+            onOpenImage: (list, i) => win.openFromGrid(list, i)
+            onCloseRequested: win.doClose()
         }
 
         // ---- modal overlay: confirm moving the picture to the Trash ----

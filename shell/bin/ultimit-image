@@ -1,6 +1,7 @@
 #!/bin/sh
-# ultimit-image FILE... - open pictures in IMAGE, the Ultimit image viewer. One file: that picture, with the
-# others in its folder to step through. Several files: just those, in one window.
+# ultimit-image [FILE...|DIR] - open pictures in IMAGE, the Ultimit image viewer. One file: that picture, with
+# the others in its folder to step through. Several files: just those, in one window. A folder, or nothing:
+# the library (that folder, or Pictures, as thumbnails).
 # IMAGE is its own quickshell process (image-shell.qml), started here when not yet running; it exits
 # when its last window closes.
 shell="${ULTIMIT_SHELL_DIR:-$(dirname "$(dirname "$(readlink -f "$0")")")}"
@@ -10,8 +11,6 @@ QS=$(command -v qs) || for q in "$shell/../bin/qs" "${ULTIMIT_DEPS:-$HOME/.local
 	[ -x "$q" ] && QS=$q && break
 done
 QS=${QS:-qs}
-
-[ $# -gt 0 ] || { echo "usage: ultimit-image FILE..." >&2; exit 2; }
 
 image() { "$QS" -p "$cfg" ipc call image "$@" >/dev/null 2>&1; }
 
@@ -31,7 +30,11 @@ for p in "$@"; do
 	paths="$paths$p
 "
 done
-if [ $# -eq 1 ]; then
+if [ $# -eq 0 ]; then
+	image gallery ""
+elif [ $# -eq 1 ] && [ -d "${paths%?}" ]; then
+	image gallery "${paths%?}"
+elif [ $# -eq 1 ]; then
 	image open "${paths%?}"
 else
 	image openset "$paths"

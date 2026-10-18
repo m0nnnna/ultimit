@@ -5,6 +5,10 @@
                                  name order (natural, case-insensitive), and where <file> is among them
   image.py set <file>...         JSON {ok, dir, files[], index:0}: just these files (DATA "Open" on a selection)
   image.py trash <file>          JSON {ok, err}: move to the Trash (DATA's Trash, so DATA can restore it)
+  image.py dir [<dir>]           JSON {ok, dir, parent, dirs[], files[], places[], err}: the library view of
+                                 <dir> (default: the Pictures folder): its images, its subfolders that hold
+                                 images (dirs[]: {p, n, count, cover}) and the places to jump to
+                                 (places[]: {p, n}, the ones that exist)
 
 files[] entries: {p, n, size, mtime}. Hidden files are left out unless <file> itself is one.
 """
@@ -75,6 +79,73 @@ def cmd_set(paths):
     out({"ok": bool(files), "dir": os.path.dirname(files[0]["p"]) if files else "", "files": files, "index": 0,
          "err": "" if files else "No such file"})
 
+def user_dir(key, fallback):
+    """An XDG user dir (~/.config/user-dirs.dirs), like xdg-user-dir."""
+    home = os.path.expanduser("~")
+    cfg = os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.join(home, ".config"), "user-dirs.dirs")
+    try:
+        with open(cfg, encoding="utf-8") as f:
+            for line in f:
+                k, _, v = line.strip().partition("=")
+                if k == "XDG_%s_DIR" % key:
+                    v = v.strip('"').replace("$HOME", home)
+                    if v.rstrip("/") != home:
+                        return v
+    except OSError:
+        pass
+    return os.path.join(home, fallback)
+
+def places():
+    pics = user_dir("PICTURES", "Pictures")
+    cands = [(pics, "Pictures"), (os.path.join(pics, "Screenshots"), "Screenshots"),
+             (os.path.join(pics, "Wallpapers"), "Wallpapers"),
+             (user_dir("DOWNLOAD", "Downloads"), "Downloads"), (user_dir("DESKTOP", "Desktop"), "Desktop")]
+    return [{"p": p, "n": n} for p, n in cands if os.path.isdir(p)]
+
+def scan(d):
+    """(images, subfolders) of d, hidden ones left out."""
+    imgs, subs = [], []
+    with os.scandir(d) as it:
+        for e in it:
+            if e.name.startswith("."):
+                continue
+            try:
+                if e.is_dir():
+                    subs.append(e.path)
+                elif e.is_file() and is_image(e.name):
+                    imgs.append(e.path)
+            except OSError:
+                pass
+    return imgs, subs
+
+def cmd_dir(d):
+    d = os.path.abspath(d or user_dir("PICTURES", "Pictures"))
+    o = {"ok": False, "dir": d, "parent": "" if d == "/" else os.path.dirname(d), "dirs": [], "files": [],
+         "places": places(), "err": ""}
+    try:
+        imgs, subs = scan(d)
+    except OSError as ex:
+        o["err"] = ex.strerror or str(ex)
+        out(o)
+        return
+    for p in imgs:
+        try: o["files"].append(entry(p))
+        except OSError: pass
+    o["files"].sort(key=lambda e: data.natkey(e["n"]))
+    # A subfolder is shown when it holds pictures; its newest one is the cover.
+    for s in subs:
+        try:
+            si, _ = scan(s)
+        except OSError:
+            continue
+        if not si:
+            continue
+        cover = max(si, key=lambda p: os.path.getmtime(p) if os.path.exists(p) else 0)
+        o["dirs"].append({"p": s, "n": os.path.basename(s), "count": len(si), "cover": cover})
+    o["dirs"].sort(key=lambda e: data.natkey(e["n"]))
+    o["ok"] = True
+    out(o)
+
 def cmd_trash(p):
     try:
         data.Job({"items": []}).trash(p)
@@ -89,6 +160,7 @@ def main():
     if a[0] == "list": cmd_list(a[1])
     elif a[0] == "set": cmd_set(a[1:])
     elif a[0] == "trash": cmd_trash(a[1])
+    elif a[0] == "dir": cmd_dir(a[1] if len(a) > 1 else "")
     else: sys.exit(__doc__)
 
 if __name__ == "__main__":

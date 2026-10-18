@@ -1,3 +1,4 @@
 singleton Viewer 1.0 Viewer.qml
 ImageApp 1.0 ImageApp.qml
 ImageWindow 1.0 ImageWindow.qml
+Gallery 1.0 Gallery.qml

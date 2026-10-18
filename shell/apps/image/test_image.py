@@ -68,6 +68,38 @@ class ImageHelper(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(trash, "files", "img1.webp")))
         self.assertTrue(os.path.exists(os.path.join(trash, "info", "img1.webp.trashinfo")))
 
+    def test_dir_lists_images_and_picture_folders(self):
+        for sub, names in (("album", ["b.png", "a.jpg"]), ("empty", []), (".hidden", ["h.png"]), ("docs", ["x.txt"])):
+            os.mkdir(self.p(sub))
+            for n in names:
+                with open(os.path.join(self.p(sub), n), "wb") as f:
+                    f.write(b"x")
+        o = self.run_helper("dir", self.d)
+        self.assertTrue(o["ok"])
+        self.assertEqual(o["parent"], self.tmp.name)
+        self.assertEqual([f["n"] for f in o["files"]], ["Anim.gif", "img1.webp", "img2.JPG", "img10.png"])
+        self.assertEqual([(d["n"], d["count"]) for d in o["dirs"]], [("album", 2)])
+        self.assertIn(os.path.basename(o["dirs"][0]["cover"]), ("a.jpg", "b.png"))
+
+    def test_dir_defaults_to_pictures(self):
+        home = os.path.join(self.tmp.name, "home")
+        os.makedirs(os.path.join(home, "Pics", "Screenshots"))
+        os.makedirs(os.path.join(home, ".config"))
+        with open(os.path.join(home, ".config", "user-dirs.dirs"), "w") as f:
+            f.write('XDG_PICTURES_DIR="$HOME/Pics"\n')
+        env = dict(self.env, HOME=home)
+        env.pop("XDG_CONFIG_HOME", None)
+        p = subprocess.run([sys.executable, "-I", os.path.join(HERE, "image.py"), "dir"],
+                           capture_output=True, text=True, env=env)
+        o = json.loads(p.stdout)
+        self.assertEqual(o["dir"], os.path.join(home, "Pics"))
+        self.assertEqual([x["n"] for x in o["places"]], ["Pictures", "Screenshots"])
+
+    def test_dir_missing(self):
+        o = self.run_helper("dir", os.path.join(self.tmp.name, "nowhere"))
+        self.assertFalse(o["ok"])
+        self.assertTrue(o["err"])
+
     def test_trash_missing_reports_error(self):
         o = self.run_helper("trash", self.p("gone.png"))
         self.assertFalse(o["ok"])

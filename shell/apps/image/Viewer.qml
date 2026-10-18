@@ -12,7 +12,7 @@ Singleton {
     readonly property string helper: Quickshell.shellPath("apps/image/image.py")
 
     property var ids: []                // open window ids (Variants model)
-    property var requests: ({})         // id -> { path } (its folder) or { set: [paths] }
+    property var requests: ({})         // id -> { path } (its folder), { set: [paths] } or { gallery: dir }
     property var current: ({})          // id -> path on screen (for IPC state and re-open)
     property int nextId: 1
     property int raise: 0               // bumped to ask a window to grab focus
@@ -28,6 +28,11 @@ Singleton {
     function openSet(paths) {
         quitTimer.stop();
         return paths.length === 1 ? openFile(paths[0]) : add({ set: paths });
+    }
+    // The library: a folder as thumbnails ("" = Pictures). Always a new window.
+    function openGallery(dir) {
+        quitTimer.stop();
+        return add({ gallery: dir });
     }
     function add(req) {
         const id = nextId++;

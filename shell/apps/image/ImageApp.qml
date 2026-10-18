@@ -1,6 +1,7 @@
 // ImageApp.qml - IMAGE, the Ultimit image viewer. Instantiated once by image-shell.qml.
 // One ImageWindow (a normal xdg toplevel) per open request.
-//   qs -p <shell>/image-shell.qml ipc call image open <path> | openset <paths, one per line> | state
+//   qs -p <shell>/image-shell.qml ipc call image open <path> | openset <paths, one per line>
+//                                                | gallery <dir, "" for Pictures> | state
 // (shell/bin/ultimit-image [FILE...] wraps these.)
 import QtQuick
 import Quickshell
@@ -11,6 +12,7 @@ Scope {
         target: "image"
         function open(path: string): void { Viewer.openFile(path); }
         function openset(paths: string): void { Viewer.openSet(paths.split("\n").filter(p => p !== "")); }
+        function gallery(dir: string): void { Viewer.openGallery(dir); }
         function state(): string { return Viewer.stateJson(); }
     }
     Variants {
