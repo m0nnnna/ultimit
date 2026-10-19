@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=ITEMS
+GenericName=Device Settings
+Comment=Buttons, lighting and DPI for gaming mice and other devices with their own settings
+Exec=ultimit-items
+Icon=ultimit-items
+Terminal=false
+Categories=Settings;HardwareSettings;
+Keywords=mouse;redragon;buttons;macro;rgb;lighting;dpi;peripheral;device;keymap;

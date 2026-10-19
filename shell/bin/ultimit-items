@@ -1,0 +1,18 @@
+#!/bin/sh
+# ultimit-items - open ITEMS, device settings (mice and other peripherals with their own settings).
+# ITEMS is its own quickshell process (items-shell.qml), started here when not yet running; it exits when its
+# window closes.
+shell="${ULTIMIT_SHELL_DIR:-$(dirname "$(dirname "$(readlink -f "$0")")")}"
+cfg="$shell/items-shell.qml"
+
+items() { qs -p "$cfg" ipc call items "$@" >/dev/null 2>&1; }
+
+if ! items state; then
+    qs -p "$cfg" -n -d >/dev/null 2>&1
+    i=0
+    until items state; do
+        i=$((i + 1)); [ $i -gt 50 ] && { echo "ultimit-items: ITEMS did not start" >&2; exit 1; }
+        sleep 0.2
+    done
+fi
+items open

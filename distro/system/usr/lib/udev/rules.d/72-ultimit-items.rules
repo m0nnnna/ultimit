@@ -1,0 +1,7 @@
+# Ultimit ITEMS: the person at the desk may configure the devices ITEMS supports (their settings go over
+# hidraw). One line per device; keep in step with shell/apps/items/drivers/.
+ACTION=="remove", GOTO="ultimit_items_end"
+SUBSYSTEM!="hidraw", GOTO="ultimit_items_end"
+# Redragon M990 Legend RGB
+ATTRS{idVendor}=="04d9", ATTRS{idProduct}=="fc41", TAG+="uaccess"
+LABEL="ultimit_items_end"

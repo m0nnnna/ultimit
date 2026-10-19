@@ -309,6 +309,10 @@ add("apps", "ultimit-tasks",
     P(cp(6, 7, 36, 34, 5, ("tl", "br")), A, "fill"), S("M6 15H42", A),
     S("M11 22H19M11 29H19M11 36H19", F), S("M23 22H37", D), S("M23 22H31", A), S("M23 29H37", D), S("M23 29H35", A),
     S("M23 36H37", D), S("M23 36H27", A), SOL("M38 9h3v3h-3z", F))
+add("apps", "ultimit-items",
+    # a chamfered gaming mouse: body, the seam between the buttons, the wheel, a column of side buttons and a light strip
+    P(cp(13, 5, 22, 38, 7, ("tl", "br")), A, "fill"), S("M24 5V18M13 18H35", A), SOL("M23 9h2v6h-2z", F),
+    S("M16 23h4M16 28h4M16 33h4", F), S("M28 38H35", A))
 add("apps", "ultimit-terminal",
     P(cp(5, 8, 38, 32, 4, ("tr", "bl")), A, "fill"), S("M5 16H43", A),
     S("M12 22L18 27L12 32", F), S("M22 33H32", A), SOL("M8 11h3v2H8z", F))
