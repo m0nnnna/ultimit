@@ -211,6 +211,7 @@ struct ul_server {
 	double press_sx, press_sy, press_lx, press_ly;
 	struct wl_list keyboards;
 	struct wl_list pointers; /* ul_pointer.link */
+	struct wl_list touches;  /* ul_pointer.link: touchscreens */
 	struct ul_config config;
 
 	enum ul_cursor_mode cursor_mode;
@@ -480,6 +481,7 @@ void input_init(struct ul_server *server);
 void input_update_hover(struct ul_server *server);
 void input_update_pointer_focus(struct ul_server *server, uint32_t time_msec);
 void input_reapply_keyboards(struct ul_server *server);
+void input_map_touch(struct ul_server *server);
 void input_focus_layer(struct ul_server *server, struct wlr_layer_surface_v1 *layer_surface);
 void input_test_drag(struct ul_server *server, struct ul_view *view, int x, int y, bool release);
 void input_snap_preview_hide(struct ul_server *server);

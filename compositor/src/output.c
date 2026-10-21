@@ -427,6 +427,7 @@ static void new_output(struct wl_listener *listener, void *data) {
 		wlr_output->adaptive_sync_supported ? "supported" : "not supported");
 
 	output_arrange(output);
+	input_map_touch(server);
 }
 
 /* ---- wlr-output-management ---------------------------------------------- */

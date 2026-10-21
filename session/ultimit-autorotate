@@ -1,0 +1,21 @@
+#!/bin/sh
+# Rotate the built-in panel to follow the accelerometer (iio-sensor-proxy).
+# Touch follows because the compositor maps the touchscreen to the panel.
+# Lock rotation by creating ~/.config/ultimit/rotation-lock.
+command -v monitor-sensor >/dev/null && command -v wlr-randr >/dev/null || exit 0
+LOCK="${XDG_CONFIG_HOME:-$HOME/.config}/ultimit/rotation-lock"
+panel=$(wlr-randr 2>/dev/null | awk '/^(DSI|eDP|LVDS)/{print $1; exit}')
+[ -n "$panel" ] || exit 0
+last=""
+monitor-sensor --accel 2>/dev/null | while IFS= read -r line; do
+	case $line in
+	*orientation*normal*) t=normal ;;
+	*orientation*left-up*) t=90 ;;
+	*orientation*right-up*) t=270 ;;
+	*orientation*bottom-up*) t=180 ;;
+	*) continue ;;
+	esac
+	[ -e "$LOCK" ] && continue
+	[ "$t" = "$last" ] && continue
+	wlr-randr --output "$panel" --transform "$t" && last=$t
+done

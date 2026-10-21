@@ -182,7 +182,7 @@ fi
 OSK=""
 if grep -qi touchscreen /proc/bus/input/devices 2>/dev/null && command -v wvkbd-mobintl >/dev/null; then
 	export ULTIMIT_OSK=1
-	OSK="(wvkbd-mobintl --hidden -H 480 -L 300 --fn 'Sans 24' >/dev/null 2>&1 &); "
+	OSK="(wvkbd-mobintl --hidden -H 480 -L 300 --fn 'Sans 24' >/dev/null 2>&1 &); ('$ROOT/session/ultimit-autorotate' >/dev/null 2>&1 &); "
 fi
 
 # Once the compositor is up: hand the display variables to systemd/D-Bus so

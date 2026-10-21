@@ -5,6 +5,7 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <linux/input-event-codes.h>
 #include <wlr/types/wlr_cursor_shape_v1.h>
@@ -881,6 +882,24 @@ static void pointer_destroy(struct wl_listener *listener, void *data) {
 	free(p);
 }
 
+/* A touchscreen belongs to the built-in panel: map it there, so it covers that
+ * screen only and wlroots turns touches with the panel's rotation. */
+void input_map_touch(struct ul_server *server) {
+	struct wlr_output *panel = NULL;
+	struct ul_output *output;
+	wl_list_for_each(output, &server->outputs, link) {
+		const char *n = output->wlr_output->name;
+		if (!strncmp(n, "DSI", 3) || !strncmp(n, "eDP", 3) || !strncmp(n, "LVDS", 4)) {
+			panel = output->wlr_output;
+			break;
+		}
+	}
+	struct ul_pointer *p;
+	wl_list_for_each(p, &server->touches, link) {
+		wlr_cursor_map_input_to_output(server->cursor, p->device, panel);
+	}
+}
+
 void input_reapply_keyboards(struct ul_server *server) {
 	struct ul_keyboard *keyboard;
 	wl_list_for_each(keyboard, &server->keyboards, link) {
@@ -906,9 +925,16 @@ static void add_input_device(struct ul_server *server, struct wlr_input_device *
 		wlr_cursor_attach_input_device(server->cursor, device);
 		break;
 	}
-	case WLR_INPUT_DEVICE_TOUCH:
+	case WLR_INPUT_DEVICE_TOUCH: {
+		struct ul_pointer *p = calloc(1, sizeof(*p));
+		p->device = device;
+		p->destroy.notify = pointer_destroy;
+		wl_signal_add(&device->events.destroy, &p->destroy);
+		wl_list_insert(&server->touches, &p->link);
 		wlr_cursor_attach_input_device(server->cursor, device);
+		input_map_touch(server);
 		break;
+	}
 	default:
 		break;
 	}
@@ -1060,6 +1086,7 @@ void input_init(struct ul_server *server) {
 
 	wl_list_init(&server->keyboards);
 	wl_list_init(&server->pointers);
+	wl_list_init(&server->touches);
 	server->new_input.notify = new_input;
 	wl_signal_add(&server->backend->events.new_input, &server->new_input);
 
