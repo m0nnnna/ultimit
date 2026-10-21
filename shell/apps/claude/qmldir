@@ -12,3 +12,4 @@ Entry 1.0 Entry.qml
 FolderPicker 1.0 FolderPicker.qml
 UsageMeters 1.0 UsageMeters.qml
 MiniPanel 1.0 MiniPanel.qml
+QuestionPanel 1.0 QuestionPanel.qml

@@ -79,8 +79,10 @@ for line in sys.stdin:
         out({"type": "user", "parent_tool_use_id": None, "session_id": session, "message": {"role": "user", "content": [
             {"type": "tool_result", "tool_use_id": "toolu_1", "is_error": not allowed,
              "content": "File created successfully" if allowed else r.get("message", "denied")}]}})
+        answers = (r.get("updatedInput") or {}).get("answers")
         out({"type": "assistant", "parent_tool_use_id": None, "session_id": session, "message": {"role": "assistant", "content": [
-            {"type": "text", "text": "Wrote it." if allowed else "Not written."}]}})
+            {"type": "text", "text": ("answers=" + json.dumps(answers, sort_keys=True)) if answers
+             else "Wrote it." if allowed else "Not written."}]}})
         out({"type": "result", "subtype": "success", "is_error": False, "session_id": session, "num_turns": 2,
              "total_cost_usd": 0.01, "duration_ms": 1200, "result": "", "permission_denials": [] if allowed else [{}]})
         continue
@@ -103,6 +105,16 @@ for line in sys.stdin:
     with open(transcript, "a") as f:
         f.write(json.dumps({"prompt": text}) + "\n")
     out({"type": "system", "subtype": "task_summary", "detail": "Thinking it over", "session_id": session})
+    if "question" in text.lower():
+        q = {"questions": [{"question": "Which colour?", "header": "Colour", "multiSelect": False,
+                            "options": [{"label": "Red", "description": "warm"}, {"label": "Blue", "description": "cool"}]},
+                           {"question": "Which sides?", "header": "Sides", "multiSelect": True,
+                            "options": [{"label": "Left", "description": ""}, {"label": "Right", "description": ""}]}]}
+        out({"type": "assistant", "parent_tool_use_id": None, "session_id": session, "message": {"role": "assistant", "content": [
+            {"type": "tool_use", "id": "toolu_1", "name": "AskUserQuestion", "input": q}]}})
+        out({"type": "control_request", "request_id": "req-1", "request": {
+            "subtype": "can_use_tool", "tool_name": "AskUserQuestion", "input": q, "tool_use_id": "toolu_1"}})
+        continue
     if "write" in text.lower():
         out({"type": "assistant", "parent_tool_use_id": None, "session_id": session, "message": {"role": "assistant", "content": [
             {"type": "tool_use", "id": "toolu_1", "name": "Write", "input": {"file_path": "/tmp/x/hello.txt", "content": "hi"}}]}})

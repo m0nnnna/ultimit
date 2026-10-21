@@ -930,6 +930,21 @@ def system_prompt(proj):
 
 
 # ---------------------------------------------------------------------------------------- session
+def questions_of(req):
+    """AskUserQuestion's questions, cleaned for the window: [{question, header, multi, options[{label, description}]}]."""
+    if req.get("tool_name") != "AskUserQuestion":
+        return []
+    out = []
+    for q in (req.get("input") or {}).get("questions") or []:
+        if not isinstance(q, dict) or not q.get("question"):
+            continue
+        opts = [{"label": str(o.get("label", "")), "description": str(o.get("description", ""))}
+                for o in q.get("options") or [] if isinstance(o, dict) and o.get("label")]
+        out.append({"question": str(q["question"]), "header": str(q.get("header", "")),
+                    "multi": bool(q.get("multiSelect")), "options": opts})
+    return out
+
+
 def summarize(name, inp):
     if not isinstance(inp, dict):
         return ""
@@ -1080,9 +1095,17 @@ class Session:
         self.write({"type": "user", "session_id": "", "parent_tool_use_id": None,
                     "message": {"role": "user", "content": content}})
 
-    def permit(self, rid, allow, always):
+    def permit(self, rid, allow, always, answers=None):
         req = self.asks.pop(rid, None)
         if req is None:
+            return
+        if allow and isinstance(answers, dict):     # AskUserQuestion: the picks go back in the tool's input
+            answers = {str(k): str(v) for k, v in answers.items()}
+            resp = {"behavior": "allow", "updatedInput": dict(req.get("input") or {}, answers=answers)}
+            self.write({"type": "control_response",
+                        "response": {"subtype": "success", "request_id": rid, "response": resp}})
+            self.record({"k": "note", "text": "Answered: " + "; ".join(answers.values()), "kind": "perm"})
+            self.emit({"ev": "asked", "rid": rid, "allow": True})
             return
         if allow:
             resp = {"behavior": "allow", "updatedInput": req.get("input") or {}}
@@ -1165,7 +1188,8 @@ class Session:
                            "summary": summarize(r.get("tool_name"), r.get("input")),
                            "detail": clip(json.dumps(r.get("input") or {}, indent=1, ensure_ascii=False), 3000),
                            "reason": r.get("decision_reason") or r.get("description") or "",
-                           "always": bool(r.get("permission_suggestions"))})
+                           "always": bool(r.get("permission_suggestions")),
+                           "questions": questions_of(r)})
             else:
                 self.write({"type": "control_response", "response": {"subtype": "error", "request_id": rid,
                                                                      "error": "Not supported by CLAUDE"}})
@@ -1251,7 +1275,7 @@ class Session:
             if op == "send" and ((c.get("text") or "").strip() or c.get("images")):
                 self.send(c.get("text") or "", bool(c.get("sysinfo")), [p for p in c.get("images") or [] if isinstance(p, str)])
             elif op == "permit":
-                self.permit(c.get("rid", ""), bool(c.get("allow")), bool(c.get("always")))
+                self.permit(c.get("rid", ""), bool(c.get("allow")), bool(c.get("always")), c.get("answers"))
             elif op == "interrupt":
                 self.control({"subtype": "interrupt"})
             elif op == "close":

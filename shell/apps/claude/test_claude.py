@@ -62,8 +62,8 @@ class ClaudeHelper(unittest.TestCase):
                 else:
                     send({"op": "close"})
             elif e["ev"] == "ask":
-                allow, always = answer(e)
-                send({"op": "permit", "rid": e["rid"], "allow": allow, "always": always})
+                send(dict({"op": "permit", "rid": e["rid"]}, **answer(e)) if e.get("questions") else
+                     dict(zip(("op", "rid", "allow", "always"), ("permit", e["rid"]) + tuple(answer(e)))))
         p.wait(timeout=30)
         p.stdin.close()
         p.stdout.close()
@@ -283,6 +283,20 @@ class ClaudeHelper(unittest.TestCase):
             t = [i for i in items if i["k"] == "tool"][0]
             self.assertEqual(t["status"], "ok" if allow else "error")
             self.assertTrue(any(i["k"] == "note" and i["kind"] == "perm" for i in items))
+
+    def test_ask_user_question(self):
+        acc = self.add_logged_in()
+        p = self.j("project-save", stdin=json.dumps({"name": "Game", "dir": self.proj_dir, "account": acc["id"]}))["project"]
+        picks = {"Which colour?": "Blue", "Which sides?": "Left, Right"}
+        ev = self.session(p["id"], "new", {"op": "send", "text": "ask me a question"},
+                          answer=lambda a: {"allow": True, "always": False, "answers": picks})
+        ask = [e for e in ev if e["ev"] == "ask"][0]
+        self.assertEqual([q["question"] for q in ask["questions"]], ["Which colour?", "Which sides?"])
+        self.assertEqual(([o["label"] for o in ask["questions"][0]["options"]], ask["questions"][1]["multi"]),
+                         (["Red", "Blue"], True))
+        self.assertEqual([e for e in ev if e["ev"] == "text"][0]["text"], "answers=" + json.dumps(picks, sort_keys=True))
+        items = self.j("chat", p["id"], ev[0]["chat"])["items"]
+        self.assertTrue(any(i["k"] == "note" and i["text"] == "Answered: Blue; Left, Right" for i in items))
 
     def test_not_logged_in_and_no_cli(self):
         acc = self.j("account-add", "Empty")["account"]

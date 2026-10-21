@@ -97,6 +97,12 @@ Item {
         addItem({ k: "note", kind: "perm", text: (allow ? (always ? "Allowed (always)" : "Allowed") : "Declined") + ": " + ask.tool + " " + ask.summary });
         nextAsk();
     }
+    function answer(answers) {        // AskUserQuestion: { question: answer }
+        if (!ask || !proc) return;
+        proc.write(JSON.stringify({ op: "permit", rid: ask.rid, allow: true, always: false, answers: answers }) + "\n");
+        addItem({ k: "note", kind: "perm", text: "Answered: " + Object.keys(answers).map(k => answers[k]).join("; ") });
+        nextAsk();
+    }
     function nextAsk() { ask = askQueue.length ? askQueue[0] : null; askQueue = askQueue.slice(1); }
     function stopProc() {
         if (!proc) return;

@@ -188,18 +188,29 @@ PanelWindow {
                 id: askCol
                 x: 14; y: 10; width: parent.width - 28
                 spacing: 6
+                readonly property bool isQuestion: !!win.chat && !!win.chat.ask && !!win.chat.ask.questions && win.chat.ask.questions.length > 0
                 Text {
                     width: parent.width; elide: Text.ElideRight
-                    text: win.chat && win.chat.ask ? ("Claude wants to use " + win.chat.ask.tool).toUpperCase()
+                    text: askCol.isQuestion ? "CLAUDE HAS A QUESTION" + (win.chat.askQueue.length ? "   (+" + win.chat.askQueue.length + " MORE)" : "")
+                          : win.chat && win.chat.ask ? ("Claude wants to use " + win.chat.ask.tool).toUpperCase()
                           + (win.chat.askQueue.length ? "   (+" + win.chat.askQueue.length + " MORE)" : "") : ""
                     color: Theme.warn; font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.6
                 }
+                QuestionPanel {
+                    visible: askCol.isQuestion
+                    width: parent.width; compact: true
+                    ask: askCol.isQuestion ? win.chat.ask : null
+                    onAnswered: a => win.chat.answer(a)
+                    onSkipped: win.chat.permit(false, false)
+                }
                 Text {
+                    visible: !askCol.isQuestion
                     width: parent.width; wrapMode: Text.WrapAnywhere; maximumLineCount: 4; elide: Text.ElideRight
                     text: win.chat && win.chat.ask ? win.chat.ask.summary : ""
                     color: Theme.fg; font.family: Theme.mono; font.pixelSize: 12
                 }
                 Row {
+                    visible: !askCol.isQuestion
                     spacing: 8
                     ChamferButton { implicitHeight: 28; text: "Allow"; primary: true; onClicked: win.chat.permit(true, false) }
                     ChamferButton { implicitHeight: 28; text: "Always"; visible: !!win.chat && !!win.chat.ask && win.chat.ask.always; onClicked: win.chat.permit(true, true) }

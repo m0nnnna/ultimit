@@ -608,23 +608,38 @@ FloatingWindow {
                             id: askCol
                             x: 18; y: 14; width: parent.width - 36
                             spacing: 8
+                            readonly property bool isQuestion: !!chat.ask && !!chat.ask.questions && chat.ask.questions.length > 0
                             Text {
+                                visible: askCol.isQuestion
+                                text: "CLAUDE HAS A QUESTION" + (chat.askQueue.length ? "   (+" + chat.askQueue.length + " MORE)" : "")
+                                color: Theme.warn; font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.8
+                            }
+                            QuestionPanel {
+                                visible: askCol.isQuestion
+                                width: parent.width
+                                ask: askCol.isQuestion ? chat.ask : null
+                                onAnswered: a => chat.answer(a)
+                                onSkipped: chat.permit(false, false)
+                            }
+                            Text {
+                                visible: !askCol.isQuestion
                                 text: chat.ask ? ("Claude wants to use " + chat.ask.tool).toUpperCase() + (chat.askQueue.length ? "   (+" + chat.askQueue.length + " MORE)" : "") : ""
                                 color: Theme.warn; font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.8
                             }
                             Text {
+                                visible: !askCol.isQuestion
                                 width: parent.width; wrapMode: Text.WrapAnywhere; maximumLineCount: 6; elide: Text.ElideRight
                                 text: chat.ask ? chat.ask.summary : ""
                                 color: Theme.fg; font.family: Theme.mono; font.pixelSize: 13
                             }
                             Text {
-                                visible: !!chat.ask && chat.ask.reason !== "" && chat.ask.reason !== chat.ask.summary
+                                visible: !askCol.isQuestion && !!chat.ask && chat.ask.reason !== "" && chat.ask.reason !== chat.ask.summary
                                 width: parent.width; wrapMode: Text.Wrap
                                 text: chat.ask ? chat.ask.reason : ""
                                 color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
                             }
                             Rectangle {
-                                visible: askMore.checked
+                                visible: askMore.checked && !askCol.isQuestion
                                 width: parent.width; height: Math.min(detail.implicitHeight + 16, 220)
                                 color: Theme.bg1; border.width: 1; border.color: Theme.line
                                 Flickable {
@@ -641,6 +656,7 @@ FloatingWindow {
                                 }
                             }
                             Row {
+                                visible: !askCol.isQuestion
                                 spacing: 8
                                 ChamferButton { text: "Allow"; primary: true; onClicked: chat.permit(true, false) }
                                 ChamferButton { text: "Always allow"; visible: !!chat.ask && chat.ask.always; onClicked: chat.permit(true, true) }
