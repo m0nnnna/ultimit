@@ -159,7 +159,12 @@ Scope {
         enabled: Config.lockAfter > 0
         timeout: Config.lockAfter
         respectInhibitors: true
-        onIsIdleChanged: if (isIdle) { console.log("[lock] idle: locking"); root.lock(); }
+        onIsIdleChanged: if (isIdle) {
+            console.log("[lock] idle: locking");
+            root.lock();
+            // Phone: blank the panel too; the power key wakes it.
+            if (root.phone && !dryRun) Quickshell.execDetached([Quickshell.shellPath("bin/ultimitctl"), "screen", "off"]);
+        }
     }
     IdleMonitor {
         id: suspendMon
@@ -168,7 +173,9 @@ Scope {
         respectInhibitors: true
         onIsIdleChanged: if (isIdle) root.idleSuspend()
     }
+    readonly property bool phone: Quickshell.env("ULTIMIT_OSK") === "1"
     function idleSuspend() {
+        if (phone) { console.log("[lock] idle suspend skipped (phone: screen blanks instead)"); return; }
         if (!Config.suspendOnAC && !UPower.onBattery) {
             console.log("[lock] idle suspend skipped (on AC)");
             return;

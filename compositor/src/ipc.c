@@ -183,6 +183,17 @@ static void run_command(struct ul_server *server, char *line, struct out *o) {
 		write_state(server, o);
 		return;
 	}
+	if (strcmp(cmd, "screen") == 0) {
+		/* screen on|off|toggle: blank the panels (phone idle; the power key wakes them). */
+		char arg[16] = {0};
+		sscanf(line, "%*s %15s", arg);
+		bool off = strcmp(arg, "off") == 0 ? true : strcmp(arg, "on") == 0 ? false :
+			!server->screen_off;
+		if (off != server->screen_off)
+			output_set_screen_off(server, off);
+		put(o, "{\"ok\":true,\"screen_off\":%s}", server->screen_off ? "true" : "false");
+		return;
+	}
 	if (strcmp(cmd, "cursor-theme") == 0) {
 		/* cursor-theme NAME [SIZE]: the shell sends this on a skin change. */
 		char name[128] = {0};
