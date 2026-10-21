@@ -1,0 +1,5 @@
+#!/bin/sh
+# PinePhone Pro: keep /boot/ppp.dtb matching the newest kernel (GRUB loads it).
+d=/usr/lib/firmware/$1/device-tree/rockchip/rk3399-pinephone-pro.dtb
+[ -f $d ] && cp $d /boot/ppp.dtb
+exit 0
