@@ -481,6 +481,7 @@ struct wlr_scene_tree *layer_popup_parent(struct wlr_layer_surface_v1 *layer_sur
 /* input.c */
 void input_init(struct ul_server *server);
 void text_input_init(struct ul_server *server);
+void text_input_tap(struct ul_server *server, struct wlr_surface *surface);
 void input_update_hover(struct ul_server *server);
 void input_update_pointer_focus(struct ul_server *server, uint32_t time_msec);
 void input_reapply_keyboards(struct ul_server *server);

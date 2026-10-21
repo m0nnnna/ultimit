@@ -4,7 +4,8 @@
  * Apps enable a text input while one of their text fields has focus and
  * disable it when it loses focus. With an OSK running (ULTIMIT_OSK=1, a
  * phone), enable shows wvkbd and disable hides it again a moment later, so
- * moving between two fields doesn't flash it. Text itself still arrives
+ * moving between two fields doesn't flash it; a tap outside the typing app
+ * hides it too. Text itself still arrives
  * through wvkbd's virtual keyboard; there is no input method here.
  */
 
@@ -107,6 +108,25 @@ static void keyboard_focus_change(struct wl_listener *listener, void *data) {
 	wl_list_for_each(input, &server->text_input->text_inputs, link) {
 		ti_focus(input, event->new_surface);
 	}
+}
+
+/* A finger went down on `surface` (not the OSK): back into the app that is
+ * typing shows the keyboard again (after a hide from the tray), anywhere else
+ * (desktop, bar, another window) puts it away. */
+void text_input_tap(struct ul_server *server, struct wlr_surface *surface) {
+	if (!server->text_input || enabled_inputs == 0) {
+		return;
+	}
+	struct wl_client *client = surface ? wl_resource_get_client(surface->resource) : NULL;
+	struct wlr_text_input_v3 *input;
+	wl_list_for_each(input, &server->text_input->text_inputs, link) {
+		if (input->current_enabled && client &&
+				wl_resource_get_client(input->resource) == client) {
+			osk_signal(true);
+			return;
+		}
+	}
+	osk_signal(false);
 }
 
 void text_input_init(struct ul_server *server) {

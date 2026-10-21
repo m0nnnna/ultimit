@@ -769,6 +769,7 @@ static void touch_down(struct wl_listener *listener, void *data) {
 	if (server->touch_id >= 0) {
 		return;
 	}
+	text_input_tap(server, surface);
 	server->touch_id = event->touch_id;
 	touch_move_to(server, event->touch, event->time_msec, event->x, event->y);
 	touch_button(server, event->time_msec, true);
