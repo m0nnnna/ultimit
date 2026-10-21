@@ -212,6 +212,7 @@ int main(int argc, char *argv[]) {
 	xdg_init(&server);
 	layer_init(&server);
 	input_init(&server);
+	text_input_init(&server);
 	lock_init(&server);
 	xwayland_init(&server);
 
@@ -271,6 +272,10 @@ int main(int argc, char *argv[]) {
 	};
 	for (size_t i = 0; i < sizeof(listeners) / sizeof(listeners[0]); i++) {
 		wl_list_remove(&listeners[i]->link);
+	}
+	if (server.text_input) {
+		wl_list_remove(&server.new_text_input.link);
+		wl_list_remove(&server.text_focus_change.link);
 	}
 	if (server.xwayland) {
 		/* wlroots asserts nobody is still listening when XWayland goes away. */

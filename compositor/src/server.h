@@ -197,6 +197,8 @@ struct ul_server {
 	struct wlr_seat *seat;
 	struct wl_listener new_input;
 	struct wl_listener new_virtual_keyboard;
+	struct wlr_text_input_manager_v3 *text_input; /* NULL unless ULTIMIT_OSK=1 */
+	struct wl_listener new_text_input, text_focus_change;
 	struct wl_listener new_virtual_pointer;
 	struct wl_listener request_cursor;
 	struct wl_listener request_set_selection;
@@ -478,6 +480,7 @@ struct wlr_scene_tree *layer_popup_parent(struct wlr_layer_surface_v1 *layer_sur
 
 /* input.c */
 void input_init(struct ul_server *server);
+void text_input_init(struct ul_server *server);
 void input_update_hover(struct ul_server *server);
 void input_update_pointer_focus(struct ul_server *server, uint32_t time_msec);
 void input_reapply_keyboards(struct ul_server *server);

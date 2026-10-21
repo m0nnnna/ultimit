@@ -14,6 +14,7 @@
 #include <wlr/types/wlr_pointer.h>
 #include <wlr/types/wlr_primary_selection.h>
 #include <wlr/types/wlr_touch.h>
+#include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_virtual_keyboard_v1.h>
 #include <wlr/types/wlr_virtual_pointer_v1.h>
 #include <wlr/util/region.h>
@@ -695,10 +696,32 @@ static void cursor_frame(struct wl_listener *listener, void *data) {
 
 /* ---- touchscreen --------------------------------------------------------- */
 
-/* For now the first finger is the mouse: down warps the cursor there and
- * presses the left button, moving drags, lifting releases. Every pointer
- * path (focus, window moves, snapping, the greeter) then works by touch.
- * Other fingers are ignored until there are real touch gestures. */
+/* Fingers on the on-screen keyboard go to it as real touches (every finger,
+ * so two-thumb typing works). Elsewhere the first finger is the mouse: down
+ * warps the cursor there and presses the left button, moving drags, lifting
+ * releases. Every pointer path (focus, window moves, snapping, the greeter)
+ * then works by touch; other fingers are ignored there for now. */
+#define UL_OSK_TOUCHES 10
+static struct {
+	bool used;
+	int32_t id;
+	double ox, oy; /* layout position of the touched surface's origin */
+} osk_touch[UL_OSK_TOUCHES];
+
+static int osk_touch_find(int32_t id) {
+	for (int i = 0; i < UL_OSK_TOUCHES; i++) {
+		if (osk_touch[i].used && osk_touch[i].id == id) return i;
+	}
+	return -1;
+}
+
+static bool surface_is_osk(struct wlr_surface *surface) {
+	struct wlr_layer_surface_v1 *ls = surface ?
+		wlr_layer_surface_v1_try_from_wlr_surface(wlr_surface_get_root_surface(surface)) : NULL;
+	struct ul_layer_surface *l = ls ? ls->data : NULL;
+	return l && l->osk;
+}
+
 static void touch_button(struct ul_server *server, uint32_t time_msec, bool down) {
 	struct wlr_pointer_button_event ev = {
 		.time_msec = time_msec,
@@ -720,7 +743,30 @@ static void touch_move_to(struct ul_server *server, struct wlr_touch *touch,
 static void touch_down(struct wl_listener *listener, void *data) {
 	struct ul_server *server = wl_container_of(listener, server, touch_down);
 	struct wlr_touch_down_event *event = data;
-	if (server->touch_id >= 0 || server->screen_off) {
+	if (server->screen_off) {
+		return;
+	}
+	double lx, ly, sx, sy;
+	wlr_cursor_absolute_to_layout_coords(server->cursor, &event->touch->base,
+		event->x, event->y, &lx, &ly);
+	struct ul_view *view;
+	struct wlr_surface *surface = surface_at(server, lx, ly, &sx, &sy, &view, NULL);
+	if (surface_is_osk(surface)) {
+		for (int i = 0; i < UL_OSK_TOUCHES; i++) {
+			if (!osk_touch[i].used) {
+				osk_touch[i].used = true;
+				osk_touch[i].id = event->touch_id;
+				osk_touch[i].ox = lx - sx;
+				osk_touch[i].oy = ly - sy;
+				idle_activity(server);
+				wlr_seat_touch_notify_down(server->seat, surface, event->time_msec,
+					event->touch_id, sx, sy);
+				break;
+			}
+		}
+		return;
+	}
+	if (server->touch_id >= 0) {
 		return;
 	}
 	server->touch_id = event->touch_id;
@@ -731,6 +777,15 @@ static void touch_down(struct wl_listener *listener, void *data) {
 static void touch_motion(struct wl_listener *listener, void *data) {
 	struct ul_server *server = wl_container_of(listener, server, touch_motion);
 	struct wlr_touch_motion_event *event = data;
+	int i = osk_touch_find(event->touch_id);
+	if (i >= 0) {
+		double lx, ly;
+		wlr_cursor_absolute_to_layout_coords(server->cursor, &event->touch->base,
+			event->x, event->y, &lx, &ly);
+		wlr_seat_touch_notify_motion(server->seat, event->time_msec, event->touch_id,
+			lx - osk_touch[i].ox, ly - osk_touch[i].oy);
+		return;
+	}
 	if (event->touch_id == server->touch_id) {
 		touch_move_to(server, event->touch, event->time_msec, event->x, event->y);
 		wlr_seat_pointer_notify_frame(server->seat);
@@ -740,6 +795,12 @@ static void touch_motion(struct wl_listener *listener, void *data) {
 static void touch_up(struct wl_listener *listener, void *data) {
 	struct ul_server *server = wl_container_of(listener, server, touch_up);
 	struct wlr_touch_up_event *event = data;
+	int i = osk_touch_find(event->touch_id);
+	if (i >= 0) {
+		osk_touch[i].used = false;
+		wlr_seat_touch_notify_up(server->seat, event->time_msec, event->touch_id);
+		return;
+	}
 	if (event->touch_id == server->touch_id) {
 		server->touch_id = -1;
 		touch_button(server, event->time_msec, false);
@@ -749,6 +810,12 @@ static void touch_up(struct wl_listener *listener, void *data) {
 static void touch_cancel(struct wl_listener *listener, void *data) {
 	struct ul_server *server = wl_container_of(listener, server, touch_cancel);
 	struct wlr_touch_cancel_event *event = data;
+	int i = osk_touch_find(event->touch_id);
+	if (i >= 0) {
+		osk_touch[i].used = false;
+		wlr_seat_touch_notify_up(server->seat, event->time_msec, event->touch_id);
+		return;
+	}
 	if (event->touch_id == server->touch_id) {
 		server->touch_id = -1;
 		touch_button(server, event->time_msec, false);
@@ -756,7 +823,11 @@ static void touch_cancel(struct wl_listener *listener, void *data) {
 }
 
 static void touch_frame(struct wl_listener *listener, void *data) {
-	/* each event above already ends its own pointer frame */
+	/* the pointer path ends its own frames; real touches end theirs here */
+	struct ul_server *server = wl_container_of(listener, server, touch_frame);
+	if (wlr_seat_touch_num_points(server->seat) > 0) {
+		wlr_seat_touch_notify_frame(server->seat);
+	}
 }
 
 static void request_set_shape(struct wl_listener *listener, void *data) {
@@ -941,6 +1012,9 @@ static void add_input_device(struct ul_server *server, struct wlr_input_device *
 	uint32_t caps = WL_SEAT_CAPABILITY_POINTER;
 	if (!wl_list_empty(&server->keyboards)) {
 		caps |= WL_SEAT_CAPABILITY_KEYBOARD;
+	}
+	if (!wl_list_empty(&server->touches)) {
+		caps |= WL_SEAT_CAPABILITY_TOUCH;
 	}
 	wlr_seat_set_capabilities(server->seat, caps);
 }
