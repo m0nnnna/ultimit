@@ -91,3 +91,4 @@ flatpak
 fwupd
 ufw
 7zip
+wvkbd

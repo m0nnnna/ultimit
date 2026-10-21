@@ -12,6 +12,7 @@
 #include <wlr/types/wlr_keyboard.h>
 #include <wlr/types/wlr_pointer.h>
 #include <wlr/types/wlr_primary_selection.h>
+#include <wlr/types/wlr_touch.h>
 #include <wlr/types/wlr_virtual_keyboard_v1.h>
 #include <wlr/types/wlr_virtual_pointer_v1.h>
 #include <wlr/util/region.h>
@@ -691,6 +692,72 @@ static void cursor_frame(struct wl_listener *listener, void *data) {
 	wlr_seat_pointer_notify_frame(server->seat);
 }
 
+/* ---- touchscreen --------------------------------------------------------- */
+
+/* For now the first finger is the mouse: down warps the cursor there and
+ * presses the left button, moving drags, lifting releases. Every pointer
+ * path (focus, window moves, snapping, the greeter) then works by touch.
+ * Other fingers are ignored until there are real touch gestures. */
+static void touch_button(struct ul_server *server, uint32_t time_msec, bool down) {
+	struct wlr_pointer_button_event ev = {
+		.time_msec = time_msec,
+		.button = BTN_LEFT,
+		.state = down ? WL_POINTER_BUTTON_STATE_PRESSED : WL_POINTER_BUTTON_STATE_RELEASED,
+	};
+	cursor_button(&server->cursor_button, &ev);
+	wlr_seat_pointer_notify_frame(server->seat);
+}
+
+static void touch_move_to(struct ul_server *server, struct wlr_touch *touch,
+		uint32_t time_msec, double x, double y) {
+	double lx, ly;
+	wlr_cursor_absolute_to_layout_coords(server->cursor, &touch->base, x, y, &lx, &ly);
+	double dx = lx - server->cursor->x, dy = ly - server->cursor->y;
+	handle_motion(server, &touch->base, time_msec, dx, dy, dx, dy);
+}
+
+static void touch_down(struct wl_listener *listener, void *data) {
+	struct ul_server *server = wl_container_of(listener, server, touch_down);
+	struct wlr_touch_down_event *event = data;
+	if (server->touch_id >= 0) {
+		return;
+	}
+	server->touch_id = event->touch_id;
+	touch_move_to(server, event->touch, event->time_msec, event->x, event->y);
+	touch_button(server, event->time_msec, true);
+}
+
+static void touch_motion(struct wl_listener *listener, void *data) {
+	struct ul_server *server = wl_container_of(listener, server, touch_motion);
+	struct wlr_touch_motion_event *event = data;
+	if (event->touch_id == server->touch_id) {
+		touch_move_to(server, event->touch, event->time_msec, event->x, event->y);
+		wlr_seat_pointer_notify_frame(server->seat);
+	}
+}
+
+static void touch_up(struct wl_listener *listener, void *data) {
+	struct ul_server *server = wl_container_of(listener, server, touch_up);
+	struct wlr_touch_up_event *event = data;
+	if (event->touch_id == server->touch_id) {
+		server->touch_id = -1;
+		touch_button(server, event->time_msec, false);
+	}
+}
+
+static void touch_cancel(struct wl_listener *listener, void *data) {
+	struct ul_server *server = wl_container_of(listener, server, touch_cancel);
+	struct wlr_touch_cancel_event *event = data;
+	if (event->touch_id == server->touch_id) {
+		server->touch_id = -1;
+		touch_button(server, event->time_msec, false);
+	}
+}
+
+static void touch_frame(struct wl_listener *listener, void *data) {
+	/* each event above already ends its own pointer frame */
+}
+
 static void request_set_shape(struct wl_listener *listener, void *data) {
 	struct ul_server *server = wl_container_of(listener, server, request_set_shape);
 	struct wlr_cursor_shape_manager_v1_request_set_shape_event *event = data;
@@ -839,6 +906,9 @@ static void add_input_device(struct ul_server *server, struct wlr_input_device *
 		wlr_cursor_attach_input_device(server->cursor, device);
 		break;
 	}
+	case WLR_INPUT_DEVICE_TOUCH:
+		wlr_cursor_attach_input_device(server->cursor, device);
+		break;
 	default:
 		break;
 	}
@@ -965,6 +1035,17 @@ void input_init(struct ul_server *server) {
 	wl_signal_add(&server->cursor->events.axis, &server->cursor_axis);
 	server->cursor_frame.notify = cursor_frame;
 	wl_signal_add(&server->cursor->events.frame, &server->cursor_frame);
+	server->touch_id = -1;
+	server->touch_down.notify = touch_down;
+	wl_signal_add(&server->cursor->events.touch_down, &server->touch_down);
+	server->touch_up.notify = touch_up;
+	wl_signal_add(&server->cursor->events.touch_up, &server->touch_up);
+	server->touch_motion.notify = touch_motion;
+	wl_signal_add(&server->cursor->events.touch_motion, &server->touch_motion);
+	server->touch_cancel.notify = touch_cancel;
+	wl_signal_add(&server->cursor->events.touch_cancel, &server->touch_cancel);
+	server->touch_frame.notify = touch_frame;
+	wl_signal_add(&server->cursor->events.touch_frame, &server->touch_frame);
 
 	struct wlr_cursor_shape_manager_v1 *shapes =
 		wlr_cursor_shape_manager_v1_create(server->display, 1);

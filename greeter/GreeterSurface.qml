@@ -12,8 +12,10 @@ PanelWindow {
     color: Theme.bg1
 
     anchors { top: true; bottom: true; left: true; right: true }
-    exclusionMode: ExclusionMode.Ignore
-    WlrLayershell.layer: WlrLayer.Overlay
+    // with an on-screen keyboard (ultimit-greeter-session) stay beside it, on its layer
+    readonly property bool osk: Quickshell.env("ULTIMIT_OSK") === "1"
+    exclusionMode: osk ? ExclusionMode.Normal : ExclusionMode.Ignore
+    WlrLayershell.layer: osk ? WlrLayer.Top : WlrLayer.Overlay
     WlrLayershell.namespace: "ultimit-greeter"
     WlrLayershell.keyboardFocus: primary ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
@@ -166,6 +168,7 @@ PanelWindow {
                     readonly property bool bad: win.ctl.denied
                     readonly property bool canType: win.ctl.phase === "prompt"
                     Component.onCompleted: forceActiveFocus()
+                    MouseArea { anchors.fill: parent; onPressed: field.forceActiveFocus() }
 
                     Keys.onPressed: e => {
                         if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) {
@@ -222,6 +225,15 @@ PanelWindow {
                         width: 2; height: 18; color: Theme.accent
                         Timer { interval: 530; repeat: true; running: Config.motion; onTriggered: caret.caretOn = !caret.caretOn }
                     }
+                }
+
+                // touch screens have no Enter key to hand
+                ChamferButton {
+                    width: parent.width; height: 40
+                    primary: true
+                    text: "Log in"
+                    visible: win.ctl.phase === "prompt"
+                    onClicked: { field.forceActiveFocus(); win.ctl.submit(); }
                 }
 
                 // status line

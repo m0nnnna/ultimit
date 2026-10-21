@@ -4,7 +4,7 @@
 # session), the compositor exits (-x) and greetd takes over. Installed at
 # /opt/ultimit/session/ultimit-greeter-session; everything is found relative to that.
 ROOT=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
-export LD_LIBRARY_PATH="$ROOT/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH="$ROOT/lib/$(uname -m)-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export XDG_CURRENT_DESKTOP=Ultimit XDG_SESSION_TYPE=wayland
 export QT_QPA_PLATFORM=wayland
 # Hinted text like the session (see ultimit-shell)
@@ -42,4 +42,10 @@ if [ -z "${WLR_DRM_DEVICES:-}" ]; then
 	done
 	[ -n "$primary" ] && [ -n "$others" ] && export WLR_DRM_DEVICES="$primary$others"
 fi
-exec "$ROOT/bin/ultimit" -x -s "$ROOT/bin/qs -p $ROOT/greeter"
+# Touchscreen and no keyboard to type with (phones): an on-screen keyboard beside the login screen.
+osk=""
+if grep -qi touchscreen /proc/bus/input/devices 2>/dev/null && command -v wvkbd-mobintl >/dev/null; then
+	osk="wvkbd-mobintl & "
+	export ULTIMIT_OSK=1
+fi
+exec "$ROOT/bin/ultimit" -x -s "$osk exec $ROOT/bin/qs -p $ROOT/greeter"

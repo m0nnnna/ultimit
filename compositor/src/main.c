@@ -262,6 +262,8 @@ int main(int argc, char *argv[]) {
 		&server.new_layer_surface, &server.new_decoration, &server.new_kde_decoration,
 		&server.request_activate, &server.cursor_motion, &server.cursor_motion_absolute,
 		&server.cursor_button, &server.cursor_axis, &server.cursor_frame,
+		&server.touch_down, &server.touch_up, &server.touch_motion, &server.touch_cancel,
+		&server.touch_frame,
 		&server.request_set_shape, &server.new_constraint, &server.constraint_destroy,
 		&server.new_input, &server.new_virtual_keyboard, &server.new_virtual_pointer,
 		&server.request_cursor, &server.request_set_selection,

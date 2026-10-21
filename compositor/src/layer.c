@@ -57,10 +57,14 @@ void layer_arrange(struct ul_output *output) {
 		ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY, ZWLR_LAYER_SHELL_V1_LAYER_TOP,
 		ZWLR_LAYER_SHELL_V1_LAYER_BOTTOM, ZWLR_LAYER_SHELL_V1_LAYER_BACKGROUND,
 	};
+	/* Surfaces that reserve space (panels, the on-screen keyboard) first, so
+	 * the rest fit in what is left whatever order they were mapped in. */
+	for (int pass = 0; pass < 2; pass++)
 	for (size_t i = 0; i < 4; i++) {
 		struct ul_layer_surface *l;
 		wl_list_for_each(l, &output->layer_surfaces[order[i]], link) {
-			if (!l->layer_surface->initialized) {
+			if (!l->layer_surface->initialized ||
+					(l->layer_surface->current.exclusive_zone > 0) != (pass == 0)) {
 				continue;
 			}
 			wlr_scene_layer_surface_v1_configure(l->scene, &full, &usable);

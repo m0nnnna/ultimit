@@ -183,6 +183,9 @@ struct ul_server {
 	struct wl_listener cursor_button;
 	struct wl_listener cursor_axis;
 	struct wl_listener cursor_frame;
+	/* Touchscreen: the first finger drives the pointer (input.c) */
+	struct wl_listener touch_down, touch_up, touch_motion, touch_cancel, touch_frame;
+	int32_t touch_id; /* -1: no finger down */
 	struct wl_listener request_set_shape;
 
 	struct wlr_relative_pointer_manager_v1 *relative_pointer;
