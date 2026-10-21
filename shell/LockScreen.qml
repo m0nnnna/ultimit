@@ -148,15 +148,25 @@ Scope {
     }
 
     // ---------------- idle: dim -> lock -> suspend ----------------
+    // IdleMonitor keeps the timeout it was armed with, so re-arm it when a timeout
+    // changes (Persist loads the saved ones after startup, Settings edits them).
+    property bool rearm: false
+    function rearmIdle() { rearm = true; rearm = false; }
+    Connections {
+        target: Config
+        function onDimAfterChanged() { root.rearmIdle(); }
+        function onLockAfterChanged() { root.rearmIdle(); }
+        function onSuspendAfterChanged() { root.rearmIdle(); }
+    }
     IdleMonitor {
         id: dimMon
-        enabled: Config.dimAfter > 0 && !root.locked
+        enabled: Config.dimAfter > 0 && !root.locked && !root.rearm
         timeout: Config.dimAfter
         respectInhibitors: true
     }
     IdleMonitor {
         id: lockMon
-        enabled: Config.lockAfter > 0
+        enabled: Config.lockAfter > 0 && !root.rearm
         timeout: Config.lockAfter
         respectInhibitors: true
         onIsIdleChanged: if (isIdle) {
@@ -168,7 +178,7 @@ Scope {
     }
     IdleMonitor {
         id: suspendMon
-        enabled: Config.suspendAfter > 0
+        enabled: Config.suspendAfter > 0 && !root.rearm
         timeout: Config.suspendAfter
         respectInhibitors: true
         onIsIdleChanged: if (isIdle) root.idleSuspend()
