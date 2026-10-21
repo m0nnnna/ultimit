@@ -42,10 +42,16 @@ Scope {
         password = ""; authState = "idle"; message = ""; pendingSecret = "";
         Config.closeLauncher(); Config.closeMenu(); SysState.closeQs();
         sessionLock.locked = true;
+        osk("USR2");   // show
+    }
+    // Touchscreens (ULTIMIT_OSK, ultimit-session): the on-screen keyboard to type the password with
+    function osk(sig) {
+        if (Quickshell.env("ULTIMIT_OSK") === "1") Quickshell.execDetached(["pkill", "--signal", sig, "-x", "wvkbd-mobintl"]);
     }
     function unlock() {
         password = ""; pendingSecret = ""; authState = "idle"; message = "";
         sessionLock.locked = false;
+        osk("USR1");   // hide
     }
     Connections {
         target: Config

@@ -16,6 +16,8 @@ WlSessionLockSurface {
 
     readonly property bool primary: screen !== null && Config.isMainScreen(screen.name)
     readonly property real u: Math.max(.7, Math.min(width, height) / 800)
+    // the on-screen keyboard covers the bottom while locked (LockScreen.osk): centre above it
+    readonly property real oskH: surf.primary && Quickshell.env("ULTIMIT_OSK") === "1" ? 480 : 0
 
     SystemClock { id: clock; precision: SystemClock.Seconds }
     readonly property var days: ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"]
@@ -62,7 +64,7 @@ WlSessionLockSurface {
         Column {
             id: center
             anchors.horizontalCenter: parent.horizontalCenter
-            y: Math.max(40, parent.height * .5 - height * .5 - (surf.primary ? 90 * surf.u : 0))
+            y: Math.max(40, (parent.height - surf.oskH) * .5 - height * .5 - (surf.primary ? 90 * surf.u : 0))
             spacing: 8 * surf.u
             Emblem { anchors.horizontalCenter: parent.horizontalCenter; size: 54 * surf.u; color: Theme.fg }
             Text {
