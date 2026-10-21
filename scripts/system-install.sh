@@ -55,7 +55,7 @@ if [ -n "$RELEASE" ]; then
 	mv "$PREFIX.new/opt/ultimit" "$PREFIX"
 	# DXVK (install-apps.sh) lives in /opt/ultimit but isn't part of a release
 	if [ -d "$PREFIX.previous/dxvk" ] && [ ! -e "$PREFIX/dxvk" ]; then cp -a "$PREFIX.previous/dxvk" "$PREFIX/dxvk"; fi
-	install -D -m644 "$PREFIX.new/usr/lib/x86_64-linux-gnu/security/pam_oo7.so" /usr/lib/x86_64-linux-gnu/security/pam_oo7.so
+	install -D -m644 "$PREFIX.new/usr/lib/$(uname -m)-linux-gnu/security/pam_oo7.so" /usr/lib/$(uname -m)-linux-gnu/security/pam_oo7.so
 	rm -rf "$PREFIX.new"
 	note "Ultimit $(cat "$PREFIX/VERSION")"
 elif [ -n "$TREE" ]; then
@@ -291,7 +291,7 @@ done
 # (no "fc-list | grep -q": with pipefail, grep quitting early makes fc-list fail with SIGPIPE)
 [ "$(fc-list : family | grep -c -E 'Michroma|Chakra Petch|Share Tech Mono')" -ge 3 ] || { warn "fonts not found by fontconfig"; fail=1; }
 [ -f /usr/share/wayland-sessions/ultimit.desktop ] || { warn "session file missing"; fail=1; }
-[ -f /usr/lib/x86_64-linux-gnu/security/pam_oo7.so ] || { warn "keyring unlock module missing"; fail=1; }
+[ -f /usr/lib/$(uname -m)-linux-gnu/security/pam_oo7.so ] || { warn "keyring unlock module missing"; fail=1; }
 [ "$fail" = 0 ] || die "the install is incomplete (see the warnings above)"
 rm -rf "$PREFIX.previous"
 note "Ultimit $(cat "$PREFIX/VERSION") is in place"

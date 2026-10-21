@@ -21,7 +21,7 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
 PREFIX=/opt/ultimit
 WORK=${ULTIMIT_BUILD_DIR:-$HOME/.cache/ultimit-build}
-LIBDIR=lib/x86_64-linux-gnu
+LIBDIR=lib/$(uname -m)-linux-gnu
 SKIP_PACKAGES=${ULTIMIT_SKIP_PACKAGES:-}   # space separated, e.g. for test machines
 
 # Pinned versions (the ones Ultimit is developed against)
@@ -63,7 +63,7 @@ step "Checking this computer"
 [ "$(id -u)" -ne 0 ] || die "run this as your normal user, not root (it uses sudo when needed)"
 . /etc/os-release
 [ "${ID:-}" = ubuntu ] && [ "${VERSION_ID:-}" = 26.04 ] || die "Ultimit needs Ubuntu 26.04 (this is ${PRETTY_NAME:-unknown})"
-[ "$(uname -m)" = x86_64 ] || die "Ultimit needs a 64-bit PC (x86_64)"
+case $(uname -m) in x86_64|aarch64) ;; *) die "Ultimit needs a 64-bit PC (x86_64) or arm64";; esac
 free_gb() { df -Pk "$1" | awk 'NR==2 {print int($4 / 1048576)}'; }
 [ "$(free_gb "$WORK")" -ge 12 ] || die "need 12 GB free for building in $WORK"
 [ "$(free_gb /)" -ge 8 ] || die "need 8 GB free on / for the install and its packages"
@@ -169,7 +169,7 @@ if built oo7 "$OO7_REF"; then note "already installed"; else
 		"$CARGO_HOME/bin/cargo" build --release -q -j "$JOBS" -p oo7-daemon -p oo7-pam )
 	sudo install -D -m755 -s "$d/target/release/oo7-daemon" -t "$PREFIX/bin/"
 	sudo install -D -m755 -s "$d/target/release/oo7-daemon-login" -t "$PREFIX/libexec/"
-	sudo install -D -m644 "$d/target/release/libpam_oo7.so" /usr/lib/x86_64-linux-gnu/security/pam_oo7.so
+	sudo install -D -m644 "$d/target/release/libpam_oo7.so" /usr/$LIBDIR/security/pam_oo7.so
 	mark oo7 "$OO7_REF"
 fi
 
@@ -179,6 +179,7 @@ ninja -C "$WORK/compositor" -j "$JOBS"
 sudo install -D -m755 "$WORK/compositor/ultimit" "$PREFIX/bin/ultimit"
 [ "$(ldd "$PREFIX/bin/ultimit" | grep -c "not found")" = 0 ] || die "the compositor can't find a library: $(ldd "$PREFIX/bin/ultimit" | grep 'not found')"
 
+if [ "$(uname -m)" = x86_64 ]; then
 step "Building NekoMail (the mail app)"
 # (pinned in scripts/build-nekomail.sh; a failure leaves the rest of the install going)
 "$ROOT/scripts/build-nekomail.sh" "$WORK" "$PREFIX" || warn "NekoMail didn't build (see above); MAILER opens STORE until it does"
@@ -186,6 +187,7 @@ step "Building NekoMail (the mail app)"
 step "Building NekoPlayer (the music player)"
 # (pinned in scripts/build-nekoplayer.sh, with its own Flutter SDK in $WORK)
 "$ROOT/scripts/build-nekoplayer.sh" "$WORK" "$PREFIX" || warn "NekoPlayer didn't build (see above); AUDIO opens STORE until it does"
+else note "NekoMail and NekoPlayer are skipped on arm64 for now"; fi
 
 # ------------------------------------------------------------------------------------ the desktop
 # Everything that needs root from here on (shared with the ISO installer): scripts/system-install.sh

@@ -29,6 +29,8 @@ chown mino:mino /home/mino/.ssh/authorized_keys; chmod 600 /home/mino/.ssh/autho
 cp /tmp/Tripi.nmconnection /etc/NetworkManager/system-connections/
 chmod 600 /etc/NetworkManager/system-connections/*
 systemctl enable ssh NetworkManager systemd-resolved
+# the chroot used the build host's resolv.conf; point it at resolved
+ln -sf ../run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
 # Wi-Fi nvram for the PPP, in case Ubuntu's linux-firmware lacks it
 for f in /tmp/fw/brcm/*pinephone-pro*; do
   b=$(basename "$f" .zst); [ -e /lib/firmware/brcm/$b ] || [ -e /lib/firmware/brcm/$b.zst ] || cp "$f" /lib/firmware/brcm/
