@@ -1,5 +1,11 @@
 #!/bin/sh
-# PinePhone Pro: keep /boot/ppp.dtb matching the newest kernel (GRUB loads it).
-d=/usr/lib/firmware/$1/device-tree/rockchip/rk3399-pinephone-pro.dtb
-[ -f $d ] && cp $d /boot/ppp.dtb
+# PinePhone Pro: GRUB loads /boot/dtb-<version>. Copy the device tree that ships with
+# each kernel there (Ubuntu kernels and our bindeb-pkg -ppp kernel use different paths).
+v=$1
+for d in /usr/lib/firmware/$v/device-tree/rockchip /usr/lib/linux-image-$v/rockchip; do
+	if [ -f $d/rk3399-pinephone-pro.dtb ]; then
+		cp $d/rk3399-pinephone-pro.dtb /boot/dtb-$v
+		break
+	fi
+done
 exit 0

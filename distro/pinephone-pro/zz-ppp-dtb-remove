@@ -1,0 +1,4 @@
+#!/bin/sh
+# PinePhone Pro: drop the kernel's /boot/dtb-<version> when the kernel is removed.
+rm -f /boot/dtb-$1
+exit 0
