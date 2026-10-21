@@ -45,7 +45,7 @@ fi
 # Touchscreen and no keyboard to type with (phones): an on-screen keyboard beside the login screen.
 osk=""
 if grep -qi touchscreen /proc/bus/input/devices 2>/dev/null && command -v wvkbd-mobintl >/dev/null; then
-	osk="wvkbd-mobintl & "
+	osk="wvkbd-mobintl -H 480 -L 300 --fn \"Sans 24\" & "
 	export ULTIMIT_OSK=1
 fi
 exec "$ROOT/bin/ultimit" -x -s "$osk exec $ROOT/bin/qs -p $ROOT/greeter"

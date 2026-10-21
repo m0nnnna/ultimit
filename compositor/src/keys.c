@@ -32,6 +32,7 @@ enum act {
 	ACT_SPAWN,
 	ACT_LAUNCHER,
 	ACT_LOCK,
+	ACT_SCREEN,
 	ACT_ALTTAB_NEXT,
 	ACT_ALTTAB_PREV,
 	ACT_CLOSE,
@@ -126,6 +127,8 @@ static const struct binding bindings[] = {
 		"Switch virtual terminal", KB_DOC },
 
 	/* ---- media keys (work over the lock screen too) ---- */
+	{ 0, XKB_KEY_XF86PowerOff, 0, ACT_SCREEN, NULL, NULL, "Media", "screen-power",
+		"Screen off (locks) / on (phones; logind ignores the key there)", KB_ANY_MODS | KB_ALWAYS },
 	{ 0, XKB_KEY_XF86AudioRaiseVolume, 0, ACT_SPAWN, "ultimit-media volume up", NULL, "Media",
 		"volume-up", "Volume up", KB_ANY_MODS | KB_ALWAYS },
 	{ 0, XKB_KEY_XF86AudioLowerVolume, 0, ACT_SPAWN, "ultimit-media volume down", NULL, "Media",
@@ -211,6 +214,12 @@ static void run(struct ul_server *server, const struct binding *b, uint32_t mods
 		break;
 	case ACT_LOCK:
 		server_spawn("ultimit-lock");
+		break;
+	case ACT_SCREEN:
+		if (!server->screen_off && !server->locked) {
+			server_spawn("ultimit-lock");
+		}
+		output_set_screen_off(server, !server->screen_off);
 		break;
 	case ACT_ALTTAB_NEXT:
 		alttab_step(server, mods, 1);

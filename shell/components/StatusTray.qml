@@ -185,6 +185,26 @@ Item {
                 }
             }
 
+            // ---- on-screen keyboard (touchscreens: ultimit-session starts wvkbd hidden) ----
+            StatusButton {
+                visible: Quickshell.env("ULTIMIT_OSK") === "1"
+                name: "On-screen keyboard"
+                tip: "KEYBOARD\nSHOW / HIDE"
+                width: visible ? 28 : 0
+                onClicked: Quickshell.execDetached(["pkill", "--signal", "RTMIN", "-x", "wvkbd-mobintl"])
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: 16; height: 11; radius: 1
+                    color: "transparent"; border.color: Theme.fg; border.width: 1
+                    Grid {
+                        anchors.centerIn: parent; anchors.verticalCenterOffset: -1
+                        columns: 4; spacing: 1
+                        Repeater { model: 8; Rectangle { width: 2; height: 2; color: Theme.fg } }
+                    }
+                    Rectangle { anchors.horizontalCenter: parent.horizontalCenter; anchors.bottom: parent.bottom; anchors.bottomMargin: 2; width: 8; height: 1; color: Theme.fg }
+                }
+            }
+
             // ---- network ----
             StatusButton {
                 id: net

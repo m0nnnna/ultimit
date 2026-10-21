@@ -1,0 +1,18 @@
+# meson cross file for the PinePhone Pro; build.sh fills in @SYSROOT@
+[binaries]
+c = ['clang', '--target=aarch64-linux-gnu', '--sysroot=@SYSROOT@', '-fuse-ld=lld']
+cpp = ['clang++', '--target=aarch64-linux-gnu', '--sysroot=@SYSROOT@', '-fuse-ld=lld']
+ar = 'llvm-ar'
+strip = 'llvm-strip'
+pkg-config = 'pkg-config'
+wayland-scanner = '/usr/bin/wayland-scanner'
+
+[properties]
+sys_root = '@SYSROOT@'
+pkg_config_libdir = ['@SYSROOT@/opt/ultimit/lib/aarch64-linux-gnu/pkgconfig', '@SYSROOT@/usr/lib/aarch64-linux-gnu/pkgconfig', '@SYSROOT@/usr/share/pkgconfig', '@SYSROOT@/opt/ultimit/share/pkgconfig']
+
+[host_machine]
+system = 'linux'
+cpu_family = 'aarch64'
+cpu = 'cortex-a72'
+endian = 'little'

@@ -34,7 +34,7 @@ void output_identity(struct wlr_output *wlr_output, char *buf, size_t len) {
 }
 
 static bool in_layout(struct ul_output *output) {
-	return output->wlr_output->enabled &&
+	return (output->wlr_output->enabled || output->power_off) &&
 		wlr_output_layout_get(output->server->output_layout, output->wlr_output) != NULL;
 }
 
@@ -240,6 +240,28 @@ static void output_frame(struct wl_listener *listener, void *data) {
 	 * its frames are paced by the game. */
 	if (moving && !game) {
 		wlr_output_schedule_frame(wlr_output);
+	}
+}
+
+/* The power key on phones: switch the panels off (and back on) without taking
+ * them out of the layout, so windows stay where they are. */
+void output_set_screen_off(struct ul_server *server, bool off) {
+	server->screen_off = off;
+	struct ul_output *output;
+	wl_list_for_each(output, &server->outputs, link) {
+		if (off ? !output->wlr_output->enabled : !output->power_off) {
+			continue;
+		}
+		struct wlr_output_state state;
+		wlr_output_state_init(&state);
+		wlr_output_state_set_enabled(&state, !off);
+		if (wlr_output_commit_state(output->wlr_output, &state)) {
+			output->power_off = off;
+		}
+		wlr_output_state_finish(&state);
+		if (!off) {
+			wlr_output_schedule_frame(output->wlr_output);
+		}
 	}
 }
 

@@ -719,7 +719,7 @@ static void touch_move_to(struct ul_server *server, struct wlr_touch *touch,
 static void touch_down(struct wl_listener *listener, void *data) {
 	struct ul_server *server = wl_container_of(listener, server, touch_down);
 	struct wlr_touch_down_event *event = data;
-	if (server->touch_id >= 0) {
+	if (server->touch_id >= 0 || server->screen_off) {
 		return;
 	}
 	server->touch_id = event->touch_id;

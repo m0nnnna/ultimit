@@ -5,9 +5,28 @@
  * into.
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "server.h"
+
+/* The on-screen keyboard (wvkbd) asks for the top layer, under the shell's
+ * full-screen overlays (launcher, menus), which would catch its taps; it goes
+ * above all of them instead, the lock screen too, so a phone can unlock. */
+static bool is_osk(struct wlr_layer_surface_v1 *ls) {
+	pid_t pid = 0;
+	wl_client_get_credentials(wl_resource_get_client(ls->resource), &pid, NULL, NULL);
+	char path[64], comm[32] = "";
+	snprintf(path, sizeof(path), "/proc/%d/comm", (int)pid);
+	FILE *f = fopen(path, "r");
+	if (f) {
+		if (!fgets(comm, sizeof(comm), f)) {
+			comm[0] = '\0';
+		}
+		fclose(f);
+	}
+	return strncmp(comm, "wvkbd", 5) == 0;
+}
 
 static enum ul_layer scene_layer_for(enum zwlr_layer_shell_v1_layer layer) {
 	switch (layer) {
@@ -170,7 +189,7 @@ static void layer_commit(struct wl_listener *listener, void *data) {
 	}
 	if (ls->current.committed & WLR_LAYER_SURFACE_V1_STATE_LAYER) {
 		/* The client moved itself to a different layer. */
-		enum ul_layer target = scene_layer_for(ls->current.layer);
+		enum ul_layer target = l->osk ? UL_LAYER_LOCK : scene_layer_for(ls->current.layer);
 		wlr_scene_node_reparent(&l->scene->tree->node, l->server->layers[target]);
 		wl_list_remove(&l->link);
 		wl_list_insert(&l->output->layer_surfaces[ls->current.layer], &l->link);
@@ -180,6 +199,10 @@ static void layer_commit(struct wl_listener *listener, void *data) {
 	}
 	if (!l->mapped) {
 		return;
+	}
+	if (l->osk) {
+		/* stay over a lock screen that came up after it */
+		wlr_scene_node_raise_to_top(&l->scene->tree->node);
 	}
 	if (under_glass(l)) {
 		/* A new wallpaper frame: refresh this screen's glass (rate-limited). */
@@ -233,10 +256,11 @@ static void new_layer_surface(struct wl_listener *listener, void *data) {
 	l->output = output;
 	l->layer_surface = ls;
 	ls->data = l;
-	l->scene = wlr_scene_layer_surface_v1_create(
-		server->layers[scene_layer_for(ls->pending.layer)], ls);
-	enum ul_layer popup_layer = ls->pending.layer == ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY ?
-		UL_LAYER_OVERLAY : UL_LAYER_TOP;
+	l->osk = is_osk(ls);
+	l->scene = wlr_scene_layer_surface_v1_create(server->layers[l->osk ? UL_LAYER_LOCK
+		: scene_layer_for(ls->pending.layer)], ls);
+	enum ul_layer popup_layer = l->osk ? UL_LAYER_LOCK
+		: ls->pending.layer == ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY ? UL_LAYER_OVERLAY : UL_LAYER_TOP;
 	l->popups = wlr_scene_tree_create(server->layers[popup_layer]);
 	wl_list_insert(&output->layer_surfaces[ls->pending.layer], &l->link);
 

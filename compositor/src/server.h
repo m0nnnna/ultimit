@@ -243,6 +243,7 @@ struct ul_server {
 	struct wlr_session_lock_manager_v1 *lock_manager;
 	struct wlr_session_lock_v1 *lock;
 	bool locked;
+	bool screen_off; /* power key: panels off, touch ignored (output.c) */
 	struct wlr_scene_rect *lock_cover;
 	struct wl_listener new_lock;
 	struct wl_listener lock_new_surface;
@@ -273,6 +274,7 @@ struct ul_output {
 	struct wlr_box usable_area; /* full_area minus exclusive zones */
 	bool vrr_always; /* user turned adaptive sync on; else only for fullscreen */
 	bool primary;    /* the main display (displays.conf primary = true) */
+	bool power_off;  /* panel switched off by the power key; stays in the layout */
 	struct wlr_box prev_area; /* full_area before a layout change (output_relocate_views) */
 	/* Cached blur of what lies under the windows, for this screen only. SceneFX keeps one
 	 * "needs redrawing" flag per blur node and the first screen to draw clears it, so a node
@@ -295,6 +297,7 @@ struct ul_layer_surface {
 	struct wlr_scene_layer_surface_v1 *scene;
 	struct wlr_scene_tree *popups; /* above windows, follows the surface */
 	bool mapped;
+	bool osk; /* on-screen keyboard (layer.c): drawn above everything */
 
 	struct wl_listener map;
 	struct wl_listener unmap;
@@ -462,6 +465,7 @@ void output_finish(struct ul_server *server);
 struct ul_output *output_at(struct ul_server *server, double lx, double ly);
 struct ul_output *output_for_view(struct ul_view *view);
 void output_arrange(struct ul_output *output);
+void output_set_screen_off(struct ul_server *server, bool off);
 void output_refresh_blur(struct ul_output *output, bool now);
 void server_update_backdrop(struct ul_server *server);
 
