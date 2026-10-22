@@ -1,5 +1,0 @@
-/* Ultimit phone: let the window shrink to a 360 px screen */
-:root, #main-window, #navigator-toolbox, #nav-bar, #TabsToolbar, #titlebar { min-width: 0 !important; }
-#urlbar-container { min-width: 120px !important; width: auto !important; }
-#urlbar { min-width: 0 !important; }
-#nav-bar toolbarspring, #nav-bar toolbarpaddingspacer, #home-button, #fxa-toolbar-menu-button, #firefox-view-button, #alltabs-button, #tracking-protection-icon-container { display: none !important; }

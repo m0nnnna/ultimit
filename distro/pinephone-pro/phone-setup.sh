@@ -9,7 +9,7 @@ cd "$(dirname "$0")"
 # (Chromium's window can't get narrower than 500 px; the phone is 360 wide at 2x)
 DEBIAN_FRONTEND=noninteractive apt-get install -yq iio-sensor-proxy wlr-randr \
   eg25-manager modemmanager gnome-snapshot pipewire-libcamera libcamera-tools v4l-utils device-tree-compiler \
-  epiphany-browser
+  epiphany-browser git make
 udevadm trigger -s iio -c add   # iio-sensor-proxy needs the sensors re-tagged once
 systemctl enable --now eg25-manager ModemManager
 
@@ -40,15 +40,22 @@ for d in /boot/dtb-*-ppp; do [ -e "$d" ] && ppp-dtb-modem-fix "$d"; done
 if [ -n "${SUDO_USER:-}" ]; then
   su - "$SUDO_USER" -c 'xdg-mime default org.gnome.Epiphany.desktop x-scheme-handler/http x-scheme-handler/https text/html' || true
 fi
-# Firefox (flatpak) for Bitwarden and passkeys: the policy installs the Bitwarden extension,
-# turns on sites' mobile layouts and skips onboarding; userChrome.css lets the window shrink
-# below Firefox's 500 px minimum (it needs a profile, so it is copied into existing ones)
+# Firefox (flatpak) for Bitwarden and passkeys, made phone-shaped by postmarketOS's
+# mobile-config-firefox (plain CSS/prefs, installed into the flatpak's systemconfig dir);
+# our policy (Bitwarden extension, no onboarding, mobile site layouts) is merged over its own
 flatpak install -y --noninteractive flathub org.mozilla.firefox com.bitwarden.desktop
-install -Dm644 firefox/policies.json \
-  /var/lib/flatpak/extension/org.mozilla.firefox.systemconfig/aarch64/stable/policies/policies.json
-if [ -n "${SUDO_USER:-}" ]; then
-  for p in /home/"$SUDO_USER"/.var/app/org.mozilla.firefox/config/mozilla/firefox/*.default*; do
-    [ -d "$p" ] && install -Dm644 -o "$SUDO_USER" -g "$SUDO_USER" firefox/userChrome.css "$p/chrome/userChrome.css"
-  done
-fi
-echo "done; reboot for the modem fix (start Firefox once, then re-run for its userChrome.css)"
+mcf=$(mktemp -d)
+git clone -q --depth 1 https://gitlab.postmarketos.org/postmarketOS/mobile-config-firefox.git "$mcf"
+make -C "$mcf" FLATPAK=1 install >/dev/null
+python3 - firefox/policies.json \
+  /var/lib/flatpak/extension/org.mozilla.firefox.systemconfig/aarch64/stable/policies/policies.json <<'PY'
+import json, sys
+ours = json.load(open(sys.argv[1]))["policies"]; m = json.load(open(sys.argv[2]))
+p = m["policies"]; p.pop("SearchEngines", None)
+for k, v in ours.items():
+    if k == "Preferences": p.setdefault(k, {}).update(v)
+    else: p[k] = v
+json.dump(m, open(sys.argv[2], "w"), indent=2)
+PY
+rm -rf "$mcf"
+echo "done; reboot for the modem fix"
