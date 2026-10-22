@@ -51,7 +51,14 @@ Scope {
     }
     function applyRailNews() {
         const a = store.adapter;
-        Pins.setSpecs(root.envPins ? Pins.fromTokens(Quickshell.env("ULTIMIT_PINS")) : a.pins);
+        if (root.envPins) Pins.setSpecs(Pins.fromTokens(Quickshell.env("ULTIMIT_PINS")));
+        else {
+            const offered = a.pinsOffered || [];
+            Pins.setSpecs(Pins.withNew(a.pins, offered));
+            if (Pins.laterIds.some(id => offered.indexOf(id) < 0)) {   // new built-ins offered: remember that
+                a.pinsOffered = Pins.laterIds; a.pins = Pins.specs; save.restart();
+            }
+        }
         Feeds.urls = root.envFeeds ? root.envFeedList() : root.cleanFeeds(a.feeds);
         Feeds.start();
     }
@@ -227,10 +234,12 @@ Scope {
             property real suspendAfter: 900
             property bool suspendOnAC: false
             property var pins: [   // rail pinned items, in order (see Pins.qml); ACCESSORY is always kept
-                { id: "games", label: "GAMES", icon: "games" }, { id: "mailer", label: "MAILER", icon: "mailer" },
-                { id: "news", label: "NEWS", icon: "news" }, { id: "audio", label: "AUDIO", icon: "audio" },
-                { id: "data", label: "DATA", icon: "data" }, { id: "accessory", label: "ACCESSORY", icon: "accessory" }
+                { id: "www", label: "WWW", icon: "www" }, { id: "games", label: "GAMES", icon: "games" },
+                { id: "mailer", label: "MAILER", icon: "mailer" }, { id: "news", label: "NEWS", icon: "news" },
+                { id: "audio", label: "AUDIO", icon: "audio" }, { id: "data", label: "DATA", icon: "data" },
+                { id: "term", label: "CONSOLE", icon: "term" }, { id: "accessory", label: "ACCESSORY", icon: "accessory" }
             ]
+            property var pinsOffered: []   // Pins.laterIds already put into this rail once
             property var feeds: ["https://meowops.net/feed.xml"]   // news ticker feeds; [] = built-in headlines
             property var frames: []   // photo frames on the desktop (see Frames.qml)
         }

@@ -181,6 +181,19 @@ Singleton {
     //             (compared case-insensitively)
     //  own      - opens one of Ultimit's own windows (no external command needed)
     readonly property var apps: [
+        { id: "www",       label: "WWW",
+          tryCmds: [
+              // The default browser first (Settings > Default apps), then common ones.
+              { bin: "gtk-launch", cmd: "gtk-launch \"$(xdg-settings get default-web-browser)\"",
+                check: "command -v gtk-launch >/dev/null && [ -n \"$(xdg-settings get default-web-browser 2>/dev/null)\" ]" },
+              { bin: "firefox",  cmd: "firefox" },
+              { bin: "flatpak", cmd: "flatpak run org.mozilla.firefox", check: "flatpak info org.mozilla.firefox >/dev/null 2>&1" },
+              { bin: "chromium", cmd: "chromium" },
+              { bin: "google-chrome", cmd: "google-chrome" },
+              { bin: "brave-browser", cmd: "brave-browser" }
+          ],
+          hint: { what: "No web browser installed", store: "web browser" },
+          appIds: ["firefox", "org.mozilla.firefox", "google-chrome", "chromium", "brave-browser", "librewolf", "io.gitlab.librewolf-community", "zen"] },
         { id: "games",     label: "GAMES",     own: true,
           appIds: ["steam", "lutris", "heroic", "com.heroicgameslauncher.hgl", "net.lutris.lutris"] },
         { id: "mailer",    label: "MAILER",
@@ -224,6 +237,13 @@ Singleton {
           hint: { what: "No music app installed", store: "music player" },
           appIds: ["nekoplayer", "rhythmbox", "org.gnome.rhythmbox3", "spotify", "lollypop", "io.bassi.amberol", "org.gnome.music"] },
         { id: "data",      label: "DATA", own: true, appIds: [] },   // apps/data
+        { id: "term",      label: "CONSOLE",
+          tryCmds: [
+              { bin: "foot", cmd: "foot" }, { bin: "kitty", cmd: "kitty" }, { bin: "ptyxis", cmd: "ptyxis" },
+              { bin: "gnome-terminal", cmd: "gnome-terminal" }, { bin: "xterm", cmd: "xterm" }
+          ],
+          hint: { what: "No terminal installed", store: "terminal" },
+          appIds: ["foot", "kitty", "org.gnome.ptyxis", "ptyxis", "org.gnome.terminal", "gnome-terminal-server", "xterm"] },
         { id: "accessory", label: "ACCESSORY", own: true,
           appIds: ["gnome-control-center", "org.gnome.settings"] }
     ]

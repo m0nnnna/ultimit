@@ -1,10 +1,10 @@
 pragma Singleton
 
-// Pins.qml - the rail's pinned items (the top section: GAMES, MAILER, ... ACCESSORY).
+// Pins.qml - the rail's pinned items (the top section: WWW, GAMES, MAILER, ... ACCESSORY).
 //
 // `specs` is the stored list, in order (Persist.qml keeps it in shell.json as "pins"):
 //   { id, label, icon, desktopId? }
-//   - built-in rail entry: id is a Config.apps id ("games", "mailer", "news", "audio", "data", "accessory"),
+//   - built-in rail entry: id is a Config.apps id ("www", "games", "mailer", "news", "audio", "data", "term", "accessory"),
 //     label/icon are those of the built-in.
 //   - desktop app: id is "app:<desktopId>", desktopId the DesktopEntries id; label is the upper-cased name
 //     shortened to fit the rail; icon the entry's themed icon name (resolved live via Icons.qml).
@@ -19,7 +19,21 @@ Singleton {
 
     readonly property int maxPins: 12
     readonly property string lockedId: "accessory"
-    readonly property var defaultIds: ["games", "mailer", "news", "audio", "data", "accessory"]
+    readonly property var defaultIds: ["www", "games", "mailer", "news", "audio", "data", "term", "accessory"]
+    // Built-ins added to the defaults later: put once into rails saved before them (Persist.qml
+    // `pinsOffered`), at their default spot; one the user unpins afterwards stays unpinned.
+    readonly property var laterIds: ["www", "term"]
+    function withNew(arr, offered) {
+        const out = (arr || []).slice();
+        for (const id of laterIds) {
+            if (offered.indexOf(id) >= 0 || out.some(p => p && p.id === id) || out.length >= maxPins) continue;
+            const prev = defaultIds[defaultIds.indexOf(id) - 1];
+            let at = prev ? out.findIndex(p => p && p.id === prev) + 1 : 0;
+            if (prev && at === 0) at = Math.max(0, out.findIndex(p => p && p.id === lockedId));
+            out.splice(at, 0, { id: id });
+        }
+        return out;
+    }
 
     function defaults() {
         return defaultIds.map(id => { const a = Config.appById(id); return { id: id, label: a.label, icon: id }; });

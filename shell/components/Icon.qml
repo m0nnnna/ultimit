@@ -12,10 +12,12 @@ Item {
 
     // Subpath data per glyph (SVG path syntax, 24x24 viewBox).
     readonly property var glyphs: ({
+        www:       ["M12 3l6.4 2.6L21 12l-2.6 6.4L12 21l-6.4-2.6L3 12l2.6-6.4z", "M3 12h18M12 3l-3 9 3 9M12 3l3 9-3 9"],
         games:     ["M3 9l3-3h12l3 3v6l-3 3h-3l-2-2h-2l-2 2H6l-3-3z", "M8 10v4M6 12h4M15.5 11h.01M17.5 13h.01"],
         mailer:    ["M3 6h18v12H3z", "M3 6l9 7 9-7"],
         news:      ["M4 4h16v16H4z", "M8 16V8l8 8V8"],
         audio:     ["M3 12h2M7 8v8M11 4v16M15 9v6M19 11v2"],
+        term:      ["M3 5h18v14H3z", "M7 9l3 3-3 3M12 15h5"],
         data:      ["M12 3l8 4.5v9L12 21l-8-4.5v-9z", "M4 7.5l8 4.5 8-4.5M12 12v9"],
         accessory: ["M12 3l9 16H3z", "M12 9.5l3.5 6.5h-7z"]
     })
