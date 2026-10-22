@@ -504,8 +504,9 @@ static void ready(struct wl_listener *listener, void *data) {
 void xwayland_init(struct ul_server *server) {
 	/* Not lazy: a lazy XWayland exits with its last client and takes seconds
 	 * to come back, and an X11 app (Steam, a game) started in that gap fails
-	 * to connect. Keeping it up costs ~30 MB. */
-	server->xwayland = wlr_xwayland_create(server->display, server->compositor, false);
+	 * to connect. Keeping it up costs ~30 MB. Phones are the exception: nothing
+	 * there is X11 and it holds ~80 MB of 4 GB, so it starts on demand. */
+	server->xwayland = wlr_xwayland_create(server->display, server->compositor, server->mobile);
 	if (!server->xwayland) {
 		wlr_log(WLR_ERROR, "XWayland unavailable; X11 apps and Steam will not run");
 		return;
