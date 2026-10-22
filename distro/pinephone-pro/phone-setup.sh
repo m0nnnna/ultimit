@@ -7,7 +7,7 @@ cd "$(dirname "$0")"
 
 # rotation sensor, screen transforms, modem, cameras
 DEBIAN_FRONTEND=noninteractive apt-get install -yq iio-sensor-proxy wlr-randr \
-  eg25-manager modemmanager megapixels libcamera-tools v4l-utils device-tree-compiler
+  eg25-manager modemmanager gnome-snapshot pipewire-libcamera libcamera-tools v4l-utils device-tree-compiler
 udevadm trigger -s iio -c add   # iio-sensor-proxy needs the sensors re-tagged once
 systemctl enable --now eg25-manager ModemManager
 
@@ -21,6 +21,10 @@ cp -r ucm2/PinePhonePro /usr/share/alsa/ucm2/
 install -d /usr/share/alsa/ucm2/conf.d/simple-card
 ln -sf ../../PinePhonePro/PINE64-PinePhonePro-.conf \
   /usr/share/alsa/ucm2/conf.d/simple-card/PINE64-PinePhonePro.conf
+
+# cameras: Snapshot via libcamera only (the raw ISP nodes aren't cameras)
+install -Dm644 wireplumber/50-ppp-libcamera-only.conf \
+  /etc/wireplumber/wireplumber.conf.d/50-ppp-libcamera-only.conf
 
 # modem: free uart3 and keep its regulators on (see dtb-modem-fix.sh); reboot after
 # (zz-ppp-dtb re-applies it whenever a kernel update copies a fresh DTB)
