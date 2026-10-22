@@ -5,9 +5,11 @@
 set -eu
 cd "$(dirname "$0")"
 
-# rotation sensor, screen transforms, modem, cameras
+# rotation sensor, screen transforms, modem, cameras; GNOME Web, which fits a phone screen
+# (Chromium's window can't get narrower than 500 px; the phone is 360 wide at 2x)
 DEBIAN_FRONTEND=noninteractive apt-get install -yq iio-sensor-proxy wlr-randr \
-  eg25-manager modemmanager gnome-snapshot pipewire-libcamera libcamera-tools v4l-utils device-tree-compiler
+  eg25-manager modemmanager gnome-snapshot pipewire-libcamera libcamera-tools v4l-utils device-tree-compiler \
+  epiphany-browser
 udevadm trigger -s iio -c add   # iio-sensor-proxy needs the sensors re-tagged once
 systemctl enable --now eg25-manager ModemManager
 
@@ -34,4 +36,8 @@ install -Dm644 sounds/key-pressed.wav /usr/local/share/sounds/freedesktop/stereo
 install -m755 dtb-modem-fix.sh /usr/local/sbin/ppp-dtb-modem-fix
 install -m755 zz-ppp-dtb /etc/kernel/postinst.d/zz-ppp-dtb
 for d in /boot/dtb-*-ppp; do [ -e "$d" ] && ppp-dtb-modem-fix "$d"; done
+# GNOME Web as the default browser for the user who ran sudo
+if [ -n "${SUDO_USER:-}" ]; then
+  su - "$SUDO_USER" -c 'xdg-mime default org.gnome.Epiphany.desktop x-scheme-handler/http x-scheme-handler/https text/html' || true
+fi
 echo "done; reboot for the modem fix"
