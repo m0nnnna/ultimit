@@ -209,7 +209,7 @@ Singleton {
         { id: "news",      label: "NEWS",
           tryCmds: [ { bin: "xdg-open", cmd: "xdg-open https://news.ycombinator.com" } ],
           hint: { what: "No web browser installed", store: "web browser" },
-          appIds: ["firefox", "org.mozilla.firefox", "google-chrome", "chromium", "brave-browser"] },
+          appIds: ["firefox", "firefox-esr", "org.mozilla.firefox", "google-chrome", "chromium", "brave-browser"] },
         { id: "audio",     label: "AUDIO",
           tryCmds: [
               // NekoPlayer (Ultimit's own music player, /opt/ultimit/nekoplayer,

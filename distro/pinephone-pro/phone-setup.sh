@@ -43,26 +43,8 @@ install -Dm644 sounds/key-pressed.wav /usr/local/share/sounds/freedesktop/stereo
 install -m755 dtb-modem-fix.sh /usr/local/sbin/ppp-dtb-modem-fix
 install -m755 zz-ppp-dtb /etc/kernel/postinst.d/zz-ppp-dtb
 for d in /boot/dtb-*-ppp; do [ -e "$d" ] && ppp-dtb-modem-fix "$d"; done
-# GNOME Web as the default browser for the user who ran sudo
-if [ -n "${SUDO_USER:-}" ]; then
-  su - "$SUDO_USER" -c 'xdg-mime default org.gnome.Epiphany.desktop x-scheme-handler/http x-scheme-handler/https text/html' || true
-fi
-# Firefox (flatpak) for Bitwarden and passkeys, made phone-shaped by postmarketOS's
-# mobile-config-firefox (plain CSS/prefs, installed into the flatpak's systemconfig dir);
-# our policy (Bitwarden extension, no onboarding, mobile site layouts) is merged over its own
-flatpak install -y --noninteractive flathub org.mozilla.firefox com.bitwarden.desktop
-mcf=$(mktemp -d)
-git clone -q --depth 1 https://gitlab.postmarketos.org/postmarketOS/mobile-config-firefox.git "$mcf"
-make -C "$mcf" FLATPAK=1 install >/dev/null
-python3 - firefox/policies.json \
-  /var/lib/flatpak/extension/org.mozilla.firefox.systemconfig/aarch64/stable/policies/policies.json <<'PY'
-import json, sys
-ours = json.load(open(sys.argv[1]))["policies"]; m = json.load(open(sys.argv[2]))
-p = m["policies"]; p.pop("SearchEngines", None)
-for k, v in ours.items():
-    if k == "Preferences": p.setdefault(k, {}).update(v)
-    else: p[k] = v
-json.dump(m, open(sys.argv[2], "w"), indent=2)
-PY
-rm -rf "$mcf"
+# Firefox ESR, phone-shaped, with uBlock Origin + Bitwarden, as the default browser (firefox-esr.sh);
+# the Bitwarden app (flatpak) for passkeys
+sh ./firefox-esr.sh
+flatpak install -y --noninteractive flathub com.bitwarden.desktop
 echo "done; reboot for the modem fix"
