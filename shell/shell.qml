@@ -118,12 +118,29 @@ ShellRoot {
             id: scope
             required property var modelData
 
-            Wallpaper   { screen: scope.modelData }   // background layer (+ wordmark)
-            StatusBlock { screen: scope.modelData }   // bottom layer, top-right
-            // rail: every display, or the main one only (Config.barsOn)
-            Rail        { screen: scope.modelData; visible: Config.showsBars(scope.modelData.name) }   // top layer, left, exclusive zone
-            // news ticker: the main display only, so its scroll animation runs once, not per screen
-            Ticker      { screen: scope.modelData; visible: Config.isMainScreen(scope.modelData.name) }   // top layer, bottom, exclusive zone
+            // background layer (+ wordmark); phones draw a plain one in MobileHome instead
+            LazyLoader { active: !Config.mobile; Wallpaper { screen: scope.modelData } }
+            // Desktop: status block, rail and news ticker. Phones (Config.mobile): status bar,
+            // app-grid home, gesture bar and card switcher instead.
+            LazyLoader {
+                active: !Config.mobile
+                Scope {
+                    StatusBlock { screen: scope.modelData }   // bottom layer, top-right
+                    // rail: every display, or the main one only (Config.barsOn)
+                    Rail        { screen: scope.modelData; visible: Config.showsBars(scope.modelData.name) }   // top layer, left, exclusive zone
+                    // news ticker: the main display only, so its scroll animation runs once, not per screen
+                    Ticker      { screen: scope.modelData; visible: Config.isMainScreen(scope.modelData.name) }   // top layer, bottom, exclusive zone
+                }
+            }
+            LazyLoader {
+                active: Config.mobile
+                Scope {
+                    MobileBar      { screen: scope.modelData }   // top layer, top, exclusive zone
+                    GestureBar     { screen: scope.modelData }   // overlay, bottom, exclusive zone
+                    MobileHome     { screen: scope.modelData }   // bottom layer, app grid
+                    MobileSwitcher { screen: scope.modelData }   // overlay, open apps as cards
+                }
+            }
             Launcher    { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, app launcher (rail emblem)
             ContextMenu { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, desktop right-click menu
             RailMenu    { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, rail button right-click menu

@@ -212,8 +212,15 @@ bool anim_motion(void) {
 	return motion;
 }
 
+/* Phones: no window animations (slow GPU, and windows only ever fill the screen). */
+static bool mobile;
+
+void anim_set_mobile(bool on) {
+	mobile = on;
+}
+
 static bool animations_enabled(void) {
-	return anim_motion();
+	return anim_motion() && !mobile;
 }
 
 static bool no_input(struct wlr_scene_buffer *buffer, double *sx, double *sy) {

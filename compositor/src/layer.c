@@ -145,7 +145,7 @@ static void set_layer_blur(struct wlr_scene_buffer *buffer, int sx, int sy, void
 static void layer_update_blur(struct ul_layer_surface *l) {
 	const char *ns = l->layer_surface->namespace;
 	struct layer_blur b = {
-		.enabled = !under_glass(l) && ns && strncmp(ns, "ultimit-", 8) == 0,
+		.enabled = !l->output->server->mobile && !under_glass(l) && ns && strncmp(ns, "ultimit-", 8) == 0,
 		.optimized = l->layer_surface->current.exclusive_zone > 0,
 	};
 	wlr_scene_node_for_each_buffer(&l->scene->tree->node, set_layer_blur, &b);

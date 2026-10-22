@@ -178,11 +178,22 @@ fi
 # Ungoogled Chromium: spell-check dictionaries (it can't download its own, so nothing gets underlined).
 ("$ROOT/session/ultimit-spellcheck" >"$LOG_DIR/spellcheck.log" 2>&1 &)
 
-# Touchscreen (phones): an on-screen keyboard, hidden until the tray's keyboard button shows it.
+# Phones and tablets (the device tree says so): the mobile shell - apps full-screen, status bar,
+# app-grid home, gesture bar - and the screen at 2x (compositor). ULTIMIT_MOBILE=0/1 overrides.
+if [ -z "${ULTIMIT_MOBILE:-}" ]; then
+	case "$(tr -d '\0' </proc/device-tree/chassis-type 2>/dev/null)" in
+		handset|tablet) export ULTIMIT_MOBILE=1 ;;
+	esac
+fi
+
+# Touchscreen (phones): an on-screen keyboard, hidden until a text field (or the tray's keyboard
+# button) shows it. Sizes are in logical pixels: the phone screen runs at 2x.
 OSK=""
 if grep -qi touchscreen /proc/bus/input/devices 2>/dev/null && command -v wvkbd-mobintl >/dev/null; then
 	export ULTIMIT_OSK=1
-	OSK="(stdbuf -oL wvkbd-mobintl --hidden -o --press 3d7dd8 --press-sp 3d7dd8 -H 480 -L 300 --fn 'Sans 24' 2>/dev/null | '$ROOT/session/ultimit-osk-feedback' &); ('$ROOT/session/ultimit-autorotate' >/dev/null 2>&1 &); "
+	OSK_H="-H 480 -L 300 --fn 'Sans 24'"
+	[ "${ULTIMIT_MOBILE:-}" = 1 ] && OSK_H="-H 240 -L 150 --fn 'Sans 12'"
+	OSK="(stdbuf -oL wvkbd-mobintl --hidden -o --press 3d7dd8 --press-sp 3d7dd8 $OSK_H 2>/dev/null | '$ROOT/session/ultimit-osk-feedback' &); ('$ROOT/session/ultimit-autorotate' >/dev/null 2>&1 &); "
 fi
 
 # Once the compositor is up: hand the display variables to systemd/D-Bus so

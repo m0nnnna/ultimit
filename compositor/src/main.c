@@ -12,6 +12,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <scenefx/render/fx_renderer/fx_renderer.h>
@@ -161,6 +162,9 @@ int main(int argc, char *argv[]) {
 	wlr_primary_selection_v1_device_manager_create(server.display);
 	wlr_data_control_manager_v1_create(server.display);
 
+	const char *mobile = getenv("ULTIMIT_MOBILE");
+	server.mobile = mobile && strcmp(mobile, "1") == 0;
+	anim_set_mobile(server.mobile);
 	config_load(&server);
 	output_init(&server);
 

@@ -279,7 +279,7 @@ static void view_apply_snap(struct ul_view *view, bool animate) {
 /* Snap to the left/right of the output's usable area. A maximized window
  * keeps its pre-maximize geometry as the thing to restore to. */
 void view_snap(struct ul_view *view, enum ul_snap side, int step) {
-	if (view->fullscreen || !view->mapped || side == UL_SNAP_NONE) {
+	if (view->server->mobile || view->fullscreen || !view->mapped || side == UL_SNAP_NONE) {
 		return;
 	}
 	if (!view->snapped && !view->maximized) {
@@ -357,10 +357,24 @@ struct ul_view *view_by_id(struct ul_server *server, unsigned id) {
 	return NULL;
 }
 
+/* Dialogs (a parent window, or a fixed size) float even on a phone. */
+bool view_is_dialog(struct ul_view *view) {
+	if (view->type == UL_VIEW_XDG) {
+		struct wlr_xdg_toplevel *t = view->xdg_toplevel;
+		return t->parent || (t->current.min_width > 0 && t->current.min_width == t->current.max_width &&
+			t->current.min_height > 0 && t->current.min_height == t->current.max_height);
+	}
+	return view->xwayland_surface->parent || view->xwayland_surface->modal;
+}
+
 static void set_maximized(struct ul_view *view, bool maximized, bool animate) {
+	if (view->server->mobile && !maximized && !view_is_dialog(view)) {
+		goto done; /* phone windows stay full-screen */
+	}
 	if (view->fullscreen || view->maximized == maximized) {
 		goto done;
 	}
+	int border = view->server->mobile ? 0 : UL_BORDER;
 	if (maximized) {
 		if (view->snapped) {
 			/* Keep the geometry from before the snap as the restore target. */
@@ -374,8 +388,8 @@ static void set_maximized(struct ul_view *view, bool maximized, bool animate) {
 		int bar = view->ssd ? UL_TITLEBAR_H : 0;
 		view->maximized = true;
 		if (animate) anim_morph(view, area);
-		view_set_position(view, area.x + UL_BORDER, area.y + bar + UL_BORDER);
-		view_request_size(view, area.width - 2 * UL_BORDER, area.height - bar - 2 * UL_BORDER);
+		view_set_position(view, area.x + border, area.y + bar + border);
+		view_request_size(view, area.width - 2 * border, area.height - bar - 2 * border);
 	} else {
 		view->maximized = false;
 		if (animate) anim_morph(view, frame_of(view, view->saved.x, view->saved.y, view->saved.width, view->saved.height));
@@ -552,7 +566,7 @@ void view_close(struct ul_view *view) {
 
 void view_begin_interactive(struct ul_view *view, enum ul_cursor_mode mode, uint32_t edges) {
 	struct ul_server *server = view->server;
-	if (view->fullscreen) {
+	if (view->fullscreen || server->mobile) {
 		return;
 	}
 	/* A maximized window only restores once it's actually dragged (see
@@ -614,6 +628,9 @@ void view_update_title(struct ul_view *view) {
 }
 
 void view_set_ssd(struct ul_view *view, bool ssd) {
+	if (view->server->mobile) {
+		ssd = false; /* no frames on a phone */
+	}
 	if (view->ssd == ssd) {
 		return;
 	}
@@ -793,6 +810,9 @@ void view_map(struct ul_view *view) {
 		if (y < area.y + bar) y = area.y + bar;
 		view_set_position(view, x, y);
 		wlr_foreign_toplevel_handle_v1_output_enter(view->foreign, output->wlr_output);
+		if (server->mobile && !view_is_dialog(view)) {
+			set_maximized(view, true, false);
+		}
 	} else {
 		view_set_position(view, view->x, view->y);
 	}

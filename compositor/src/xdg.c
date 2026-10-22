@@ -21,7 +21,7 @@ static void apply_decoration_mode(struct ul_view *view);
 
 static void xdg_map(struct wl_listener *listener, void *data) {
 	struct ul_view *view = wl_container_of(listener, view, map);
-	if (!view->xdg_decoration &&
+	if (!view->server->mobile && !view->xdg_decoration &&
 			xdg_kde_wants_ssd(view->server, view->xdg_toplevel->base->surface)) {
 		view->ssd = true;
 	}

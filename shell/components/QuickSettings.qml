@@ -118,11 +118,12 @@ PanelWindow {
         id: panel
         // "top": under the desktop clock (top right). "bottom": above the tray cluster (bottom right).
         readonly property bool atBottom: SysState.qsAnchor === "bottom"
-        readonly property real topY: 100
+        // Phones: a shade under the status bar, the width of the screen.
+        readonly property real topY: Config.mobile ? Config.mobileBarH + 4 : 100
         readonly property real maxH: atBottom ? win.height - Config.tickerHeight - 6 - 12
-                                              : win.height - topY - Config.tickerHeight - 6
-        width: 360
-        x: win.width - (atBottom ? 8 : 24) - width
+                                              : win.height - topY - (Config.mobile ? Config.gestureH : Config.tickerHeight) - 6
+        width: Config.mobile ? win.width - 12 : 360
+        x: Config.mobile ? 6 : win.width - (atBottom ? 8 : 24) - width
         height: Math.min(flick.contentHeight + 28, maxH)
         y: atBottom ? win.height - Config.tickerHeight - 6 - height + (1 - win.reveal) * 10
                     : topY - (1 - win.reveal) * 10

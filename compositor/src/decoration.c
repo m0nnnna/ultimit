@@ -505,7 +505,7 @@ void decoration_update(struct ul_view *view) {
 	if (!deco->tree) {
 		return;
 	}
-	bool visible = view->mapped && !view->fullscreen;
+	bool visible = view->mapped && !view->fullscreen && !view->server->mobile;
 	wlr_scene_node_set_enabled(&deco->tree->node, visible);
 	if (!visible) {
 		return;

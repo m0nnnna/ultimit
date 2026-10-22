@@ -216,8 +216,8 @@ Scope {
             property string railSpin: "always"
             property string appIcons: "letters"
             property string cursorStyle: "izy"
-            property bool wallpaperMotion: true
-            property int shardDensity: 34
+            property bool wallpaperMotion: !Config.mobile   // phones: a still wallpaper
+            property int shardDensity: Config.mobile ? 16 : 34
             property string wallpaper: ""
             property string wallpaperFit: "fill"
             property string barsOn: "all"

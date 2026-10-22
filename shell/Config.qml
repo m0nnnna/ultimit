@@ -114,6 +114,12 @@ Singleton {
     readonly property int railWidth: 84
     readonly property int tickerHeight: 30   // bottom bar (ticker + tray cluster)
 
+    // ---- phones (ULTIMIT_MOBILE=1): status bar, app-grid home, gesture bar (components/Mobile*.qml) ----
+    readonly property bool mobile: Quickshell.env("ULTIMIT_MOBILE") === "1"
+    readonly property int mobileBarH: 28     // top status bar
+    readonly property int gestureH: 22       // bottom gesture strip
+    property bool switcherOpen: false        // the card app switcher (MobileSwitcher.qml)
+
     // ---- launcher / context menu state (see components/Launcher.qml, ContextMenu.qml) ----
     property bool launcherOpen: false
     property bool shortcutsOpen: false   // the keyboard shortcut sheet (Super+/)

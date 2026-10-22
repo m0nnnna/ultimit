@@ -112,7 +112,7 @@ Scope {
     function maybeAutostart() {
         if (boot.autostartDone || !boot.settingsReady || !boot.infoReady) return;
         boot.autostartDone = true;
-        if (Config.bootOnStart) boot.start();
+        if (Config.bootOnStart && !Config.mobile) boot.start();   // phones: straight to home
     }
     onSettingsReadyChanged: maybeAutostart()
     Timer {

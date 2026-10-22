@@ -17,7 +17,7 @@ WlSessionLockSurface {
     readonly property bool primary: screen !== null && Config.isMainScreen(screen.name)
     readonly property real u: Math.max(.7, Math.min(width, height) / 800)
     // the on-screen keyboard covers the bottom while locked (LockScreen.osk): centre above it
-    readonly property real oskH: surf.primary && Quickshell.env("ULTIMIT_OSK") === "1" ? 480 : 0
+    readonly property real oskH: surf.primary && Quickshell.env("ULTIMIT_OSK") === "1" ? (Config.mobile ? 240 : 480) : 0
 
     SystemClock { id: clock; precision: SystemClock.Seconds }
     readonly property var days: ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"]

@@ -247,6 +247,7 @@ struct ul_server {
 	struct wlr_session_lock_v1 *lock;
 	bool locked;
 	bool screen_off; /* power key: panels off, touch ignored (output.c) */
+	bool mobile; /* ULTIMIT_MOBILE=1 (phones): every window fills the screen, no frames */
 	struct wlr_scene_rect *lock_cover;
 	struct wl_listener new_lock;
 	struct wl_listener lock_new_surface;
@@ -505,6 +506,7 @@ void view_set_position(struct ul_view *view, int x, int y);
 void view_request_size(struct ul_view *view, int width, int height);
 void view_update_size(struct ul_view *view, int width, int height);
 void view_set_maximized(struct ul_view *view, bool maximized);
+bool view_is_dialog(struct ul_view *view);
 void view_snap(struct ul_view *view, enum ul_snap side, int step);
 void view_clear_snap(struct ul_view *view);
 void view_restore(struct ul_view *view); /* un-snap or un-maximize */
@@ -530,6 +532,7 @@ void anim_open(struct ul_view *view);
 void anim_cancel(struct ul_view *view);
 bool anim_running(struct ul_view *view);
 void anim_set_motion(bool on);
+void anim_set_mobile(bool on);
 bool anim_motion(void);
 void anim_close(struct ul_view *view);
 void anim_close_requested(struct ul_view *view);

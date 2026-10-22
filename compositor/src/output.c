@@ -6,6 +6,7 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include "server.h"
 #include "theme.h"
@@ -307,7 +308,9 @@ static void output_destroy(struct wl_listener *listener, void *data) {
 	if (output->blur_timer) {
 		wl_event_source_remove(output->blur_timer);
 	}
-	wlr_scene_node_destroy(&output->blur->node);
+	if (output->blur) {
+		wlr_scene_node_destroy(&output->blur->node);
+	}
 	output->wlr_output->data = NULL;
 	free(output);
 	server_update_backdrop(server);
@@ -377,6 +380,11 @@ static void new_output(struct wl_listener *listener, void *data) {
 		if (conf.scale > 0) wlr_output_state_set_scale(&state, conf.scale);
 		wlr_output_state_set_transform(&state, conf.transform);
 	}
+	if (enabled && !have_conf && server->mobile &&
+			(!strncmp(wlr_output->name, "DSI", 3) || !strncmp(wlr_output->name, "eDP", 3))) {
+		/* A phone panel is ~300 dpi: 2x, so fingers can hit things. */
+		wlr_output_state_set_scale(&state, 2);
+	}
 	if (!wlr_output_commit_state(wlr_output, &state) && have_conf && enabled) {
 		/* A saved mode the monitor no longer takes: fall back to defaults. */
 		wlr_log(WLR_ERROR, "Output %s rejected displays.conf; using its preferred mode",
@@ -410,7 +418,8 @@ static void new_output(struct wl_listener *listener, void *data) {
 	output->vrr_always = have_conf && conf.adaptive_sync;
 	output->primary = have_conf && conf.primary;
 	output->scene_output = wlr_scene_output_create(server->scene, wlr_output);
-	output->blur = wlr_scene_optimized_blur_create(server->blur_layer, 0, 0);
+	/* Phones: no glass blur (a slow GPU, and the home screen redraws under it). */
+	output->blur = server->mobile ? NULL : wlr_scene_optimized_blur_create(server->blur_layer, 0, 0);
 	if (!enabled) {
 		wlr_log(WLR_INFO, "Output %s: disabled (displays.conf)", wlr_output->name);
 		return;

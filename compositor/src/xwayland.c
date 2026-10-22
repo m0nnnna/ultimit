@@ -239,7 +239,7 @@ static void x_map(struct wl_listener *listener, void *data) {
 	view->content = wlr_scene_subsurface_tree_create(view->tree, xsurface->surface);
 	view->width = xsurface->width;
 	view->height = xsurface->height;
-	view->ssd = wants_ssd(xsurface);
+	view->ssd = !view->server->mobile && wants_ssd(xsurface);
 	view_map(view);
 	if (xsurface->fullscreen) {
 		view_set_fullscreen(view, true);
