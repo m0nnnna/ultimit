@@ -1,0 +1,12 @@
+#!/bin/sh
+# On-screen keyboard (wvkbd) with key feedback, restarted if it ever exits, until the
+# compositor does. Arguments: wvkbd size/font options. Its errors go to the session log.
+ROOT=$(dirname "$(readlink -f "$0")")/..
+COMP=$(cat "${XDG_RUNTIME_DIR:-/tmp}/ultimit-session.pid" 2>/dev/null)
+while :; do
+	stdbuf -o0 wvkbd-mobintl --hidden -o --press 3d7dd8 --press-sp 3d7dd8 "$@" \
+		| "$ROOT/session/ultimit-osk-feedback"
+	[ -n "$COMP" ] && kill -0 "$COMP" 2>/dev/null || exit 0
+	echo "ultimit-osk: wvkbd exited, restarting it" >&2
+	sleep 2
+done

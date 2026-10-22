@@ -193,7 +193,7 @@ if grep -qi touchscreen /proc/bus/input/devices 2>/dev/null && command -v wvkbd-
 	export ULTIMIT_OSK=1
 	OSK_H="-H 480 -L 300 --fn 'Sans 24'"
 	[ "${ULTIMIT_MOBILE:-}" = 1 ] && OSK_H="-H 240 -L 150 --fn 'Sans 12'"
-	OSK="(stdbuf -o0 wvkbd-mobintl --hidden -o --press 3d7dd8 --press-sp 3d7dd8 $OSK_H 2>/dev/null | '$ROOT/session/ultimit-osk-feedback' &); ('$ROOT/session/ultimit-autorotate' >/dev/null 2>&1 &); "
+	OSK="('$ROOT/session/ultimit-osk' $OSK_H &); ('$ROOT/session/ultimit-autorotate' >/dev/null 2>&1 &); "
 fi
 
 # Once the compositor is up: hand the display variables to systemd/D-Bus so
