@@ -16,7 +16,7 @@ Flickable {
     readonly property var h: Tasks.hist
     readonly property var m: s.mem || ({ total: 0, used: 0, swap_total: 0, swap_used: 0, cached: 0 })
     readonly property var g: Tasks.gpu
-    readonly property int cardW: Math.floor((col.width - 12) / 2)
+    readonly property int cardW: Config.mobile ? col.width : Math.floor((col.width - 12) / 2)
     function last(a) { return a.length > 0 ? a[a.length - 1] : 0; }
     function tone(v) { return v >= 90 ? Theme.bad : v >= 70 ? Theme.warn : Theme.fg; }
 
@@ -70,7 +70,7 @@ Flickable {
 
         Grid {
             width: parent.width
-            columns: 2
+            columns: Config.mobile ? 1 : 2
             spacing: 12
 
             // ---- memory ----

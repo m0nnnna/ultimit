@@ -17,6 +17,8 @@ Scope {
     id: root
 
     property string page: "appearance"
+    // phones: the page list and the page take the whole window in turn
+    property bool navShown: true
     readonly property var pages: [
         { id: "appearance", n: "Appearance",   file: "AppearancePage.qml" },
         { id: "rail",       n: "Rail",         file: "RailPage.qml" },
@@ -40,7 +42,10 @@ Scope {
 
     Connections {   // Config.openSettings("rail") from the rail menu etc.
         target: Config
-        function onSettingsRequestChanged() { if (root.isPage(Config.settingsPage)) root.page = Config.settingsPage; }
+        function onSettingsRequestChanged() {
+            if (root.isPage(Config.settingsPage)) root.page = Config.settingsPage;
+            root.navShown = !root.isPage(Config.settingsPage);
+        }
     }
 
     LazyLoader {
@@ -51,7 +56,7 @@ Scope {
             title: Config.accessoryTitle
             implicitWidth: 900
             implicitHeight: 620
-            minimumSize: Qt.size(640, 440)
+            minimumSize: Config.mobile ? Qt.size(0, 0) : Qt.size(640, 440)
             color: "transparent"
             visible: true
 
@@ -64,7 +69,8 @@ Scope {
                 // ---- sidebar ----
                 Rectangle {
                     id: side
-                    width: 190; height: parent.height
+                    width: Config.mobile ? parent.width : 190; height: parent.height
+                    visible: !Config.mobile || root.navShown
                     color: Theme.panel2
                     Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Theme.line }
 
@@ -77,7 +83,7 @@ Scope {
                                 id: nav
                                 required property var modelData
                                 readonly property bool sel: root.page === modelData.id
-                                width: parent.width; height: 38
+                                width: parent.width; height: Config.mobile ? 48 : 38
                                 activeFocusOnTab: true
                                 Keys.onPressed: e => {
                                     if (e.key === Qt.Key_Return || e.key === Qt.Key_Space) { root.page = nav.modelData.id; e.accepted = true; }
@@ -100,7 +106,7 @@ Scope {
                                     id: nm
                                     anchors.fill: parent; hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
-                                    onClicked: { nav.forceActiveFocus(Qt.MouseFocusReason); root.page = nav.modelData.id; }
+                                    onClicked: { nav.forceActiveFocus(Qt.MouseFocusReason); root.page = nav.modelData.id; root.navShown = false; }
                                 }
                             }
                         }
@@ -108,10 +114,17 @@ Scope {
                 }
 
                 // ---- page ----
+                MobileBack {
+                    id: back
+                    visible: Config.mobile && !root.navShown
+                    label: "Settings"
+                    onBack: root.navShown = true
+                }
                 Loader {
                     id: pageLoader
-                    anchors.left: side.right; anchors.right: parent.right
-                    anchors.top: parent.top; anchors.bottom: parent.bottom
+                    anchors.left: Config.mobile ? parent.left : side.right; anchors.right: parent.right
+                    anchors.top: back.visible ? back.bottom : parent.top; anchors.bottom: parent.bottom
+                    visible: !Config.mobile || !root.navShown
                     active: win.visible
                     source: root.fileFor(root.page)
                 }

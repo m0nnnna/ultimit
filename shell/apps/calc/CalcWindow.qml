@@ -14,7 +14,7 @@ FloatingWindow {
     visible: Calc.open
     implicitWidth: 340
     implicitHeight: 620
-    minimumSize: Qt.size(300, 520)
+    minimumSize: Config.mobile ? Qt.size(0, 0) : Qt.size(300, 520)
     color: "transparent"   // the Theme.panel glass below fills it
 
     onVisibleChanged: { if (visible !== Calc.open) Calc.open = visible; if (visible) Qt.callLater(() => ui.forceActiveFocus()); }

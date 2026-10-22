@@ -15,25 +15,28 @@ Item {
     Item {
         id: bar
         width: parent.width
-        height: 34
+        height: Config.mobile ? 132 : 34
         GInput {
             id: find
-            anchors { left: parent.left; verticalCenter: parent.verticalCenter }
-            width: 240
+            anchors { left: parent.left; verticalCenter: Config.mobile ? undefined : parent.verticalCenter; top: Config.mobile ? parent.top : undefined }
+            width: Config.mobile ? parent.width : 240
+            height: Config.mobile ? 40 : implicitHeight
             placeholder: "Search name, command or PID"
             onEdited: v => Tasks.search = v
             onEscaped: { text = ""; Tasks.search = ""; }
         }
         GSeg {
             id: seg
-            anchors { left: find.right; leftMargin: 12; verticalCenter: parent.verticalCenter }
+            anchors { left: Config.mobile ? parent.left : find.right; leftMargin: Config.mobile ? 0 : 12; verticalCenter: Config.mobile ? undefined : parent.verticalCenter
+                      top: Config.mobile ? find.bottom : undefined; topMargin: Config.mobile ? 6 : 0 }
+            height: Config.mobile ? 40 : implicitHeight
             options: [{ id: "apps", label: "Apps" }, { id: "mine", label: "Mine" }, { id: "all", label: "All" }]
             current: Tasks.filter
             onPicked: id => Tasks.filter = id
         }
         Row {
-            anchors { right: parent.right; verticalCenter: parent.verticalCenter }
-            spacing: 8
+            anchors { right: parent.right; verticalCenter: Config.mobile ? undefined : parent.verticalCenter; bottom: Config.mobile ? parent.bottom : undefined }
+            spacing: Config.mobile ? 4 : 8
             GButton { text: root.paused ? "Resume" : "Pause"; enabled: !!root.p && !Tasks.busy; onClicked: Tasks.ask(root.paused ? "cont" : "stop") }
             GButton { text: "End"; primary: true; enabled: !!root.p && !Tasks.busy; onClicked: Tasks.ask("term") }
             DButton { text: "Kill…"; enabled: !!root.p && !Tasks.busy; onClicked: Tasks.ask("kill") }
@@ -50,13 +53,13 @@ Item {
         Row {
             anchors { fill: parent; leftMargin: 10; rightMargin: 10 }
             HeaderCell { width: parent.width - Tasks.colTotal; key: "name"; text: "Name" }
-            HeaderCell { width: Tasks.colW.pid; key: "pid"; text: "PID"; alignRight: true; rightPadding: 8 }
-            HeaderCell { width: Tasks.colW.user; key: "user"; text: "User"; leftPadding: 8 }
+            HeaderCell { width: Tasks.colW.pid; visible: width > 0; key: "pid"; text: "PID"; alignRight: true; rightPadding: 8 }
+            HeaderCell { width: Tasks.colW.user; visible: width > 0; key: "user"; text: "User"; leftPadding: 8 }
             HeaderCell { width: Tasks.colW.cpu; key: "cpu"; text: "CPU"; alignRight: true; rightPadding: 8 }
             HeaderCell { width: Tasks.colW.mem; key: "mem"; text: "Memory"; alignRight: true; rightPadding: 8 }
-            HeaderCell { width: Tasks.colW.gpu; key: "gpu"; text: "GPU mem"; alignRight: true; rightPadding: 8 }
-            HeaderCell { width: Tasks.colW.threads; key: "threads"; text: "Thr."; alignRight: true; rightPadding: 8 }
-            HeaderCell { width: Tasks.colW.state; key: "state"; text: "State"; leftPadding: 8 }
+            HeaderCell { width: Tasks.colW.gpu; visible: width > 0; key: "gpu"; text: "GPU mem"; alignRight: true; rightPadding: 8 }
+            HeaderCell { width: Tasks.colW.threads; visible: width > 0; key: "threads"; text: "Thr."; alignRight: true; rightPadding: 8 }
+            HeaderCell { width: Tasks.colW.state; visible: width > 0; key: "state"; text: "State"; leftPadding: 8 }
         }
     }
 

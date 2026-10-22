@@ -31,14 +31,14 @@ Item {
 
     Item {
         id: head
-        width: parent.width; height: 48
+        width: parent.width; height: Config.mobile ? 58 : 48
         Text {
             text: root.label.toUpperCase()
             color: Theme.dim
             font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.8
         }
         Rectangle {
-            y: 16; width: parent.width; height: 30
+            y: 16; width: parent.width; height: Config.mobile ? 40 : 30
             color: m.containsMouse ? Theme.panel2 : "transparent"
             border.width: 1; border.color: root.open || root.activeFocus ? Theme.accent : Theme.lineStrong
             Text {
@@ -82,7 +82,7 @@ Item {
         visible: root.open
         y: head.height + (root.filterable ? 34 : 0)
         width: parent.width
-        height: Math.min(220, Math.max(1, count) * 30)
+        height: Math.min(220, Math.max(1, count) * (Config.mobile ? 40 : 30))
         clip: true
         boundsBehavior: Flickable.StopAtBounds
         model: root.shown
@@ -90,7 +90,7 @@ Item {
             id: row
             required property var modelData
             readonly property bool sel: String(modelData.id) === root.current
-            width: list.width; height: 30
+            width: list.width; height: Config.mobile ? 40 : 30
             color: rm.containsMouse ? Theme.panel2 : "transparent"
             Rectangle { width: 2; height: parent.height; color: Theme.accent; visible: row.sel }
             Text {

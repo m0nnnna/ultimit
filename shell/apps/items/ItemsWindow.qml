@@ -11,10 +11,11 @@ FloatingWindow {
     visible: Items.open
     implicitWidth: 980
     implicitHeight: 720
-    minimumSize: Qt.size(760, 520)
+    minimumSize: Config.mobile ? Qt.size(0, 0) : Qt.size(760, 520)
     color: "transparent"
 
     onVisibleChanged: if (visible !== Items.open) Items.open = visible
+    property bool mobileList: true      // phone: device list or the chosen device's profile, never both
 
     component Heading: Text {
         color: Theme.dim
@@ -33,7 +34,8 @@ FloatingWindow {
         // ---------------- devices ----------------
         Rectangle {
             id: side
-            width: 230
+            visible: !Config.mobile || win.mobileList
+            width: Config.mobile ? parent.width : 230
             anchors { top: parent.top; bottom: parent.bottom; left: parent.left }
             color: Theme.panel2
             Column {
@@ -48,7 +50,7 @@ FloatingWindow {
                         required property var modelData
                         readonly property bool on: Items.current === modelData.id
                         width: parent.width
-                        height: 52
+                        height: Config.mobile ? 56 : 52
                         color: on ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14) : (dm.containsMouse ? Theme.panel : "transparent")
                         border.color: on ? Theme.accent : "transparent"
                         Column {
@@ -66,7 +68,7 @@ FloatingWindow {
                                 font.family: Theme.mono; font.pixelSize: 10
                             }
                         }
-                        MouseArea { id: dm; anchors.fill: parent; hoverEnabled: true; onClicked: Items.select(devRow.modelData.id) }
+                        MouseArea { id: dm; anchors.fill: parent; hoverEnabled: true; onClicked: { Items.select(devRow.modelData.id); win.mobileList = false; } }
                     }
                 }
                 Text {
@@ -85,28 +87,35 @@ FloatingWindow {
             }
         }
 
+        MobileBack {
+            id: mback
+            visible: Config.mobile && !win.mobileList
+            label: "Devices"
+            onBack: win.mobileList = true
+        }
+
         // ---------------- the chosen device ----------------
         Item {
             id: main
-            anchors { top: parent.top; bottom: parent.bottom; left: side.right; right: parent.right; margins: 20 }
-            visible: Items.config !== null && Items.schema !== null
+            anchors { top: Config.mobile ? mback.bottom : parent.top; bottom: parent.bottom; left: Config.mobile ? parent.left : side.right; right: parent.right; margins: 20 }
+            visible: Items.config !== null && Items.schema !== null && (!Config.mobile || !win.mobileList)
 
             Item {
                 id: header
                 width: parent.width
-                height: 34
+                height: Config.mobile ? 34 + 8 + 40 : 34
                 GSeg {
                     anchors { left: parent.left; verticalCenter: parent.verticalCenter }
                     options: {
                         const o = [];
-                        for (let i = 0; i < (Items.schema ? Items.schema.profiles : 0); i++) o.push({ id: String(i), label: "Profile " + (i + 1) });
+                        for (let i = 0; i < (Items.schema ? Items.schema.profiles : 0); i++) o.push({ id: String(i), label: (Config.mobile ? "P" : "Profile ") + (i + 1) });
                         return o;
                     }
                     current: String(Items.profile)
                     onPicked: id => Items.profile = Number(id)
                 }
                 Row {
-                    anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+                    anchors { right: parent.right; verticalCenter: Config.mobile ? undefined : parent.verticalCenter; bottom: Config.mobile ? parent.bottom : undefined }
                     spacing: 8
                     GButton { text: "Revert"; visible: Items.dirty; onClicked: Items.revert() }
                     GButton {
@@ -161,12 +170,12 @@ FloatingWindow {
                                 }
                             }
                         }
-                        Row {
+                        Flow {
+                            width: parent.width
                             spacing: 10
-                            Text { text: "Color"; width: 80; anchors.verticalCenter: parent.verticalCenter; color: Theme.fg; font.family: Theme.ui; font.pixelSize: 13 }
+                            Text { text: "Color"; width: 80; height: 32; verticalAlignment: Text.AlignVCenter; color: Theme.fg; font.family: Theme.ui; font.pixelSize: 13 }
                             Rectangle {
                                 width: 32; height: 32
-                                anchors.verticalCenter: parent.verticalCenter
                                 border.color: Theme.line
                                 color: Items.prof && Items.colorOk(Items.prof.color) ? "#" + String(Items.prof.color).replace("#", "") : "transparent"
                             }
@@ -179,13 +188,15 @@ FloatingWindow {
                             }
                             Repeater {
                                 model: ["ff0000", "ff8800", "ffee00", "00ff00", "00ffff", "0055ff", "8800ff", "ff00aa", "ffffff"]
-                                delegate: Rectangle {
+                                delegate: Item {
                                     required property string modelData
-                                    width: 22; height: 22
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    color: "#" + modelData
-                                    border.color: Items.prof && String(Items.prof.color).toLowerCase().replace("#", "") === modelData ? Theme.fg : Theme.line
-                                    border.width: 2
+                                    width: 22; height: 32
+                                    Rectangle {
+                                        width: 22; height: 22; anchors.verticalCenter: parent.verticalCenter
+                                        color: "#" + parent.modelData
+                                        border.color: Items.prof && String(Items.prof.color).toLowerCase().replace("#", "") === parent.modelData ? Theme.fg : Theme.line
+                                        border.width: 2
+                                    }
                                     MouseArea { anchors.fill: parent; onClicked: Items.setProf("color", parent.modelData) }
                                 }
                             }
@@ -207,7 +218,8 @@ FloatingWindow {
                         width: parent.width
                         spacing: 10
                         Heading { text: "DPI LEVELS  ·  0 TURNS A LEVEL OFF" }
-                        Row {
+                        Flow {
+                            width: parent.width
                             spacing: 10
                             Repeater {
                                 model: Items.schema && Items.schema.dpi ? Items.schema.dpi.levels : 0
@@ -285,7 +297,7 @@ FloatingWindow {
 
         Text {
             anchors.centerIn: main
-            visible: !main.visible
+            visible: !main.visible && (!Config.mobile || !win.mobileList)
             text: Items.devices.length === 0 ? "" : "Loading…"
             color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
         }

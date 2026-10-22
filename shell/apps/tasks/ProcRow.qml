@@ -20,7 +20,7 @@ Rectangle {
     readonly property bool on: Tasks.selPid === pid
     signal menu(real x, real y)
 
-    height: 30
+    height: Config.mobile ? 40 : 30
     color: on ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.12) : (m.containsMouse ? Theme.panel2 : "transparent")
     border.color: on ? Theme.accent : "transparent"
     border.width: 1
@@ -64,19 +64,19 @@ Rectangle {
                 }
             }
         }
-        Text { width: Tasks.colW.pid; height: parent.height; verticalAlignment: Text.AlignVCenter; horizontalAlignment: Text.AlignRight; rightPadding: 8
+        Text { width: Tasks.colW.pid; visible: width > 0; height: parent.height; verticalAlignment: Text.AlignVCenter; horizontalAlignment: Text.AlignRight; rightPadding: 8
             text: root.pid; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11 }
-        Text { width: Tasks.colW.user; height: parent.height; verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight; leftPadding: 8; rightPadding: 4
+        Text { width: Tasks.colW.user; visible: width > 0; height: parent.height; verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight; leftPadding: 8; rightPadding: 4
             text: root.user; color: root.user === Tasks.me ? Theme.fg : Theme.dim; font.family: Theme.mono; font.pixelSize: 11 }
         Text { width: Tasks.colW.cpu; height: parent.height; verticalAlignment: Text.AlignVCenter; horizontalAlignment: Text.AlignRight; rightPadding: 8
             text: Tasks.pct(root.cpu); color: root.cpuTone; font.family: Theme.mono; font.pixelSize: 11 }
         Text { width: Tasks.colW.mem; height: parent.height; verticalAlignment: Text.AlignVCenter; horizontalAlignment: Text.AlignRight; rightPadding: 8
             text: Tasks.fmt(root.rss); color: Theme.fg; font.family: Theme.mono; font.pixelSize: 11 }
-        Text { width: Tasks.colW.gpu; height: parent.height; verticalAlignment: Text.AlignVCenter; horizontalAlignment: Text.AlignRight; rightPadding: 8
+        Text { width: Tasks.colW.gpu; visible: width > 0; height: parent.height; verticalAlignment: Text.AlignVCenter; horizontalAlignment: Text.AlignRight; rightPadding: 8
             text: root.gpuMem >= 0 ? Tasks.fmt(root.gpuMem) : "–"; color: root.gpuMem >= 0 ? Theme.fg : Theme.dim; font.family: Theme.mono; font.pixelSize: 11 }
-        Text { width: Tasks.colW.threads; height: parent.height; verticalAlignment: Text.AlignVCenter; horizontalAlignment: Text.AlignRight; rightPadding: 8
+        Text { width: Tasks.colW.threads; visible: width > 0; height: parent.height; verticalAlignment: Text.AlignVCenter; horizontalAlignment: Text.AlignRight; rightPadding: 8
             text: root.threads; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11 }
-        Text { width: Tasks.colW.state; height: parent.height; verticalAlignment: Text.AlignVCenter; leftPadding: 8
+        Text { width: Tasks.colW.state; visible: width > 0; height: parent.height; verticalAlignment: Text.AlignVCenter; leftPadding: 8
             text: Tasks.stateText(root.state); color: root.state === "T" || root.state === "t" ? Theme.warn : root.state === "Z" ? Theme.bad : Theme.dim
             font.family: Theme.mono; font.pixelSize: 11 }
     }

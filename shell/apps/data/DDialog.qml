@@ -84,16 +84,23 @@ FocusScope {
         id: box
         anchors.centerIn: parent
         width: Math.min(root.width - 40, d && d.kind === "conflict" ? 480 : (d && d.kind === "input" ? 520 : 440))
-        height: content.implicitHeight + 40
+        height: Math.min(content.implicitHeight + 40, root.height - 24)
         color: Theme.bg1
         border.width: 1; border.color: Theme.lineStrong
         Rectangle { anchors.fill: parent; color: Theme.panel }
         Brackets {}
 
+        Flickable {   // scrolls when the dialog is taller than the window (phone)
+            id: contentFlick
+            x: 20; y: 20
+            width: box.width - 40; height: box.height - 40
+            contentHeight: content.implicitHeight
+            clip: true
+            interactive: contentHeight > height
+            boundsBehavior: Flickable.StopAtBounds
         Column {
             id: content
-            x: 20; y: 20
-            width: box.width - 40
+            width: contentFlick.width
             spacing: 14
 
             Item {   // .lbl
@@ -291,27 +298,25 @@ FocusScope {
                 }
             }
 
-            // ---- buttons
-            Row {
-                anchors.right: parent.right
+            // ---- buttons (right-to-left, so they stay right-aligned and wrap on a narrow window)
+            Flow {
+                width: parent.width
+                layoutDirection: Qt.RightToLeft
                 spacing: 10
-                GButton { visible: d && d.kind === "conflict"; text: "Cancel"; onClicked: Data.answerConflict("cancel", false) }
-                GButton { visible: d && d.kind === "conflict"; text: "Skip"; onClicked: Data.answerConflict("skip", root.applyAll) }
-                GButton { visible: d && d.kind === "conflict"; text: "Keep both"; onClicked: Data.answerConflict("both", root.applyAll) }
-                GButton { visible: d && d.kind === "conflict"; primary: true; text: "Replace"; onClicked: Data.answerConflict("replace", root.applyAll) }
-
-                GButton { visible: d && d.kind === "confirm"; text: "Cancel"; onClicked: Data.closeDialog() }
-                GButton { visible: d && d.kind === "confirm"; primary: true; text: d && d.kind === "confirm" ? d.ok : ""; onClicked: Data.acceptDialog() }
-
-                GButton { visible: d && (d.kind === "password" || d.kind === "input" || d.kind === "compress"); text: "Cancel"; onClicked: Data.closeDialog() }
-                GButton { visible: d && (d.kind === "password" || d.kind === "input"); primary: true; text: d && d.ok ? d.ok : "OK"; onClicked: root.submit() }
-                GButton { visible: d && d.kind === "compress"; primary: true; text: "Compress"; onClicked: root.submit() }
-
-                GButton { visible: d && d.kind === "props"; primary: true; text: "Close"; onClicked: Data.closeDialog() }
-
-                GButton { visible: d && d.kind === "openwith"; text: "Cancel"; onClicked: Data.closeDialog() }
                 GButton { visible: d && d.kind === "openwith"; primary: true; enabled: Data.apps.length > 0; text: "Open"; onClicked: Data.openWith(Data.apps[root.appSel]) }
+                GButton { visible: d && d.kind === "openwith"; text: "Cancel"; onClicked: Data.closeDialog() }
+                GButton { visible: d && d.kind === "props"; primary: true; text: "Close"; onClicked: Data.closeDialog() }
+                GButton { visible: d && d.kind === "compress"; primary: true; text: "Compress"; onClicked: root.submit() }
+                GButton { visible: d && (d.kind === "password" || d.kind === "input"); primary: true; text: d && d.ok ? d.ok : "OK"; onClicked: root.submit() }
+                GButton { visible: d && (d.kind === "password" || d.kind === "input" || d.kind === "compress"); text: "Cancel"; onClicked: Data.closeDialog() }
+                GButton { visible: d && d.kind === "confirm"; primary: true; text: d && d.kind === "confirm" ? d.ok : ""; onClicked: Data.acceptDialog() }
+                GButton { visible: d && d.kind === "confirm"; text: "Cancel"; onClicked: Data.closeDialog() }
+                GButton { visible: d && d.kind === "conflict"; primary: true; text: "Replace"; onClicked: Data.answerConflict("replace", root.applyAll) }
+                GButton { visible: d && d.kind === "conflict"; text: "Keep both"; onClicked: Data.answerConflict("both", root.applyAll) }
+                GButton { visible: d && d.kind === "conflict"; text: "Skip"; onClicked: Data.answerConflict("skip", root.applyAll) }
+                GButton { visible: d && d.kind === "conflict"; text: "Cancel"; onClicked: Data.answerConflict("cancel", false) }
             }
+        }
         }
     }
 }

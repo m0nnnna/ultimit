@@ -19,7 +19,7 @@ FloatingWindow {
     title: (chatTitle !== "" ? chatTitle + " — " : "") + "EMBER"
     implicitWidth: 1160
     implicitHeight: 800
-    minimumSize: Qt.size(820, 560)
+    minimumSize: Config.mobile ? Qt.size(0, 0) : Qt.size(820, 560)
     color: "transparent"
     visible: true
 
@@ -29,6 +29,7 @@ FloatingWindow {
 
     // ================================================================ the chat on screen
     property string chatId: ""
+    property bool mobileList: true      // phone: the Ember + chat list, or the conversation
     property string chatTitle: ""
     property bool busy: false
     property bool loading: false
@@ -115,9 +116,10 @@ FloatingWindow {
         stopProc();
         items.clear(); liveText = ""; tool = ""; ask = null; busy = false; flash = ""; usage = { input: 0, output: 0 };
     }
-    function newChat() { reset(); chatId = ""; chatTitle = ""; input.forceActiveFocus(); }
+    function newChat() { reset(); chatId = ""; chatTitle = ""; mobileList = false; input.forceActiveFocus(); }
     function openChat(id) {
-        if (id === chatId && !loading) return;
+        if (id === chatId && !loading) { mobileList = false; return; }
+        mobileList = false;
         reset();
         chatId = id; chatTitle = ""; loading = true;
         Ember.run(["chat", id], o => {
@@ -186,13 +188,13 @@ FloatingWindow {
     Connections {
         target: Ember
         function onRaiseChanged() {
-            if (Ember.wantText !== "") { input.text = Ember.wantText; Ember.wantText = ""; }
+            if (Ember.wantText !== "") { input.text = Ember.wantText; Ember.wantText = ""; mobileList = false; }
             input.forceActiveFocus();
         }
         function onLoadedChanged() { if (Ember.loaded && !Ember.ready) win.overlay = "settings"; }
     }
     Component.onCompleted: {
-        if (Ember.wantText !== "") { input.text = Ember.wantText; Ember.wantText = ""; }
+        if (Ember.wantText !== "") { input.text = Ember.wantText; Ember.wantText = ""; mobileList = false; }
         if (Ember.loaded && !Ember.ready) overlay = "settings";
         input.forceActiveFocus();
     }
@@ -217,7 +219,8 @@ FloatingWindow {
 
             // ---------------------------------------------------- Ember
             Rectangle {
-                Layout.fillHeight: true; Layout.preferredWidth: 380
+                Layout.fillHeight: true; Layout.preferredWidth: Config.mobile ? ui.width : 380
+                visible: !Config.mobile || win.mobileList
                 color: Theme.panel
                 Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Theme.line }
 
@@ -227,7 +230,7 @@ FloatingWindow {
 
                     EmberFace {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: Math.min(width * 1.25, win.height * 0.6)
+                        Layout.preferredHeight: Math.min(width * 1.25, win.height * (Config.mobile ? 0.34 : 0.6))
                         mood: win.mood
                         talk: win.talk
                     }
@@ -283,7 +286,13 @@ FloatingWindow {
                     RowLayout {
                         Layout.fillWidth: true; Layout.topMargin: 6
                         SectionLabel { text: "Chats"; Layout.fillWidth: true }
-                        C.SmallLink { text: "+ NEW"; onClicked: win.newChat() }
+                        C.SmallLink { visible: !Config.mobile; text: "+ NEW"; onClicked: win.newChat() }
+                    }
+                    RowLayout {
+                        visible: Config.mobile
+                        Layout.fillWidth: true; spacing: 8
+                        ChamferButton { Layout.fillWidth: true; implicitHeight: 40; text: "New chat"; onClicked: win.newChat() }
+                        ChamferButton { Layout.fillWidth: true; implicitHeight: 40; text: "Settings"; onClicked: win.overlay = "settings" }
                     }
                     ListView {
                         Layout.fillWidth: true; Layout.fillHeight: true
@@ -317,10 +326,13 @@ FloatingWindow {
             // ---------------------------------------------------- the conversation
             ColumnLayout {
                 Layout.fillWidth: true; Layout.fillHeight: true
+                visible: !Config.mobile || !win.mobileList
                 spacing: 0
 
+                MobileBack { visible: Config.mobile; Layout.fillWidth: true; Layout.preferredHeight: 44
+                             label: "Ember"; onBack: win.mobileList = true }
                 Rectangle {
-                    Layout.fillWidth: true; Layout.preferredHeight: 56
+                    Layout.fillWidth: true; Layout.preferredHeight: Config.mobile ? 48 : 56
                     color: Theme.panel
                     Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
                     Text {
@@ -333,8 +345,8 @@ FloatingWindow {
                         id: headBtns
                         anchors.right: parent.right; anchors.rightMargin: 14; anchors.verticalCenter: parent.verticalCenter
                         spacing: 6
-                        ChamferButton { implicitHeight: 30; text: "New chat"; onClicked: win.newChat() }
-                        ChamferButton { implicitHeight: 30; text: "Settings"; onClicked: win.overlay = "settings" }
+                        ChamferButton { implicitHeight: Config.mobile ? 38 : 30; text: "New chat"; visible: !Config.mobile; onClicked: win.newChat() }
+                        ChamferButton { implicitHeight: Config.mobile ? 38 : 30; text: "Settings"; onClicked: win.overlay = "settings" }
                     }
                 }
 
@@ -457,17 +469,20 @@ FloatingWindow {
                                 }
                             }
                         }
-                        Row {
-                            spacing: 8
-                            ChamferButton { text: "Allow"; primary: true; onClicked: win.permit(true, false) }
-                            ChamferButton { text: "Allow for this chat"; onClicked: win.permit(true, true) }
-                            ChamferButton { text: "Deny"; onClicked: win.permit(false, false) }
-                            C.SmallLink {
-                                id: askMore
-                                property bool checked: false
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: checked ? "HIDE DETAILS" : "DETAILS"
-                                onClicked: checked = !checked
+                        Flow {
+                            width: parent.width; spacing: 8
+                            ChamferButton { implicitHeight: Config.mobile ? 40 : 34; text: "Allow"; primary: true; onClicked: win.permit(true, false) }
+                            ChamferButton { implicitHeight: Config.mobile ? 40 : 34; text: Config.mobile ? "This chat" : "Allow for this chat"; onClicked: win.permit(true, true) }
+                            ChamferButton { implicitHeight: Config.mobile ? 40 : 34; text: "Deny"; onClicked: win.permit(false, false) }
+                            Item {
+                                width: askMore.implicitWidth; height: Config.mobile ? 40 : 34
+                                C.SmallLink {
+                                    id: askMore
+                                    property bool checked: false
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: checked ? "HIDE DETAILS" : "DETAILS"
+                                    onClicked: checked = !checked
+                                }
                             }
                         }
                     }
@@ -476,11 +491,11 @@ FloatingWindow {
                 // composer
                 Rectangle {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: Math.min(Math.max(input.contentHeight + 24, 48), 220) + 46
+                    Layout.preferredHeight: Math.min(Math.max(input.contentHeight + 24, 48), 220) + (Config.mobile ? 54 : 46)
                     color: Theme.panel
                     Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Theme.line }
                     Rectangle {
-                        x: 14; y: 12; width: parent.width - 28; height: parent.height - 52
+                        x: 14; y: 12; width: parent.width - 28; height: parent.height - (Config.mobile ? 66 : 52)
                         color: "transparent"
                         border.width: 1; border.color: input.activeFocus ? Theme.accent : Theme.lineStrong
                         ScrollView {
@@ -512,7 +527,7 @@ FloatingWindow {
                             MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: win.overlay = "settings" }
                         }
                         Text {
-                            visible: win.usage.input + win.usage.output > 0
+                            visible: win.usage.input + win.usage.output > 0 && !Config.mobile
                             text: "TOKENS " + win.usage.input + " IN · " + win.usage.output + " OUT"
                             color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.2
                         }
@@ -524,11 +539,11 @@ FloatingWindow {
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             text: "ENTER SENDS · SHIFT+ENTER NEW LINE"
-                            visible: !win.busy
+                            visible: !win.busy && !Config.mobile
                             color: Theme.dim; font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1.2
                         }
-                        ChamferButton { implicitHeight: 28; text: "Stop"; visible: win.busy; onClicked: win.interrupt() }
-                        ChamferButton { implicitHeight: 28; text: "Send"; primary: win.canSend; onClicked: win.sendNow() }
+                        ChamferButton { implicitHeight: Config.mobile ? 36 : 28; text: "Stop"; visible: win.busy; onClicked: win.interrupt() }
+                        ChamferButton { implicitHeight: Config.mobile ? 36 : 28; text: "Send"; primary: win.canSend; onClicked: win.sendNow() }
                     }
                 }
             }
@@ -543,8 +558,8 @@ FloatingWindow {
             Loader {
                 id: ov
                 anchors.centerIn: parent
-                width: Math.min(parent.width - 40, win.overlay === "settings" ? 640 : 440)
-                height: Math.min(parent.height - 40, item ? item.implicitHeight : 0)
+                width: Config.mobile ? parent.width - 24 : Math.min(parent.width - 40, win.overlay === "settings" ? 640 : 440)
+                height: Math.min(parent.height - (Config.mobile ? 24 : 40), item ? item.implicitHeight : 0)
                 active: win.overlay !== ""
                 sourceComponent: win.overlay === "settings" ? settingsC : smallC
                 onLoaded: item.forceActiveFocus()

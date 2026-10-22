@@ -13,7 +13,7 @@ Item {
     GLabel {
         id: hd
         strong: true
-        text: Store.installedApps.length + " installed apps  ·  updates are in Settings › Updates"
+        text: Store.installedApps.length + " installed apps" + (Config.mobile ? "" : "  ·  updates are in Settings › Updates")
     }
     Text {
         anchors { right: parent.right; verticalCenter: hd.verticalCenter }
@@ -56,7 +56,7 @@ Item {
                 anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
                 spacing: 8
                 Text {
-                    visible: root.confirmId === row.modelData.id
+                    visible: !Config.mobile && root.confirmId === row.modelData.id
                     anchors.verticalCenter: parent.verticalCenter
                     text: "Remove it?"; color: Theme.warn; font.family: Theme.ui; font.pixelSize: 12
                 }

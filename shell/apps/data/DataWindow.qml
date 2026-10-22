@@ -16,7 +16,7 @@ FloatingWindow {
     visible: Data.open
     implicitWidth: 960
     implicitHeight: 600
-    minimumSize: Qt.size(760, 440)
+    minimumSize: Config.mobile ? Qt.size(0, 0) : Qt.size(760, 440)
     color: Theme.panel   // frosted glass, like every Ultimit app window
 
     onVisibleChanged: { if (visible !== Data.open) Data.open = visible; if (visible) Qt.callLater(() => ui.forceActiveFocus()); }
@@ -39,6 +39,10 @@ FloatingWindow {
     readonly property bool grid: Data.viewMode === "grid"
     readonly property var lv: grid ? gridView : listView
     readonly property int sideW: 196
+    property bool mobilePlaces: false                       // phone: the places list instead of the files, never both
+    readonly property int barH: Config.mobile ? 82 : 28     // toolbar height (phone: two rows)
+    readonly property int rowH: Config.mobile ? 48 : 32     // list row height
+    readonly property int listTop: Config.mobile ? tabBarH + 98 + arcBarH : tabBarH + 73 + arcBarH   // phone: no column header
     readonly property int arcBarH: Data.isArc ? 34 : 0     // archive strip under the toolbar
     readonly property int tabBarH: 34                       // tab strip above the toolbar
     readonly property int cols: Math.max(1, Math.floor(gridView.width / gridView.cellWidth))
@@ -280,7 +284,7 @@ FloatingWindow {
         property bool active: false
         property bool on: true
         signal clicked()
-        width: 30; height: 28
+        width: Config.mobile ? 38 : 30; height: Config.mobile ? 40 : 28
         opacity: on ? 1 : 0.35
         Rectangle {
             anchors.fill: parent
@@ -325,7 +329,7 @@ FloatingWindow {
         signal ejectClicked()
         signal menuRequested(real x, real y)
         signal middleClicked()
-        width: parent ? parent.width : 100; height: sr.stacked ? 40 : 30
+        width: parent ? parent.width : 100; height: Config.mobile ? 44 : (sr.stacked ? 40 : 30)
         Rectangle {
             anchors.fill: parent
             color: sr.current || sm.containsMouse || sdrop.containsDrag ? Theme.panel2 : "transparent"
@@ -337,7 +341,7 @@ FloatingWindow {
             sourceSize: Qt.size(36, 36); source: sr.icon
         }
         Text {
-            x: 40; y: sr.stacked ? 6 : (parent.height - height) / 2
+            x: 40; y: sr.stacked ? (Config.mobile ? 8 : 6) : (parent.height - height) / 2
             width: parent.width - 40 - (sr.eject ? 34 : 10) - (subT.visible && !sr.stacked ? subT.implicitWidth + 4 : 0)
             text: sr.label.toUpperCase(); elide: Text.ElideRight
             color: sr.current ? Theme.accent : Theme.fg
@@ -347,7 +351,7 @@ FloatingWindow {
             id: subT
             visible: sr.sub !== ""
             x: sr.stacked ? 40 : parent.width - width - (sr.eject ? 34 : 10)
-            y: sr.stacked ? 23 : (parent.height - height) / 2
+            y: sr.stacked ? (Config.mobile ? 26 : 23) : (parent.height - height) / 2
             text: sr.sub; color: Theme.dim
             font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1
         }
@@ -358,12 +362,12 @@ FloatingWindow {
             onClicked: mouse => {
                 if (mouse.button === Qt.RightButton) { const p = mapToItem(ui, mouse.x, mouse.y); sr.menuRequested(p.x, p.y); }
                 else if (mouse.button === Qt.MiddleButton) sr.middleClicked();
-                else sr.clicked();
+                else { sr.clicked(); if (Config.mobile) win.mobilePlaces = false; }
             }
         }
         Item {
             visible: sr.eject
-            anchors.right: parent.right; width: 30; height: parent.height
+            anchors.right: parent.right; width: Config.mobile ? 40 : 30; height: parent.height
             Text {
                 anchors.centerIn: parent; text: "⏏"
                 color: em.containsMouse ? Theme.accent : Theme.dim
@@ -394,8 +398,8 @@ FloatingWindow {
             case Qt.Key_Up: d = win.grid ? -win.cols : -1; break;
             case Qt.Key_Right: if (win.grid) d = 1; else return false; break;
             case Qt.Key_Left: if (win.grid) d = -1; else return false; break;
-            case Qt.Key_PageDown: d = Math.max(1, Math.floor(win.lv.height / (win.grid ? gridView.cellHeight : 32))) * (win.grid ? win.cols : 1); break;
-            case Qt.Key_PageUp: d = -Math.max(1, Math.floor(win.lv.height / (win.grid ? gridView.cellHeight : 32))) * (win.grid ? win.cols : 1); break;
+            case Qt.Key_PageDown: d = Math.max(1, Math.floor(win.lv.height / (win.grid ? gridView.cellHeight : win.rowH))) * (win.grid ? win.cols : 1); break;
+            case Qt.Key_PageUp: d = -Math.max(1, Math.floor(win.lv.height / (win.grid ? gridView.cellHeight : win.rowH))) * (win.grid ? win.cols : 1); break;
             case Qt.Key_Home: Data.moveTo(0, ext); return true;
             case Qt.Key_End: Data.moveTo(Data.view.length - 1, ext); return true;
             default: return false;
@@ -476,12 +480,20 @@ FloatingWindow {
         // ============================================================ sidebar
         Rectangle {
             id: side
-            x: 0; y: 0; width: win.sideW; height: parent.height
+            visible: !Config.mobile || win.mobilePlaces
+            x: 0; y: 0; width: Config.mobile ? parent.width : win.sideW; height: parent.height
             color: Qt.rgba(0, 0, 0, 0.18)
             Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Theme.line }
 
+            MobileBack {
+                id: placesBack
+                visible: Config.mobile
+                label: "Files"
+                onBack: win.mobilePlaces = false
+            }
+
             Flickable {
-                anchors { left: parent.left; right: parent.right; top: parent.top; bottom: meterBox.top }
+                anchors { left: parent.left; right: parent.right; top: Config.mobile ? placesBack.bottom : parent.top; bottom: meterBox.top }
                 clip: true
                 contentWidth: width; contentHeight: sideCol.implicitHeight + 24
                 ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
@@ -615,7 +627,8 @@ FloatingWindow {
         // ============================================================ main column
         Item {
             id: main
-            x: win.sideW + 1; y: 0
+            visible: !Config.mobile || !win.mobilePlaces
+            x: Config.mobile ? 0 : win.sideW + 1; y: 0
             width: parent.width - x; height: parent.height
 
             // ---- tab strip: click switches, middle-click / × closes, drag reorders, right-click menu,
@@ -754,10 +767,23 @@ FloatingWindow {
             // ---- toolbar
             Item {
                 id: bar
-                x: 12; y: win.tabBarH + 10; width: parent.width - 24; height: 28
+                x: 12; y: win.tabBarH + (Config.mobile ? 8 : 10); width: parent.width - 24; height: win.barH
+
+                Item {   // phone: opens the places list
+                    id: placesBtn
+                    visible: Config.mobile
+                    width: 70; height: 40
+                    Rectangle { anchors.fill: parent; color: pbm.pressed ? Theme.panel2 : "transparent"; border.width: 1; border.color: Theme.line }
+                    Text {
+                        anchors.centerIn: parent; text: "PLACES"; color: Theme.fg
+                        font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.4
+                    }
+                    MouseArea { id: pbm; anchors.fill: parent; onClicked: win.mobilePlaces = true }
+                }
 
                 Row {
                     id: navBtns
+                    x: Config.mobile ? placesBtn.width + 6 : 0
                     spacing: 4
                     TBtn { glyph: "‹"; on: Data.backStack.length > 0; onClicked: Data.goBack() }
                     TBtn { glyph: "›"; on: Data.fwdStack.length > 0; onClicked: Data.goForward() }
@@ -769,12 +795,15 @@ FloatingWindow {
                     id: rightBtns
                     anchors.right: parent.right
                     spacing: 4
-                    TBtn { glyph: "☰"; active: !win.grid; onClicked: Data.viewMode = "list" }
-                    TBtn { glyph: "▦"; active: win.grid; onClicked: Data.viewMode = "grid" }
+                    TBtn { visible: !Config.mobile || win.grid; glyph: "☰"; active: !win.grid; onClicked: Data.viewMode = "list" }
+                    TBtn { visible: !Config.mobile || !win.grid; glyph: "▦"; active: win.grid; onClicked: Data.viewMode = "grid" }
                     TBtn { glyph: "⇅"; onClicked: { win.openSortMenu(); } }
                     TBtn { glyph: "."; active: Data.showHidden; onClicked: Data.showHidden = !Data.showHidden }
-                    Rectangle {   // filter field
-                        width: 150; height: 28
+                    Rectangle {   // filter field (phone: second toolbar row, right of the path bar)
+                        id: filterBox
+                        parent: Config.mobile ? bar : rightBtns
+                        x: Config.mobile ? bar.width - width : 0; y: Config.mobile ? 46 : 0
+                        width: Config.mobile ? 104 : 150; height: Config.mobile ? 36 : 28
                         color: "transparent"; border.width: 1
                         border.color: filterInput.activeFocus || Data.filter !== "" ? Theme.accent : Theme.line
                         Text {
@@ -803,8 +832,11 @@ FloatingWindow {
                 // breadcrumb / path bar
                 Item {
                     id: crumb
-                    anchors { left: navBtns.right; leftMargin: 10; right: rightBtns.left; rightMargin: 10; verticalCenter: parent.verticalCenter }
-                    height: 28
+                    anchors { left: Config.mobile ? parent.left : navBtns.right; leftMargin: Config.mobile ? 0 : 10
+                              right: Config.mobile ? parent.right : rightBtns.left; rightMargin: Config.mobile ? 124 : 10
+                              top: Config.mobile ? parent.top : undefined; topMargin: Config.mobile ? 46 : 0
+                              verticalCenter: Config.mobile ? undefined : parent.verticalCenter }
+                    height: Config.mobile ? 36 : 28
                     property bool editing: false
                     readonly property var segs: {
                         const out = [];
@@ -989,13 +1021,13 @@ FloatingWindow {
             Item {
                 id: arcBar
                 visible: Data.isArc
-                x: 12; y: win.tabBarH + 44; width: parent.width - 24; height: win.arcBarH
+                x: 12; y: win.tabBarH + (Config.mobile ? 94 : 44); width: parent.width - 24; height: win.arcBarH
                 Row {
                     id: arcBtns
                     anchors { right: parent.right; verticalCenter: parent.verticalCenter }
                     spacing: 8
-                    GButton { height: 24; text: "Extract selected…"; enabled: Data.selCount > 0 || Data.cur >= 0; onClicked: Data.extractSelectedDialog() }
-                    GButton { height: 24; primary: true; text: "Extract all…"; onClicked: Data.extractAllDialog() }
+                    GButton { height: 24; text: Config.mobile ? "Selected…" : "Extract selected…"; enabled: Data.selCount > 0 || Data.cur >= 0; onClicked: Data.extractSelectedDialog() }
+                    GButton { height: 24; primary: true; text: Config.mobile ? "All…" : "Extract all…"; onClicked: Data.extractAllDialog() }
                 }
                 Text {
                     anchors { left: parent.left; right: arcBtns.left; rightMargin: 12; verticalCenter: parent.verticalCenter }
@@ -1011,7 +1043,7 @@ FloatingWindow {
             // ---- column header (list mode)
             Item {
                 id: header
-                visible: !win.grid
+                visible: !win.grid && !Config.mobile
                 x: 12; y: win.tabBarH + 48 + win.arcBarH; width: parent.width - 24; height: 24
                 readonly property int sizeW: 84
                 readonly property int modW: 128
@@ -1043,7 +1075,7 @@ FloatingWindow {
             // ---- listing area
             Item {
                 id: area
-                x: 12; y: win.tabBarH + (win.grid ? 48 : 73) + win.arcBarH
+                x: 12; y: Config.mobile ? win.listTop : win.tabBarH + (win.grid ? 48 : 73) + win.arcBarH
                 width: parent.width - 24
                 height: parent.height - y - statusBar.height - (progress.visible ? progress.height : 0)
                 clip: true
@@ -1062,7 +1094,7 @@ FloatingWindow {
                         id: row
                         required property var modelData
                         required property int index
-                        width: ListView.view.width; height: 32
+                        width: ListView.view.width; height: win.rowH
                         readonly property bool sel: Data.selected[modelData.p] === true
                         readonly property bool isCur: Data.cur === index
                         readonly property bool renaming: Data.renamePath === modelData.p
@@ -1099,8 +1131,8 @@ FloatingWindow {
                         Text {
                             id: nameT
                             visible: !row.renaming
-                            x: 42; width: header.width - header.sizeW - header.modW - header.typeW - 8 - 42 - 4
-                            anchors.verticalCenter: parent.verticalCenter
+                            x: 42; width: Config.mobile ? row.width - 42 - 10 : header.width - header.sizeW - header.modW - header.typeW - 8 - 42 - 4
+                            anchors.verticalCenter: parent.verticalCenter; anchors.verticalCenterOffset: Config.mobile ? -9 : 0
                             text: row.modelData.n; elide: Text.ElideMiddle
                             color: row.modelData.d ? Theme.accent : Theme.fg
                             opacity: row.modelData.h ? 0.6 : 1
@@ -1108,13 +1140,22 @@ FloatingWindow {
                         }
                         Loader {
                             active: row.renaming
-                            x: 40; width: header.width - header.sizeW - header.modW - header.typeW - 8 - 40 - 4; height: 24
+                            x: 40; width: Config.mobile ? row.width - 40 - 8 : header.width - header.sizeW - header.modW - header.typeW - 8 - 40 - 4; height: 24
                             anchors.verticalCenter: parent.verticalCenter
                             sourceComponent: renameEditor
                             property string initial: row.modelData.n
                             property bool isDir: row.modelData.d
                         }
+                        Text {   // phone: one small meta line under the name instead of the columns
+                            visible: Config.mobile && !row.renaming
+                            x: 42; width: row.width - 42 - 10
+                            anchors.verticalCenter: parent.verticalCenter; anchors.verticalCenterOffset: 11
+                            text: (row.modelData.d ? "folder" : Data.fmtSize(row.modelData.s)) + "  ·  " + Data.fmtDate(row.modelData.m)
+                            elide: Text.ElideRight
+                            color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10
+                        }
                         Text {
+                            visible: !Config.mobile
                             x: header.width - header.sizeW - header.modW - header.typeW - 8; width: header.sizeW - 14
                             anchors.verticalCenter: parent.verticalCenter
                             horizontalAlignment: Text.AlignRight
@@ -1122,6 +1163,7 @@ FloatingWindow {
                             color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11
                         }
                         Text {
+                            visible: !Config.mobile
                             x: header.width - header.modW - header.typeW; width: header.modW - 14
                             anchors.verticalCenter: parent.verticalCenter
                             horizontalAlignment: Text.AlignRight
@@ -1129,7 +1171,7 @@ FloatingWindow {
                             color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11
                         }
                         Text {
-                            visible: header.typeW > 0
+                            visible: header.typeW > 0 && !Config.mobile
                             x: header.width - header.typeW + 8; width: header.typeW - 12
                             anchors.verticalCenter: parent.verticalCenter
                             text: Data.isTrash ? Data.dirname(row.modelData.o || "") : (row.modelData.d ? "folder" : row.modelData.t)
@@ -1213,6 +1255,7 @@ FloatingWindow {
                     y: Math.max(0, Math.min(parent.height, contentEnd - win.lv.contentY))
                     height: parent.height - y
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    onPressAndHold: mouse => { if (Config.mobile) { Data.clearSel(); const pt = mapToItem(ui, mouse.x, mouse.y); win.openBgMenu(pt.x, pt.y); } }
                     onPressed: mouse => {
                         ui.forceActiveFocus();
                         if (mouse.button === Qt.RightButton) { Data.clearSel(); const pt = mapToItem(ui, mouse.x, mouse.y); win.openBgMenu(pt.x, pt.y); }
@@ -1275,14 +1318,17 @@ FloatingWindow {
                 Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Theme.line }
                 Text {
                     x: 14; anchors.verticalCenter: parent.verticalCenter
+                    width: Config.mobile ? Math.max(0, parent.width - 14 - statusChips.width - 20) : implicitWidth
+                    elide: Config.mobile ? Text.ElideRight : Text.ElideNone
                     text: Data.statusText()
                     color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.6
                 }
                 Row {
+                    id: statusChips
                     anchors.right: parent.right; anchors.rightMargin: 12; anchors.verticalCenter: parent.verticalCenter
                     spacing: 8
                     GChip { visible: Data.clipPaths.length > 0; text: (Data.clipCut ? "cut " : "copied ") + Data.clipPaths.length; tone: Theme.accent }
-                    GChip { visible: Data.showHidden; text: "hidden shown"; tone: Theme.dim }
+                    GChip { visible: Data.showHidden && !Config.mobile; text: "hidden shown"; tone: Theme.dim }
                     GChip { visible: Data.isTrash; text: "trash"; tone: Theme.warn }
                     GButton {
                         visible: Data.isTrash

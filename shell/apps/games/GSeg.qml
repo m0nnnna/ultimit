@@ -8,7 +8,7 @@ Item {
     property string current: ""
     signal picked(string id)
 
-    implicitHeight: 28
+    implicitHeight: Config.mobile ? 38 : 28
     implicitWidth: row.implicitWidth
 
     Row {

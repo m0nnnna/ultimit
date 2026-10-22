@@ -31,7 +31,7 @@ FloatingWindow {
                            : (name !== "" ? name + " — " : "") + "IMAGE"
     implicitWidth: 1120
     implicitHeight: 720
-    minimumSize: Qt.size(420, 300)
+    minimumSize: Config.mobile ? Qt.size(0, 0) : Qt.size(420, 300)
     color: "transparent"   // the Theme.panel glass below fills it
     visible: true
 
@@ -219,29 +219,38 @@ FloatingWindow {
                 Layout.fillWidth: true; Layout.preferredHeight: tbFlow.implicitHeight + 14
                 color: Theme.panel
                 Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
+                Flickable {   // phone: one swipeable row instead of several wrapped ones
+                    id: tbScroll
+                    anchors.fill: parent
+                    clip: true
+                    interactive: Config.mobile
+                    contentWidth: tbFlow.childrenRect.width + 20
+                    boundsBehavior: Flickable.StopAtBounds
+                }
                 Flow {
                     id: tbFlow
-                    x: 10; y: 7; width: parent.width - 20
+                    parent: tbScroll.contentItem
+                    x: 10; y: 7; width: Config.mobile ? 4000 : parent.width - 20
                     spacing: 6
-                    ChamferButton { implicitHeight: 30; text: "Grid"; onClicked: win.backToGrid() }
+                    ChamferButton { implicitHeight: Config.mobile ? 38 : 30; text: "Grid"; onClicked: win.backToGrid() }
                     Item { width: 8; height: 1 }
-                    ChamferButton { implicitHeight: 30; text: "Prev"; onClicked: win.go(-1) }
-                    ChamferButton { implicitHeight: 30; text: "Next"; onClicked: win.go(1) }
+                    ChamferButton { implicitHeight: Config.mobile ? 38 : 30; text: "Prev"; onClicked: win.go(-1) }
+                    ChamferButton { implicitHeight: Config.mobile ? 38 : 30; text: "Next"; onClicked: win.go(1) }
                     Item { width: 8; height: 1 }
-                    ChamferButton { implicitHeight: 30; text: "Fit"; primary: win.fit; onClicked: win.fit = true }
-                    ChamferButton { implicitHeight: 30; text: "1:1"; primary: !win.fit && Math.abs(win.zoom - 1) < 0.001; onClicked: win.actualSize() }
-                    ChamferButton { implicitHeight: 30; text: "−"; onClicked: win.zoomStep(-1) }
-                    ChamferButton { implicitHeight: 30; text: "+"; onClicked: win.zoomStep(1) }
+                    ChamferButton { implicitHeight: Config.mobile ? 38 : 30; text: "Fit"; primary: win.fit; onClicked: win.fit = true }
+                    ChamferButton { implicitHeight: Config.mobile ? 38 : 30; text: "1:1"; primary: !win.fit && Math.abs(win.zoom - 1) < 0.001; onClicked: win.actualSize() }
+                    ChamferButton { implicitHeight: Config.mobile ? 38 : 30; text: "−"; onClicked: win.zoomStep(-1) }
+                    ChamferButton { implicitHeight: Config.mobile ? 38 : 30; text: "+"; onClicked: win.zoomStep(1) }
                     Item { width: 8; height: 1 }
-                    ChamferButton { implicitHeight: 30; text: "↺"; onClicked: win.rotate(-90) }
-                    ChamferButton { implicitHeight: 30; text: "↻"; onClicked: win.rotate(90) }
-                    ChamferButton { visible: win.anim; implicitHeight: 30; text: animPic.paused ? "Play" : "Pause"; onClicked: animPic.paused = !animPic.paused }
+                    ChamferButton { implicitHeight: Config.mobile ? 38 : 30; text: "↺"; onClicked: win.rotate(-90) }
+                    ChamferButton { implicitHeight: Config.mobile ? 38 : 30; text: "↻"; onClicked: win.rotate(90) }
+                    ChamferButton { visible: win.anim; implicitHeight: Config.mobile ? 38 : 30; text: animPic.paused ? "Play" : "Pause"; onClicked: animPic.paused = !animPic.paused }
                     Item { width: 8; height: 1 }
-                    ChamferButton { implicitHeight: 30; text: "Wallpaper"; onClicked: win.setWallpaper() }
-                    ChamferButton { implicitHeight: 30; text: "Frame"; onClicked: win.putInFrame() }
-                    ChamferButton { implicitHeight: 30; text: "Show in folder"; onClicked: win.showInFolder() }
-                    ChamferButton { implicitHeight: 30; text: "Copy"; onClicked: win.copyImage() }
-                    ChamferButton { implicitHeight: 30; text: "Delete"; onClicked: if (win.path !== "") win.overlay = "trash" }
+                    ChamferButton { implicitHeight: Config.mobile ? 38 : 30; text: "Wallpaper"; onClicked: win.setWallpaper() }
+                    ChamferButton { implicitHeight: Config.mobile ? 38 : 30; text: "Frame"; onClicked: win.putInFrame() }
+                    ChamferButton { implicitHeight: Config.mobile ? 38 : 30; text: "Show in folder"; onClicked: win.showInFolder() }
+                    ChamferButton { implicitHeight: Config.mobile ? 38 : 30; text: "Copy"; onClicked: win.copyImage() }
+                    ChamferButton { implicitHeight: Config.mobile ? 38 : 30; text: "Delete"; onClicked: if (win.path !== "") win.overlay = "trash" }
                 }
             }
 
@@ -284,6 +293,11 @@ FloatingWindow {
                             cache: false
                             smooth: true
                             onSourceChanged: paused = false
+                        }
+                        PinchHandler {   // phone: two-finger zoom around the fingers
+                            enabled: Config.mobile
+                            target: null
+                            onScaleChanged: delta => win.zoomAt(delta, centroid.position.x - flick.contentX, centroid.position.y - flick.contentY)
                         }
                         TapHandler {
                             onDoubleTapped: eventPoint => win.toggleFit(eventPoint.position.x - flick.contentX,
@@ -363,7 +377,7 @@ FloatingWindow {
                     anchors.left: parent.left; anchors.leftMargin: 12; anchors.right: info.left; anchors.rightMargin: 20
                     anchors.verticalCenter: parent.verticalCenter
                     elide: Text.ElideMiddle
-                    text: win.path
+                    text: Config.mobile ? win.name : win.path
                     color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11
                 }
                 Text {
@@ -373,9 +387,9 @@ FloatingWindow {
                         if (!win.cur) return "";
                         const parts = [(win.index + 1) + " / " + win.files.length];
                         if (win.ready) parts.push(Math.round(win.natW) + " × " + Math.round(win.natH));
-                        parts.push(win.humanSize(win.cur.size));
+                        if (!Config.mobile) parts.push(win.humanSize(win.cur.size));
                         if (win.anim && animPic.frameCount > 1) parts.push(animPic.frameCount + " FRAMES");
-                        if (win.ready) parts.push((win.fit ? "FIT " : "") + Math.round(win.viewScale * 100) + "%");
+                        if (win.ready && !Config.mobile) parts.push((win.fit ? "FIT " : "") + Math.round(win.viewScale * 100) + "%");
                         if (win.rot) parts.push(win.rot + "°");
                         return parts.join("   ");
                     }

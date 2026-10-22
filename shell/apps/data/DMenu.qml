@@ -13,7 +13,7 @@ FocusScope {
 
     property var items: []
     property int cur: -1
-    readonly property int rowH: 28
+    readonly property int rowH: Config.mobile ? 38 : 28
     readonly property int menuW: 236
     signal picked(string id)
     signal dismissed()
@@ -23,10 +23,11 @@ FocusScope {
         for (const it of items) h += it.kind === "sep" ? 9 : rowH;
         return h;
     }
+    readonly property int shownH: Config.mobile ? Math.min(menuH, root.height - 12) : menuH   // phone: scrolls when taller than the window
     function popup(x, y) {
         cur = -1;
         menu.x = Math.max(6, Math.min(x, root.width - menuW - 6));
-        menu.y = Math.max(6, Math.min(y, root.height - menuH - 6));
+        menu.y = Math.max(6, Math.min(y, root.height - shownH - 6));
         visible = true;
         forceActiveFocus();
     }
@@ -68,13 +69,19 @@ FocusScope {
 
     Rectangle {
         id: menu
-        width: root.menuW; height: root.menuH
+        width: root.menuW; height: root.shownH
         color: Qt.rgba(Theme.bg1.r, Theme.bg1.g, Theme.bg1.b, 0.97)
         border.width: 1; border.color: Theme.lineStrong
         MouseArea { anchors.fill: parent; acceptedButtons: Qt.LeftButton | Qt.RightButton }
         Rectangle { anchors.fill: parent; color: Theme.panel }
         Brackets { size: 8 }
 
+        Flickable {
+            anchors.fill: parent
+            clip: true
+            contentHeight: root.menuH
+            interactive: root.menuH > height
+            boundsBehavior: Flickable.StopAtBounds
         Repeater {
             model: root.items
             delegate: Item {
@@ -119,6 +126,7 @@ FocusScope {
                     onClicked: root.activate(row.modelData)
                 }
             }
+        }
         }
     }
 }

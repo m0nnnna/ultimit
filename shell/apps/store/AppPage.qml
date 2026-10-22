@@ -22,7 +22,9 @@ Flickable {
         width: root.width
         spacing: 16
 
+        MobileBack { visible: Config.mobile; label: "Store"; onBack: Store.back() }
         Text {
+            visible: !Config.mobile
             text: "‹  BACK"; color: bk.hovered ? Theme.fg : Theme.accent
             font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.6
             HoverHandler { id: bk; cursorShape: Qt.PointingHandCursor }
@@ -37,10 +39,10 @@ Flickable {
         // ---- head ----
         Item {
             visible: !!root.a
-            width: parent.width; height: 96
+            width: parent.width; height: Config.mobile ? 150 : 96
             AppIcon { id: ic; size: 96; app: root.a || ({}) }
             Column {
-                anchors { left: ic.right; leftMargin: 18; right: actions.left; rightMargin: 16; verticalCenter: ic.verticalCenter }
+                anchors { left: ic.right; leftMargin: 18; right: Config.mobile ? parent.right : actions.left; rightMargin: 16; verticalCenter: ic.verticalCenter }
                 spacing: 4
                 Text {
                     width: parent.width; elide: Text.ElideRight
@@ -64,7 +66,8 @@ Flickable {
             }
             Row {
                 id: actions
-                anchors { right: parent.right; verticalCenter: ic.verticalCenter }
+                anchors { right: Config.mobile ? undefined : parent.right; verticalCenter: Config.mobile ? undefined : ic.verticalCenter
+                          left: Config.mobile ? parent.left : undefined; top: Config.mobile ? ic.bottom : undefined; topMargin: 12 }
                 spacing: 8
                 GButton {
                     visible: root.installed && root.jobKind === ""
@@ -85,15 +88,17 @@ Flickable {
         Rectangle {
             id: confirmRemove
             visible: false
-            width: parent.width; height: 48
+            width: parent.width; height: Config.mobile ? 100 : 48
             color: Theme.panel2; border.color: Theme.warn
             Text {
-                anchors { left: parent.left; leftMargin: 14; verticalCenter: parent.verticalCenter }
+                anchors { left: parent.left; leftMargin: 14; verticalCenter: Config.mobile ? undefined : parent.verticalCenter; top: Config.mobile ? parent.top : undefined; topMargin: 10
+                          right: Config.mobile ? parent.right : undefined; rightMargin: 14 }
+                wrapMode: Config.mobile ? Text.WordWrap : Text.NoWrap
                 text: "Remove " + (root.a ? root.a.name : "") + "? Its settings stay in your home folder."
                 color: Theme.fg; font.family: Theme.ui; font.pixelSize: 12
             }
             Row {
-                anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
+                anchors { right: parent.right; rightMargin: 10; verticalCenter: Config.mobile ? undefined : parent.verticalCenter; bottom: Config.mobile ? parent.bottom : undefined; bottomMargin: 8 }
                 spacing: 8
                 GButton { text: "Keep"; onClicked: confirmRemove.visible = false }
                 GButton { primary: true; text: "Remove"; onClicked: { confirmRemove.visible = false; Store.remove(Store.appId, root.a ? root.a.name : ""); } }

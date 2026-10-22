@@ -15,14 +15,17 @@ Item {
     default property alias trailing: tr.data
 
     Layout.fillWidth: true
-    implicitHeight: 48
+    // phone: wide button sets drop under the text instead of squeezing it
+    readonly property bool stacked: Config.mobile && tr.childrenRect.width > width * 0.45
+    implicitHeight: stacked ? info.height + tr.height + 20 : 48
 
     Rectangle { anchors.fill: parent; color: Theme.panel2; opacity: m.containsMouse ? 1 : 0 }
     Rectangle { x: 0; width: 2; height: parent.height; color: Theme.accent; visible: root.selected }
     MouseArea { id: m; anchors.fill: parent; hoverEnabled: true; onClicked: root.clicked() }
     Column {
-        anchors.left: parent.left; anchors.leftMargin: 10; anchors.verticalCenter: parent.verticalCenter
-        anchors.right: tr.left; anchors.rightMargin: 8
+        id: info
+        x: 10; y: root.stacked ? 8 : (root.height - height) / 2
+        width: root.stacked ? root.width - 20 : tr.x - 8 - x
         spacing: 2
         Row {
             spacing: 8
@@ -46,7 +49,8 @@ Item {
     }
     Row {
         id: tr
-        anchors.right: parent.right; anchors.rightMargin: 6; anchors.verticalCenter: parent.verticalCenter
+        x: root.stacked ? 10 : root.width - width - 6
+        y: root.stacked ? info.y + info.height + 6 : (root.height - height) / 2
         spacing: 6
     }
     Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }

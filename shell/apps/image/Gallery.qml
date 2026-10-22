@@ -74,6 +74,7 @@ Item {
 
         // places
         Rectangle {
+            visible: !Config.mobile   // phone: the places are a strip above the grid
             Layout.preferredWidth: 184; Layout.fillHeight: true
             color: "transparent"
             Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Theme.line }
@@ -122,15 +123,47 @@ Item {
                 RowLayout {
                     anchors.fill: parent; anchors.leftMargin: 10; anchors.rightMargin: 10
                     spacing: 6
-                    ChamferButton { implicitHeight: 30; text: "Up"; visible: gal.parentDir !== ""; onClicked: gal.up() }
+                    ChamferButton { implicitHeight: Config.mobile ? 36 : 30; text: "Up"; visible: gal.parentDir !== ""; onClicked: gal.up() }
                     Text {
                         Layout.fillWidth: true; Layout.leftMargin: 6
                         text: gal.dir
                         elide: Text.ElideLeft
                         color: Theme.fg; font.family: Theme.mono; font.pixelSize: 12
                     }
-                    ChamferButton { implicitHeight: 30; text: "Newest"; primary: gal.sort === "date"; onClicked: gal.sort = "date" }
-                    ChamferButton { implicitHeight: 30; text: "Name"; primary: gal.sort === "name"; onClicked: gal.sort = "name" }
+                    ChamferButton {   // phone: one button that flips between the two orders
+                        implicitHeight: Config.mobile ? 36 : 30
+                        text: Config.mobile && gal.sort === "name" ? "Name" : "Newest"
+                        primary: !Config.mobile && gal.sort === "date"
+                        onClicked: gal.sort = Config.mobile ? (gal.sort === "date" ? "name" : "date") : "date"
+                    }
+                    ChamferButton { visible: !Config.mobile; implicitHeight: 30; text: "Name"; primary: gal.sort === "name"; onClicked: gal.sort = "name" }
+                }
+            }
+
+            // phone: the places as a swipeable strip
+            ListView {
+                visible: Config.mobile && gal.places.length > 0
+                Layout.fillWidth: true; Layout.preferredHeight: visible ? 44 : 0
+                orientation: ListView.Horizontal
+                spacing: 6; leftMargin: 10; rightMargin: 10
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                model: gal.places
+                delegate: Rectangle {
+                    required property var modelData
+                    readonly property bool here: gal.dir === modelData.p
+                    anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+                    width: pl.implicitWidth + 24; height: 34
+                    color: here ? Theme.panel2 : "transparent"
+                    border.width: 1; border.color: here ? Theme.accent : Theme.lineStrong
+                    Text {
+                        id: pl
+                        anchors.centerIn: parent
+                        text: modelData.n
+                        color: parent.here ? Theme.accent : Theme.fg
+                        font.family: Theme.ui; font.pixelSize: 13
+                    }
+                    MouseArea { anchors.fill: parent; onClicked: gal.load(modelData.p) }
                 }
             }
 

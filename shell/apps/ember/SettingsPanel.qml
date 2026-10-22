@@ -71,7 +71,7 @@ Rectangle {
                 model: Ember.providers
                 Rectangle {
                     required property var modelData
-                    width: (col.width - 16) / 3; height: 54
+                    width: Config.mobile ? (col.width - 8) / 2 : (col.width - 16) / 3; height: 54
                     color: root.sel === modelData.id ? Theme.panel2 : (pm.containsMouse ? Qt.rgba(Theme.panel2.r, Theme.panel2.g, Theme.panel2.b, 0.5) : "transparent")
                     border.width: 1; border.color: root.sel === modelData.id ? Theme.accent : Theme.lineStrong
                     Rectangle {
@@ -203,20 +203,20 @@ Rectangle {
         }
 
         // Claude: effort
-        Row {
+        Flow {
             visible: root.p.kind === "anthropic"
-            spacing: 8
+            width: parent.width; spacing: 8
             Text {
-                anchors.verticalCenter: parent.verticalCenter
+                height: 26; verticalAlignment: Text.AlignVCenter
                 text: "EFFORT"
                 color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.6
-                width: 60
+                width: Config.mobile ? parent.width : 60
             }
             Repeater {
                 model: Ember.efforts
                 Rectangle {
                     required property string modelData
-                    width: et.implicitWidth + 18; height: 26
+                    width: et.implicitWidth + 18; height: Config.mobile ? 36 : 26
                     color: root.p.effort === modelData ? Theme.accent : "transparent"
                     border.width: 1; border.color: root.p.effort === modelData ? Theme.accent : Theme.lineStrong
                     Text {

@@ -12,7 +12,7 @@ FloatingWindow {
     visible: Tasks.open
     implicitWidth: 1000
     implicitHeight: 700
-    minimumSize: Qt.size(760, 520)
+    minimumSize: Config.mobile ? Qt.size(0, 0) : Qt.size(760, 520)
     color: "transparent"
 
     onVisibleChanged: if (visible !== Tasks.open) Tasks.open = visible

@@ -50,12 +50,12 @@ Item {
                 width: parent.width
                 spacing: 6
                 Head { text: "Connect to an address" }
-                Row {
+                Flow {
                     width: parent.width
                     spacing: 8
                     GInput {
                         id: addr
-                        width: parent.width - go.width - 8
+                        width: Config.mobile ? parent.width : parent.width - go.width - 8
                         height: 34
                         placeholder: "\\\\computer\\share  or  smb://computer/share"
                         onAccepted: go.clicked()
@@ -114,7 +114,7 @@ Item {
                             id: card
                             required property var modelData
                             readonly property bool on: Shares.browseServer !== null && Shares.browseServer.host === modelData.host
-                            width: 206; height: 52
+                            width: Config.mobile ? parent.width : 206; height: Config.mobile ? 56 : 52
                             color: on ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14) : (cm.containsMouse ? Theme.panel2 : "transparent")
                             border.color: on ? Theme.accent : Theme.line
                             border.width: 1
@@ -211,17 +211,24 @@ Item {
                         id: mrow
                         required property var modelData
                         width: body.width
+                        implicitHeight: Config.mobile ? minfo.implicitHeight + mbtns.height + 34 : 62
                         Column {
-                            anchors { left: parent.left; right: mbtns.left; verticalCenter: parent.verticalCenter; leftMargin: 16; rightMargin: 12 }
+                            id: minfo
+                            anchors { left: parent.left; right: Config.mobile ? parent.right : mbtns.left; leftMargin: 16; rightMargin: 12
+                                      top: Config.mobile ? parent.top : undefined; topMargin: Config.mobile ? 12 : 0
+                                      verticalCenter: Config.mobile ? undefined : parent.verticalCenter }
                             spacing: 4
                             Text { width: parent.width; elide: Text.ElideRight; text: mrow.modelData.name; color: Theme.fg
                                    font.family: Theme.ui; font.pixelSize: 15; font.weight: Font.DemiBold }
                             Text { width: parent.width; elide: Text.ElideMiddle; text: mrow.modelData.uri; color: Theme.dim
                                    font.family: Theme.mono; font.pixelSize: 11 }
                         }
-                        Row {
+                        Grid {
                             id: mbtns
-                            anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
+                            columns: Config.mobile ? 2 : 3
+                            anchors { right: Config.mobile ? undefined : parent.right; left: Config.mobile ? parent.left : undefined; rightMargin: 12; leftMargin: 16
+                                      bottom: Config.mobile ? parent.bottom : undefined; bottomMargin: Config.mobile ? 12 : 0
+                                      verticalCenter: Config.mobile ? undefined : parent.verticalCenter }
                             spacing: 8
                             GButton { text: Shares.isSaved(mrow.modelData.uri) ? "★ Saved" : "☆ Save"; enabled: !Shares.isSaved(mrow.modelData.uri)
                                       onClicked: Shares.saveMount(mrow.modelData) }
@@ -249,15 +256,20 @@ Item {
                         required property var modelData
                         stripe: Theme.dim
                         width: body.width
+                        implicitHeight: Config.mobile ? sinfo.implicitHeight + rec.height + sbtns.height + 48 : 62
                         Column {
-                            anchors { left: parent.left; right: rec.left; verticalCenter: parent.verticalCenter; leftMargin: 16; rightMargin: 12 }
+                            id: sinfo
+                            anchors { left: parent.left; right: Config.mobile ? parent.right : rec.left; leftMargin: 16; rightMargin: 12
+                                      top: Config.mobile ? parent.top : undefined; topMargin: Config.mobile ? 12 : 0
+                                      verticalCenter: Config.mobile ? undefined : parent.verticalCenter }
                             spacing: 4
-                            Row {
+                            Flow {
+                                width: parent.width
                                 spacing: 10
-                                Text { anchors.verticalCenter: parent.verticalCenter; text: srow2.modelData.name; color: Theme.fg
+                                Text { anchors.verticalCenter: Config.mobile ? undefined : parent.verticalCenter; text: srow2.modelData.name; color: Theme.fg
                                        font.family: Theme.ui; font.pixelSize: 15; font.weight: Font.DemiBold }
-                                GChip { visible: srow2.modelData.user !== ""; anchors.verticalCenter: parent.verticalCenter; text: srow2.modelData.user; tone: Theme.dim }
-                                GChip { visible: Shares.isMounted(srow2.modelData.uri); anchors.verticalCenter: parent.verticalCenter; text: "Connected"; tone: Theme.ok }
+                                GChip { visible: srow2.modelData.user !== ""; anchors.verticalCenter: Config.mobile ? undefined : parent.verticalCenter; text: srow2.modelData.user; tone: Theme.dim }
+                                GChip { visible: Shares.isMounted(srow2.modelData.uri); anchors.verticalCenter: Config.mobile ? undefined : parent.verticalCenter; text: "Connected"; tone: Theme.ok }
                             }
                             Text { width: parent.width; elide: Text.ElideMiddle; text: srow2.modelData.uri; color: Theme.dim
                                    font.family: Theme.mono; font.pixelSize: 11 }
@@ -265,14 +277,18 @@ Item {
                         GToggle {
                             id: rec
                             width: 200
-                            anchors { right: sbtns.left; rightMargin: 14; verticalCenter: parent.verticalCenter }
+                            anchors { right: Config.mobile ? undefined : sbtns.left; rightMargin: 14; verticalCenter: Config.mobile ? undefined : parent.verticalCenter
+                                      left: Config.mobile ? sinfo.left : undefined; top: Config.mobile ? sinfo.bottom : undefined; topMargin: Config.mobile ? 8 : 0 }
                             label: "Reconnect at login"
                             checked: srow2.modelData.reconnectAtLogin
                             onToggled: v => Shares.setReconnect(srow2.modelData.uri, v)
                         }
-                        Row {
+                        Grid {
                             id: sbtns
-                            anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
+                            columns: 2
+                            anchors { right: Config.mobile ? undefined : parent.right; left: Config.mobile ? parent.left : undefined; rightMargin: 12; leftMargin: 16
+                                      bottom: Config.mobile ? parent.bottom : undefined; bottomMargin: Config.mobile ? 12 : 0
+                                      verticalCenter: Config.mobile ? undefined : parent.verticalCenter }
                             spacing: 8
                             GButton { text: "Connect"; primary: true; enabled: !Shares.isMounted(srow2.modelData.uri) && Shares.connecting === ""
                                       onClicked: Shares.connectSaved(srow2.modelData) }

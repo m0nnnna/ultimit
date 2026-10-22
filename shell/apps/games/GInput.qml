@@ -17,7 +17,7 @@ Rectangle {
     signal accepted()
     signal downPressed()
 
-    implicitHeight: 32
+    implicitHeight: Config.mobile ? 40 : 32
     color: Theme.panel2
     border.color: field.activeFocus ? Theme.accent : Theme.line
     border.width: 1

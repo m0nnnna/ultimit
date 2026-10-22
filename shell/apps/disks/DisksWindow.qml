@@ -13,7 +13,7 @@ FloatingWindow {
     visible: Disks.open
     implicitWidth: 1000
     implicitHeight: 700
-    minimumSize: Qt.size(760, 520)
+    minimumSize: Config.mobile ? Qt.size(0, 0) : Qt.size(760, 520)
     color: "transparent"
 
     onVisibleChanged: if (visible !== Disks.open) Disks.open = visible
@@ -29,6 +29,7 @@ FloatingWindow {
     Component.onCompleted: Disks.refresh()
 
     property bool showSerial: false
+    property bool mobileList: true      // phone: drive list or the picked drive's detail, never both
     readonly property var d: Disks.drive
     readonly property var v: Disks.volume
     readonly property var health: d ? Disks.healthBy[d.id] : null
@@ -90,9 +91,18 @@ FloatingWindow {
             anchors.bottom: parent.bottom; anchors.bottomMargin: 16
             width: parent.width - 40
 
+            MobileBack {
+                id: mback
+                visible: Config.mobile && !win.mobileList
+                x: -20; width: win.width
+                label: "Drives"
+                onBack: win.mobileList = true
+            }
+
             Flickable {
                 id: listFlick
-                width: 250
+                visible: !Config.mobile || win.mobileList
+                width: Config.mobile ? parent.width : 250
                 height: parent.height
                 contentHeight: listCol.implicitHeight
                 clip: true
@@ -107,7 +117,7 @@ FloatingWindow {
                             required property var modelData
                             width: listCol.width
                             drive: modelData
-                            onPicked: { Disks.select(modelData.id, ""); win.showSerial = false; }
+                            onPicked: { Disks.select(modelData.id, ""); win.showSerial = false; win.mobileList = false; }
                         }
                     }
                 }
@@ -115,11 +125,12 @@ FloatingWindow {
 
             Flickable {
                 id: pane
-                anchors { left: listFlick.right; leftMargin: 16; right: parent.right; top: parent.top; bottom: parent.bottom }
+                anchors { left: Config.mobile ? parent.left : listFlick.right; leftMargin: Config.mobile ? 0 : 16; right: parent.right
+                          top: Config.mobile ? mback.bottom : parent.top; topMargin: Config.mobile ? 8 : 0; bottom: parent.bottom }
                 contentHeight: paneCol.implicitHeight
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
-                visible: !!(win.d !== null)
+                visible: !!(win.d !== null) && (!Config.mobile || !win.mobileList)
                 ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
                 Column {
@@ -130,16 +141,18 @@ FloatingWindow {
                     // ---- drive header ----
                     Item {
                         width: parent.width
-                        height: 54
+                        height: Config.mobile ? 54 + btns.height + 8 : 54
                         Column {
-                            anchors { left: parent.left; right: btns.left; rightMargin: 12; verticalCenter: parent.verticalCenter }
+                            anchors { left: parent.left; right: Config.mobile ? parent.right : btns.left; rightMargin: Config.mobile ? 0 : 12
+                                      top: Config.mobile ? parent.top : undefined; verticalCenter: Config.mobile ? undefined : parent.verticalCenter }
                             spacing: 4
                             Text {
                                 width: parent.width; elide: Text.ElideRight
                                 text: win.d ? win.d.name : ""
                                 color: Theme.fg; font.family: Theme.display; font.pixelSize: 18
                             }
-                            Row {
+                            Flow {
+                                width: parent.width
                                 spacing: 8
                                 Text {
                                     id: sub
@@ -158,7 +171,8 @@ FloatingWindow {
                         }
                         Row {
                             id: btns
-                            anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+                            anchors { left: Config.mobile ? parent.left : undefined; right: Config.mobile ? undefined : parent.right
+                                      bottom: Config.mobile ? parent.bottom : undefined; verticalCenter: Config.mobile ? undefined : parent.verticalCenter }
                             spacing: 8
                             // health chip: click to check
                             Rectangle {

@@ -14,13 +14,14 @@ Flickable {
     readonly property var spk: Broadcast.spk
     readonly property bool idle: Broadcast.busy === ""
 
-    Row {
+    Grid {   // phone: the two columns stack
         id: cols
         width: root.width - 8
+        columns: Config.mobile ? 1 : 2
         spacing: 20
 
         Column {
-            width: 270
+            width: Config.mobile ? cols.width : 270
             spacing: 10
             Row {
                 spacing: 8
@@ -59,7 +60,7 @@ Flickable {
         }
 
         Column {
-            width: cols.width - 290
+            width: Config.mobile ? cols.width : cols.width - 290
             spacing: 12
             EffectCard {
                 width: parent.width

@@ -10,7 +10,7 @@ Rectangle {
 
     readonly property string unc: Shares.uncPath(share.name)
 
-    implicitHeight: 92
+    implicitHeight: Config.mobile ? info.implicitHeight + buttons.height + 36 : 92
     color: Theme.panel2
     border.color: Theme.line
     border.width: 1
@@ -18,18 +18,22 @@ Rectangle {
     Rectangle { width: 2; height: parent.height; color: root.share.guest ? Theme.warn : Theme.accent }
 
     Column {
-        anchors { left: parent.left; right: buttons.left; verticalCenter: parent.verticalCenter; leftMargin: 16; rightMargin: 12 }
+        id: info
+        anchors { left: parent.left; right: Config.mobile ? parent.right : buttons.left; leftMargin: 16; rightMargin: Config.mobile ? 12 : 12
+                  top: Config.mobile ? parent.top : undefined; topMargin: Config.mobile ? 12 : 0
+                  verticalCenter: Config.mobile ? undefined : parent.verticalCenter }
         spacing: 6
-        Row {
+        Flow {
+            width: parent.width
             spacing: 10
             Text {
-                anchors.verticalCenter: parent.verticalCenter
+                anchors.verticalCenter: Config.mobile ? undefined : parent.verticalCenter
                 text: root.share.name
                 color: Theme.fg
                 font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: 16
             }
-            GChip { anchors.verticalCenter: parent.verticalCenter; text: root.share.writable ? "Writable" : "Read-only"; tone: root.share.writable ? Theme.accent : Theme.dim }
-            GChip { anchors.verticalCenter: parent.verticalCenter; text: root.share.guest ? "Guests: yes" : "Guests: no"; tone: root.share.guest ? Theme.warn : Theme.dim }
+            GChip { anchors.verticalCenter: Config.mobile ? undefined : parent.verticalCenter; text: root.share.writable ? "Writable" : "Read-only"; tone: root.share.writable ? Theme.accent : Theme.dim }
+            GChip { anchors.verticalCenter: Config.mobile ? undefined : parent.verticalCenter; text: root.share.guest ? "Guests: yes" : "Guests: no"; tone: root.share.guest ? Theme.warn : Theme.dim }
         }
         Text {
             width: parent.width
@@ -38,16 +42,17 @@ Rectangle {
             color: Theme.dim
             font.family: Theme.mono; font.pixelSize: 12
         }
-        Row {
+        Flow {
+            width: parent.width
             spacing: 10
             Text {
-                anchors.verticalCenter: parent.verticalCenter
+                anchors.verticalCenter: Config.mobile ? undefined : parent.verticalCenter
                 text: root.unc
                 color: Theme.fg
                 font.family: Theme.mono; font.pixelSize: 13
             }
             GLabel {
-                anchors.verticalCenter: parent.verticalCenter
+                anchors.verticalCenter: Config.mobile ? undefined : parent.verticalCenter
                 text: "Copy address"
                 color: copyMouse.containsMouse ? Theme.accent : Theme.dim
                 MouseArea {
@@ -59,7 +64,7 @@ Rectangle {
                 }
             }
             GLabel {
-                anchors.verticalCenter: parent.verticalCenter
+                anchors.verticalCenter: Config.mobile ? undefined : parent.verticalCenter
                 text: "Copy smb link"
                 color: copyUrlMouse.containsMouse ? Theme.accent : Theme.dim
                 MouseArea {
@@ -73,9 +78,12 @@ Rectangle {
         }
     }
 
-    Column {
+    Grid {
         id: buttons
-        anchors { right: parent.right; rightMargin: 14; verticalCenter: parent.verticalCenter }
+        columns: Config.mobile ? 2 : 1
+        anchors { right: Config.mobile ? undefined : parent.right; left: Config.mobile ? parent.left : undefined; rightMargin: 14; leftMargin: 16
+                  bottom: Config.mobile ? parent.bottom : undefined; bottomMargin: Config.mobile ? 12 : 0
+                  verticalCenter: Config.mobile ? undefined : parent.verticalCenter }
         spacing: 8
         GButton { width: 118; text: "Open folder"; onClicked: Shares.openFolder(root.share.path) }
         GButton { width: 118; text: "Remove"; onClicked: root.removeRequested(root.share.name) }

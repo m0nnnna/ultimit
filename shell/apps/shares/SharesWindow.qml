@@ -13,7 +13,7 @@ FloatingWindow {
     visible: Shares.open
     implicitWidth: 880
     implicitHeight: 640
-    minimumSize: Qt.size(660, 460)
+    minimumSize: Config.mobile ? Qt.size(0, 0) : Qt.size(660, 460)
     color: "transparent"   // the Theme.panel glass below fills it
 
     property bool showSetup: false
@@ -48,6 +48,7 @@ FloatingWindow {
             width: parent.width - 40
             height: 36
             GLabel {
+                visible: !Config.mobile
                 anchors { left: parent.left; verticalCenter: parent.verticalCenter }
                 text: "File share maker"
             }
@@ -141,12 +142,44 @@ FloatingWindow {
             id: addrBar
             x: 20; anchors.top: statusRow.bottom; anchors.topMargin: 10
             width: parent.width - 40
-            height: 40
+            height: Config.mobile ? mAddr.height + 20 : 40
             color: Theme.panel2
             border.color: Theme.line
             border.width: 1
             visible: Shares.loaded && Shares.tab === "mine"
+            // phone: the same info on two lines
+            Column {
+                id: mAddr
+                visible: Config.mobile
+                x: 14; y: 10
+                width: parent.width - 28
+                spacing: 8
+                Flow {
+                    width: parent.width
+                    spacing: 10
+                    GLabel { text: "Your address" }
+                    Text { text: "\\\\" + Shares.host; color: Theme.fg; font.family: Theme.mono; font.pixelSize: 14 }
+                    GLabel {
+                        text: "Copy"
+                        color: m1.pressed ? Theme.accent : Theme.dim
+                        MouseArea { id: m1; anchors.fill: parent; anchors.margins: -10; onClicked: Shares.copy("\\\\" + Shares.host) }
+                    }
+                }
+                Flow {
+                    width: parent.width
+                    spacing: 10
+                    Text { visible: Shares.addr !== null; text: Shares.addr ? "smb://" + Shares.addr.ip : ""; color: Theme.fg; font.family: Theme.mono; font.pixelSize: 14 }
+                    GLabel {
+                        visible: Shares.addr !== null
+                        text: "Copy"
+                        color: m2.pressed ? Theme.accent : Theme.dim
+                        MouseArea { id: m2; anchors.fill: parent; anchors.margins: -10; onClicked: Shares.copy("smb://" + Shares.addr.ip) }
+                    }
+                    GLabel { visible: Shares.addr === null; text: "No home network found"; color: Theme.warn }
+                }
+            }
             Row {
+                visible: !Config.mobile
                 anchors { left: parent.left; leftMargin: 14; verticalCenter: parent.verticalCenter }
                 spacing: 14
                 GLabel { anchors.verticalCenter: parent.verticalCenter; text: "Your address" }

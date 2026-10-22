@@ -33,10 +33,10 @@ Rectangle {
         }
         Item {
             width: parent.width
-            height: Math.max(txt.implicitHeight, btn.height)
+            height: Config.mobile ? txt.implicitHeight + 10 + btn.height : Math.max(txt.implicitHeight, btn.height)
             Text {
                 id: txt
-                anchors { left: parent.left; right: btn.left; rightMargin: 16; verticalCenter: parent.verticalCenter }
+                anchors { left: parent.left; right: Config.mobile ? parent.right : btn.left; rightMargin: Config.mobile ? 0 : 16; verticalCenter: Config.mobile ? undefined : parent.verticalCenter; top: Config.mobile ? parent.top : undefined }
                 wrapMode: Text.WordWrap
                 color: Theme.fg; font.family: Theme.ui; font.pixelSize: 13
                 text: root.step === "install-helper"
@@ -47,7 +47,7 @@ Rectangle {
             }
             GButton {
                 id: btn
-                anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+                anchors { right: parent.right; verticalCenter: Config.mobile ? undefined : parent.verticalCenter; bottom: Config.mobile ? parent.bottom : undefined }
                 primary: true
                 enabled: Firewall.busy === ""
                 text: Firewall.busy.startsWith("setup:") ? "Working…" : root.step === "unlock" ? "Unlock" : "Install"

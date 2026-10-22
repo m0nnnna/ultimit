@@ -14,7 +14,7 @@ FloatingWindow {
     visible: Firewall.open
     implicitWidth: 900
     implicitHeight: 680
-    minimumSize: Qt.size(680, 480)
+    minimumSize: Config.mobile ? Qt.size(0, 0) : Qt.size(680, 480)
     color: "transparent"   // the Theme.panel glass below fills it
 
     onVisibleChanged: if (visible !== Firewall.open) Firewall.open = visible
@@ -39,13 +39,13 @@ FloatingWindow {
             // The window title itself is in the compositor's titlebar.
             x: 20; y: 10
             width: parent.width - 40
-            height: 36
+            height: Config.mobile && Firewall.ready ? 78 : 36
             GLabel {
-                anchors { left: parent.left; verticalCenter: parent.verticalCenter }
+                anchors { left: parent.left; verticalCenter: Config.mobile && Firewall.ready ? undefined : parent.verticalCenter; top: Config.mobile && Firewall.ready ? parent.top : undefined; topMargin: 10 }
                 text: "Who can reach this PC"
             }
             Row {
-                anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+                anchors { right: parent.right; verticalCenter: Config.mobile && Firewall.ready ? undefined : parent.verticalCenter; bottom: Config.mobile && Firewall.ready ? parent.bottom : undefined }
                 spacing: 10
                 GButton {
                     visible: Firewall.ready && Firewall.tab === "rules"

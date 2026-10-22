@@ -356,7 +356,7 @@ Item {
             id: canvas
             visible: pg.outs.length > 0
             Layout.fillWidth: true
-            Layout.preferredHeight: 300
+            Layout.preferredHeight: Config.mobile ? 220 : 300
             readonly property var en: pg.enabledOuts
             readonly property real x0: en.length ? Math.min(...en.map(o => o.x)) : 0
             readonly property real y0: en.length ? Math.min(...en.map(o => o.y)) : 0
@@ -368,7 +368,7 @@ Item {
             Rectangle { anchors.fill: parent; color: Theme.panel2; border.width: 1; border.color: Theme.line }
             Text {
                 anchors { right: parent.right; bottom: parent.bottom; margins: 8 }
-                text: pg.duplicate ? "DUPLICATED" : (pg.enabledOuts.length > 1 ? "DRAG TO ARRANGE  ·  HOLD SHIFT: NO SNAPPING" : "")
+                text: pg.duplicate ? "DUPLICATED" : (pg.enabledOuts.length > 1 ? (Config.mobile ? "DRAG TO ARRANGE" : "DRAG TO ARRANGE  ·  HOLD SHIFT: NO SNAPPING") : "")
                 color: Theme.dim; font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1.6
             }
             Repeater {
@@ -500,6 +500,8 @@ Item {
                 }
                 Text {
                     visible: !!od.o && od.o.primary
+                    Layout.fillWidth: Config.mobile
+                    wrapMode: Config.mobile ? Text.WordWrap : Text.NoWrap   // else its one-line width forces the whole page wider
                     text: "■ MAIN DISPLAY  ·  launcher, notifications and new windows open here"
                     color: Theme.accent; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.2
                 }
@@ -530,6 +532,7 @@ Item {
                 spacing: 8
                 Text {
                     visible: pg.enabledOuts.length > 1 && !pg.duplicate
+                    Layout.fillWidth: Config.mobile; wrapMode: Config.mobile ? Text.WordWrap : Text.NoWrap
                     text: "POSITION  (TOP-LEFT CORNER, LOGICAL PIXELS)"; color: Theme.dim
                     font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.8
                 }

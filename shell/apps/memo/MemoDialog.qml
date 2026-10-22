@@ -90,8 +90,8 @@ Item {
     Rectangle {
         id: box
         anchors.centerIn: parent
-        width: Math.min(root.width - 40, 640)
-        height: Math.min(root.height - 40, 520)
+        width: Config.mobile ? root.width - 16 : Math.min(root.width - 40, 640)
+        height: Config.mobile ? root.height - 16 : Math.min(root.height - 40, 520)
         color: Theme.bg1
         border.width: 1; border.color: Theme.lineStrong
         Rectangle { anchors.fill: parent; color: Theme.panel }
@@ -103,7 +103,7 @@ Item {
                 SectionLabel { text: root.saveMode ? "Save as" : "Open file" }
             }
             Rectangle {
-                width: parent.width; height: 32; color: "transparent"
+                width: parent.width; height: Config.mobile ? 42 : 32; color: "transparent"
                 border.width: 1; border.color: pathField.activeFocus ? Theme.accent : Theme.lineStrong
                 TextInput {
                     id: pathField
@@ -146,7 +146,7 @@ Item {
                     delegate: Rectangle {
                         required property var modelData
                         required property int index
-                        width: list.width; height: 28
+                        width: list.width; height: Config.mobile ? 40 : 28
                         color: root.sel === index ? Theme.accent : (m.containsMouse ? Theme.panel2 : "transparent")
                         readonly property color tc: root.sel === index ? Theme.onAccent : Theme.fg
                         Text {
@@ -184,12 +184,12 @@ Item {
             }
             Row {
                 width: parent.width; spacing: 10
-                MemoToggle { text: "HIDDEN"; on: root.showHidden; onClicked: root.showHidden = !root.showHidden; anchors.verticalCenter: parent.verticalCenter }
+                MemoToggle { text: "HIDDEN"; on: root.showHidden; implicitHeight: Config.mobile ? 34 : 26; onClicked: root.showHidden = !root.showHidden; anchors.verticalCenter: parent.verticalCenter }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width - 330
+                    width: Config.mobile ? parent.width - 90 : parent.width - 330
                     visible: root.confirmOver
-                    text: "file exists - press again to overwrite"
+                    text: Config.mobile ? "file exists - tap again" : "file exists - press again to overwrite"
                     color: Theme.warn; font.family: Theme.mono; font.pixelSize: 11; elide: Text.ElideRight
                 }
                 Item { width: 1; height: 1; visible: !root.confirmOver }

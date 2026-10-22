@@ -48,8 +48,8 @@ Item {
     Rectangle {
         id: card
         anchors.centerIn: parent
-        width: Math.min(480, parent.width - 32)
-        height: col.implicitHeight + 40
+        width: Config.mobile ? parent.width - 24 : Math.min(480, parent.width - 32)
+        height: Config.mobile ? Math.min(parent.height - 24, col.implicitHeight + 40) : col.implicitHeight + 40
         color: Theme.bg1
         border.color: Theme.lineStrong
         border.width: 1
@@ -57,8 +57,17 @@ Item {
         Rectangle { anchors.fill: parent; color: Theme.panel }
         Brackets { color: Theme.accent; size: 12 }
 
+        Flickable {   // phone: the form scrolls when it is taller than the window
+            id: sc
+            anchors.fill: parent
+            contentHeight: col.implicitHeight + 40
+            clip: true
+            interactive: Config.mobile
+            boundsBehavior: Flickable.StopAtBounds
+        }
         Column {
             id: col
+            parent: sc.contentItem
             x: 20; y: 20
             width: parent.width - 40
             spacing: 12
@@ -69,7 +78,7 @@ Item {
                 GLabel { text: "Add game"; strong: true }
             }
             GSeg {
-                options: [{ id: "wine", label: "Windows program (Wine)" }, { id: "command", label: "Command" }]
+                options: [{ id: "wine", label: Config.mobile ? "Wine program" : "Windows program (Wine)" }, { id: "command", label: "Command" }]
                 current: root.kind
                 onPicked: id => root.kind = id
             }

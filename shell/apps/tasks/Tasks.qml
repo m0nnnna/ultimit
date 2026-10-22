@@ -35,7 +35,9 @@ Singleton {
     property bool sortDesc: true
     property int selPid: -1                 // stays on the same process across ticks
     // column widths shared by the header and the rows (the name column takes what is left)
-    readonly property var colW: ({ pid: 64, user: 92, cpu: 66, mem: 88, gpu: 88, threads: 64, state: 86 })
+    // (on the phone only name, CPU and memory are shown)
+    readonly property var colW: Config.mobile ? ({ pid: 0, user: 0, cpu: 56, mem: 84, gpu: 0, threads: 0, state: 0 })
+                                              : ({ pid: 64, user: 92, cpu: 66, mem: 88, gpu: 88, threads: 64, state: 86 })
     readonly property int colTotal: colW.pid + colW.user + colW.cpu + colW.mem + colW.gpu + colW.threads + colW.state
     property string note: ""
     property string noteKind: "info"        // info | error

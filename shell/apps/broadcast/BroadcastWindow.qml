@@ -11,7 +11,7 @@ FloatingWindow {
     visible: Broadcast.open
     implicitWidth: 880
     implicitHeight: 640
-    minimumSize: Qt.size(700, 480)
+    minimumSize: Config.mobile ? Qt.size(0, 0) : Qt.size(700, 480)
     color: "transparent"   // the Theme.panel glass below fills it
 
     onVisibleChanged: if (visible !== Broadcast.open) Broadcast.open = visible
@@ -27,17 +27,18 @@ FloatingWindow {
             // The window title itself is in the compositor's titlebar.
             x: 20; y: 10
             width: parent.width - 40
-            height: 36
+            height: Config.mobile ? 66 : 36
             GLabel {
-                anchors { left: parent.left; verticalCenter: parent.verticalCenter }
+                anchors { left: parent.left; verticalCenter: Config.mobile ? undefined : parent.verticalCenter; top: Config.mobile ? parent.top : undefined; topMargin: 8 }
                 text: "Mic, speakers and camera"
             }
             Row {
-                anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+                anchors { right: Config.mobile ? undefined : parent.right; verticalCenter: Config.mobile ? undefined : parent.verticalCenter
+                          left: Config.mobile ? parent.left : undefined; bottom: Config.mobile ? parent.bottom : undefined }
                 spacing: 8
                 GChip {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: (Broadcast.audioRunning ? "✓ " : "✕ ") + "Audio engine " + (Broadcast.audioRunning ? "running" : "stopped")
+                    text: (Broadcast.audioRunning ? "✓ " : "✕ ") + (Config.mobile ? "Audio" : "Audio engine " + (Broadcast.audioRunning ? "running" : "stopped"))
                     tone: !Broadcast.loaded ? Theme.dim : Broadcast.audioRunning ? Theme.ok : Theme.warn
                 }
                 GButton {
@@ -48,7 +49,7 @@ FloatingWindow {
                 }
                 GChip {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: Broadcast.camStarting ? "… Camera engine starting" : ((Broadcast.camRunning ? "✓ " : "✕ ") + "Camera engine " + (Broadcast.camRunning ? "running" : "stopped"))
+                    text: Broadcast.camStarting ? (Config.mobile ? "… Camera" : "… Camera engine starting") : ((Broadcast.camRunning ? "✓ " : "✕ ") + (Config.mobile ? "Camera" : "Camera engine " + (Broadcast.camRunning ? "running" : "stopped")))
                     tone: !Broadcast.loaded ? Theme.dim : Broadcast.camRunning ? Theme.ok : Broadcast.camStarting ? Theme.warn : Theme.dim
                 }
             }
@@ -112,6 +113,8 @@ FloatingWindow {
         Text {
             id: footer
             x: 20; anchors.bottom: parent.bottom; anchors.bottomMargin: 10
+            visible: !Config.mobile      // no room for it on the phone
+            height: Config.mobile ? 0 : implicitHeight
             width: parent.width - 40
             elide: Text.ElideRight
             text: "Effects run in hidden helpers (EasyEffects and OBS Studio). Do not open their windows: closing the EasyEffects window stops the audio engine."

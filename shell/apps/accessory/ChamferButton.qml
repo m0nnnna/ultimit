@@ -11,7 +11,7 @@ Item {
     signal clicked()
 
     implicitWidth: label.implicitWidth + 32
-    implicitHeight: 34
+    implicitHeight: Config.mobile ? 40 : 34
     activeFocusOnTab: true
     Keys.onPressed: event => {
         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {

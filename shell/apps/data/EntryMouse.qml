@@ -16,6 +16,7 @@ MouseArea {
     property real py: 0
     property bool dragging: false
     property bool handedOut: false   // the drag left the window: the system drag has it now
+    property bool held: false        // phone: the press became a long-press (context menu), so no tap-open
 
     onPressed: mouse => {
         host.forceActiveFocus();
@@ -26,7 +27,7 @@ MouseArea {
             host.openItemMenu(pt.x, pt.y);
             return;
         }
-        px = mouse.x; py = mouse.y; dragging = false; handedOut = false;
+        px = mouse.x; py = mouse.y; dragging = false; handedOut = false; held = false;
         if (mouse.modifiers & Qt.ControlModifier) Data.toggleSel(idx);
         else if (mouse.modifiers & Qt.ShiftModifier) Data.selectRange(idx);
         else if (!Data.isSel(entry.p)) Data.selectOnly(idx);
@@ -43,7 +44,7 @@ MouseArea {
             && Data.selCount > 1 && Data.isSel(entry.p)) Data.selectOnly(idx);
     }
     onPositionChanged: mouse => {
-        if (!pressed || !(pressedButtons & Qt.LeftButton) || Data.isTrash || Data.isArc || handedOut) return;
+        if (!pressed || !(pressedButtons & Qt.LeftButton) || Data.isTrash || Data.isArc || handedOut || Config.mobile) return;   // touch drags scroll the list
         if (!dragging && Math.abs(mouse.x - px) + Math.abs(mouse.y - py) > 10) {
             dragging = true;
             host.ghostStart(Data.dragPaths(entry), entry.n);
@@ -52,6 +53,15 @@ MouseArea {
         const pt = mapToItem(host.ui, mouse.x, mouse.y);
         if (pt.x < 0 || pt.y < 0 || pt.x >= host.ui.width || pt.y >= host.ui.height) { handedOut = true; host.ghostOut(); }
         else host.ghostMove(pt.x, pt.y);
+    }
+    // phone: a tap opens, a long-press selects and shows the item menu
+    onClicked: mouse => { if (Config.mobile && mouse.button === Qt.LeftButton && !held) Data.openEntry(entry); }
+    onPressAndHold: mouse => {
+        if (!Config.mobile) return;
+        held = true;
+        if (!Data.isSel(entry.p)) Data.selectOnly(idx);
+        const pt = mapToItem(host.ui, mouse.x, mouse.y);
+        host.openItemMenu(pt.x, pt.y);
     }
     onDoubleClicked: mouse => { if (mouse.button === Qt.LeftButton) Data.openEntry(entry); }
 }

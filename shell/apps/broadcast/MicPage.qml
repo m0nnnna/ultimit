@@ -19,14 +19,15 @@ Flickable {
         return (mic.devices || []).map(d => ({ id: d.id, label: d.description, tag: d.default ? "default" : "" }));
     }
 
-    Row {
+    Grid {   // phone: the two columns stack
         id: cols
         width: root.width - 8
+        columns: Config.mobile ? 1 : 2
         spacing: 20
 
         // ---- left: which microphone ----
         Column {
-            width: 270
+            width: Config.mobile ? cols.width : 270
             spacing: 10
             Row {
                 spacing: 8
@@ -76,7 +77,7 @@ Flickable {
 
         // ---- right: level + effects ----
         Column {
-            width: cols.width - 290
+            width: Config.mobile ? cols.width : cols.width - 290
             spacing: 12
 
             Rectangle {
@@ -86,6 +87,7 @@ Flickable {
                 GLabel { x: 18; y: 14; text: "Input level" + (root.mic.enabled && Broadcast.audioRunning ? " · after noise removal" : " · raw") }
                 GLabel {
                     anchors { right: parent.right; rightMargin: 18; top: parent.top; topMargin: 14 }
+                    visible: !Config.mobile
                     text: root.mic.device ? root.mic.device.description : ""
                     elide: Text.ElideRight; width: parent.width / 2; horizontalAlignment: Text.AlignRight
                 }

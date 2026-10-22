@@ -140,7 +140,7 @@ Page {
         onPicked: id => { for (const p of pg.presets) if (p.id === id) { pg.sel = 0; pg.setWidths(p.w.slice()); } }
     }
 
-    SectionLabel { text: "Snap widths, in the order Super+Left/Right steps through them" }
+    SectionLabel { text: Config.mobile ? "Snap widths" : "Snap widths, in the order Super+Left/Right steps through them" }
     Repeater {
         model: pg.widths
         delegate: RowLayout {

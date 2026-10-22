@@ -16,3 +16,4 @@ singleton AppSearch 1.0 AppSearch.qml
 singleton AltTabState 1.0 AltTabState.qml
 ShowBehavior 1.0 ShowBehavior.qml
 singleton MobileState 1.0 MobileState.qml
+MobileBack 1.0 MobileBack.qml

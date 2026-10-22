@@ -21,14 +21,15 @@ Flickable {
 
     function fileName(p) { return p ? p.split("/").pop() : ""; }
 
-    Row {
+    Grid {   // phone: the two columns stack
         id: cols
         width: root.width - 8
+        columns: Config.mobile ? 1 : 2
         spacing: 20
 
         // ---- left: webcam + virtual camera ----
         Column {
-            width: 270
+            width: Config.mobile ? cols.width : 270
             spacing: 10
             Row {
                 spacing: 8
@@ -65,7 +66,7 @@ Flickable {
 
         // ---- right: preview + effects ----
         Column {
-            width: cols.width - 290
+            width: Config.mobile ? cols.width : cols.width - 290
             spacing: 12
 
             Rectangle {

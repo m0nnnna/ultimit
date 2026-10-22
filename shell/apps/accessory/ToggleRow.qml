@@ -8,7 +8,7 @@ Item {
     property bool checked: false
     signal toggled(bool value)
 
-    implicitHeight: 36
+    implicitHeight: Config.mobile ? Math.max(44, lbl.implicitHeight + 16) : 36
     activeFocusOnTab: true
     Keys.onPressed: event => {
         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
@@ -23,7 +23,10 @@ Item {
         Behavior on opacity { NumberAnimation { duration: Config.dur(150); easing.type: Easing.OutCubic } }
     }
     Text {
+        id: lbl
         anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
+        width: Config.mobile ? root.width - sw.width - 12 : implicitWidth   // phones: wrap clear of the switch
+        wrapMode: Config.mobile ? Text.WordWrap : Text.NoWrap
         text: root.text
         color: Theme.fg
         font.family: Theme.ui; font.pixelSize: 13

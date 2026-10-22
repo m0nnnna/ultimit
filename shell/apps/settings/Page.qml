@@ -19,8 +19,8 @@ Item {
 
         ColumnLayout {
             id: col
-            x: 24; y: 18
-            width: fl.width - 48
+            x: Config.mobile ? 14 : 24; y: 18
+            width: fl.width - 2 * x
             spacing: 14
 
             Text {

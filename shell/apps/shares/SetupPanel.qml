@@ -42,7 +42,7 @@ Rectangle {
                 required property int index
                 readonly property bool busy: Shares.busy === modelData.id || (modelData.id.startsWith("firewall") && Shares.busy.startsWith("firewall"))
                 width: col.width
-                height: Math.max(54, textCol.implicitHeight + 16)
+                height: Config.mobile ? textCol.implicitHeight + actions.height + 28 : Math.max(54, textCol.implicitHeight + 16)
 
                 Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Theme.line }
 
@@ -56,17 +56,20 @@ Rectangle {
                 }
                 Column {
                     id: textCol
-                    anchors { left: num.right; right: actions.left; verticalCenter: parent.verticalCenter; rightMargin: 12 }
+                    anchors { left: num.right; right: Config.mobile ? parent.right : actions.left; rightMargin: Config.mobile ? 0 : 12
+                              top: Config.mobile ? parent.top : undefined; topMargin: Config.mobile ? 10 : 0
+                              verticalCenter: Config.mobile ? undefined : parent.verticalCenter }
                     spacing: 3
-                    Row {
+                    Flow {
+                        width: parent.width
                         spacing: 10
                         Text {
-                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.verticalCenter: Config.mobile ? undefined : parent.verticalCenter
                             text: stepRow.modelData.label
                             color: stepRow.modelData.state === "blocked" ? Theme.dim : Theme.fg
                             font.family: Theme.ui; font.pixelSize: 14; font.weight: Font.DemiBold
                         }
-                        GChip { anchors.verticalCenter: parent.verticalCenter; text: root.stateText(stepRow.modelData.state); tone: root.stateTone(stepRow.modelData.state) }
+                        GChip { anchors.verticalCenter: Config.mobile ? undefined : parent.verticalCenter; text: root.stateText(stepRow.modelData.state); tone: root.stateTone(stepRow.modelData.state) }
                     }
                     Text {
                         width: parent.width
@@ -78,7 +81,9 @@ Rectangle {
                 }
                 Row {
                     id: actions
-                    anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+                    anchors { right: Config.mobile ? undefined : parent.right; left: Config.mobile ? textCol.left : undefined
+                              bottom: Config.mobile ? parent.bottom : undefined; bottomMargin: Config.mobile ? 10 : 0
+                              verticalCenter: Config.mobile ? undefined : parent.verticalCenter }
                     spacing: 8
                     GLabel {
                         visible: stepRow.modelData.state === "unknown"

@@ -20,7 +20,7 @@ FloatingWindow {
     title: (chat.meta.title ? chat.meta.title + " — " : "") + "CLAUDE"
     implicitWidth: 1180
     implicitHeight: 780
-    minimumSize: Qt.size(760, 480)
+    minimumSize: Config.mobile ? Qt.size(0, 0) : Qt.size(760, 480)
     color: "transparent"   // the Theme.panel glass below fills it
     visible: true
 
@@ -32,6 +32,7 @@ FloatingWindow {
     property var target: null           // the chat being renamed / removed
     property bool withSysinfo: true     // the system summary goes with the next message
     property bool closing: false
+    property bool mobileList: true      // phone: the projects + chats list, or the chat
     readonly property alias panel: ov.item  // the open overlay (AccountsPanel, ProjectPanel, ...)
     readonly property ChatSession session: chat
     property alias draft: input.text
@@ -140,8 +141,8 @@ FloatingWindow {
         const pid = projectId;
         Claude.run(["chats", pid], o => { if (win.projectId === pid) win.chats = o.chats || []; });
     }
-    function openChat(c) { showChat(projectId, c.id); withSysinfo = false; input.forceActiveFocus(); }
-    function newChat() { showChat(projectId, ""); withSysinfo = projectId === "system"; input.forceActiveFocus(); }
+    function openChat(c) { showChat(projectId, c.id); withSysinfo = false; mobileList = false; input.forceActiveFocus(); }
+    function newChat() { showChat(projectId, ""); withSysinfo = projectId === "system"; mobileList = false; input.forceActiveFocus(); }
     function sendNow() {
         if (!canSend || !proj) return;
         const text = input.text, sys = withSysinfo, imgs = attachments.map(a => a.path);
@@ -303,6 +304,7 @@ FloatingWindow {
         if (!h) return;
         const c = h.chat, prev = chat;
         projectId = c.projectId;
+        mobileList = false;
         withSysinfo = false;
         chats = [];
         c.changed.connect(win.loadChats);
@@ -327,7 +329,7 @@ FloatingWindow {
     Connections {
         target: Claude
         function onRaiseChanged() {
-            if (Claude.wantProject !== "") { win.selectProject(Claude.wantProject); Claude.wantProject = ""; }
+            if (Claude.wantProject !== "") { win.selectProject(Claude.wantProject); Claude.wantProject = ""; win.mobileList = false; }
             if (Claude.wantDir !== "") win.takeDir();
             win.takeHandoff();
             input.forceActiveFocus();
@@ -358,7 +360,8 @@ FloatingWindow {
 
             // ---------------------------------------------------- sidebar
             Rectangle {
-                Layout.fillHeight: true; Layout.preferredWidth: 270
+                Layout.fillHeight: true; Layout.preferredWidth: Config.mobile ? ui.width : 270
+                visible: !Config.mobile || (win.mobileList && win.ready)
                 color: Theme.panel
                 Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Theme.line }
 
@@ -413,12 +416,13 @@ FloatingWindow {
                     RowLayout {
                         Layout.fillWidth: true; Layout.topMargin: 6
                         SectionLabel { text: "Projects"; Layout.fillWidth: true }
-                        SmallLink { text: "+ NEW"; onClicked: win.editProject(null) }
+                        SmallLink { visible: !Config.mobile; text: "+ NEW"; onClicked: win.editProject(null) }
+                        ChamferButton { visible: Config.mobile; implicitHeight: 36; text: "+ New"; onClicked: win.editProject(null) }
                     }
                     ListView {
                         id: projList
                         Layout.fillWidth: true
-                        Layout.preferredHeight: Math.min(contentHeight, 40 * 6)
+                        Layout.preferredHeight: Math.min(contentHeight, 40 * (Config.mobile ? 3 : 6))
                         clip: true
                         boundsBehavior: Flickable.StopAtBounds
                         model: Claude.projects
@@ -439,7 +443,8 @@ FloatingWindow {
                     RowLayout {
                         Layout.fillWidth: true; Layout.topMargin: 6
                         SectionLabel { text: "Chats"; Layout.fillWidth: true }
-                        SmallLink { text: "+ NEW"; onClicked: win.newChat() }
+                        SmallLink { visible: !Config.mobile; text: "+ NEW"; onClicked: win.newChat() }
+                        ChamferButton { visible: Config.mobile; implicitHeight: 36; text: "+ New"; onClicked: win.newChat() }
                     }
                     ListView {
                         Layout.fillWidth: true; Layout.fillHeight: true
@@ -476,11 +481,12 @@ FloatingWindow {
             // ---------------------------------------------------- main
             Item {
                 Layout.fillWidth: true; Layout.fillHeight: true
+                visible: !Config.mobile || !win.mobileList || !win.ready
 
                 // set-up states: Claude Code missing, no account yet
                 Loader {
                     anchors.centerIn: parent
-                    width: Math.min(parent.width - 60, 560)
+                    width: Config.mobile ? parent.width - 24 : Math.min(parent.width - 60, 560)
                     active: !win.ready
                     sourceComponent: Setup { onAccounts: win.overlay = "accounts" }
                 }
@@ -490,14 +496,18 @@ FloatingWindow {
                     spacing: 0
                     visible: win.ready
 
+                    MobileBack { visible: Config.mobile; Layout.fillWidth: true; Layout.preferredHeight: 44
+                                 label: "Chats"; onBack: win.mobileList = true }
+
                     // header: project, folder, account, model, permissions
                     Rectangle {
-                        Layout.fillWidth: true; Layout.preferredHeight: 64
+                        Layout.fillWidth: true; Layout.preferredHeight: Config.mobile ? 108 : 64
                         color: Theme.panel
                         Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
                         Column {
-                            x: 18; anchors.verticalCenter: parent.verticalCenter
-                            width: parent.width - headBtns.width - 50
+                            x: 18; anchors.verticalCenter: Config.mobile ? undefined : parent.verticalCenter
+                            y: 12      // phone: the buttons go on a row below
+                            width: Config.mobile ? parent.width - 36 : parent.width - headBtns.width - 50
                             spacing: 3
                             Text {
                                 width: parent.width; elide: Text.ElideRight
@@ -513,11 +523,13 @@ FloatingWindow {
                         }
                         Row {
                             id: headBtns
-                            anchors.right: parent.right; anchors.rightMargin: 14; anchors.verticalCenter: parent.verticalCenter
+                            anchors.right: parent.right; anchors.rightMargin: 14
+                            anchors.verticalCenter: Config.mobile ? undefined : parent.verticalCenter
+                            anchors.bottom: Config.mobile ? parent.bottom : undefined; anchors.bottomMargin: 8
                             spacing: 6
-                            ChamferButton { implicitHeight: 30; text: "Show in DATA"; visible: !!win.proj; onClicked: win.showFolder(win.proj.dir) }
-                            ChamferButton { implicitHeight: 30; text: "Project"; onClicked: win.editProject(win.proj) }
-                            ChamferButton { implicitHeight: 30; text: "New chat"; onClicked: win.newChat() }
+                            ChamferButton { implicitHeight: Config.mobile ? 40 : 30; text: "Show in DATA"; visible: !!win.proj && !Config.mobile; onClicked: win.showFolder(win.proj.dir) }
+                            ChamferButton { implicitHeight: Config.mobile ? 40 : 30; text: "Project"; onClicked: win.editProject(win.proj) }
+                            ChamferButton { implicitHeight: Config.mobile ? 40 : 30; text: "New chat"; onClicked: win.newChat() }
                         }
                     }
 
@@ -590,7 +602,7 @@ FloatingWindow {
                                 width: parent.width; horizontalAlignment: Text.AlignHCenter; wrapMode: Text.Wrap
                                 text: win.projectId === "system"
                                     ? "Describe the problem. Claude gets a summary of this PC (Ultimit version, graphics, monitors, recent errors) with your first message, can read the logs, and asks before it changes anything."
-                                    : "Claude works in " + win.tilde(win.proj ? win.proj.dir : "") + " and keeps to this project's notes. Chats stay in the list on the left, so you can pick one up later."
+                                    : "Claude works in " + win.tilde(win.proj ? win.proj.dir : "") + " and keeps to this project's notes. Chats stay in the list " + (Config.mobile ? "under Chats" : "on the left") + ", so you can pick one up later."
                                 color: Theme.fg; font.family: Theme.ui; font.pixelSize: 14
                             }
                         }
@@ -640,17 +652,20 @@ FloatingWindow {
                                     }
                                 }
                             }
-                            Row {
-                                spacing: 8
-                                ChamferButton { text: "Allow"; primary: true; onClicked: chat.permit(true, false) }
-                                ChamferButton { text: "Always allow"; visible: !!chat.ask && chat.ask.always; onClicked: chat.permit(true, true) }
-                                ChamferButton { text: "Deny"; onClicked: chat.permit(false, false) }
-                                SmallLink {
-                                    id: askMore
-                                    property bool checked: false
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: checked ? "HIDE DETAILS" : "DETAILS"
-                                    onClicked: checked = !checked
+                            Flow {
+                                width: parent.width; spacing: 8
+                                ChamferButton { implicitHeight: Config.mobile ? 40 : 34; text: "Allow"; primary: true; onClicked: chat.permit(true, false) }
+                                ChamferButton { implicitHeight: Config.mobile ? 40 : 34; text: "Always allow"; visible: !!chat.ask && chat.ask.always; onClicked: chat.permit(true, true) }
+                                ChamferButton { implicitHeight: Config.mobile ? 40 : 34; text: "Deny"; onClicked: chat.permit(false, false) }
+                                Item {
+                                    width: askMore.implicitWidth; height: Config.mobile ? 40 : 34
+                                    SmallLink {
+                                        id: askMore
+                                        property bool checked: false
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: checked ? "HIDE DETAILS" : "DETAILS"
+                                        onClicked: checked = !checked
+                                    }
                                 }
                             }
                         }
@@ -659,7 +674,7 @@ FloatingWindow {
                     // composer
                     Rectangle {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: Math.min(Math.max(input.contentHeight + 24, 48), 220) + 46 + strip.height
+                        Layout.preferredHeight: Math.min(Math.max(input.contentHeight + 24, 48), 220) + (Config.mobile ? 54 : 46) + strip.height
                         color: Theme.panel
                         Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Theme.line }
 
@@ -723,7 +738,7 @@ FloatingWindow {
 
                         Rectangle {
                             id: box
-                            x: 14; y: 12 + strip.height; width: parent.width - 28; height: parent.height - 52 - strip.height
+                            x: 14; y: 12 + strip.height; width: parent.width - 28; height: parent.height - (Config.mobile ? 66 : 52) - strip.height
                             color: "transparent"
                             border.width: 1; border.color: input.activeFocus ? Theme.accent : Theme.lineStrong
                             ScrollView {
@@ -778,6 +793,7 @@ FloatingWindow {
                             }
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
+                                visible: !Config.mobile     // no room beside SEND on a phone
                                 text: [chat.info, win.usageText, chat.limit].filter(s => s !== "").join("   ·   ").toUpperCase()
                                 color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.2
                             }
@@ -789,11 +805,11 @@ FloatingWindow {
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: "ENTER SENDS · SHIFT+ENTER NEW LINE"
-                                visible: !chat.busy
+                                visible: !chat.busy && !Config.mobile
                                 color: Theme.dim; font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1.2
                             }
-                            ChamferButton { implicitHeight: 28; text: "Stop"; visible: chat.busy; onClicked: chat.interrupt() }
-                            ChamferButton { implicitHeight: 28; text: "Send"; primary: win.canSend; onClicked: win.sendNow() }
+                            ChamferButton { implicitHeight: Config.mobile ? 36 : 28; text: "Stop"; visible: chat.busy; onClicked: chat.interrupt() }
+                            ChamferButton { implicitHeight: Config.mobile ? 36 : 28; text: "Send"; primary: win.canSend; onClicked: win.sendNow() }
                         }
                     }
                 }
@@ -810,10 +826,11 @@ FloatingWindow {
             Loader {
                 id: ov
                 anchors.centerIn: parent
-                width: Math.min(parent.width - 40, win.overlay === "accounts" || win.overlay === "project" ? 620 : 440)
-                height: Math.min(parent.height - 40, item ? item.implicitHeight : 0)
+                width: Config.mobile ? parent.width - 24 : Math.min(parent.width - 40, win.overlay === "accounts" || win.overlay === "project" ? 620 : 440)
+                height: Math.min(parent.height - (Config.mobile ? 24 : 40), item ? item.implicitHeight : 0)
                 active: win.overlay !== ""
-                sourceComponent: win.overlay === "accounts" ? accountsC : win.overlay === "project" ? projectC : smallC
+                sourceComponent: win.overlay === "accounts" ? (Config.mobile ? accountsM : accountsC)
+                               : win.overlay === "project" ? (Config.mobile ? projectM : projectC) : smallC
                 onLoaded: item.forceActiveFocus()
             }
         }
@@ -824,6 +841,25 @@ FloatingWindow {
 
         Component { id: accountsC; AccountsPanel { host: win } }
         Component { id: projectC; ProjectPanel { host: win; project: win.editing } }
+        // phone: the same panels, scrolling when taller than the window
+        Component {
+            id: accountsM
+            Flickable {
+                id: apF
+                implicitHeight: ap.implicitHeight; contentWidth: width; contentHeight: ap.implicitHeight
+                clip: true; boundsBehavior: Flickable.StopAtBounds
+                AccountsPanel { id: ap; width: apF.width; host: win }
+            }
+        }
+        Component {
+            id: projectM
+            Flickable {
+                id: ppF
+                implicitHeight: pp.implicitHeight; contentWidth: width; contentHeight: pp.implicitHeight
+                clip: true; boundsBehavior: Flickable.StopAtBounds
+                ProjectPanel { id: pp; width: ppF.width; host: win; project: win.editing }
+            }
+        }
         Component {
             id: smallC
             Rectangle {

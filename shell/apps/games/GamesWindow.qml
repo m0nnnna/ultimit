@@ -17,12 +17,12 @@ FloatingWindow {
     visible: Games.open
     implicitWidth: 900
     implicitHeight: 620
-    minimumSize: Qt.size(640, 440)
+    minimumSize: Config.mobile ? Qt.size(0, 0) : Qt.size(640, 440)
     color: "transparent"   // the Theme.panel glass below fills it
 
     onVisibleChanged: {
         if (visible !== Games.open) Games.open = visible;
-        if (visible) Qt.callLater(() => grid.forceActiveFocus());
+        if (visible) { mobileList = true; Qt.callLater(() => grid.forceActiveFocus()); }
     }
 
     // qs -p <shell> ipc call games <fn>   (select/tab/search/sort/launchSelected/addDialog/dump are for scripting + tests)
@@ -50,6 +50,8 @@ FloatingWindow {
     }
 
     property string tab: "overview"            // overview | options
+    property bool mobileList: true             // phone: the library fills the window; false = the picked game's details
+    readonly property bool mDetail: Config.mobile && !mobileList && sel !== null
     readonly property var sel: Games.selected
     readonly property var cfg: sel ? Games.setting(sel.id) : null
     readonly property bool isSteam: sel !== null && sel.source === "steam"
@@ -65,9 +67,12 @@ FloatingWindow {
         anchors.fill: parent
         color: Theme.panel
 
+        MobileBack { visible: win.mDetail; label: "Library"; onBack: win.mobileList = true }
+
         // ---- section label (.lbl) ----
         Item {
             id: lbl
+            visible: !win.mDetail
             x: 16; y: 14
             width: parent.width - 32
             height: 16
@@ -95,7 +100,7 @@ FloatingWindow {
                 color: rescanMouse.containsMouse ? Theme.accent : Theme.dim
                 MouseArea {
                     id: rescanMouse
-                    anchors.fill: parent; anchors.margins: -4
+                    anchors.fill: parent; anchors.margins: Config.mobile ? -10 : -4
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: Games.rescan()
@@ -108,11 +113,12 @@ FloatingWindow {
             id: toolbar
             x: 16; y: 40
             width: parent.width - 32
-            height: 32
+            height: Config.mobile ? 92 : 32   // phone: search on its own line, sort + add under it
+            visible: !win.mDetail
             GInput {
                 id: search
-                width: Math.min(260, parent.width - sortSeg.width - addBtn.width - 32)
-                height: parent.height
+                width: Config.mobile ? parent.width : Math.min(260, parent.width - sortSeg.width - addBtn.width - 32)
+                height: Config.mobile ? 42 : parent.height
                 placeholder: "Search  ( / )"
                 value: Games.query
                 onEdited: v => Games.query = v
@@ -122,16 +128,17 @@ FloatingWindow {
             }
             GSeg {
                 id: sortSeg
-                anchors.left: search.right; anchors.leftMargin: 12
-                anchors.verticalCenter: parent.verticalCenter
+                x: Config.mobile ? 0 : search.width + 12
+                y: Config.mobile ? 52 : (parent.height - height) / 2
                 options: [{ id: "recent", label: "Recent" }, { id: "name", label: "Name" }]
                 current: Games.sortMode
                 onPicked: id => Games.setSort(id)
             }
             GButton {
                 id: addBtn
-                anchors.right: parent.right
-                height: parent.height
+                x: parent.width - width
+                y: Config.mobile ? 52 : 0
+                height: Config.mobile ? 40 : parent.height
                 text: "Add game…"
                 onClicked: addDlg.open()
             }
@@ -142,7 +149,7 @@ FloatingWindow {
             id: steamStrip
             x: 16; y: toolbar.y + toolbar.height + 10
             width: parent.width - 32
-            visible: win.anyGames && Games.loaded && Games.steamState !== "ready"
+            visible: win.anyGames && Games.loaded && Games.steamState !== "ready" && !win.mDetail
             mode: Games.steamState
             compact: true
         }
@@ -180,7 +187,7 @@ FloatingWindow {
         Item {
             id: body
             anchors { left: parent.left; right: parent.right; leftMargin: 16; rightMargin: 16 }
-            y: steamStrip.visible ? steamStrip.y + steamStrip.height + 12 : toolbar.y + toolbar.height + 12
+            y: win.mDetail ? 56 : steamStrip.visible ? steamStrip.y + steamStrip.height + 12 : toolbar.y + toolbar.height + 12
             height: parent.height - y - 16
             visible: win.anyGames
             readonly property real leftW: Math.min(width * 0.46, 440)
@@ -195,7 +202,8 @@ FloatingWindow {
             // library grid
             GridView {
                 id: grid
-                width: body.leftW
+                visible: !win.mDetail
+                width: Config.mobile ? body.width : body.leftW
                 height: parent.height
                 clip: true
                 focus: true
@@ -312,7 +320,7 @@ FloatingWindow {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: { grid.forceActiveFocus(); Games.selectedId = cell.modelData.id; }
+                            onClicked: { grid.forceActiveFocus(); Games.selectedId = cell.modelData.id; if (Config.mobile) win.mobileList = false; }
                             onDoubleClicked: Games.launch(cell.modelData.id)
                         }
                     }
@@ -330,10 +338,10 @@ FloatingWindow {
             // detail pane
             Item {
                 id: detailBox
-                x: body.leftW + 16
+                x: Config.mobile ? 0 : body.leftW + 16
                 width: parent.width - x
                 height: parent.height
-                visible: win.sel !== null
+                visible: win.sel !== null && (!Config.mobile || !win.mobileList)
 
                 GSeg {
                     id: tabs
@@ -346,7 +354,7 @@ FloatingWindow {
                     id: detail
                     y: tabs.height + 10
                     width: parent.width
-                    height: parent.height - y - 46
+                    height: parent.height - y - (Config.mobile ? 52 : 46)
                     clip: true
                     contentWidth: width
                     contentHeight: win.tab === "overview" ? overviewCol.implicitHeight : optionsCol.implicitHeight
@@ -648,6 +656,7 @@ FloatingWindow {
                 GButton {
                     anchors.bottom: parent.bottom
                     width: detail.width - 10
+                    height: Config.mobile ? 42 : implicitHeight
                     primary: true
                     text: win.isSteam ? "Launch with Steam" : "Launch"
                     onClicked: Games.launch(win.sel.id)

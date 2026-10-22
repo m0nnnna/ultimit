@@ -14,7 +14,7 @@ FloatingWindow {
     visible: Store.open
     implicitWidth: 1000
     implicitHeight: 700
-    minimumSize: Qt.size(720, 480)
+    minimumSize: Config.mobile ? Qt.size(0, 0) : Qt.size(720, 480)
     color: "transparent"   // the Theme.panel glass below fills it
 
     onVisibleChanged: if (visible !== Store.open) Store.open = visible
@@ -29,15 +29,17 @@ FloatingWindow {
             // The window title itself is in the compositor's titlebar.
             x: 20; y: 10
             width: parent.width - 40
-            height: 36
+            height: Config.mobile ? 88 : 36
             GLabel {
                 id: sub
-                anchors { left: parent.left; verticalCenter: parent.verticalCenter }
+                anchors { left: parent.left; verticalCenter: Config.mobile ? undefined : parent.verticalCenter; top: Config.mobile ? parent.top : undefined; topMargin: 10 }
                 text: Store.total > 0 ? Store.total.toLocaleString(Qt.locale("en_US"), "f", 0) + " apps from Flathub" : "Apps from Flathub"
             }
             GInput {
                 id: search
-                anchors { left: sub.right; leftMargin: 20; right: instBtn.left; rightMargin: 12; verticalCenter: parent.verticalCenter }
+                anchors { left: Config.mobile ? parent.left : sub.right; leftMargin: Config.mobile ? 0 : 20; right: Config.mobile ? parent.right : instBtn.left; rightMargin: Config.mobile ? 0 : 12
+                          verticalCenter: Config.mobile ? undefined : parent.verticalCenter; bottom: Config.mobile ? parent.bottom : undefined }
+                height: Config.mobile ? 40 : implicitHeight
                 placeholder: "Search apps  ( / )"
                 onEdited: v => debounce.restart()
                 onAccepted: { debounce.stop(); Store.search(text, ""); }
@@ -46,7 +48,7 @@ FloatingWindow {
             }
             GButton {
                 id: instBtn
-                anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+                anchors { right: parent.right; verticalCenter: Config.mobile ? undefined : parent.verticalCenter; top: Config.mobile ? parent.top : undefined }
                 text: "Installed" + (Store.installedIds.length ? " (" + Store.installedIds.length + ")" : "")
                 primary: Store.view === "installed"
                 onClicked: Store.showInstalled()
@@ -70,7 +72,7 @@ FloatingWindow {
                     required property var modelData
                     readonly property bool on: modelData.id === "" ? Store.view === "home"
                         : (Store.view === "results" && Store.category === modelData.id && Store.query === "")
-                    width: ct.implicitWidth + 20; height: 26
+                    width: ct.implicitWidth + 20; height: Config.mobile ? 32 : 26
                     color: on ? Theme.accent : (ch.hovered ? Theme.panel2 : "transparent")
                     border.color: on ? Theme.accent : Theme.line
                     Text {

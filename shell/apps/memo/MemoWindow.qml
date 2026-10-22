@@ -40,7 +40,7 @@ FloatingWindow {
     title: (modified ? "● " : "") + name + " — MEMO"
     implicitWidth: 880
     implicitHeight: 620
-    minimumSize: Qt.size(520, 360)
+    minimumSize: Config.mobile ? Qt.size(0, 0) : Qt.size(520, 360)
     color: "transparent"   // the Theme.panel glass below fills it
     visible: true
 
@@ -388,36 +388,46 @@ FloatingWindow {
                 Layout.fillWidth: true; Layout.preferredHeight: tbFlow.implicitHeight + 14
                 color: Theme.panel2
                 Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
+                Flickable {   // phone: one swipeable row instead of three wrapped ones
+                    id: tbScroll
+                    anchors.fill: parent
+                    clip: true
+                    interactive: Config.mobile
+                    contentWidth: tbFlow.childrenRect.width + 20
+                    boundsBehavior: Flickable.StopAtBounds
+                }
                 Flow {
                     id: tbFlow
-                    x: 10; y: 7; width: parent.width - 20
+                    parent: tbScroll.contentItem
+                    x: 10; y: 7; width: Config.mobile ? 4000 : ui.width - 20
                     spacing: 6
-                    ChamferButton { implicitHeight: 30; text: "New"; onClicked: { Memo.newDoc(); ta.forceActiveFocus() } }
-                    ChamferButton { implicitHeight: 30; text: "Open"; onClicked: { win.overlay = "open"; ta.forceActiveFocus() } }
-                    ChamferButton { implicitHeight: 30; text: "Save"; primary: win.modified; onClicked: { win.save(); ta.forceActiveFocus() } }
-                    ChamferButton { implicitHeight: 30; text: "Save as"; onClicked: { win.overlay = "saveas"; ta.forceActiveFocus() } }
+                    ChamferButton { implicitHeight: Config.mobile ? 38 : 30; text: "New"; onClicked: { Memo.newDoc(); ta.forceActiveFocus() } }
+                    ChamferButton { implicitHeight: Config.mobile ? 38 : 30; text: "Open"; onClicked: { win.overlay = "open"; ta.forceActiveFocus() } }
+                    ChamferButton { implicitHeight: Config.mobile ? 38 : 30; text: "Save"; primary: win.modified; onClicked: { win.save(); ta.forceActiveFocus() } }
+                    ChamferButton { implicitHeight: Config.mobile ? 38 : 30; text: "Save as"; onClicked: { win.overlay = "saveas"; ta.forceActiveFocus() } }
                     Item { width: 8; height: 1 }
-                    ChamferButton { implicitHeight: 30; text: "Undo"; onClicked: { ta.undo(); ta.forceActiveFocus() } }
-                    ChamferButton { implicitHeight: 30; text: "Redo"; onClicked: { ta.redo(); ta.forceActiveFocus() } }
+                    ChamferButton { implicitHeight: Config.mobile ? 38 : 30; text: "Undo"; onClicked: { ta.undo(); ta.forceActiveFocus() } }
+                    ChamferButton { implicitHeight: Config.mobile ? 38 : 30; text: "Redo"; onClicked: { ta.redo(); ta.forceActiveFocus() } }
                     Item { width: 8; height: 1 }
-                    ChamferButton { implicitHeight: 30; text: "Find"; onClicked: { win.openFind(false); ta.forceActiveFocus() } }
-                    ChamferButton { implicitHeight: 30; text: "Goto"; onClicked: { win.gotoOpen = true; win.findOpen = false; Qt.callLater(() => { gotoField.text = ""; gotoField.forceActiveFocus(); }); ta.forceActiveFocus() } }
+                    ChamferButton { implicitHeight: Config.mobile ? 38 : 30; text: "Find"; onClicked: { win.openFind(false); ta.forceActiveFocus() } }
+                    ChamferButton { implicitHeight: Config.mobile ? 38 : 30; text: "Goto"; onClicked: { win.gotoOpen = true; win.findOpen = false; Qt.callLater(() => { gotoField.text = ""; gotoField.forceActiveFocus(); }); ta.forceActiveFocus() } }
                     Item { width: 8; height: 1 }
-                    MemoToggle { text: "WRAP"; on: Memo.wrap; implicitHeight: 30; onClicked: Memo.wrap = !Memo.wrap }
-                    MemoToggle { text: "TAB=4SP"; on: Memo.tabSpaces; implicitHeight: 30; onClicked: Memo.tabSpaces = !Memo.tabSpaces }
+                    MemoToggle { text: "WRAP"; on: Memo.wrap; implicitHeight: Config.mobile ? 38 : 30; onClicked: Memo.wrap = !Memo.wrap }
+                    MemoToggle { text: "TAB=4SP"; on: Memo.tabSpaces; implicitHeight: Config.mobile ? 38 : 30; onClicked: Memo.tabSpaces = !Memo.tabSpaces }
                 }
             }
 
             // disk-change / error banner
             Rectangle {
                 visible: win.banner !== ""
-                Layout.fillWidth: true; Layout.preferredHeight: 38
+                Layout.fillWidth: true; Layout.preferredHeight: Config.mobile ? 84 : 38   // phone: text above, buttons below
                 color: Theme.panel2
                 Rectangle { anchors.left: parent.left; width: 3; height: parent.height; color: win.bannerKind === "error" ? Theme.bad : (win.bannerKind === "info" ? Theme.accent : Theme.warn) }
                 Text {
-                    anchors.left: parent.left; anchors.leftMargin: 14; anchors.right: bannerBtns.left; anchors.rightMargin: 10
-                    anchors.verticalCenter: parent.verticalCenter
-                    elide: Text.ElideRight
+                    anchors.left: parent.left; anchors.leftMargin: 14; anchors.right: Config.mobile ? parent.right : bannerBtns.left; anchors.rightMargin: 10
+                    y: Config.mobile ? 8 : (parent.height - height) / 2
+                    wrapMode: Config.mobile ? Text.WordWrap : Text.NoWrap
+                    elide: Config.mobile ? Text.ElideNone : Text.ElideRight
                     text: win.banner === "changed" ? "File changed on disk." + (win.modified ? " Reloading discards your edits." : "")
                         : win.banner === "deleted" ? "File was deleted or moved on disk."
                         : win.banner === "recovered" ? "Recovered unsaved changes."
@@ -426,12 +436,13 @@ FloatingWindow {
                 }
                 Row {
                     id: bannerBtns
-                    anchors.right: parent.right; anchors.rightMargin: 10; anchors.verticalCenter: parent.verticalCenter
+                    anchors.right: parent.right; anchors.rightMargin: 10
+                    y: Config.mobile ? parent.height - height - 8 : (parent.height - height) / 2
                     spacing: 8
-                    ChamferButton { visible: win.banner === "changed"; implicitHeight: 26; text: "Reload"; onClicked: win.reload() }
-                    ChamferButton { visible: win.banner === "recovered"; implicitHeight: 26; text: "Discard"; onClicked: win.doClose() }
+                    ChamferButton { visible: win.banner === "changed"; implicitHeight: Config.mobile ? 34 : 26; text: "Reload"; onClicked: win.reload() }
+                    ChamferButton { visible: win.banner === "recovered"; implicitHeight: Config.mobile ? 34 : 26; text: "Discard"; onClicked: win.doClose() }
                     ChamferButton {
-                        implicitHeight: 26
+                        implicitHeight: Config.mobile ? 34 : 26
                         text: win.banner === "recovered" ? "Keep" : (win.banner === "changed" || win.banner === "deleted" ? "Keep mine" : "Dismiss")
                         onClicked: {
                             if (win.banner === "changed") win.stamp = win.pendingStamp;
@@ -445,15 +456,18 @@ FloatingWindow {
             // find / replace bar
             Rectangle {
                 visible: win.findOpen
-                Layout.fillWidth: true; Layout.preferredHeight: win.replaceOpen ? 76 : 42
+                Layout.fillWidth: true; Layout.preferredHeight: Config.mobile ? fcol.implicitHeight + 12 : (win.replaceOpen ? 76 : 42)
                 color: Theme.panel2
                 Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
                 Column {
+                    id: fcol
                     x: 10; y: 6; spacing: 6
-                    Row {
+                    width: Config.mobile ? parent.width - 20 : implicitWidth
+                    Flow {   // phone: the field gets its own line, the buttons wrap under it
+                        width: Config.mobile ? parent.width : 4000
                         spacing: 6
                         Rectangle {
-                            width: 240; height: 28; color: "transparent"
+                            width: Config.mobile ? parent.width : 240; height: Config.mobile ? 38 : 28; color: "transparent"
                             border.width: 1; border.color: findField.activeFocus ? Theme.accent : Theme.lineStrong
                             TextInput {
                                 id: findField
@@ -470,22 +484,23 @@ FloatingWindow {
                                 Text { visible: findField.text === ""; text: "find"; color: Theme.dim; font: findField.font }
                             }
                         }
-                        ChamferButton { implicitHeight: 28; text: "Prev"; onClicked: win.findNext(true) }
-                        ChamferButton { implicitHeight: 28; text: "Next"; onClicked: win.findNext(false) }
-                        MemoToggle { text: "Aa"; on: win.matchCase; y: 1; onClicked: { win.matchCase = !win.matchCase; win.recount(); } }
-                        MemoToggle { text: "REPLACE"; on: win.replaceOpen; y: 1; onClicked: win.replaceOpen = !win.replaceOpen }
+                        ChamferButton { implicitHeight: Config.mobile ? 36 : 28; text: "Prev"; onClicked: win.findNext(true) }
+                        ChamferButton { implicitHeight: Config.mobile ? 36 : 28; text: "Next"; onClicked: win.findNext(false) }
+                        MemoToggle { text: "Aa"; on: win.matchCase; y: 1; implicitHeight: Config.mobile ? 34 : 26; onClicked: { win.matchCase = !win.matchCase; win.recount(); } }
+                        MemoToggle { text: "REPLACE"; on: win.replaceOpen; y: 1; implicitHeight: Config.mobile ? 34 : 26; onClicked: win.replaceOpen = !win.replaceOpen }
                         Text {
-                            anchors.verticalCenter: parent.verticalCenter
+                            height: 28; verticalAlignment: Text.AlignVCenter
                             text: findField.text === "" ? "" : win.matchCount + (win.matchCount === 1 ? " match" : " matches")
                             color: findField.text !== "" && win.matchCount === 0 ? Theme.bad : Theme.dim
                             font.family: Theme.mono; font.pixelSize: 11
                         }
                     }
-                    Row {
+                    Flow {
                         visible: win.replaceOpen
+                        width: Config.mobile ? parent.width : 4000
                         spacing: 6
                         Rectangle {
-                            width: 240; height: 28; color: "transparent"
+                            width: Config.mobile ? parent.width : 240; height: Config.mobile ? 38 : 28; color: "transparent"
                             border.width: 1; border.color: replField.activeFocus ? Theme.accent : Theme.lineStrong
                             TextInput {
                                 id: replField
@@ -499,8 +514,8 @@ FloatingWindow {
                                 Text { visible: replField.text === ""; text: "replace with"; color: Theme.dim; font: replField.font }
                             }
                         }
-                        ChamferButton { implicitHeight: 28; text: "Replace"; onClicked: win.replaceOne() }
-                        ChamferButton { implicitHeight: 28; text: "Replace all"; onClicked: win.replaceAll() }
+                        ChamferButton { implicitHeight: Config.mobile ? 36 : 28; text: "Replace"; onClicked: win.replaceOne() }
+                        ChamferButton { implicitHeight: Config.mobile ? 36 : 28; text: "Replace all"; onClicked: win.replaceAll() }
                     }
                 }
             }
@@ -508,14 +523,14 @@ FloatingWindow {
             // go-to-line bar
             Rectangle {
                 visible: win.gotoOpen
-                Layout.fillWidth: true; Layout.preferredHeight: 42
+                Layout.fillWidth: true; Layout.preferredHeight: Config.mobile ? 52 : 42
                 color: Theme.panel2
                 Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
                 Row {
                     x: 10; y: 7; spacing: 8
                     Text { anchors.verticalCenter: parent.verticalCenter; text: "GO TO LINE"; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.5 }
                     Rectangle {
-                        width: 120; height: 28; color: "transparent"
+                        width: 120; height: Config.mobile ? 38 : 28; color: "transparent"
                         border.width: 1; border.color: gotoField.activeFocus ? Theme.accent : Theme.lineStrong
                         TextInput {
                             id: gotoField
@@ -664,14 +679,16 @@ FloatingWindow {
                 Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Theme.line }
                 Text {
                     anchors.left: parent.left; anchors.leftMargin: 12; anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width / 2 - 20
+                    width: Config.mobile ? parent.width - stat.width - 36 : parent.width / 2 - 20
                     elide: Text.ElideMiddle
-                    text: win.path === "" ? "UNSAVED DOCUMENT" : win.path
+                    text: Config.mobile ? win.name : win.path === "" ? "UNSAVED DOCUMENT" : win.path
                     color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11
                 }
                 Text {
+                    id: stat
                     anchors.right: parent.right; anchors.rightMargin: 12; anchors.verticalCenter: parent.verticalCenter
-                    text: "LN " + win.line + ", COL " + win.col + "   " + win.lineCount + " LINES   UTF-8   " + win.eol.toUpperCase()
+                    text: Config.mobile ? "LN " + win.line + ":" + win.col + "   " + win.lineCount + " LINES" + (win.modified ? "   ● MODIFIED" : "   SAVED")
+                        : "LN " + win.line + ", COL " + win.col + "   " + win.lineCount + " LINES   UTF-8   " + win.eol.toUpperCase()
                         + (win.modified ? "   ● MODIFIED" : "   SAVED")
                     color: win.modified ? Theme.warn : Theme.dim
                     font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 0.8

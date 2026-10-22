@@ -8,7 +8,7 @@ Rectangle {
     id: root
     required property var item
 
-    implicitHeight: Math.max(col.implicitHeight, btns.implicitHeight) + 24
+    implicitHeight: Config.mobile ? port.implicitHeight + col.implicitHeight + btns.implicitHeight + 36 : Math.max(col.implicitHeight, btns.implicitHeight) + 24
     color: Theme.panel2
     border.color: Theme.line
     border.width: 1
@@ -18,8 +18,8 @@ Rectangle {
 
     Text {
         id: port
-        anchors { left: parent.left; leftMargin: 16; verticalCenter: parent.verticalCenter }
-        width: 128
+        anchors { left: parent.left; leftMargin: 16; verticalCenter: Config.mobile ? undefined : parent.verticalCenter; top: Config.mobile ? parent.top : undefined; topMargin: 12 }
+        width: Config.mobile ? implicitWidth : 128
         text: root.item.port + "/" + root.item.proto.toUpperCase()
         color: Theme.fg
         font.family: Theme.mono; font.pixelSize: 17
@@ -27,9 +27,24 @@ Rectangle {
 
     Column {
         id: col
-        anchors { left: port.right; right: btns.left; verticalCenter: parent.verticalCenter; leftMargin: 8; rightMargin: 12 }
+        anchors { left: Config.mobile ? parent.left : port.right; right: Config.mobile ? parent.right : btns.left; verticalCenter: Config.mobile ? undefined : parent.verticalCenter
+                  top: Config.mobile ? port.bottom : undefined; topMargin: 6; leftMargin: Config.mobile ? 16 : 8; rightMargin: Config.mobile ? 14 : 12 }
         spacing: 5
+        Flow {   // phone: chips wrap under the name
+            visible: Config.mobile
+            width: parent.width
+            spacing: 6
+            Text {
+                text: root.item.label !== "" ? root.item.label : "Unknown app"
+                color: root.item.label !== "" ? Theme.fg : Theme.dim
+                font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: 14
+            }
+            GChip { visible: root.item.allowed; text: "Allowed now"; tone: Theme.ok }
+            GChip { visible: root.item.broadcast; text: "Broadcast"; tone: Theme.dim }
+            GChip { visible: !root.item.lan; text: "From outside your network"; tone: Theme.bad }
+        }
         Row {
+            visible: !Config.mobile
             spacing: 10
             Text {
                 anchors.verticalCenter: parent.verticalCenter
@@ -53,11 +68,12 @@ Rectangle {
 
     Column {
         id: btns
-        anchors { right: parent.right; rightMargin: 14; verticalCenter: parent.verticalCenter }
+        anchors { right: parent.right; rightMargin: 14; verticalCenter: Config.mobile ? undefined : parent.verticalCenter
+                  left: Config.mobile ? parent.left : undefined; leftMargin: 16; top: Config.mobile ? col.bottom : undefined; topMargin: 8 }
         spacing: 6
         GButton {
             visible: !root.item.allowed
-            width: 196
+            width: Config.mobile ? btns.width : 196
             primary: root.item.lan
             text: root.item.preset !== "" ? "Allow this app" : "Allow from home"
             enabled: Firewall.busy === "" && Firewall.subnet !== ""
@@ -66,6 +82,8 @@ Rectangle {
         GLabel {
             visible: !root.item.allowed
             anchors.right: parent.right
+            height: Config.mobile ? 32 : implicitHeight
+            verticalAlignment: Text.AlignVCenter
             text: "Custom rule…"
             color: customMouse.containsMouse ? Theme.accent : Theme.dim
             MouseArea {

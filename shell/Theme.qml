@@ -107,7 +107,9 @@ Singleton {
     // ---- colors ----
     readonly property color bg1: cur.bg1
     readonly property color bg2: cur.bg2
-    readonly property color panel: _rgba(cur.panel)
+    // phones draw no blur (ULTIMIT_MOBILE), so app panels are solid there
+    readonly property bool _solid: Quickshell.env("ULTIMIT_MOBILE") === "1"
+    readonly property color panel: _rgba(_solid ? cur.panel.slice(0, 3).concat([1]) : cur.panel)
     readonly property color panel2: _rgba(cur.panel2)
     readonly property color rail: _rgba(cur.rail)
     readonly property color fg: cur.fg

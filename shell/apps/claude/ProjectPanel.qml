@@ -203,6 +203,7 @@ Rectangle {
 
     component Label_: Text {
         Layout.topMargin: 4
+        Layout.fillWidth: true; wrapMode: Text.Wrap     // a long label wraps instead of widening the panel
         color: Theme.dim
         font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.8
         font.capitalization: Font.AllUppercase
@@ -212,7 +213,7 @@ Rectangle {
         property string text: ""
         property bool sel: false
         signal clicked()
-        width: ct.implicitWidth + 24; height: 28
+        width: ct.implicitWidth + 24; height: Config.mobile ? 36 : 28
         color: sel ? Theme.accent : (cm.containsMouse ? Theme.panel2 : "transparent")
         border.width: 1; border.color: sel ? Theme.accent : Theme.lineStrong
         Text {

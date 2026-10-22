@@ -128,8 +128,8 @@ Item {
                     spacing: 6
                     GLabel { text: "Who can connect" }
                     GSeg {
-                        options: [{ id: "lan", label: "Home network", disabled: Firewall.subnet === "" },
-                                  { id: "custom", label: "One device or network" }, { id: "any", label: "Anyone" }]
+                        options: [{ id: "lan", label: Config.mobile ? "Home" : "Home network", disabled: Firewall.subnet === "" },
+                                  { id: "custom", label: Config.mobile ? "One device" : "One device or network" }, { id: "any", label: "Anyone" }]
                         current: root.from
                         onPicked: id => { root.from = id; if (id === "custom") srcField.input.forceActiveFocus(); }
                     }
