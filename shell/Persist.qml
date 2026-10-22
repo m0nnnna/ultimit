@@ -53,7 +53,7 @@ Scope {
         const a = store.adapter;
         Pins.setSpecs(root.envPins ? Pins.fromTokens(Quickshell.env("ULTIMIT_PINS")) : a.pins);
         Feeds.urls = root.envFeeds ? root.envFeedList() : root.cleanFeeds(a.feeds);
-        Feeds.start();
+        if (!Config.mobile) Feeds.start();   // the ticker is desktop-only: no fetches on phones
     }
     function envFeedList() { const e = Quickshell.env("ULTIMIT_FEEDS").trim(); return e === "-" ? [] : cleanFeeds(e.split(/[\s,]+/)); }
     // Keep only http(s) URLs, no duplicates.

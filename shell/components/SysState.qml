@@ -211,7 +211,8 @@ Singleton {
     }
     Timer { id: vpnRefresh; interval: 1800; onTriggered: root.refreshVpn() }
     // the bar's VPN marker follows connections made anywhere (Settings, nmcli, PIA's app...)
-    Timer { interval: 6000; running: true; repeat: true; triggeredOnStart: true; onTriggered: root.refreshVpn() }
+    // phones: every 30 s, or 6 s while quick settings is open, to save the battery
+    Timer { interval: Config.mobile && !root.qsOpen ? 30000 : 6000; running: true; repeat: true; triggeredOnStart: true; onTriggered: root.refreshVpn() }
     // ...plus tunnels NetworkManager doesn't know: PIA's app runs its own (wgpia0, or tun0 for OpenVPN)
     property var vpnTunnels: []
     readonly property var vpnActive: vpnList.filter(v => v.active).map(v => v.name).concat(vpnTunnels)
@@ -229,7 +230,7 @@ Singleton {
             }
         }
     }
-    Timer { interval: 6000; running: true; repeat: true; triggeredOnStart: true; onTriggered: if (!tunProc.running) tunProc.running = true }
+    Timer { interval: Config.mobile && !root.qsOpen ? 30000 : 6000; running: true; repeat: true; triggeredOnStart: true; onTriggered: if (!tunProc.running) tunProc.running = true }
     Process {
         id: vpnProc
         command: ["nmcli", "-t", "-f", "NAME,TYPE,ACTIVE", "connection", "show"]

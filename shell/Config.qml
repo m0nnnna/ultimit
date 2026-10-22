@@ -262,7 +262,7 @@ Singleton {
         onLoaded: { const n = parseInt(text().trim()); root.mailUnread = isNaN(n) || n < 0 ? 0 : n; }
         onLoadFailed: root.mailUnread = 0
     }
-    Timer { interval: 5000; repeat: true; running: true; onTriggered: mailUnreadView.reload() }
+    Timer { interval: 5000; repeat: true; running: !root.mobile; onTriggered: mailUnreadView.reload() }   // the badge is on the rail
 
     // Detected launch commands: { appId: cmd } (missing key = nothing installed).
     property var resolved: ({})
@@ -288,7 +288,7 @@ Singleton {
     // Probe again: something may have been installed since (STORE, apt). Also every minute, so the
     // rail's NOT INSTALLED goes away on its own.
     function redetect() { probe.running = false; probe.running = true; }
-    Timer { interval: 60000; repeat: true; running: true; onTriggered: root.redetect() }
+    Timer { interval: root.mobile ? 600000 : 60000; repeat: true; running: true; onTriggered: root.redetect() }
     function openTerminal() {
         if (terminalCmd) Quickshell.execDetached(["sh", "-c", terminalCmd]);
         else Toasts.show("Terminal", "No terminal installed — try:", "sudo apt install foot");

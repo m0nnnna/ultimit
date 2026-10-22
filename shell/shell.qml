@@ -141,18 +141,24 @@ ShellRoot {
                     MobileSwitcher { screen: scope.modelData }   // overlay, open apps as cards
                 }
             }
-            Launcher    { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, app launcher (rail emblem)
-            ContextMenu { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, desktop right-click menu
-            RailMenu    { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, rail button right-click menu
-            WindowPopups { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, rail window tooltip + menu
+            // desktop-only overlays: phones never open them, so don't build them there
+            LazyLoader {
+                active: !Config.mobile
+                Scope {
+                    Launcher    { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, app launcher (rail emblem)
+                    ContextMenu { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, desktop right-click menu
+                    RailMenu    { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, rail button right-click menu
+                    WindowPopups { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, rail window tooltip + menu
+                    TrayMenu    { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, tray item menu
+                    Flyout      { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, tray icon flyouts
+                    AltTab      { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, Alt+Tab window switcher (compositor-driven)
+                    ClipboardPanel { screen: scope.modelData; screenName: scope.modelData.name }  // overlay, Super+V clipboard history
+                    ShortcutSheet { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, Super+/ keyboard shortcuts
+                }
+            }
             OsdOverlay  { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, volume/brightness OSD
-            TrayMenu    { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, tray item menu
             ToastOverlay { screen: scope.modelData; screenName: scope.modelData.name }  // overlay, top-right toasts
-            Flyout      { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, tray icon flyouts
-            AltTab      { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, Alt+Tab window switcher (compositor-driven)
             QuickSettings { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, status-block popover
-            ClipboardPanel { screen: scope.modelData; screenName: scope.modelData.name }  // overlay, Super+V clipboard history
-            ShortcutSheet { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, Super+/ keyboard shortcuts
         }
     }
 }
