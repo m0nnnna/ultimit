@@ -13,6 +13,13 @@ DEBIAN_FRONTEND=noninteractive apt-get install -yq iio-sensor-proxy wlr-randr \
 udevadm trigger -s iio -c add   # iio-sensor-proxy needs the sensors re-tagged once
 systemctl enable --now eg25-manager ModemManager
 
+# swap to zstd-compressed RAM before the eMMC swapfile (faster, and spares the flash)
+DEBIAN_FRONTEND=noninteractive apt-get install -yq systemd-zram-generator
+printf '[zram0]\nzram-size = ram / 2\ncompression-algorithm = zstd\nswap-priority = 100\n' \
+  > /etc/systemd/zram-generator.conf
+printf 'vm.swappiness = 100\nvm.page-cluster = 0\n' > /etc/sysctl.d/90-ultimit-zram.conf
+systemctl daemon-reload && systemctl start dev-zram0.swap && sysctl -q -p /etc/sysctl.d/90-ultimit-zram.conf
+
 # power key: the compositor blanks the screen; a long press still powers off
 install -Dm644 logind-ppp.conf /etc/systemd/logind.conf.d/ultimit-ppp.conf
 systemctl kill -s HUP systemd-logind
