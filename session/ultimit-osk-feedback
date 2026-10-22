@@ -3,10 +3,30 @@
 # one per line; play feedbackd's "key-pressed" event (vibration + click, as
 # the feedback profile allows) for each. Fire-and-forget D-Bus calls, so a
 # missing feedbackd only costs a failed call.
+import json
+import os
+import subprocess
 import sys
 import gi
 gi.require_version("Gio", "2.0")
 from gi.repository import Gio, GLib
+
+# feedbackd's key-pressed buzz (45 ms) is too short for the PinePhone Pro's
+# motor to spin up; a small custom theme on top of the device theme makes it
+# longer. Installed once per user; delete the file to go back.
+KEY_BUZZ_MS = 90
+THEME = os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"),
+                     "feedbackd", "themes", "ultimit.json")
+if not os.path.exists(THEME):
+    os.makedirs(os.path.dirname(THEME), exist_ok=True)
+    with open(THEME, "w") as f:
+        json.dump({"name": "ultimit", "parent-name": "$device", "profiles": [
+            {"name": "quiet", "feedbacks": [
+                {"event-name": "key-pressed", "type": "VibraRumble", "duration": KEY_BUZZ_MS}]}]},
+            f, indent=2)
+    subprocess.run(["gsettings", "set", "org.sigxcpu.feedbackd", "theme", "ultimit"],
+                   stderr=subprocess.DEVNULL)
+    subprocess.run(["pkill", "-HUP", "-x", "feedbackd"], stderr=subprocess.DEVNULL)
 
 try:
     bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
