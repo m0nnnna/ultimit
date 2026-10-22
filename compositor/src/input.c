@@ -697,10 +697,12 @@ static void cursor_frame(struct wl_listener *listener, void *data) {
 /* ---- touchscreen --------------------------------------------------------- */
 
 /* Fingers on the on-screen keyboard go to it as real touches (every finger,
- * so two-thumb typing works). Elsewhere the first finger is the mouse: down
- * warps the cursor there and presses the left button, moving drags, lifting
- * releases. Every pointer path (focus, window moves, snapping, the greeter)
- * then works by touch; other fingers are ignored there for now. */
+ * so two-thumb typing works). On phones (server->mobile) every surface that
+ * takes touch gets real touches too: kinetic scrolling, pinch zoom, long
+ * press. Elsewhere the first finger is the mouse: down warps the cursor there
+ * and presses the left button, moving drags, lifting releases. Every pointer
+ * path (focus, window moves, snapping, the greeter) then works by touch;
+ * other fingers are ignored there for now. */
 #define UL_OSK_TOUCHES 10
 static struct {
 	bool used;
@@ -740,6 +742,31 @@ static void touch_move_to(struct ul_server *server, struct wlr_touch *touch,
 	handle_motion(server, &touch->base, time_msec, dx, dy, dx, dy);
 }
 
+/* What a click would do before the press reaches the client: focus the
+ * window (or a layer surface that takes the keyboard), show or hide the OSK. */
+static void touch_focus(struct ul_server *server, struct wlr_surface *surface,
+		struct ul_view *view) {
+	idle_activity(server);
+	if (server->locked || !surface) {
+		text_input_tap(server, surface);
+		return;
+	}
+	struct wlr_layer_surface_v1 *layer =
+		wlr_layer_surface_v1_try_from_wlr_surface(wlr_surface_get_root_surface(surface));
+	if (layer && layer->current.keyboard_interactive !=
+			ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE) {
+		input_focus_layer(server, layer);
+	} else if (!layer && server->focused_layer &&
+			server->focused_layer->current.keyboard_interactive ==
+			ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_ON_DEMAND) {
+		server->focused_layer = NULL;
+	}
+	if (view) {
+		view_focus(view);
+	}
+	text_input_tap(server, surface);
+}
+
 static void touch_down(struct wl_listener *listener, void *data) {
 	struct ul_server *server = wl_container_of(listener, server, touch_down);
 	struct wlr_touch_down_event *event = data;
@@ -751,14 +778,22 @@ static void touch_down(struct wl_listener *listener, void *data) {
 		event->x, event->y, &lx, &ly);
 	struct ul_view *view;
 	struct wlr_surface *surface = surface_at(server, lx, ly, &sx, &sy, &view, NULL);
-	if (surface_is_osk(surface)) {
+	bool osk = surface_is_osk(surface);
+	if (osk || (server->mobile && surface && server->touch_id < 0 &&
+			wlr_surface_accepts_touch(surface, server->seat))) {
 		for (int i = 0; i < UL_OSK_TOUCHES; i++) {
 			if (!osk_touch[i].used) {
 				osk_touch[i].used = true;
 				osk_touch[i].id = event->touch_id;
 				osk_touch[i].ox = lx - sx;
 				osk_touch[i].oy = ly - sy;
-				idle_activity(server);
+				if (osk) {
+					idle_activity(server);
+				} else if (wlr_seat_touch_num_points(server->seat) == 0) {
+					/* first finger: focus like a click; no cursor on a phone */
+					touch_focus(server, surface, view);
+					wlr_cursor_unset_image(server->cursor);
+				}
 				wlr_seat_touch_notify_down(server->seat, surface, event->time_msec,
 					event->touch_id, sx, sy);
 				break;
