@@ -32,6 +32,7 @@ SKIP_PARTTYPES = {
 INTERNAL = {"ntfs", "exfat"}
 REMOVABLE = INTERNAL | {"vfat", "ext4", "ext3", "ext2", "btrfs", "xfs", "f2fs", "iso9660", "udf", "hfsplus"}
 MIN_INTERNAL = 1 << 30  # small internal NTFS partitions are OEM/recovery leftovers
+PIDFILE = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "ultimit-session.pid")
 CHOICE = os.path.join(os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")), "ultimit", "automount")
 
 
@@ -169,13 +170,39 @@ def scan():
         threading.Thread(target=ask, args=(internal,), daemon=True).start()
 
 
+def compositor_alive(pid):
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+
+
 def main():
+    try:
+        with open(PIDFILE) as f:
+            comp = int(f.read().strip())
+    except (OSError, ValueError):
+        comp = 0
     time.sleep(3)  # let the shell's notification server, udisks and ultimit-ldm settle after login
     scan()
     mon = subprocess.Popen(["udevadm", "monitor", "--udev", "--subsystem-match=block"],
                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+    try:
+        watch(mon, comp)
+    finally:
+        mon.kill()
+
+
+def watch(mon, comp):
     while True:
-        select.select([mon.stdout], [], [])
+        # started detached, so exit with the compositor instead of piling up across sessions
+        if not select.select([mon.stdout], [], [], 30)[0]:
+            if comp and not compositor_alive(comp):
+                return
+            continue
         if not mon.stdout.readline():
             return
         # drain the burst of events a plug-in makes, then look once
