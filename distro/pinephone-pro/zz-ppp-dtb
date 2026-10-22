@@ -5,6 +5,11 @@ v=$1
 for d in /usr/lib/firmware/$v/device-tree/rockchip /usr/lib/linux-image-$v/rockchip; do
 	if [ -f $d/rk3399-pinephone-pro.dtb ]; then
 		cp $d/rk3399-pinephone-pro.dtb /boot/dtb-$v
+		# phone-setup.sh installs the modem fix; re-apply it to the fresh copy
+		if [ -x /usr/local/sbin/ppp-dtb-modem-fix ] && command -v dtc >/dev/null; then
+			rm -f /boot/dtb-$v.orig
+			/usr/local/sbin/ppp-dtb-modem-fix /boot/dtb-$v || true
+		fi
 		break
 	fi
 done
