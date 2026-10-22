@@ -40,4 +40,15 @@ for d in /boot/dtb-*-ppp; do [ -e "$d" ] && ppp-dtb-modem-fix "$d"; done
 if [ -n "${SUDO_USER:-}" ]; then
   su - "$SUDO_USER" -c 'xdg-mime default org.gnome.Epiphany.desktop x-scheme-handler/http x-scheme-handler/https text/html' || true
 fi
-echo "done; reboot for the modem fix"
+# Firefox (flatpak) for Bitwarden and passkeys: the policy installs the Bitwarden extension,
+# turns on sites' mobile layouts and skips onboarding; userChrome.css lets the window shrink
+# below Firefox's 500 px minimum (it needs a profile, so it is copied into existing ones)
+flatpak install -y --noninteractive flathub org.mozilla.firefox com.bitwarden.desktop
+install -Dm644 firefox/policies.json \
+  /var/lib/flatpak/extension/org.mozilla.firefox.systemconfig/aarch64/stable/policies/policies.json
+if [ -n "${SUDO_USER:-}" ]; then
+  for p in /home/"$SUDO_USER"/.var/app/org.mozilla.firefox/config/mozilla/firefox/*.default*; do
+    [ -d "$p" ] && install -Dm644 -o "$SUDO_USER" -g "$SUDO_USER" firefox/userChrome.css "$p/chrome/userChrome.css"
+  done
+fi
+echo "done; reboot for the modem fix (start Firefox once, then re-run for its userChrome.css)"
