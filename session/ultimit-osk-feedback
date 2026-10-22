@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-# Key feedback for the on-screen keyboard: wvkbd -o prints each key it sends,
-# one per line; play feedbackd's "key-pressed" event (vibration + click, as
+# Key feedback for the on-screen keyboard: wvkbd -o prints each key's label as
+# it sends it (no newline; only Enter prints one), so every read is a key; play feedbackd's "key-pressed" event (vibration + click, as
 # the feedback profile allows) for each. Fire-and-forget D-Bus calls, so a
 # missing feedbackd only costs a failed call.
 import json
 import os
 import subprocess
-import sys
 import gi
 gi.require_version("Gio", "2.0")
 from gi.repository import Gio, GLib
@@ -34,7 +33,12 @@ except GLib.Error:
     bus = None
 
 args = GLib.Variant("(ssa{sv}i)", ("ultimit-osk", "key-pressed", {}, -1))
-for _ in sys.stdin:
+while True:
+    try:
+        if not os.read(0, 256):
+            break
+    except InterruptedError:
+        continue
     if bus is None:
         continue
     bus.call("org.sigxcpu.Feedback", "/org/sigxcpu/Feedback", "org.sigxcpu.Feedback",
