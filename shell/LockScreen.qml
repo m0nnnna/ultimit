@@ -35,6 +35,21 @@ Scope {
     property string pendingSecret: ""
     property bool pendingOk: false
     property bool sleeping: false
+    // phones (Config.mobile): the lock opens on a glance view (clock, notifications) with the
+    // keyboard down; swiping up brings the password field and the keyboard ("entry")
+    property bool entry: !Config.mobile
+    function showEntry() {
+        entryIdle.restart();
+        if (entry) return;
+        entry = true;
+        osk("USR2");   // show
+    }
+    function hideEntry() {
+        if (!Config.mobile || !entry || authState === "auth") return;
+        entry = false; password = ""; authState = "idle"; message = "";
+        osk("USR1");   // hide
+    }
+    Timer { id: entryIdle; interval: 30000; onTriggered: root.hideEntry() }
 
     // ---------------- lock / unlock ----------------
     function lock() {
@@ -42,7 +57,9 @@ Scope {
         password = ""; authState = "idle"; message = ""; pendingSecret = "";
         Config.closeLauncher(); Config.closeMenu(); SysState.closeQs();
         sessionLock.locked = true;
-        osk("USR2");   // show
+        entry = !Config.mobile;
+        if (entry) osk("USR2");   // show
+        else osk("USR1");
     }
     // Touchscreens (ULTIMIT_OSK, ultimit-session): the on-screen keyboard to type the password with
     function osk(sig) {
@@ -123,6 +140,7 @@ Scope {
     function onKey(e) {
         e.accepted = true;
         if (authState === "auth") return;
+        if (Config.mobile) showEntry();
         const mods = e.modifiers;
         if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) { submit(); return; }
         if (e.key === Qt.Key_CapsLock) { capsLock = !capsLock; return; }

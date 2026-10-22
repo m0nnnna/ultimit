@@ -15,10 +15,9 @@ WlSessionLockSurface {
     color: Theme.bg1
 
     readonly property bool primary: screen !== null && Config.isMainScreen(screen.name)
-    // phones (Config.mobile): sized to the screen width, laid out above the on-screen keyboard
-    readonly property real u: Config.mobile ? width / 400 : Math.max(.7, Math.min(width, height) / 800)
+    readonly property real u: Math.max(.7, Math.min(width, height) / 800)
     // the on-screen keyboard covers the bottom while locked (LockScreen.osk): centre above it
-    readonly property real oskH: surf.primary && Quickshell.env("ULTIMIT_OSK") === "1" ? (Config.mobile ? 240 : 480) : 0
+    readonly property real oskH: surf.primary && Quickshell.env("ULTIMIT_OSK") === "1" ? 480 : 0
 
     SystemClock { id: clock; precision: SystemClock.Seconds }
     readonly property var days: ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"]
@@ -36,7 +35,7 @@ WlSessionLockSurface {
             anchors.fill: parent
             railInset: 0
             active: surf.visible
-            animate: Config.motion && Config.lockAnimated
+            animate: Config.motion && Config.lockAnimated && !Config.mobile
         }
         Rectangle { anchors.fill: parent; color: Theme.light ? "#40ffffff" : "#8c000000" }   // dimmed look
         Rectangle {   // soft vignette via two gradients
@@ -50,8 +49,17 @@ WlSessionLockSurface {
             visible: !Theme.light
         }
 
+        // phones: their own layout (glance view, swipe up for the password)
+        MobileLock {
+            anchors.fill: parent
+            visible: Config.mobile
+            ctl: surf.ctl
+            now: surf.now
+        }
+
         // top-left status tag
         Row {
+            visible: !Config.mobile
             x: 30; y: 26; spacing: 10
             Rectangle { width: 8; height: 8; anchors.verticalCenter: parent.verticalCenter; color: Theme.accent
                         SequentialAnimation on opacity {
@@ -64,15 +72,16 @@ WlSessionLockSurface {
         // centre column: emblem, clock, date
         Column {
             id: center
+            visible: !Config.mobile
             anchors.horizontalCenter: parent.horizontalCenter
-            y: Config.mobile ? 48 : Math.max(40, (parent.height - surf.oskH) * .5 - height * .5 - (surf.primary ? 90 * surf.u : 0))
+            y: Math.max(40, (parent.height - surf.oskH) * .5 - height * .5 - (surf.primary ? 90 * surf.u : 0))
             spacing: 8 * surf.u
             Emblem { anchors.horizontalCenter: parent.horizontalCenter; size: 54 * surf.u; color: Theme.fg }
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: ((surf.now.getHours() % 12) || 12) + ":" + surf.p2(surf.now.getMinutes()) + (surf.now.getHours() < 12 ? " AM" : " PM")
                 color: Theme.fg
-                font.family: Theme.display; font.pixelSize: Config.mobile ? 40 : 104 * surf.u; font.letterSpacing: Config.mobile ? 2 : 6 * surf.u
+                font.family: Theme.display; font.pixelSize: 104 * surf.u; font.letterSpacing: 6 * surf.u
                 font.features: { "tnum": 1 }
             }
             Text {
@@ -86,10 +95,10 @@ WlSessionLockSurface {
         // user panel (first screen only)
         Item {
             id: panel
-            visible: surf.primary
-            width: Config.mobile ? surf.width - 40 : 380 * surf.u; height: panelCol.height + 36
+            visible: surf.primary && !Config.mobile
+            width: 380 * surf.u; height: panelCol.height + 36
             anchors.horizontalCenter: parent.horizontalCenter
-            y: center.y + center.height + (Config.mobile ? 24 : 36 * surf.u)
+            y: center.y + center.height + 36 * surf.u
             property real shakeX: 0
             transform: Translate { x: panel.shakeX }
 
@@ -125,54 +134,7 @@ WlSessionLockSurface {
                            font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: 16; font.letterSpacing: 3 }
                 }
 
-                // chamfered password field
-                Item {
-                    id: field
-                    width: parent.width; height: 40
-                    readonly property real c: 8
-                    readonly property bool bad: surf.ctl.authState === "fail"
-                    Shape {
-                        anchors.fill: parent
-                        preferredRendererType: Shape.CurveRenderer
-                        ShapePath {
-                            strokeWidth: field.bad ? 2 : 1
-                            strokeColor: field.bad ? Theme.bad : Theme.accent
-                            fillColor: Theme.panel2
-                            startX: field.c + .5; startY: .5
-                            PathLine { x: field.width - .5; y: .5 }
-                            PathLine { x: field.width - .5; y: field.height - field.c - .5 }
-                            PathLine { x: field.width - field.c - .5; y: field.height - .5 }
-                            PathLine { x: .5; y: field.height - .5 }
-                            PathLine { x: .5; y: field.c + .5 }
-                            PathLine { x: field.c + .5; y: .5 }
-                        }
-                    }
-                    Text {   // placeholder
-                        anchors.verticalCenter: parent.verticalCenter; x: 22
-                        visible: surf.ctl.password.length === 0 && surf.ctl.authState !== "auth"
-                        text: "ENTER PASSWORD"; color: Theme.dim
-                        font.family: Theme.mono; font.pixelSize: 12; font.letterSpacing: 3
-                    }
-                    Text {   // masked input (tail is kept visible when long)
-                        id: dots
-                        anchors.verticalCenter: parent.verticalCenter; x: 14
-                        width: parent.width - 28
-                        horizontalAlignment: Text.AlignLeft
-                        elide: Text.ElideLeft
-                        text: "•".repeat(surf.ctl.password.length)
-                        color: Theme.fg
-                        font.family: Theme.ui; font.pixelSize: 18; font.letterSpacing: 4
-                    }
-                    Rectangle {   // caret
-                        visible: surf.ctl.authState !== "auth" && caretOn
-                        property bool caretOn: true
-                        id: caret
-                        x: 14 + Math.min(dots.contentWidth, dots.width) + 1
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 2; height: 18; color: Theme.accent
-                        Timer { interval: 530; repeat: true; running: Config.motion; onTriggered: caret.caretOn = !caret.caretOn }
-                    }
-                }
+                LockField { width: parent.width; ctl: surf.ctl }
 
                 // status line: authenticating / denied / caps lock
                 Item {
@@ -205,7 +167,8 @@ WlSessionLockSurface {
 
         // bottom-left: battery + media
         Column {
-            x: 30; anchors.bottom: parent.bottom; anchors.bottomMargin: 28 + (Config.mobile ? surf.oskH : 0)
+            visible: !Config.mobile
+            x: 30; anchors.bottom: parent.bottom; anchors.bottomMargin: 28
             spacing: 6
             Row {
                 spacing: 8
@@ -233,7 +196,7 @@ WlSessionLockSurface {
         }
 
         Wordmark {
-            visible: !Config.mobile   // under the keyboard on a phone
+            visible: !Config.mobile
             anchors.right: parent.right; anchors.rightMargin: 30
             anchors.bottom: parent.bottom; anchors.bottomMargin: 28
         }

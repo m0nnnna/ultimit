@@ -39,3 +39,5 @@ MobileBar 1.0 MobileBar.qml
 MobileHome 1.0 MobileHome.qml
 GestureBar 1.0 GestureBar.qml
 MobileSwitcher 1.0 MobileSwitcher.qml
+LockField 1.0 LockField.qml
+MobileLock 1.0 MobileLock.qml
