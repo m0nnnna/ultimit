@@ -26,6 +26,9 @@ ln -sf ../../PinePhonePro/PINE64-PinePhonePro-.conf \
 install -Dm644 wireplumber/50-ppp-libcamera-only.conf \
   /etc/wireplumber/wireplumber.conf.d/50-ppp-libcamera-only.conf
 
+# OSK key click: feedbackd's key-pressed sound isn't in the freedesktop theme
+install -Dm644 sounds/key-pressed.wav /usr/local/share/sounds/freedesktop/stereo/key-pressed.wav
+
 # modem: free uart3 and keep its regulators on (see dtb-modem-fix.sh); reboot after
 # (zz-ppp-dtb re-applies it whenever a kernel update copies a fresh DTB)
 install -m755 dtb-modem-fix.sh /usr/local/sbin/ppp-dtb-modem-fix
