@@ -15,7 +15,8 @@ WlSessionLockSurface {
     color: Theme.bg1
 
     readonly property bool primary: screen !== null && Config.isMainScreen(screen.name)
-    readonly property real u: Math.max(.7, Math.min(width, height) / 800)
+    // phones (Config.mobile): sized to the screen width, laid out above the on-screen keyboard
+    readonly property real u: Config.mobile ? width / 400 : Math.max(.7, Math.min(width, height) / 800)
     // the on-screen keyboard covers the bottom while locked (LockScreen.osk): centre above it
     readonly property real oskH: surf.primary && Quickshell.env("ULTIMIT_OSK") === "1" ? (Config.mobile ? 240 : 480) : 0
 
@@ -64,14 +65,14 @@ WlSessionLockSurface {
         Column {
             id: center
             anchors.horizontalCenter: parent.horizontalCenter
-            y: Math.max(40, (parent.height - surf.oskH) * .5 - height * .5 - (surf.primary ? 90 * surf.u : 0))
+            y: Config.mobile ? 48 : Math.max(40, (parent.height - surf.oskH) * .5 - height * .5 - (surf.primary ? 90 * surf.u : 0))
             spacing: 8 * surf.u
             Emblem { anchors.horizontalCenter: parent.horizontalCenter; size: 54 * surf.u; color: Theme.fg }
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: ((surf.now.getHours() % 12) || 12) + ":" + surf.p2(surf.now.getMinutes()) + (surf.now.getHours() < 12 ? " AM" : " PM")
                 color: Theme.fg
-                font.family: Theme.display; font.pixelSize: 104 * surf.u; font.letterSpacing: 6 * surf.u
+                font.family: Theme.display; font.pixelSize: Config.mobile ? 40 : 104 * surf.u; font.letterSpacing: Config.mobile ? 2 : 6 * surf.u
                 font.features: { "tnum": 1 }
             }
             Text {
@@ -86,9 +87,9 @@ WlSessionLockSurface {
         Item {
             id: panel
             visible: surf.primary
-            width: 380 * surf.u; height: panelCol.height + 36
+            width: Config.mobile ? surf.width - 40 : 380 * surf.u; height: panelCol.height + 36
             anchors.horizontalCenter: parent.horizontalCenter
-            y: center.y + center.height + 36 * surf.u
+            y: center.y + center.height + (Config.mobile ? 24 : 36 * surf.u)
             property real shakeX: 0
             transform: Translate { x: panel.shakeX }
 
@@ -204,7 +205,7 @@ WlSessionLockSurface {
 
         // bottom-left: battery + media
         Column {
-            x: 30; anchors.bottom: parent.bottom; anchors.bottomMargin: 28
+            x: 30; anchors.bottom: parent.bottom; anchors.bottomMargin: 28 + (Config.mobile ? surf.oskH : 0)
             spacing: 6
             Row {
                 spacing: 8
@@ -232,6 +233,7 @@ WlSessionLockSurface {
         }
 
         Wordmark {
+            visible: !Config.mobile   // under the keyboard on a phone
             anchors.right: parent.right; anchors.rightMargin: 30
             anchors.bottom: parent.bottom; anchors.bottomMargin: 28
         }

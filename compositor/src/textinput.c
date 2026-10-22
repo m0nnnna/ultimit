@@ -31,7 +31,10 @@ static void osk_signal(bool show) {
 }
 
 static int hide_now(void *data) {
-	if (enabled_inputs == 0) {
+	struct ul_server *server = data;
+	/* Locked: the keyboard stays up for the password (focus moving off
+	 * the app's text field must not take it away). */
+	if (enabled_inputs == 0 && !server->locked) {
 		osk_signal(false);
 	}
 	return 0;
@@ -114,6 +117,10 @@ static void keyboard_focus_change(struct wl_listener *listener, void *data) {
  * typing shows the keyboard again (after a hide from the tray), anywhere else
  * (desktop, bar, another window) puts it away. */
 void text_input_tap(struct ul_server *server, struct wlr_surface *surface) {
+	if (server->text_input && server->locked) {
+		osk_signal(true); /* any tap on the lock screen brings it back */
+		return;
+	}
 	if (!server->text_input || enabled_inputs == 0) {
 		return;
 	}
@@ -136,7 +143,7 @@ void text_input_init(struct ul_server *server) {
 	}
 	server->text_input = wlr_text_input_manager_v3_create(server->display);
 	hide_timer = wl_event_loop_add_timer(wl_display_get_event_loop(server->display),
-		hide_now, NULL);
+		hide_now, server);
 	server->new_text_input.notify = new_text_input;
 	wl_signal_add(&server->text_input->events.text_input, &server->new_text_input);
 	server->text_focus_change.notify = keyboard_focus_change;
