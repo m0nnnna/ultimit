@@ -2,7 +2,8 @@
 # Drop the desktop-PC packages and services a phone has no use for: less RAM, a faster
 # boot, no apt runs eating the CPU after boot, ~1.5 GB of disk back.
 # Run as root on the phone from this directory: sudo sh slim-down.sh [--dev]
-#   --dev  also remove the build toolchain and -dev headers (only once you build on the PC)
+#   --dev  also remove the build toolchain, -dev headers and what only they pulled in
+#          (the phone doesn't build; the PC cross-builds)
 # Undo: apt-get install the packages below, `systemctl enable` the units it disables,
 # `systemctl --global unmask` the gvfs monitors, `flatpak install flathub com.github.wwmm.easyeffects`.
 set -eu
@@ -24,6 +25,11 @@ pkill -f system-config-printer/applet.py || true
 if [ "${1:-}" = --dev ]; then
   # shellcheck disable=SC2046
   apt-get remove -yq $(apt-mark showmanual | grep -E -- '-dev$') clang || true
+  # the compositor and quickshell are built locally, so apt doesn't know they need these;
+  # notify-send (automount) and avahi-browse (Shares) are called by the shell
+  apt-mark manual libjemalloc2 libliftoff0 libseat1 libxcb-composite0 libxcb-errors0 \
+    libxcb-ewmh2 libxcb-res0 libnotify-bin avahi-utils libmpv2 jq >/dev/null
+  apt-get autoremove -yq --purge
 fi
 
 # rsyslog and ubuntu-pro-client are part of ubuntu-minimal: switch them off rather than remove
