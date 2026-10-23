@@ -308,7 +308,8 @@ Singleton {
         else Toasts.show("Terminal", "No terminal installed — try:", "sudo apt install foot");
     }
 
-    // One shell run probes every candidate; output lines are "<id> <index>" / "term <index>".
+    // One shell run probes every candidate; output lines are "<id> <index>" / "_term <index>" (the
+    // desktop menu's terminal; not "term", which is the CONSOLE app's id).
     Process {
         id: probe
         running: true
@@ -320,7 +321,7 @@ Singleton {
                     const p = line.trim().split(" ");
                     if (p.length !== 2) continue;
                     const i = parseInt(p[1]);
-                    if (p[0] === "term") { if (term < 0) term = i; continue; }
+                    if (p[0] === "_term") { if (term < 0) term = i; continue; }
                     if (!(p[0] in res)) res[p[0]] = i;
                 }
                 const out = {};
@@ -342,7 +343,7 @@ Singleton {
                 s += "if " + chk + "; then echo '" + a.id + " " + i + "'; fi\n";
             });
         }
-        terminals.forEach((c, i) => { s += "if command -v " + c.bin + " >/dev/null 2>&1; then echo 'term " + i + "'; fi\n"; });
+        terminals.forEach((c, i) => { s += "if command -v " + c.bin + " >/dev/null 2>&1; then echo '_term " + i + "'; fi\n"; });
         return s;
     }
 
