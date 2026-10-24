@@ -408,6 +408,12 @@ static void new_kde_decoration(struct wl_listener *listener, void *data) {
 
 static void request_activate(struct wl_listener *listener, void *data) {
 	struct wlr_xdg_activation_v1_request_activate_event *event = data;
+	/* A sandboxed app may only raise itself with a token made from a real
+	 * input event (a click or key it got), not pop over whatever you type in. */
+	if (!event->token->seat &&
+			security_client_sandboxed(wl_resource_get_client(event->surface->resource))) {
+		return;
+	}
 	struct wlr_xdg_surface *xdg = wlr_xdg_surface_try_from_wlr_surface(event->surface);
 	struct ul_view *view = view_from_xdg_surface(xdg);
 	if (view && view->mapped) {

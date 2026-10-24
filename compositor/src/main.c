@@ -155,6 +155,7 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
+	security_init(&server); /* before any global: sandboxed apps never see the privileged ones */
 	server.compositor = wlr_compositor_create(server.display, 6, server.renderer);
 	wlr_subcompositor_create(server.display);
 	wlr_data_device_manager_create(server.display);

@@ -546,6 +546,8 @@ void decoration_finish(struct ul_view *view);
 
 /* capture.c */
 void capture_init(struct ul_server *server);
+void security_init(struct ul_server *server);
+bool security_client_sandboxed(const struct wl_client *client);
 void capture_view_commit(struct ul_view *view);
 void capture_view_destroy(struct ul_view *view);
 void capture_output_frame(struct ul_server *server);

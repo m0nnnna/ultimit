@@ -95,6 +95,7 @@ executable(
 		'src/keys.c',
 		'src/alttab.c',
 		'src/capture.c',
+		'src/security.c',
 		protocol_headers,
 		protocol_sources,
 	],
