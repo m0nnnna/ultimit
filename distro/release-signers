@@ -1,0 +1,3 @@
+# Who may sign Ultimit releases (ssh-keygen allowed_signers). updates-helper refuses a release
+# whose .sig doesn't verify against this. Made by scripts/setup-release-signing.sh.
+ultimit-release namespaces="ultimit-release" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID5P7SFM0BZRC1lHi0rfb4IjmgHcKV7Jsi45dWiXCvpy
