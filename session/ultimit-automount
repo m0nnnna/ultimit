@@ -62,6 +62,15 @@ def devices():
     return flat
 
 
+def locked():
+    """True when the session is locked. ultimitctl missing/failing counts as unlocked so mounting never breaks."""
+    try:
+        r = subprocess.run(["ultimitctl", "state"], capture_output=True, text=True, timeout=5)
+        return r.returncode == 0 and bool(json.loads(r.stdout).get("locked"))
+    except (OSError, ValueError, AttributeError, subprocess.SubprocessError):
+        return False
+
+
 def mounted(n):
     return any(m for m in (n.get("mountpoints") or []) if m)
 
@@ -151,6 +160,10 @@ tried = set()
 
 
 def scan():
+    # A stick plugged into a locked screen must not mount (autorun/parser attack surface). Devices are left
+    # untried, so the periodic rescan in watch() mounts them once the session is unlocked.
+    if locked():
+        return
     present, internal = set(), []
     for n, rm in devices():
         key = (n.get("path"), n.get("uuid"))
@@ -202,6 +215,7 @@ def watch(mon, comp):
         if not select.select([mon.stdout], [], [], 30)[0]:
             if comp and not compositor_alive(comp):
                 return
+            scan()  # picks up devices skipped while locked
             continue
         if not mon.stdout.readline():
             return

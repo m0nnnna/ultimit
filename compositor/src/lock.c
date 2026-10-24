@@ -202,30 +202,54 @@ void idle_activity(struct ul_server *server) {
 	wlr_idle_notifier_v1_notify_activity(server->idle_notifier, server->seat);
 }
 
-/* Idle (dim, lock, suspend) is held off while an app asks for it (video,
- * games via SDL/Wine) or while any window is fullscreen. */
-void idle_update_inhibit(struct ul_server *server) {
-	bool fullscreen = false;
-	struct ul_view *view;
-	wl_list_for_each(view, &server->views, link) {
-		if (view->mapped && view->fullscreen && !view->minimized) {
-			fullscreen = true;
-			break;
-		}
-	}
-	wlr_idle_notifier_v1_set_inhibited(server->idle_notifier,
-		server->idle_inhibitors > 0 || fullscreen);
-}
-
 struct ul_inhibitor {
+	struct wl_list link; /* inhibitors */
 	struct ul_server *server;
+	struct wlr_idle_inhibitor_v1 *inhibitor;
 	struct wl_listener destroy;
 };
+
+static struct wl_list inhibitors = {&inhibitors, &inhibitors};
+
+/* An inhibitor counts only while its surface can be seen: mapped, and its
+ * window (if it is one) not minimized. Otherwise a hidden window could keep
+ * the screen from ever locking. */
+static bool inhibitor_visible(struct ul_server *server, struct wlr_surface *surface) {
+	struct wlr_surface *root = wlr_surface_get_root_surface(surface);
+	if (!root || !root->mapped) {
+		return false;
+	}
+	struct ul_view *view;
+	wl_list_for_each(view, &server->views, link) {
+		if (view_surface(view) == root) {
+			return view->mapped && !view->minimized;
+		}
+	}
+	return true; /* a panel or an X11 override window: mapped is enough */
+}
+
+/* Idle (dim, lock, suspend) is held off while a visible app asks for it
+ * (video, games via SDL/Wine) or while the focused window is fullscreen.
+ * Only the focused one: an unfocused (or invisible) fullscreen window
+ * must not stop the auto-lock. */
+void idle_update_inhibit(struct ul_server *server) {
+	struct ul_view *focused = server->focused_view;
+	bool fullscreen = focused && focused->mapped && focused->fullscreen && !focused->minimized;
+	int active = 0;
+	struct ul_inhibitor *i;
+	wl_list_for_each(i, &inhibitors, link) {
+		if (inhibitor_visible(server, i->inhibitor->surface)) {
+			active++;
+		}
+	}
+	server->idle_inhibitors = active;
+	wlr_idle_notifier_v1_set_inhibited(server->idle_notifier, active > 0 || fullscreen);
+}
 
 static void inhibitor_destroy(struct wl_listener *listener, void *data) {
 	struct ul_inhibitor *i = wl_container_of(listener, i, destroy);
 	struct ul_server *server = i->server;
-	server->idle_inhibitors--;
+	wl_list_remove(&i->link);
 	wl_list_remove(&i->destroy.link);
 	free(i);
 	idle_update_inhibit(server);
@@ -236,9 +260,10 @@ static void new_inhibitor(struct wl_listener *listener, void *data) {
 	struct wlr_idle_inhibitor_v1 *inhibitor = data;
 	struct ul_inhibitor *i = calloc(1, sizeof(*i));
 	i->server = server;
+	i->inhibitor = inhibitor;
 	i->destroy.notify = inhibitor_destroy;
 	wl_signal_add(&inhibitor->events.destroy, &i->destroy);
-	server->idle_inhibitors++;
+	wl_list_insert(&inhibitors, &i->link);
 	idle_update_inhibit(server);
 }
 

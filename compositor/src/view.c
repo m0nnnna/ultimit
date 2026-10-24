@@ -114,6 +114,7 @@ void view_focus(struct ul_view *view) {
 		view_set_activated(view, true);
 		decoration_update(view);
 		decoration_focus_sweep(view);
+		idle_update_inhibit(server);
 	}
 
 	/* A layer surface with exclusive keyboard focus (lock screen, launcher)
@@ -155,6 +156,7 @@ static void focus_topmost(struct ul_server *server) {
 	}
 	server->focused_view = NULL;
 	wlr_seat_keyboard_notify_clear_focus(server->seat);
+	idle_update_inhibit(server);
 }
 
 void view_set_position(struct ul_view *view, int x, int y) {
@@ -496,6 +498,7 @@ void view_set_minimized(struct ul_view *view, bool minimized) {
 		view->server->focused_view = NULL;
 		focus_topmost(view->server);
 	}
+	idle_update_inhibit(view->server);
 }
 
 /* Super+D. First press minimizes every visible window and remembers them

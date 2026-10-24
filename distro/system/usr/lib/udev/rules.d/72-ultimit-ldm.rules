@@ -2,5 +2,9 @@
 # session/ultimit-automount) see the NTFS inside. GPT LDM metadata/data partitions, MBR type 0x42.
 ACTION!="add|change", GOTO="ultimit_ldm_end"
 SUBSYSTEM!="block", GOTO="ultimit_ldm_end"
+# Not for removable/USB media: this runs ldmtool as root on whatever partition table a plugged-in stick
+# carries. ID_BUS is set on partitions too (ATTRS{removable} would need a parent walk and is 0 for many
+# USB disks), so skip usb/ieee1394 buses by ENV.
+ENV{ID_BUS}=="usb|ieee1394", GOTO="ultimit_ldm_end"
 ENV{ID_PART_ENTRY_TYPE}=="5808c8aa-7e8f-42e0-85d2-e1e90434cfb3|af9b60a0-1431-4f62-bc68-3311714a69ad|0x42", TAG+="systemd", ENV{SYSTEMD_WANTS}+="ultimit-ldm.service"
 LABEL="ultimit_ldm_end"

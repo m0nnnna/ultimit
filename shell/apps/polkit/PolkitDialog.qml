@@ -32,6 +32,10 @@ PanelWindow {
         return "";
     }
     readonly property string infoText: (flow && flow.supplementaryMessage !== "" && !flow.supplementaryIsError) ? flow.supplementaryMessage : ""
+    // Quickshell's AuthFlow exposes no polkit details (no program/command_line), only message + actionId.
+    // pkexec puts the program path in the message, so spot a shell there: approving one is root access.
+    readonly property bool runsShell: flow !== null && flow.actionId === "org.freedesktop.policykit.exec"
+        && /(^|[\s"'`\u201c\u2018])(\/usr)?\/bin\/(ba)?sh(["'`\u201d\u2019]|\s|$)/.test(flow.message)
     readonly property bool busy: flow !== null && !flow.isResponseRequired
 
     function submit() {
@@ -97,9 +101,19 @@ PanelWindow {
             Text {
                 Layout.fillWidth: true
                 text: win.flow ? win.flow.actionId : ""
-                elide: Text.ElideMiddle
+                wrapMode: Text.WrapAnywhere  // ids can be long with no break points; elide would hide what is asking
+                maximumLineCount: 2
+                elide: Text.ElideRight
                 color: Theme.dim
                 font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1
+            }
+            Text {
+                Layout.fillWidth: true
+                visible: win.runsShell
+                text: "Runs a shell as administrator \u2014 only approve if you just asked for this"
+                wrapMode: Text.Wrap
+                color: Theme.bad
+                font.family: Theme.mono; font.pixelSize: 11
             }
 
             // identity picker (only when more than one)
