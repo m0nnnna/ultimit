@@ -14,7 +14,10 @@ Ultimit updates in two halves:
 
 1. The root helper (`/usr/libexec/ultimit/updates-helper ultimit TAG`, through pkexec, so it
    asks for your password) downloads `ultimit-<version>-amd64.tar.gz` and its `.sha256` from the
-   release, and checks the download against the checksum.
+   release, and checks the download against the checksum. It also downloads the `.sig` and checks
+   it against the release key in `/opt/ultimit/distro/release-signers` (the one the installed
+   version shipped), and that the tarball really is that version. An unsigned or badly signed
+   release doesn't install, and Settings doesn't offer a release until it is signed.
 2. It runs the release's own `scripts/system-install.sh --release`: the new `/opt/ultimit` goes
    in place, the packages its binaries need are installed (`distro/packages-runtime.txt`), and
    the helpers, fonts, session and login screen are refreshed. DXVK carries over.
@@ -75,6 +78,22 @@ Versions only go up: a PC is offered a release when its tag is newer than what i
 installed from a commit rather than a release (an ISO built from a commit, or `git pull &&
 scripts/install.sh`) counts as older than any release. One built from source ahead of the last
 release (`v0.2.0-3-gabc1234`) is not offered `v0.2.0` again.
+
+### Signing
+
+Releases are signed on GitHub: publishing one starts the **Sign release** workflow
+(`.github/workflows/sign-release.yml`). It waits for the owner's approval (the `release-signing`
+environment; GitHub sends a mail, or approve it under Actions), checks the tarball against its
+`.sha256` and its VERSION against the tag, then signs it with `ssh-keygen -Y sign` and uploads
+`ultimit-<version>-amd64.tar.gz.sig`. PCs are offered the release once that `.sig` is there. To
+sign a release by hand: Actions › Sign release › Run workflow, with the tag.
+
+The private key is only in the environment's `ULTIMIT_SIGNING_KEY` secret; nothing else can use it
+without that approval. `scripts/setup-release-signing.sh` made it (once) and wrote the public half
+to `distro/release-signers`. A fork runs that script for its own repository.
+
+Edge updates (`ultimit-update --edge`) build from the git branch, so they aren't covered by
+release signing; they trust GitHub's HTTPS like `git clone` does.
 
 The ISO (`docs/iso.md`) is too big for a GitHub release (2 GB limit); share it some other way.
 Its installs then update from the releases.

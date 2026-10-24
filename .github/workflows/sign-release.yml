@@ -1,0 +1,45 @@
+# Signs each Ultimit release so PCs only install what this repository's key signed.
+#
+# Runs when a release is published (scripts/publish-release.sh), or by hand from the Actions tab
+# for an existing tag. The private key is the ULTIMIT_SIGNING_KEY secret of the
+# `release-signing` environment, which waits for the owner's approval before each run, so a
+# leaked token or a pushed workflow can't use it. Its public half is distro/release-signers;
+# updates-helper checks the .sig against that before installing. Setup:
+# scripts/setup-release-signing.sh.
+name: Sign release
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to sign (v1.2.3)
+        required: true
+permissions:
+  contents: write
+jobs:
+  sign:
+    runs-on: ubuntu-latest
+    environment: release-signing
+    steps:
+      - name: Download, check, sign, upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+          KEY: ${{ secrets.ULTIMIT_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+(\.[0-9]+){1,3}$ ]] || { echo "not a release tag: $TAG"; exit 1; }
+          name="ultimit-${TAG#v}-amd64.tar.gz"
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p "$name" -p "$name.sha256"
+          want=$(cut -d' ' -f1 "$name.sha256")
+          got=$(sha256sum "$name" | cut -d' ' -f1)
+          [ "$want" = "$got" ] || { echo "$name doesn't match its .sha256"; exit 1; }
+          # The tarball must say it is this version (no signing an old build under a new tag)
+          ver=$(tar xzOf "$name" opt/ultimit/VERSION | tr -d '[:space:]')
+          [ "$ver" = "$TAG" ] || { echo "$name contains $ver, not $TAG"; exit 1; }
+          umask 077
+          printf '%s\n' "$KEY" > "$RUNNER_TEMP/key"
+          ssh-keygen -Y sign -q -f "$RUNNER_TEMP/key" -n ultimit-release "$name"
+          rm -f "$RUNNER_TEMP/key"
+          gh release upload "$TAG" -R "$GITHUB_REPOSITORY" "$name.sig" --clobber

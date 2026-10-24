@@ -12,6 +12,7 @@ x11-xserver-utils   # xrandr: the compositor marks the main display primary for 
 dbus-user-session
 polkitd
 pkexec
+openssh-client   # ssh-keygen: updates-helper checks release signatures
 # Quickshell's Qt pieces (the shell imports QtQuick, Controls, Layouts, Shapes, Window, Effects)
 qt6-wayland
 qt6-svg-plugins

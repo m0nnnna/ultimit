@@ -230,9 +230,10 @@ def parse_release(d, repo):
     ver = tag[1:] if tag.startswith("v") else tag
     want = "ultimit-%s-amd64.tar.gz" % ver
     asset = next((a for a in d.get("assets") or [] if a.get("name") == want), None)
+    signed = any(a.get("name") == want + ".sig" for a in d.get("assets") or [])
     return {"tag": tag, "version": ver, "name": d.get("name") or tag, "notes": (d.get("body") or "").strip(),
             "published": (d.get("published_at") or "")[:10], "url": d.get("html_url") or "https://github.com/%s/releases" % repo,
-            "size": asset.get("size", 0) if asset else 0, "asset": bool(asset)}
+            "size": asset.get("size", 0) if asset else 0, "asset": bool(asset), "signed": signed}
 
 
 def ultimit():
@@ -265,7 +266,8 @@ def ultimit():
         o["error"] = "GitHub's answer didn't make sense."
         return o
     o["latest"] = rel
-    o["newer"] = rel["asset"] and is_newer(rel["tag"], o["installed"])
+    # Unsigned (the signing job hasn't run or been approved yet): not offered until it is
+    o["newer"] = rel["asset"] and rel["signed"] and is_newer(rel["tag"], o["installed"])
     return o
 
 

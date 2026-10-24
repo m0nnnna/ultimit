@@ -26,6 +26,9 @@ die() { echo "publish-release: $*" >&2; exit 1; }
 [[ "$TAG" =~ ^v[0-9]+(\.[0-9]+){1,3}$ ]] || die "give a version tag like v0.2.0"
 command -v gh >/dev/null || die "needs the GitHub CLI: sudo apt install gh && gh auth login"
 cd "$ROOT"
+# Installed PCs only take releases signed by this key: shipping without it would leave them unable
+# to verify (so install) any later release
+grep -q '^ultimit-release ' distro/release-signers 2>/dev/null || die "no release key: run scripts/setup-release-signing.sh and commit distro/release-signers"
 [ -z "$(git status --porcelain)" ] || die "commit (or stash) your changes first"
 if ! git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
 	git tag -a "$TAG" -m "Ultimit ${TAG#v}"
@@ -45,4 +48,5 @@ git push origin "$TAG"
 notes=(--generate-notes)
 [ -n "$NOTES" ] && notes=(--notes-file "$NOTES")
 gh release create "$TAG" "$tarball" "$tarball.sha256" --title "Ultimit ${TAG#v}" "${notes[@]}" "${DRAFT[@]}"
-echo "Published $TAG. Ultimit PCs see it in Settings > Updates."
+echo "Published $TAG. Approve the signing run (GitHub mails you, or: gh run list -w sign-release.yml);"
+echo "Ultimit PCs see it in Settings > Updates once it's signed."

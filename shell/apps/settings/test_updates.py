@@ -67,7 +67,8 @@ class Parsers(unittest.TestCase):
 RELEASE = {"tag_name": "v0.2.0", "name": "Ultimit 0.2.0", "body": "Faster blur.\n", "published_at": "2026-10-14T09:00:00Z",
            "html_url": "https://github.com/m0nnnna/ultimit/releases/tag/v0.2.0",
            "assets": [{"name": "ultimit-0.2.0-amd64.tar.gz", "size": 98540165},
-                      {"name": "ultimit-0.2.0-amd64.tar.gz.sha256", "size": 92}]}
+                      {"name": "ultimit-0.2.0-amd64.tar.gz.sha256", "size": 92},
+                      {"name": "ultimit-0.2.0-amd64.tar.gz.sig", "size": 290}]}
 
 
 class Versions(unittest.TestCase):
@@ -92,8 +93,10 @@ class Versions(unittest.TestCase):
         self.assertEqual((r["tag"], r["version"], r["published"], r["size"], r["asset"]),
                          ("v0.2.0", "0.2.0", "2026-10-14", 98540165, True))
         self.assertEqual(r["notes"], "Faster blur.")
+        self.assertTrue(r["signed"])
         r = updates.parse_release(dict(RELEASE, assets=[]), "m0nnnna/ultimit")
         self.assertFalse(r["asset"])   # published without the tarball: nothing to install
+        self.assertFalse(r["signed"])
 
 
 class FakeMode(unittest.TestCase):
@@ -115,6 +118,9 @@ class FakeMode(unittest.TestCase):
         self.assertFalse(o["newer"])
         self.assertTrue(o["updating"])
         self.assertEqual(o["running"], "v0.1.0")   # updated since login: the page offers "Log out"
+        unsigned = dict(RELEASE, assets=RELEASE["assets"][:2])
+        o = self.ultimit({"github.json": json.dumps(unsigned), "VERSION": "v0.1.0\n"})
+        self.assertFalse(o["newer"])   # not signed (yet): not offered
 
     def test_status(self):
         with tempfile.TemporaryDirectory() as d:
