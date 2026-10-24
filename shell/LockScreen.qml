@@ -204,6 +204,7 @@ Scope {
             sleeping = m[1] === "true";
             console.log("[lock] PrepareForSleep " + m[1]);
             if (sleeping) root.lock();
+            else releaseKeys.restart();
             return;
         }
         m = l.match(/login1\/session\/(\S+): org\.freedesktop\.login1\.Session\.Lock \(\)/);
@@ -222,6 +223,17 @@ Scope {
         onExited: if (Config.lockOnSleep) restart.start()
     }
     Timer { id: restart; interval: 3000; onTriggered: logind.running = true }
+    // On resume the USB controller can reset the keyboards and lose a key release (the key that
+    // woke the PC, a held Ctrl): that modifier sticks and every shortcut stops working. Once the
+    // devices have settled, have the compositor release whatever it still thinks is held.
+    Timer {
+        id: releaseKeys
+        interval: 2000
+        onTriggered: if (!dryRun) Quickshell.execDetached(["ultimitctl", "release-keys"])
+    }
+
+    // Locked or dimmed: pause the desktop's idle animations (wallpaper, ticker, rail spin).
+    Binding { target: Config; property: "desktopIdle"; value: root.locked || (dimMon.enabled && dimMon.isIdle) }
 
     // Delay inhibitor: held while awake so logind waits for us on suspend; released as soon as
     // the lock is confirmed (or after logind's InhibitDelayMaxSec, 5 s by default).

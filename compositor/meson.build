@@ -4,7 +4,7 @@ project(
 	version: '0.1.0',
 	license: 'MIT',
 	meson_version: '>=1.3',
-	default_options: ['c_std=c11', 'warning_level=2', 'werror=false'],
+	default_options: ['c_std=c11', 'warning_level=2', 'werror=false', 'b_lto=true', 'b_ndebug=if-release'],
 )
 
 add_project_arguments(

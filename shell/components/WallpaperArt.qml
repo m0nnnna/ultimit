@@ -32,25 +32,24 @@ Item {
     // Shards and flicker are slow; Config.wallpaperFps steps are plenty for them.
     // The clock follows real elapsed time (timers fire late under load); a gap of more than a
     // second (paused, suspended) is skipped rather than jumped over.
+    // One clock for both, so their steps land in the same frame: the arc turns at
+    // Config.wallpaperSpinFps (a transform only), the shards step at Config.wallpaperFps.
     Timer {
         property real last: 0
-        interval: Math.round(1000 / Math.max(1, Config.wallpaperFps))
+        property real pending: 0
+        readonly property int step: Math.round(1000 / Math.max(1, Config.wallpaperFps))
+        interval: Math.round(1000 / Math.max(1, Config.wallpaperSpinFps, Config.wallpaperFps))
         repeat: true
         running: art.running
         onRunningChanged: last = Date.now()
         onTriggered: {
-            const now = Date.now(), dt = now - last;
+            const now = Date.now(), dt0 = now - last;
+            const dt = dt0 > 1000 ? interval : dt0;
             last = now;
-            art.t += dt > 1000 ? interval : dt;
+            art.spin = (art.spin + dt * .00025 * 180 / Math.PI) % 360;
+            pending += dt;
+            if (pending >= step) { art.t += pending; pending = 0; }
         }
-    }
-    // The arc turns smoothly at display rate (a transform only: no CPU drawing).
-    NumberAnimation on spin {
-        from: 0; to: 360
-        duration: Math.round(2 * Math.PI / .00025)
-        loops: Animation.Infinite
-        running: art.animate
-        paused: running && !art.running
     }
 
     // ---- generated geometry ----

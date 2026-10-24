@@ -272,6 +272,12 @@ static void run_command(struct ul_server *server, char *line, struct out *o) {
 		put(o, "{\"ok\":true}");
 		return;
 	}
+	if (strcmp(cmd, "release-keys") == 0) {
+		/* the shell sends this after a resume: drop keys whose release got lost */
+		input_release_keys(server);
+		put(o, "{\"ok\":true}");
+		return;
+	}
 	if (strcmp(cmd, "keys") == 0) {
 		keys_write_json(o);
 		return;

@@ -5,11 +5,14 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <linux/input-event-codes.h>
+#include <wlr/interfaces/wlr_keyboard.h>
 #include <wlr/types/wlr_cursor_shape_v1.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_keyboard.h>
+#include <wlr/types/wlr_keyboard_group.h>
 #include <wlr/types/wlr_pointer.h>
 #include <wlr/types/wlr_primary_selection.h>
 #include <wlr/types/wlr_virtual_keyboard_v1.h>
@@ -24,6 +27,7 @@ struct ul_keyboard {
 	struct ul_server *server;
 	struct wlr_keyboard *wlr_keyboard;
 	bool virtual; /* wtype etc.: keeps the keymap it uploads */
+	bool grouped; /* a member of server->keyboard_group: its keys reach us through the group */
 	struct wl_listener modifiers;
 	struct wl_listener key;
 	struct wl_listener destroy;
@@ -773,7 +777,8 @@ static void keyboard_modifiers(struct wl_listener *listener, void *data) {
 
 static void keyboard_destroy(struct wl_listener *listener, void *data) {
 	struct ul_keyboard *keyboard = wl_container_of(listener, keyboard, destroy);
-	/* Its release of Alt/Super will never arrive: don't leave the switcher open. */
+	/* Its release of Alt/Super will never arrive: don't leave the switcher open.
+	 * (A group member's held keys are released by the group itself.) */
 	alttab_cancel(keyboard->server);
 	wl_list_remove(&keyboard->modifiers.link);
 	wl_list_remove(&keyboard->key.link);
@@ -782,29 +787,87 @@ static void keyboard_destroy(struct wl_listener *listener, void *data) {
 	free(keyboard);
 }
 
+static void keyboard_listen(struct ul_keyboard *keyboard) {
+	keyboard->modifiers.notify = keyboard_modifiers;
+	wl_signal_add(&keyboard->wlr_keyboard->events.modifiers, &keyboard->modifiers);
+	keyboard->key.notify = keyboard_key;
+	wl_signal_add(&keyboard->wlr_keyboard->events.key, &keyboard->key);
+}
+
+/* Every physical keyboard (and the keyboard halves of mice and keypads) joins
+ * one wlroots keyboard group: one shared modifier state and one keymap for the
+ * seat, so a modifier held on one device combines with a key on another and the
+ * seat keyboard (and XWayland's keymap) no longer flips between devices. */
+static struct ul_keyboard *group_keyboard(struct ul_server *server) {
+	static struct ul_keyboard group;
+	if (!server->keyboard_group) {
+		server->keyboard_group = wlr_keyboard_group_create();
+		group.server = server;
+		group.wlr_keyboard = &server->keyboard_group->keyboard;
+		config_apply_keyboard(server, group.wlr_keyboard);
+		keyboard_listen(&group);
+	}
+	return &group;
+}
+
 static void new_keyboard(struct ul_server *server, struct wlr_input_device *device,
 		bool virtual) {
 	struct wlr_keyboard *wlr_keyboard = wlr_keyboard_from_input_device(device);
 	struct ul_keyboard *keyboard = calloc(1, sizeof(*keyboard));
 	keyboard->server = server;
 	keyboard->wlr_keyboard = wlr_keyboard;
+	wl_list_init(&keyboard->modifiers.link);
+	wl_list_init(&keyboard->key.link);
 
 	/* Layout comes from XKB_DEFAULT_LAYOUT etc. in the environment. Virtual
 	 * keyboards (wtype, remote input) upload their own keymap. */
 	keyboard->virtual = virtual;
 	if (!virtual) {
 		config_apply_keyboard(server, wlr_keyboard);
+		struct ul_keyboard *group = group_keyboard(server);
+		keyboard->grouped = wlr_keyboard_group_add_keyboard(server->keyboard_group, wlr_keyboard);
+		if (keyboard->grouped) {
+			wlr_seat_set_keyboard(server->seat, group->wlr_keyboard);
+		}
+	}
+	if (!keyboard->grouped) {
+		keyboard_listen(keyboard);
+		wlr_seat_set_keyboard(server->seat, wlr_keyboard);
 	}
 
-	keyboard->modifiers.notify = keyboard_modifiers;
-	wl_signal_add(&wlr_keyboard->events.modifiers, &keyboard->modifiers);
-	keyboard->key.notify = keyboard_key;
-	wl_signal_add(&wlr_keyboard->events.key, &keyboard->key);
 	keyboard->destroy.notify = keyboard_destroy;
 	wl_signal_add(&device->events.destroy, &keyboard->destroy);
-
-	wlr_seat_set_keyboard(server->seat, wlr_keyboard);
 	wl_list_insert(&server->keyboards, &keyboard->link);
+}
+
+/* Release every key the compositor still thinks is held. After a resume the
+ * USB controller can reset the keyboards and swallow a key release (the key
+ * that woke the PC, a held Ctrl): that modifier then sticks and every
+ * shortcut, Ctrl+C included, stops matching until the keyboard is replugged. */
+void input_release_keys(struct ul_server *server) {
+	struct timespec now;
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	struct ul_keyboard *keyboard;
+	wl_list_for_each(keyboard, &server->keyboards, link) {
+		struct wlr_keyboard *kb = keyboard->wlr_keyboard;
+		if (keyboard->virtual) {
+			continue;
+		}
+		uint32_t held[WLR_KEYBOARD_KEYS_CAP];
+		size_t n = kb->num_keycodes;
+		memcpy(held, kb->keycodes, n * sizeof(held[0]));
+		for (size_t i = 0; i < n; i++) {
+			struct wlr_keyboard_key_event event = {
+				.time_msec = now.tv_sec * 1000 + now.tv_nsec / 1000000,
+				.keycode = held[i],
+				.update_state = true,
+				.state = WL_KEYBOARD_KEY_STATE_RELEASED,
+			};
+			wlr_keyboard_notify_key(kb, &event);
+		}
+	}
+	server->super_tap = false;
+	alttab_cancel(server);
 }
 
 static void pointer_destroy(struct wl_listener *listener, void *data) {
@@ -815,10 +878,28 @@ static void pointer_destroy(struct wl_listener *listener, void *data) {
 }
 
 void input_reapply_keyboards(struct ul_server *server) {
+	/* A group only takes keyboards whose keymap matches its own: take them
+	 * out, give everyone the new keymap, then put them back. */
 	struct ul_keyboard *keyboard;
 	wl_list_for_each(keyboard, &server->keyboards, link) {
-		if (!keyboard->virtual) {
-			config_apply_keyboard(server, keyboard->wlr_keyboard);
+		if (keyboard->grouped) {
+			wlr_keyboard_group_remove_keyboard(server->keyboard_group, keyboard->wlr_keyboard);
+		}
+	}
+	if (server->keyboard_group) {
+		config_apply_keyboard(server, &server->keyboard_group->keyboard);
+	}
+	wl_list_for_each(keyboard, &server->keyboards, link) {
+		if (keyboard->virtual) {
+			continue;
+		}
+		config_apply_keyboard(server, keyboard->wlr_keyboard);
+		if (keyboard->grouped) {
+			keyboard->grouped = wlr_keyboard_group_add_keyboard(server->keyboard_group,
+				keyboard->wlr_keyboard);
+			if (!keyboard->grouped) {
+				keyboard_listen(keyboard);
+			}
 		}
 	}
 }

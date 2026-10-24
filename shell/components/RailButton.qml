@@ -26,11 +26,17 @@ Item {
     property bool covered: false   // a fullscreen window hides the rail: hold the spin
     property real spinSpeed: mouse.containsMouse ? 200 : 36   // degrees per second
     Behavior on spinSpeed { NumberAnimation { duration: Config.dur(400); easing.type: Easing.OutCubic } }
-    Timer {   // 30 steps a second: smooth enough, and the rail doesn't repaint at full refresh
-        interval: 33; repeat: true
-        running: root.spinning && root.visible && !root.covered && !Config.desktopPaused
-        onTriggered: {
-            let a = root.spinAngle + root.spinSpeed * interval / 1000;
+    // 30 steps a second on the rail's shared clock (Config.railTick): smooth enough, and the rail
+    // repaints once per step for all icons instead of once per icon.
+    readonly property bool ticking: root.spinning && root.visible && !root.covered && !Config.desktopPaused
+    onTickingChanged: Config.railSpinners += ticking ? 1 : -1
+    Component.onCompleted: if (ticking) Config.railSpinners++
+    Component.onDestruction: if (ticking) Config.railSpinners--
+    Connections {
+        target: Config
+        enabled: root.ticking
+        function onRailTickChanged() {
+            let a = root.spinAngle + root.spinSpeed * 33 / 1000;
             // In hover-only mode, settle facing front once the pointer leaves.
             if (Config.railSpin === "hover" && !mouse.containsMouse && a >= 360)
                 a = 0;

@@ -14,6 +14,7 @@
   ultimitctl skin PANEL FG DIM LINE LINE_STRONG ACCENT BAD
                                    window chrome colors (#rrggbb[aa]); the shell sends these
   ultimitctl keys                  JSON: every compositor keybinding (for cheat sheets)
+  ultimitctl release-keys          release keys stuck "held" (a lost key-up after resume)
   ultimitctl events                stream compositor events (Alt+Tab switcher), one JSON per line
   ultimitctl drag ID X Y | drag-release
                                    test hook: drag a titlebar to layout X,Y / drop it

@@ -20,6 +20,9 @@ Singleton {
     property bool wallpaperMotion: true
     // Wallpaper redraw rate cap while motion is on.
     property int wallpaperFps: 20
+    // The wallpaper's turning arc: smooth at 60 steps a second without making three monitors
+    // repaint at their full 144-180 Hz.
+    property int wallpaperSpinFps: 60
     // Number of main shards in the wing (mockup slider: 16..60).
     property int shardDensity: 34
     // Desktop picture: "" = the generative shards, else an image file; wallpaperFit is how it
@@ -82,7 +85,14 @@ Singleton {
     // A fullscreen window on any screen (a game, mostly): every screen's desktop animations stop
     // (wallpaper shards and hex flicker, news ticker, rail spin, the clock's seconds), so they
     // take nothing from the GPU while it plays. Window animations are not affected.
-    readonly property bool desktopPaused: coveredScreens.length > 0
+    // Locked or dimmed (LockScreen.qml sets desktopIdle): nobody is watching, so the same pause.
+    readonly property bool desktopPaused: coveredScreens.length > 0 || desktopIdle
+    property bool desktopIdle: false
+    // Rail icon turntables share one 30 Hz clock (Rail icons step together: one repaint per
+    // step instead of one per icon). RailButton counts itself in railSpinners while it turns.
+    property int railSpinners: 0
+    property int railTick: 0
+    Timer { interval: 33; repeat: true; running: root.railSpinners > 0; onTriggered: root.railTick++ }
     // Bumped to ask Boot.qml to (re)play the boot overlay.
     property int bootRequest: 0
     function playBoot() { bootRequest++; }
