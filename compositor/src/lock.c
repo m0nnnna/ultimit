@@ -8,8 +8,10 @@
  * stays covered and locked until a new lock client unlocks it.
  */
 
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_idle_notify_v1.h>
 #include <wlr/types/wlr_session_lock_v1.h>
@@ -124,11 +126,54 @@ static void lock_destroy(struct wl_listener *listener, void *data) {
 	}
 }
 
+/* Is this client the shell (the `qs` found on PATH, which is how
+ * ultimit-shell starts it)? Unknown when qs can't be found: then yes, so a
+ * dev setup without it on PATH keeps working. */
+static bool client_is_shell(struct wl_client *client) {
+	static char shell_exe[PATH_MAX];
+	static bool looked;
+	if (!looked) {
+		looked = true;
+		const char *path = getenv("PATH");
+		char *dirs = strdup(path ? path : "");
+		for (char *save = NULL, *dir = strtok_r(dirs, ":", &save); dir;
+				dir = strtok_r(NULL, ":", &save)) {
+			char cand[PATH_MAX];
+			snprintf(cand, sizeof(cand), "%s/qs", dir);
+			if (access(cand, X_OK) == 0 && realpath(cand, shell_exe)) {
+				break;
+			}
+			shell_exe[0] = '\0';
+		}
+		free(dirs);
+	}
+	if (!shell_exe[0]) {
+		return true;
+	}
+	pid_t pid;
+	wl_client_get_credentials(client, &pid, NULL, NULL);
+	char link[64], exe[PATH_MAX];
+	snprintf(link, sizeof(link), "/proc/%d/exe", pid);
+	ssize_t n = readlink(link, exe, sizeof(exe) - 1);
+	if (n <= 0) {
+		return false;
+	}
+	exe[n] = '\0';
+	return strcmp(exe, shell_exe) == 0;
+}
+
 static void new_lock(struct wl_listener *listener, void *data) {
 	struct ul_server *server = wl_container_of(listener, server, new_lock);
 	struct wlr_session_lock_v1 *lock = data;
 	if (server->lock) {
 		/* Only one lock client at a time. */
+		wlr_session_lock_v1_destroy(lock);
+		return;
+	}
+	if (server->locked && !client_is_shell(wl_resource_get_client(lock->resource))) {
+		/* The lock client died while locked: only the restarted shell may take
+		 * over. Anyone else could lock and at once unlock, skipping the password. */
+		wlr_log(WLR_ERROR, "Refused a lock takeover from a client that is not the shell");
 		wlr_session_lock_v1_destroy(lock);
 		return;
 	}

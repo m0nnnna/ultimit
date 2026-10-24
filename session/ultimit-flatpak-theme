@@ -47,7 +47,7 @@ for app in $(flatpak list --app --columns=application 2>/dev/null); do
 done
 
 python3 - "$(flatpak list --app --columns=application 2>/dev/null)" <<'PY'
-import json, os, sys
+import json, os, sys, tempfile
 
 # Flatpak app id -> its Chromium config dir under ~/.var/app/ID/config
 BROWSERS = {
@@ -63,6 +63,25 @@ try:
     done = set(open(done_file).read().split("\n"))
 except OSError:
     done = set()
+
+
+def write_prefs(path, prefs, compact=False):
+    """Atomically write path via a fresh 0600 temp in the same dir (the browser controls this dir, so never follow links)."""
+    d = os.path.dirname(path)
+    if os.path.islink(d) or os.path.islink(path):
+        return False
+    fd, tmp = tempfile.mkstemp(prefix="Preferences.ultimit-", dir=d)  # O_EXCL, never follows a planted name
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(prefs, f, separators=(",", ":") if compact else None)
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+    return True
 
 
 def ultimit_prefs(prefs):
@@ -81,26 +100,27 @@ for app, sub in BROWSERS.items():
     if not profiles:
         # Never started: seed the first profile.
         path = os.path.join(root, "Default", "Preferences")
+        if os.path.islink(root) or os.path.islink(os.path.dirname(path)):
+            continue
         os.makedirs(os.path.dirname(path), exist_ok=True)
         prefs = {}
         ultimit_prefs(prefs)
-        json.dump(prefs, open(path, "w"))
-        done.add(os.path.dirname(path))
+        if write_prefs(path, prefs):
+            done.add(os.path.dirname(path))
         continue
     for p in profiles:
         if p in done:
             continue
         path = os.path.join(p, "Preferences")
+        if os.path.islink(p) or os.path.islink(path):
+            continue
         try:
             prefs = json.load(open(path))
         except (OSError, ValueError):
             continue
         ultimit_prefs(prefs)
-        tmp = path + ".ultimit-tmp"
-        with open(tmp, "w") as f:
-            json.dump(prefs, f, separators=(",", ":"))
-        os.replace(tmp, path)
-        done.add(p)
+        if write_prefs(path, prefs, compact=True):
+            done.add(p)
 
 os.makedirs(state_dir, exist_ok=True)
 with open(done_file, "w") as f:

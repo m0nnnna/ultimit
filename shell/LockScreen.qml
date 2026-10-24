@@ -53,6 +53,23 @@ Scope {
     }
     Component.onCompleted: {
         if (Quickshell.env("ULTIMIT_START_LOCKED") === "1") { console.log("[lock] restarted after a crash: locking"); root.lock(); }
+        else lockedProbe.running = true;
+    }
+    // The shell itself crashed while locked: the compositor kept the screen covered and is still
+    // locked, so lock again (the compositor lets only the shell take the lock over).
+    Process {
+        id: lockedProbe
+        command: ["ultimitctl", "state"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    if (JSON.parse(text).locked === true && !root.locked) {
+                        console.log("[lock] shell restarted while locked: locking");
+                        root.lock();
+                    }
+                } catch (e) {}
+            }
+        }
     }
     IpcHandler {
         target: "lock"

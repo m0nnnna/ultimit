@@ -419,6 +419,9 @@ static int client_readable(int fd, uint32_t mask, void *data) {
 		return 0;
 	}
 	ssize_t n = read(fd, c->buf + c->len, sizeof(c->buf) - 1 - c->len);
+	if (n < 0 && (errno == EAGAIN || errno == EINTR)) {
+		return 0;
+	}
 	if (n <= 0) {
 		client_close(c);
 		return 0;
@@ -436,18 +439,25 @@ static int client_readable(int fd, uint32_t mask, void *data) {
 			run_command(c->server, c->buf, &o);
 		}
 		put(&o, "\n");
-		/* Replies are small; a blocking write on a local socket is fine. */
+		/* The socket is non-blocking: a client that doesn't read its replies
+		 * (socket buffer full) is dropped instead of stalling the compositor. */
 		size_t off = 0;
+		bool stuck = false;
 		while (off < o.len) {
 			ssize_t w = write(fd, o.data + off, o.len - off);
-			if (w < 0 && errno != EINTR) break;
+			if (w < 0 && errno != EINTR) {
+				stuck = true;
+				break;
+			}
 			if (w > 0) off += w;
 		}
 		free(o.data);
+		if (stuck) {
+			client_close(c);
+			return 0;
+		}
 		if (subscribe) {
-			/* Event writes must never stall the compositor. */
 			c->subscribed = true;
-			fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
 		}
 		size_t rest = c->len - (nl + 1 - c->buf);
 		memmove(c->buf, nl + 1, rest + 1);
@@ -461,7 +471,7 @@ static int client_readable(int fd, uint32_t mask, void *data) {
 
 static int server_acceptable(int fd, uint32_t mask, void *data) {
 	struct ul_server *server = data;
-	int cfd = accept4(fd, NULL, NULL, SOCK_CLOEXEC);
+	int cfd = accept4(fd, NULL, NULL, SOCK_CLOEXEC | SOCK_NONBLOCK);
 	if (cfd < 0) {
 		return 0;
 	}

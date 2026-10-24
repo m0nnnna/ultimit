@@ -169,6 +169,18 @@ def suggest_name(path):
     return sanitize_name(base or "share")
 
 
+def too_broad_to_open(path):
+    """True for $HOME, any parent of it, or a folder directly holding dotfiles: never world-writable."""
+    real = os.path.realpath(path)
+    h = os.path.realpath(home())
+    if real == h or h.startswith(real.rstrip("/") + "/") or real == "/":
+        return True
+    try:
+        return any(n.startswith(".") for n in os.listdir(real))
+    except OSError:
+        return True
+
+
 def inspect_path(path):
     """-> (resolved path or None, error, warnings[])"""
     warnings = []
@@ -215,7 +227,9 @@ def check(name, path, writable=False, guest=False, existing=None):
                 errors["name"] = "A share called “%s” already exists." % s["name"]
         if any(s["path"] == p for s in shares if s["name"].lower() != name.lower()):
             warnings.append({"code": "dup_path", "message": "This folder is already shared under another name."})
-    if p and guest and writable:
+    if p and guest and writable and too_broad_to_open(p):
+        errors["path"] = "Guests cannot get write access to your home folder or a folder holding hidden settings files; pick a dedicated folder or turn off guest write access."
+    elif p and guest and writable:
         try:
             if not os.stat(p).st_mode & 0o002:
                 warnings.append({"code": "guest_perms", "message": "Guests write as the system user “nobody”, so the folder must be writable by everyone (o+w).", "fix": "chmod-ow"})
@@ -439,6 +453,8 @@ def chmod_ow(path):
     p, err, _ = inspect_path(path)
     if err:
         return {"ok": False, "error": err}
+    if too_broad_to_open(p):
+        return {"ok": False, "error": "Your home folder (or a folder holding hidden settings files) cannot be made writable by everyone."}
     try:
         st = os.stat(p)
         if st.st_uid != os.getuid():
