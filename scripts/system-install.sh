@@ -289,7 +289,7 @@ for b in ultimit qs; do
 done
 "$PREFIX/bin/qs" --version >/dev/null 2>&1 || { warn "Quickshell doesn't start"; fail=1; }
 # (no "fc-list | grep -q": with pipefail, grep quitting early makes fc-list fail with SIGPIPE)
-[ "$(fc-list : family | grep -c -E 'Michroma|Chakra Petch|Share Tech Mono')" -ge 3 ] || { warn "fonts not found by fontconfig"; fail=1; }
+[ "$(fc-list : family | grep -c -E 'Michroma|Chakra Petch|Share Tech Mono|Oxanium|Saira|JetBrains Mono|Space Grotesk|Inter')" -ge 8 ] || { warn "fonts not found by fontconfig"; fail=1; }
 [ -f /usr/share/wayland-sessions/ultimit.desktop ] || { warn "session file missing"; fail=1; }
 [ -f /usr/lib/x86_64-linux-gnu/security/pam_oo7.so ] || { warn "keyring unlock module missing"; fail=1; }
 [ "$fail" = 0 ] || die "the install is incomplete (see the warnings above)"
