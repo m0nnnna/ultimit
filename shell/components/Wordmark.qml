@@ -22,8 +22,8 @@ Column {
         Text {
             text: "ULTIMIT"
             color: Theme.fg
-            font.family: Theme.display; font.pixelSize: Theme.ds(root.wordSize)
-            font.letterSpacing: Theme.dt(root.wordSize * 0.14)
+            font.family: "Michroma"; font.pixelSize: root.wordSize   // always the HUD face, whatever the font set
+            font.letterSpacing: root.wordSize * 0.14
         }
         Text {
             text: "]"
