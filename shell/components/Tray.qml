@@ -4,6 +4,7 @@
 // Collapses to zero width when empty. Icons are shown as provided by the app (not tinted:
 // full-colour app icons turn into blobs when forced monochrome).
 import QtQuick
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Services.SystemTray
 import ".."
@@ -77,7 +78,42 @@ Row {
                 asynchronous: true
                 scale: mouse.pressed ? 0.92 : 1
                 Behavior on scale { NumberAnimation { duration: Config.dur(120); easing.type: Easing.OutCubic } }
-                visible: status === Image.Ready
+                visible: status === Image.Ready && !ent.tintDark
+                onStatusChanged: if (status === Image.Ready && Theme.light) probe.loadImage(ent.modelData.icon)
+            }
+            // On a light skin a white / near-white symbolic icon vanishes: sample it, and when it is
+            // mostly light (and not colourful) draw it as a dark silhouette instead.
+            property bool tintDark: false
+            Canvas {
+                id: probe
+                width: 18; height: 18; visible: false
+                onImageLoaded: requestPaint()
+                onPaint: {
+                    const src = ent.modelData.icon;
+                    if (!Theme.light || !isImageLoaded(src)) { ent.tintDark = false; return; }
+                    const c = getContext("2d");
+                    c.clearRect(0, 0, width, height);
+                    c.drawImage(src, 0, 0, width, height);
+                    const d = c.getImageData(0, 0, width, height).data;
+                    let n = 0, lum = 0, sat = 0;
+                    for (let i = 0; i < d.length; i += 4) {
+                        if (d[i + 3] < 128) continue;
+                        n++;
+                        lum += (d[i] + d[i + 1] + d[i + 2]) / 765;
+                        sat += (Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2])) / 255;
+                    }
+                    ent.tintDark = n > 8 && lum / n > 0.8 && sat / n < 0.15;
+                }
+            }
+            Connections { target: Theme; function onLightChanged() { if (Theme.light && img.status === Image.Ready) probe.loadImage(ent.modelData.icon); else ent.tintDark = false; } }
+            MultiEffect {
+                anchors.centerIn: parent
+                width: 18; height: 18
+                source: img
+                visible: ent.tintDark
+                colorization: 1.0
+                colorizationColor: Theme.fg
+                scale: mouse.pressed ? 0.92 : 1
             }
             Rectangle {   // fallback when the icon cannot be resolved
                 anchors.centerIn: parent
