@@ -116,12 +116,13 @@ PanelWindow {
                     }
                     Spark {
                         visible: cell.k !== "mem"
-                        width: 84; height: 16
+                        width: 84; height: 26
                         values: cell.k === "cpu" ? SysStats.cpuHist : cell.k === "gpu" ? SysStats.gpuHist : SysStats.netHist
                         max: cell.k === "net" ? 0 : 100
+                        auto: true
                         floor: 10240
                     }
-                    SegBar { visible: cell.k === "mem"; width: 84; height: 16; value: SysStats.mem; segments: 14 }
+                    SegBar { visible: cell.k === "mem"; width: 84; height: 26; value: SysStats.mem; segments: 14 }
                 }
             }
         }

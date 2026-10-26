@@ -13,9 +13,12 @@ Item {
     property real max: 100
     property real floor: 1
     property int slots: 40
+    property bool auto: false      // with max > 0: zoom to the recent peak (+30%, at least `minTop`) so variation shows
+    property real minTop: 25
     property color color: Theme.accent
 
-    readonly property real limit: root.max > 0 ? root.max : Math.max(root.floor, Math.max.apply(null, root.values.length ? root.values : [0]))
+    readonly property real peak: Math.max.apply(null, root.values.length ? root.values : [0])
+    readonly property real limit: root.max > 0 ? (root.auto ? Math.min(root.max, Math.max(root.minTop, root.peak * 1.3)) : root.max) : Math.max(root.floor, Math.max.apply(null, root.values.length ? root.values : [0]))
     readonly property var pts: {
         const v = root.values, n = v.length, out = [];
         const step = root.width / Math.max(1, root.slots - 1);
@@ -33,7 +36,7 @@ Item {
         preferredRendererType: Shape.CurveRenderer
         ShapePath {
             strokeWidth: -1
-            fillColor: Qt.rgba(root.color.r, root.color.g, root.color.b, 0.14)
+            fillColor: Qt.rgba(root.color.r, root.color.g, root.color.b, 0.22)
             PathPolyline { path: root.area }
         }
         ShapePath {
