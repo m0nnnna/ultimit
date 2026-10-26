@@ -1,4 +1,4 @@
-// Persist.qml - loads/saves user settings (skin, accent, motion, shard density, wallpaper, photo frames, boot-on-start, rail pins, news feeds)
+// Persist.qml - loads/saves user settings (skin, accent, fontSet, skinAuto, motion, shard density, wallpaper, photo frames, boot-on-start, rail pins, news feeds)
 // to ~/.config/ultimit/shell.json using FileView + JsonAdapter, and syncs them
 // with the Theme / Config singletons in both directions.
 // Env overrides (ULTIMIT_SKIN, ULTIMIT_MOTION, ULTIMIT_BOOT) win over the file for that run.
@@ -13,6 +13,7 @@ Scope {
     property bool ready: false   // true once the file was read (or found missing)
 
     readonly property bool envSkin: !!Quickshell.env("ULTIMIT_SKIN")
+    readonly property bool envFontSet: !!Quickshell.env("ULTIMIT_FONTSET")
     readonly property bool envMotion: !!Quickshell.env("ULTIMIT_MOTION")
     readonly property bool envBoot: !!Quickshell.env("ULTIMIT_BOOT")
     // ULTIMIT_PINS="games,foot,accessory" and ULTIMIT_FEEDS="url url" ("-" = none) override the file for that run (not saved).
@@ -32,6 +33,9 @@ Scope {
         const a = store.adapter;
         if (!root.envSkin && a.skin in Theme.skins) Theme.skin = a.skin;
         Theme.accentOverride = Theme.validAccent(a.accent) ? a.accent.toLowerCase() : "";
+        if (!root.envFontSet && a.fontSet in Theme.fontSets) Theme.fontSet = a.fontSet;
+        Theme.skinAuto = Theme.cleanAuto(a.skinAuto);
+        auto.sync(true);
         if (!root.envMotion) Config.motion = a.motion;
         Config.railSpin = a.railSpin;
         Config.appIcons = a.appIcons === "original" ? "original" : "letters";
@@ -76,6 +80,8 @@ Scope {
         let changed = false;
         if (!root.envSkin && a.skin !== Theme.skin) { a.skin = Theme.skin; changed = true; }
         if (a.accent !== Theme.accentOverride) { a.accent = Theme.accentOverride; changed = true; }
+        if (!root.envFontSet && a.fontSet !== Theme.fontSet) { a.fontSet = Theme.fontSet; changed = true; }
+        if (JSON.stringify(Theme.cleanAuto(a.skinAuto)) !== JSON.stringify(Theme.cleanAuto(Theme.skinAuto))) { a.skinAuto = Theme.skinAuto; changed = true; }
         if (!root.envMotion && a.motion !== Config.motion) { a.motion = Config.motion; changed = true; }
         if (a.railSpin !== Config.railSpin) { a.railSpin = Config.railSpin; changed = true; }
         if (a.appIcons !== Config.appIcons) { a.appIcons = Config.appIcons; changed = true; }
@@ -140,8 +146,24 @@ Scope {
                 Quickshell.shellPath("theme/cursors/install-cursors.sh")]);
         }
     }
+    // Day/night skin: with "skinAuto" on, the skin follows the clock. It switches when the
+    // clock crosses dayStart / nightStart, and at startup and whenever the schedule is edited
+    // (so a skin picked by hand holds until the next switch). ULTIMIT_SKIN pins the skin.
+    Timer {
+        id: auto
+        interval: 20000; repeat: true; running: Theme.skinAuto.enabled && !root.envSkin
+        property string phase: ""   // the skin the schedule last asked for
+        onTriggered: sync(false)
+        function sync(force) {
+            if (root.envSkin || !Theme.skinAuto.enabled) { phase = ""; return; }
+            const want = Theme.autoSkin(Theme.skinAuto, new Date());
+            if (force || want !== phase) { phase = want; if (Theme.skin !== want) Theme.skin = want; }
+        }
+    }
     Connections {
         target: Theme
+        function onSkinAutoChanged() { root.push(); auto.sync(true); }
+        function onFontSetChanged() { root.push(); if (root.ready) accentTimer.restart(); }   // GTK themes and Discord name the fonts
         function onAccentOverrideChanged() {
             root.push();
             root.pushChrome();
@@ -157,7 +179,7 @@ Scope {
             // GTK apps started from now on, and Flatpak apps (the browser), take the skin's GTK
             // theme and colour scheme; already open ones keep theirs until restarted.
             const gtk = "Ultimit-" + Theme.skin.charAt(0).toUpperCase() + Theme.skin.slice(1);
-            const scheme = Theme.skin === "silver" ? "prefer-light" : "prefer-dark";
+            const scheme = Theme.light ? "prefer-light" : "prefer-dark";
             Quickshell.execDetached(["sh", "-c", "gsettings set org.gnome.desktop.interface gtk-theme " + gtk
                 + "; gsettings set org.gnome.desktop.interface color-scheme " + scheme
                 + "; ! command -v flatpak >/dev/null || flatpak override --user --env=GTK_THEME=" + gtk + " --env=ADW_DEBUG_COLOR_SCHEME=" + scheme]);
@@ -219,6 +241,8 @@ Scope {
         adapter: JsonAdapter {
             property string skin: "mine"
             property string accent: ""   // "#rrggbb" = your own accent on every skin, "" = the skin's
+            property string fontSet: "neo"   // hud | neo | clean (Theme.fontSets)
+            property var skinAuto: ({ enabled: false, day: "paper", night: "mine", dayStart: "07:00", nightStart: "19:00" })   // day/night skin switching
             property bool motion: true
             property string railSpin: "always"
             property string appIcons: "letters"

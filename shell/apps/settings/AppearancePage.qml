@@ -39,7 +39,10 @@ Page {
                 { id: "mine",    n: "Mine",    a: "#050607", b: "#2a2f37", c: "#d4ebff" },
                 { id: "amber",   n: "Amber",   a: "#b84d05", b: "#f8cf96", c: "#ffb04a" },
                 { id: "silver",  n: "Silver",  a: "#aeb5bf", b: "#f6f7f9", c: "#2c5b88" },
-                { id: "verdant", n: "Verdant", a: "#062a0c", b: "#79d24f", c: "#b9ff8c" }
+                { id: "verdant", n: "Verdant", a: "#062a0c", b: "#79d24f", c: "#b9ff8c" },
+                { id: "sakura",  n: "Sakura",  a: "#14040d", b: "#8c2a5c", c: "#ff5fa2" },
+                { id: "paper",   n: "Paper",   a: "#d6cdb6", b: "#fbf8f1", c: "#0e7c70" },
+                { id: "void",    n: "Void",    a: "#000000", b: "#06080e", c: "#4f9dff" }
             ]
             delegate: SkinCard {
                 required property var modelData
@@ -51,6 +54,8 @@ Page {
             }
         }
     }
+
+    SkinAutoSection { Layout.fillWidth: true }
 
     // ---- accent: the one colour that marks state (focused window, selection, toggles, cursor) ----
     SectionLabel { text: "Accent" }
@@ -103,6 +108,30 @@ Page {
         text: shown.c === "" ? "SKIN'S OWN" : (shown.n ? shown.n.toUpperCase() + " · " : "") + shown.c
         color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 2.2
     }
+    // the most vivid colour of the current wallpaper picture (off for the generative shards)
+    RowLayout {
+        Layout.fillWidth: true
+        spacing: 12
+        property string note: ""
+        ChamferButton {
+            readonly property bool can: Config.wallpaper !== "" && !wpAccent.busy
+            text: "From wallpaper"
+            enabled: can; opacity: can ? 1 : 0.3
+            onClicked: { parent.note = ""; wpAccent.pick(Config.wallpaper); }
+        }
+        Text {
+            Layout.fillWidth: true; elide: Text.ElideRight
+            text: parent.note !== "" ? parent.note : (Config.wallpaper === "" ? "NEEDS A PICTURE WALLPAPER" : "")
+            color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 2.2
+        }
+        WallpaperAccent {
+            id: wpAccent
+            onPicked: hex => { Theme.accentOverride = hex; parent.note = "PICKED · " + hex; }
+            onFailed: parent.note = "NO VIVID COLOUR IN THIS PICTURE"
+        }
+    }
+
+    FontSetSection { Layout.fillWidth: true }
 
     SectionLabel { text: "Wallpaper" }
     Chips {

@@ -84,6 +84,34 @@ ShellRoot {
         function get(): string { return Theme.accentOverride === "" ? "skin" : Theme.accentOverride; }
     }
 
+    IpcHandler {   // skin: qs ipc call skin set <name> | get | list | auto on|off|get
+        target: "skin"
+        function set(name: string): string {
+            if (!(name in Theme.skins)) return "error: one of " + Object.keys(Theme.skins).join(", ");
+            Theme.skin = name;
+            return "ok";
+        }
+        function get(): string { return Theme.skin; }
+        function list(): string { return Object.keys(Theme.skins).join("\n"); }
+        function auto(mode: string): string {   // day/night switching (Settings > Appearance)
+            if (mode === "on" || mode === "off")
+                Theme.skinAuto = Theme.cleanAuto(Object.assign({}, Theme.skinAuto, { enabled: mode === "on" }));
+            const a = Theme.skinAuto;
+            return (a.enabled ? "on" : "off") + " " + a.day + " " + a.dayStart + " / " + a.night + " " + a.nightStart;
+        }
+    }
+
+    IpcHandler {   // font set: qs ipc call fontset set hud|neo|clean | get | list
+        target: "fontset"
+        function set(name: string): string {
+            if (!(name in Theme.fontSets)) return "error: one of " + Object.keys(Theme.fontSets).join(", ");
+            Theme.fontSet = name;
+            return "ok";
+        }
+        function get(): string { return Theme.fontSet; }
+        function list(): string { return Object.keys(Theme.fontSets).join("\n"); }
+    }
+
     IpcHandler {   // keyboard shortcut sheet: qs ipc call shortcuts toggle | open | close
         target: "shortcuts"
         function toggle(): void { Config.shortcutsOpen = !Config.shortcutsOpen; }
