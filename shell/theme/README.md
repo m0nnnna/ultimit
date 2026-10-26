@@ -10,7 +10,7 @@ the skin's accent). **Only inside Ultimit sessions**: nothing global is touched
 selects the themes.
 
 ## Files
-- `gtk/build-gtk.py`: stdlib generator. Palettes for the four skins (mirror of
+- `gtk/build-gtk.py`: stdlib generator. Palettes for the seven skins (mirror of
   `Theme.qml`), helpers (chamfer, bracket, window-button SVGs), renders
   `gtk/templates/*` into complete theme dirs.
 - `gtk/templates/gtk-3.0.css.in`, `gtk-4.0.css.in`: the two templates (`{{ expr }}`
@@ -18,7 +18,7 @@ selects the themes.
 - `gtk/templates/gtk-3.0-radius.css`, `gtk-4.0-radius.css`: generated lists of every
   selector GTK3-Adwaita / libadwaita gives a rounded corner, reset to 0 (appended last).
 - `install-gtk-theme.sh`: builds + installs `Ultimit-Mine`, `Ultimit-Amber`,
-  `Ultimit-Silver`, `Ultimit-Verdant` and `Ultimit` (alias of the current skin)
+  `Ultimit-Silver`, `Ultimit-Verdant`, `Ultimit-Sakura`, `Ultimit-Paper`, `Ultimit-Void` and `Ultimit` (alias of the current skin)
   into `${XDG_DATA_HOME:-~/.local/share}/themes`; seeds `gtk-3.0/4.0 settings.ini`
   `gtk-decoration-layout` if the key is missing. Idempotent.
 - `session-env.sh`: `GTK_THEME=Ultimit-<Skin>` from `~/.config/ultimit/shell.json`

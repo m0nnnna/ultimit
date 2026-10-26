@@ -14,6 +14,9 @@ case "$skin" in
 	amber)   accent="255;176;74";  dim="220;180;140" ;;
 	silver)  accent="44;91;136";   dim="90;98;109" ;;
 	verdant) accent="185;255;140"; dim="140;170;140" ;;
+	sakura)  accent="255;95;162";  dim="210;155;182" ;;
+	paper)   accent="14;124;112";  dim="103;95;78" ;;
+	void)    accent="79;157;255";  dim="124;133;150" ;;
 	*)       skin=mine; accent="212;235;255"; dim="141;148;158" ;;
 esac
 # Your own accent (Settings > Appearance) wins over the skin's.

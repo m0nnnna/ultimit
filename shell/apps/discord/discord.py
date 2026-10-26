@@ -141,7 +141,7 @@ def skin():
     except (OSError, ValueError, AttributeError):
         s = ""
     s = os.environ.get("ULTIMIT_SKIN") or s
-    return s if s in ("mine", "amber", "silver", "verdant") else "mine"
+    return s if s in ("mine", "amber", "silver", "verdant", "sakura", "paper", "void") else "mine"
 
 
 def palette(name):
@@ -170,9 +170,9 @@ THEME = """/**
  */
 :root, .theme-dark, .theme-darker, .theme-midnight, .theme-light, .visual-refresh,
 .visual-refresh.theme-dark, .visual-refresh.theme-light, .visual-refresh .theme-dark, .visual-refresh .theme-light {
-    --font-display: "Chakra Petch", "gg sans", sans-serif !important;
-    --font-headline: "Michroma", "Chakra Petch", sans-serif !important;
-    --font-code: "Share Tech Mono", monospace !important;
+    --font-display: "%(font_ui)s", "gg sans", sans-serif !important;
+    --font-headline: "%(font_display)s", "%(font_ui)s", sans-serif !important;
+    --font-code: "%(font_mono)s", monospace !important;
 
     --background-primary: %(bg)s !important;
     --background-secondary: %(side)s !important;

@@ -12,7 +12,7 @@ import Quickshell
 Singleton {
     id: root
 
-    // One of: "mine", "amber", "silver", "verdant"
+    // One of: "mine", "amber", "silver", "verdant", "sakura", "paper", "void"
     property string skin: {
         const e = Quickshell.env("ULTIMIT_SKIN");
         return (e && e in root.skins) ? e : "mine";
@@ -61,6 +61,36 @@ Singleton {
             ok: "#8fe3b0", warn: "#ffd98f", bad: "#ff8a8a",
             shard: "242,255,236", edge: "255,255,255", shade: "0,40,0", hexc: "230,255,220",
             light: false
+        },
+        sakura: {
+            bg1: "#14040d", bg2: "#8c2a5c",
+            panel: [30, 9, 21, 0.6], panel2: [255, 190, 220, .06], rail: [21, 6, 14, 0.72],
+            fg: "#fff0f6", dim: "#d29bb6",
+            line: [255, 205, 228, .18], lineStrong: [255, 205, 228, .5],
+            accent: "#ff5fa2", onAccent: "#2a0715",
+            ok: "#9be8c0", warn: "#ffd9a0", bad: "#ff9a6b",
+            shard: "255,232,242", edge: "255,205,228", shade: "92,10,52", hexc: "255,214,232",
+            light: false
+        },
+        paper: {
+            bg1: "#fbf8f1", bg2: "#d6cdb6",
+            panel: [251, 248, 241, 0.7], panel2: [60, 45, 20, .05], rail: [238, 233, 220, 0.78],
+            fg: "#1e1b15", dim: "#675f4e",
+            line: [40, 32, 16, .16], lineStrong: [40, 32, 16, .5],
+            accent: "#0e7c70", onAccent: "#ffffff",
+            ok: "#2f7d32", warn: "#9a6200", bad: "#b3261e",
+            shard: "255,253,247", edge: "96,80,52", shade: "110,92,58", hexc: "70,58,36",
+            light: true
+        },
+        void: {
+            bg1: "#000000", bg2: "#06080e",
+            panel: [0, 0, 0, 0.72], panel2: [255, 255, 255, .04], rail: [0, 0, 0, 0.82],
+            fg: "#e8ecf2", dim: "#7c8596",
+            line: [160, 185, 225, .14], lineStrong: [160, 185, 225, .42],
+            accent: "#4f9dff", onAccent: "#00101f",
+            ok: "#5fe0b0", warn: "#ffcf70", bad: "#ff6b7a",
+            shard: "150,185,255", edge: "120,160,255", shade: "0,0,0", hexc: "110,150,230",
+            light: false
         }
     })
 
@@ -100,6 +130,30 @@ Singleton {
     function load(o) {
         if (!Quickshell.env("ULTIMIT_SKIN") && o.skin in skins) skin = o.skin;
         accentOverride = validAccent(o.accent) ? o.accent.toLowerCase() : "";
+        if (!Quickshell.env("ULTIMIT_FONTSET") && o.fontSet in fontSets) fontSet = o.fontSet;
+    }
+
+    // Day/night skin switching (Settings > Appearance, "skinAuto" in shell.json). The schedule
+    // runs in the main shell (Persist.qml); this is only the data and its validation.
+    property var skinAuto: defaultAuto
+    readonly property var defaultAuto: ({ enabled: false, day: "paper", night: "mine", dayStart: "07:00", nightStart: "19:00" })
+    function validTime(t) { return typeof t === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(t); }
+    function cleanAuto(o) {
+        const d = defaultAuto, a = (o && typeof o === "object") ? o : {};
+        return {
+            enabled: a.enabled === true,
+            day: a.day in skins ? a.day : d.day,
+            night: a.night in skins ? a.night : d.night,
+            dayStart: validTime(a.dayStart) ? a.dayStart : d.dayStart,
+            nightStart: validTime(a.nightStart) ? a.nightStart : d.nightStart
+        };
+    }
+    // The skin the schedule asks for at `now` ("day" from dayStart up to nightStart, wrapping midnight).
+    function autoSkin(a, now) {
+        const m = t => parseInt(t.substr(0, 2), 10) * 60 + parseInt(t.substr(3, 2), 10);
+        const n = now.getHours() * 60 + now.getMinutes(), d = m(a.dayStart), k = m(a.nightStart);
+        const day = d <= k ? (n >= d && n < k) : (n >= d || n < k);
+        return day ? a.day : a.night;
     }
 
     function _rgba(a) { return Qt.rgba(a[0] / 255, a[1] / 255, a[2] / 255, a[3]); }
@@ -128,9 +182,21 @@ Singleton {
     readonly property bool light: cur.light
 
     // ---- fonts (installed system-wide via fontconfig) ----
-    readonly property string display: "Michroma"
-    readonly property string ui: "Chakra Petch"
-    readonly property string mono: "Share Tech Mono"
+    // The family triple comes from the chosen font set (Settings > Appearance, "fontSet" in
+    // shell.json, ULTIMIT_FONTSET for one run). Keys are quoted so the skin scanners
+    // (install-cursors.sh, build-cursors.py) do not mistake them for skins.
+    property string fontSet: {
+        const e = Quickshell.env("ULTIMIT_FONTSET");
+        return (e && e in root.fontSets) ? e : "neo";
+    }
+    readonly property var fontSets: ({
+        "hud":   { n: "HUD",   display: "Michroma",      ui: "Chakra Petch", mono: "Share Tech Mono" },
+        "neo":   { n: "Neo",   display: "Oxanium",       ui: "Saira",        mono: "JetBrains Mono" },
+        "clean": { n: "Clean", display: "Space Grotesk", ui: "Inter",        mono: "JetBrains Mono" }
+    })
+    readonly property string display: fontSets[fontSet].display
+    readonly property string ui: fontSets[fontSet].ui
+    readonly property string mono: fontSets[fontSet].mono
 
     // Window-chrome colors for the compositor ("ultimitctl skin ..."), as
     // #rrggbbaa: panel fg dim line lineStrong accent bad.

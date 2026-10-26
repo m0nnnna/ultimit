@@ -132,7 +132,7 @@
 }
 
 /* ------------------------------- typography ------------------------------- */
-window, popover, tooltip { font-family: "Chakra Petch", "Segoe UI", system-ui, sans-serif; }
+window, popover, tooltip { font-family: "{{font_ui}}", "Segoe UI", system-ui, sans-serif; }
 
 /* ---------------------------------- window -------------------------------- */
 /* The compositor draws frame, corner brackets and shadow for CSD windows
@@ -177,9 +177,9 @@ headerbar.default-decoration { min-height: 38px; }
 headerbar.default-decoration > windowhandle > box { padding: 0 8px; }
 headerbar windowhandle, headerbar > windowhandle > box { border-radius: 0; }
 
-/* Title: Michroma, letter-spaced (as in the compositor); subtitle: mono caps */
+/* Title: display font, letter-spaced (as in the compositor); subtitle: mono caps */
 headerbar .title, windowtitle .title, headerbar windowtitle > box > .title {
-  font-family: "Michroma", "Eurostile", "Arial Black", sans-serif;
+  font-family: "{{font_display}}", "Eurostile", "Arial Black", sans-serif;
   font-size: 11.5pt; font-weight: normal; letter-spacing: 0.06em; color: @u_fg;
   padding: 0 12px 0 28px;
   /* accent square before the title, as in the compositor's titlebar */
@@ -187,7 +187,7 @@ headerbar .title, windowtitle .title, headerbar windowtitle > box > .title {
   background-position: 12px center; background-repeat: no-repeat;
 }
 headerbar .subtitle, windowtitle .subtitle {
-  font-family: "Share Tech Mono", ui-monospace, "DejaVu Sans Mono", monospace;
+  font-family: "{{font_mono}}", ui-monospace, "DejaVu Sans Mono", monospace;
   font-size: 9pt; font-weight: normal; letter-spacing: 0.18em; text-transform: uppercase;
   color: @u_dim; padding: 0 12px;
 }
@@ -322,7 +322,7 @@ treeview.view:hover { background-color: @u_panel2; }
 
 /* Section labels like the mockup's .lbl */
 .heading, .caption-heading {
-  font-family: "Share Tech Mono", ui-monospace, monospace;
+  font-family: "{{font_mono}}", ui-monospace, monospace;
   font-size: 10px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
@@ -453,7 +453,7 @@ scale slider, scale > trough > slider, scale.horizontal > trough > slider, scale
   box-shadow: none;
 }
 scale slider:hover, scale > trough > slider:hover { background-color: @u_fg; }
-progressbar > text { color: @u_fg; font-family: "Share Tech Mono", monospace; }
+progressbar > text { color: @u_fg; font-family: "{{font_mono}}", monospace; }
 
 /* ------------------------------- scrollbars ------------------------------- */
 scrollbar, scrollbar trough { background: none; border-radius: 0; border: none; }

@@ -129,6 +129,15 @@ class Discord(unittest.TestCase):
         self.assertIn("--brand-500: #2c5b88", css)
         self.assertNotIn("%(", css)
 
+    def test_theme_new_skins_and_fonts(self):
+        self.run_("setup")
+        for skin, brand in (("sakura", "#ff5fa2"), ("paper", "#0e7c70"), ("void", "#4f9dff")):
+            self.run_("theme", skin=skin)
+            css = self.read(self.var, "vesktop-2", "themes", "ultimit.css")
+            self.assertIn("--brand-500: " + brand, css)
+            self.assertIn('--font-headline: "Oxanium"', css)   # the default font set
+            self.assertNotIn("%(", css)
+
     def test_users_own_entry_left_alone(self):
         os.makedirs(self.apps)
         with open(os.path.join(self.apps, "ultimit-discord-2.desktop"), "w") as f:

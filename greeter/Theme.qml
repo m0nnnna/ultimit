@@ -12,7 +12,7 @@ import Quickshell
 Singleton {
     id: root
 
-    // One of: "mine", "amber", "silver", "verdant"
+    // One of: "mine", "amber", "silver", "verdant", "sakura", "paper", "void"
     property string skin: {
         const e = Quickshell.env("ULTIMIT_GREETER_SKIN");
         return (e && e in root.skins) ? e : "mine";
@@ -61,6 +61,36 @@ Singleton {
             ok: "#8fe3b0", warn: "#ffd98f", bad: "#ff8a8a",
             shard: "242,255,236", edge: "255,255,255", shade: "0,40,0", hexc: "230,255,220",
             light: false
+        },
+        sakura: {
+            bg1: "#14040d", bg2: "#8c2a5c",
+            panel: [30, 9, 21, 0.78], panel2: [255, 190, 220, .06], rail: [21, 6, 14, 0.86],
+            fg: "#fff0f6", dim: "#d29bb6",
+            line: [255, 205, 228, .18], lineStrong: [255, 205, 228, .5],
+            accent: "#ff5fa2", onAccent: "#2a0715",
+            ok: "#9be8c0", warn: "#ffd9a0", bad: "#ff9a6b",
+            shard: "255,232,242", edge: "255,205,228", shade: "92,10,52", hexc: "255,214,232",
+            light: false
+        },
+        paper: {
+            bg1: "#fbf8f1", bg2: "#d6cdb6",
+            panel: [251, 248, 241, 0.84], panel2: [60, 45, 20, .05], rail: [238, 233, 220, 0.9],
+            fg: "#1e1b15", dim: "#675f4e",
+            line: [40, 32, 16, .16], lineStrong: [40, 32, 16, .5],
+            accent: "#0e7c70", onAccent: "#ffffff",
+            ok: "#2f7d32", warn: "#9a6200", bad: "#b3261e",
+            shard: "255,253,247", edge: "96,80,52", shade: "110,92,58", hexc: "70,58,36",
+            light: true
+        },
+        void: {
+            bg1: "#000000", bg2: "#06080e",
+            panel: [0, 0, 0, 0.88], panel2: [255, 255, 255, .04], rail: [0, 0, 0, 0.92],
+            fg: "#e8ecf2", dim: "#7c8596",
+            line: [160, 185, 225, .14], lineStrong: [160, 185, 225, .42],
+            accent: "#4f9dff", onAccent: "#00101f",
+            ok: "#5fe0b0", warn: "#ffcf70", bad: "#ff6b7a",
+            shard: "150,185,255", edge: "120,160,255", shade: "0,0,0", hexc: "110,150,230",
+            light: false
         }
     })
 
@@ -92,9 +122,10 @@ Singleton {
     readonly property bool light: cur.light
 
     // ---- fonts (installed system-wide via fontconfig) ----
-    readonly property string display: "Michroma"
-    readonly property string ui: "Chakra Petch"
-    readonly property string mono: "Share Tech Mono"
+    // The default font set of the shell ("neo"); the greeter has no settings of its own.
+    readonly property string display: "Oxanium"
+    readonly property string ui: "Saira"
+    readonly property string mono: "JetBrains Mono"
 
     // Display name used in captions, e.g. "MINE"
     readonly property string skinLabel: skin.toUpperCase()

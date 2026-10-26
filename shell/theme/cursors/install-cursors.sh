@@ -11,7 +11,7 @@ DEST=${1:-${DEST:-$HOME/.local/share/icons}}
 LOG="${XDG_STATE_HOME:-$HOME/.local/state}/ultimit/cursors.log"
 SKINS=$(sed -n 's/^[[:space:]]*\([a-z][a-z]*\)[[:space:]]*:[[:space:]]*{.*/\1/p' "$THEME" \
 	| while read -r s; do printf '%s%s\n' "$(printf %s "$s" | cut -c1 | tr a-z A-Z)" "$(printf %s "$s" | cut -c2-)"; done)
-[ -n "$SKINS" ] || SKINS="Mine Amber Silver Verdant"
+[ -n "$SKINS" ] || SKINS="Mine Amber Silver Verdant Sakura Paper Void"
 # Your own accent (shell.json "accent") is drawn into every skin's cursor, and the cursor style
 # ("cursorStyle") picks the set, so both are part of the stamp.
 CONF="${XDG_CONFIG_HOME:-$HOME/.config}/ultimit/shell.json"
