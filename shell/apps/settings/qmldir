@@ -8,6 +8,7 @@ Dropdown 1.0 Dropdown.qml
 ItemRow 1.0 ItemRow.qml
 TextEntry 1.0 TextEntry.qml
 AppearancePage 1.0 AppearancePage.qml
+EffectsSection 1.0 EffectsSection.qml
 RailPage 1.0 RailPage.qml
 NewsPage 1.0 NewsPage.qml
 DisplayPage 1.0 DisplayPage.qml
