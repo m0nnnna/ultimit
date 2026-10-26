@@ -134,7 +134,7 @@ Scope {
     // Window chrome and its animations are the compositor's: give it the skin's colors and the
     // motion setting.
     function pushChrome() {
-        Quickshell.execDetached(["ultimitctl", "skin"].concat(Theme.chromeArgs));
+        Quickshell.execDetached(["ultimitctl", "skin"].concat(Theme.chromeArgs, [Theme.display]));
         Quickshell.execDetached(["ultimitctl", "motion", Config.motion ? "on" : "off"]);
     }
 

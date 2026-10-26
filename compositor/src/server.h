@@ -125,6 +125,7 @@ struct wlr_idle_notifier_v1;
 struct ul_skin {
 	float panel[4], panel_dim[4], fg[4], dim[4], line[4], line_strong[4];
 	float accent[4], accent_dim[4], bad[4];
+	char title_font[64];	/* display font family of the shell's font set; "" = Michroma */
 };
 
 struct ul_server {

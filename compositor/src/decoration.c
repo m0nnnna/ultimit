@@ -10,6 +10,7 @@
  */
 
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -34,6 +35,7 @@ void skin_init(struct ul_skin *skin) {
 		.line = UL_COLOR_LINE, .line_strong = UL_COLOR_LINE_STRONG,
 		.accent = UL_COLOR_ACCENT, .accent_dim = UL_COLOR_ACCENT_DIM,
 		.bad = UL_COLOR_BAD,
+		.title_font = "",
 	};
 }
 
@@ -61,8 +63,9 @@ static bool parse_color(const char *s, float out[4]) {
  * panel and the dim accent are derived. Leaves *skin alone on bad input. */
 bool skin_parse(struct ul_skin *skin, const char *args) {
 	char tok[7][16] = {{0}};
-	if (sscanf(args, "%15s %15s %15s %15s %15s %15s %15s",
-			tok[0], tok[1], tok[2], tok[3], tok[4], tok[5], tok[6]) != 7) {
+	int used = 0;
+	if (sscanf(args, "%15s %15s %15s %15s %15s %15s %15s%n",
+			tok[0], tok[1], tok[2], tok[3], tok[4], tok[5], tok[6], &used) != 7) {
 		return false;
 	}
 	struct ul_skin k;
@@ -76,6 +79,16 @@ bool skin_parse(struct ul_skin *skin, const char *args) {
 	k.panel_dim[3] *= 0.875f;
 	memcpy(k.accent_dim, k.accent, sizeof(k.accent_dim));
 	k.accent_dim[3] = 0.22f;
+	/* Optional rest of the line: the title font family ("Space Grotesk"). */
+	const char *fam = args + used;
+	while (*fam == ' ' || *fam == '\t') fam++;
+	size_t n = strcspn(fam, "\r\n");
+	while (n > 0 && (fam[n - 1] == ' ' || fam[n - 1] == '\t')) n--;
+	if (n >= sizeof(k.title_font) || strchr(fam, ',') || strchr(fam, '"')) {
+		n = 0;	/* too long or odd: keep Michroma */
+	}
+	memcpy(k.title_font, fam, n);
+	k.title_font[n] = '\0';
 	*skin = k;
 	return true;
 }
@@ -289,9 +302,19 @@ struct wlr_buffer *decoration_titlebar_buffer(struct ul_view *view) {
 
 	/* Title. */
 	PangoLayout *title = pango_cairo_create_layout(cr);
+	/* The shell's display font; Michroma is very wide, so other families get
+	 * a larger size and less tracking to read the same. */
 	PangoFontDescription *title_font = pango_font_description_from_string(UL_FONT_TITLE);
+	double title_spacing = 0.8;
+	if (k->title_font[0] && strcmp(k->title_font, "Michroma") != 0) {
+		char desc[96];
+		snprintf(desc, sizeof(desc), "%s 13.5", k->title_font);
+		pango_font_description_free(title_font);
+		title_font = pango_font_description_from_string(desc);
+		title_spacing = 0.5;
+	}
 	pango_layout_set_font_description(title, title_font);
-	set_letter_spacing(title, 0.8);
+	set_letter_spacing(title, title_spacing);
 	pango_layout_set_text(title, view_title(view), -1);
 	pango_layout_set_ellipsize(title, PANGO_ELLIPSIZE_END);
 	int title_max = buttons_left - title_x - 40;

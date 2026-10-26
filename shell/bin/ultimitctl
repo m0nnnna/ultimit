@@ -11,8 +11,8 @@
   ultimitctl test-output add W H | remove NAME
                                    test hook: plug / unplug a virtual monitor (headless)
   ultimitctl motion on|off         window animations on/off (the shell sends its motion setting)
-  ultimitctl skin PANEL FG DIM LINE LINE_STRONG ACCENT BAD
-                                   window chrome colors (#rrggbb[aa]); the shell sends these
+  ultimitctl skin PANEL FG DIM LINE LINE_STRONG ACCENT BAD [FONT FAMILY]
+                                   window chrome colors (#rrggbb[aa]) and title font; the shell sends these
   ultimitctl keys                  JSON: every compositor keybinding (for cheat sheets)
   ultimitctl release-keys          release keys stuck "held" (a lost key-up after resume)
   ultimitctl events                stream compositor events (Alt+Tab switcher), one JSON per line
