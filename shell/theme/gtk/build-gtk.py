@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Generate the Ultimit GTK themes (Mine, Amber, Silver, Verdant + alias).
+"""Generate the Ultimit GTK themes (Mine, Amber, Silver, Verdant, Sakura, Paper, Void + alias).
 
 Stdlib only. Reads templates/gtk-3.0.css.in and templates/gtk-4.0.css.in,
 substitutes one palette per skin and writes complete theme directories:
 
     OUT/Ultimit-Mine/{index.theme,gtk-3.0/gtk.css,gtk-4.0/gtk.css}
-    OUT/Ultimit-Amber/ ...  Ultimit-Silver/ ...  Ultimit-Verdant/ ...
+    OUT/Ultimit-Amber/ ...  Ultimit-Silver/ ...  Ultimit-Verdant/ ...  (and Sakura, Paper, Void)
     OUT/Ultimit -> alias of the current skin (--alias SKIN, default: read from
                    ~/.config/ultimit/shell.json, fallback mine)
 
@@ -45,8 +45,31 @@ SKINS = {
         line=(220, 255, 205, .18), line2=(220, 255, 205, .50),
         accent=(185, 255, 140), on_acc=(8, 32, 8),
         ok=(143, 227, 176), warn=(255, 217, 143), bad=(255, 138, 138), light=False),
+    "sakura": dict(
+        panel=(30, 9, 21), fg=(255, 240, 246), dim=(210, 155, 182),
+        line=(255, 205, 228, .18), line2=(255, 205, 228, .50),
+        accent=(255, 95, 162), on_acc=(42, 7, 21),
+        ok=(155, 232, 192), warn=(255, 217, 160), bad=(255, 154, 107), light=False),
+    "paper": dict(
+        panel=(251, 248, 241), fg=(30, 27, 21), dim=(103, 95, 78),
+        line=(40, 32, 16, .16), line2=(40, 32, 16, .50),
+        accent=(14, 124, 112), on_acc=(255, 255, 255),
+        ok=(47, 125, 50), warn=(154, 98, 0), bad=(179, 38, 30), light=True),
+    "void": dict(
+        panel=(0, 0, 0), fg=(232, 236, 242), dim=(124, 133, 150),
+        line=(160, 185, 225, .14), line2=(160, 185, 225, .42),
+        accent=(79, 157, 255), on_acc=(0, 16, 31),
+        ok=(95, 224, 176), warn=(255, 207, 112), bad=(255, 107, 122), light=False),
 }
-NAMES = {"mine": "Mine", "amber": "Amber", "silver": "Silver", "verdant": "Verdant"}
+NAMES = {"mine": "Mine", "amber": "Amber", "silver": "Silver", "verdant": "Verdant",
+         "sakura": "Sakura", "paper": "Paper", "void": "Void"}
+
+# Mirror of Theme.qml fontSets: the families the CSS names first.
+FONTSETS = {
+    "hud":   dict(display="Michroma", ui="Chakra Petch", mono="Share Tech Mono"),
+    "neo":   dict(display="Oxanium", ui="Saira", mono="JetBrains Mono"),
+    "clean": dict(display="Space Grotesk", ui="Inter", mono="JetBrains Mono"),
+}
 
 
 def hexc(c):
@@ -85,6 +108,16 @@ def user_accent():
     except Exception:
         return None
     return a.lower() if isinstance(a, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", a) else None
+
+
+def user_fontset():
+    """The chosen font set ("fontSet" in shell.json), "neo" when unset or unknown."""
+    p = os.path.expanduser("~/.config/ultimit/shell.json")
+    try:
+        f = json.load(open(p)).get("fontSet", "")
+    except Exception:
+        return "neo"
+    return f if f in FONTSETS else "neo"
 
 
 def accented(s, a):
@@ -130,6 +163,8 @@ def palette(name):
     selst = mix(bg, accent, .38 if not light else .32)   # text selection (solid)
     ns = dict(
         name=name, Name=NAMES[name], light=light,
+        font_display=FONTSETS[user_fontset()]["display"], font_ui=FONTSETS[user_fontset()]["ui"],
+        font_mono=FONTSETS[user_fontset()]["mono"],
         scheme="light" if light else "dark",
         dark_suffix="" if light else "-dark",
         panel=hexc(panel), bg=hexc(bg), deep=hexc(deep), side=hexc(side),

@@ -82,7 +82,7 @@ label:disabled, *:disabled label { color: @u_dim; }
 decoration, window.csd decoration, window.popup decoration, .popup decoration {
   box-shadow: none; border: none; margin: 0; border-radius: 0;
 }
-window, dialog, tooltip, menu, popover { font-family: "Chakra Petch", "Segoe UI", system-ui, sans-serif; }
+window, dialog, tooltip, menu, popover { font-family: "{{font_ui}}", "Segoe UI", system-ui, sans-serif; }
 
 /* ------------------------- headerbar / titlebar --------------------------- */
 /* glass-dark bar, 38px, accent bracket top-left, rule along the bottom that
@@ -100,7 +100,7 @@ headerbar:backdrop, .titlebar:backdrop, headerbar.titlebar:backdrop {
   color: @u_dim;
 }
 headerbar .title, .titlebar .title, headerbar.titlebar .title {
-  font-family: "Michroma", "Eurostile", "Arial Black", sans-serif;
+  font-family: "{{font_display}}", "Eurostile", "Arial Black", sans-serif;
   font-size: 11.5pt; font-weight: normal; letter-spacing: 0.06em; color: @u_fg;
   /* accent square before the title, as in the compositor's titlebar */
   padding-left: 16px;
@@ -109,7 +109,7 @@ headerbar .title, .titlebar .title, headerbar.titlebar .title {
 }
 headerbar:backdrop .title, .titlebar:backdrop .title { color: @u_dim; background-image: linear-gradient(@u_dim, @u_dim); }
 headerbar .subtitle, .titlebar .subtitle {
-  font-family: "Share Tech Mono", monospace; font-size: 9pt; font-weight: normal;
+  font-family: "{{font_mono}}", monospace; font-size: 9pt; font-weight: normal;
   letter-spacing: 0.18em; color: @u_dim; min-height: 0; margin-top: -3px; opacity: 1; font-size: 7.5pt;
 }
 headerbar entry, headerbar spinbutton, .titlebar entry { margin: 4px 0; }
@@ -232,7 +232,7 @@ treeview.view acceleditor > label { background-color: @u_sel; }
 treeview.view header button, treeview header button {
   background-color: @u_panel; background-image: none; border: none; border-radius: 0;
   border-bottom: 1px solid @u_line2; border-right: 1px solid @u_line; box-shadow: none;
-  color: @u_dim; font-family: "Share Tech Mono", monospace; font-size: 9pt; font-weight: normal;
+  color: @u_dim; font-family: "{{font_mono}}", monospace; font-size: 9pt; font-weight: normal;
   letter-spacing: 0.16em; padding: 3px 8px; min-height: 20px;
 }
 treeview.view header button:hover { color: @u_fg; background-color: @u_hover; background-image: none; }
@@ -305,7 +305,7 @@ scale slider {
 }
 scale slider:hover, scale slider:active { background-color: @u_fg; }
 scale marks, scale value { color: @u_dim; }
-progressbar { color: @u_fg; font-family: "Share Tech Mono", monospace; font-size: 9pt; }
+progressbar { color: @u_fg; font-family: "{{font_mono}}", monospace; font-size: 9pt; }
 progressbar trough { min-height: 6px; }
 levelbar block.empty { background-color: transparent; border-color: @u_line; }
 levelbar block.low { background-color: @u_warn; }
@@ -347,7 +347,7 @@ dialog .dialog-action-area, messagedialog .dialog-action-area { border-top: 1px 
 messagedialog.background { background-color: @u_bg; }
 messagedialog .titlebar { min-height: 38px; }
 .dim-label, label.dim { color: @u_dim; }
-frame > label, .heading { font-family: "Share Tech Mono", monospace; letter-spacing: 0.18em; font-size: 9pt; color: @u_dim; }
+frame > label, .heading { font-family: "{{font_mono}}", monospace; letter-spacing: 0.18em; font-size: 9pt; color: @u_dim; }
 
 /* ----------------------------- colours / links ---------------------------- */
 .success, label.success { color: @u_ok; } .warning, label.warning { color: @u_warn; } .error, label.error { color: @u_bad; }

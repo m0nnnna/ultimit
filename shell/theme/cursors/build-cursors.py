@@ -46,6 +46,9 @@ FILLS = {
     "Amber":   "#1c1108",
     "Silver":  "#f6f7f9",   # light skin
     "Verdant": "#0a1d0d",
+    "Sakura":  "#1f0a15",
+    "Paper":   "#fbf8f1",   # light skin
+    "Void":    "#05070b",
 }
 # Used only when Theme.qml cannot be read.
 SKINS = {
@@ -53,6 +56,9 @@ SKINS = {
     "Amber":   dict(accent="#ffb04a", fill="#1c1108"),
     "Silver":  dict(accent="#2c5b88", fill="#f6f7f9"),
     "Verdant": dict(accent="#b9ff8c", fill="#0a1d0d"),
+    "Sakura":  dict(accent="#ff5fa2", fill="#1f0a15"),
+    "Paper":   dict(accent="#0e7c70", fill="#fbf8f1"),
+    "Void":    dict(accent="#4f9dff", fill="#05070b"),
 }
 
 

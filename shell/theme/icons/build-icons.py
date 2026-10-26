@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """build-icons.py - build the four Ultimit freedesktop icon themes from SVG templates.
 
-    build-icons.py OUTDIR [--skin mine|amber|silver|verdant] [--sheet FILE.html]
+    build-icons.py OUTDIR [--skin mine|amber|silver|verdant|sakura|paper|void] [--sheet FILE.html]
 
 Reads ./templates/<context>/<name>.svg (placeholder colours, see make-templates.py),
 substitutes the per-skin palette and writes OUTDIR/Ultimit-<Skin>/ :
@@ -35,6 +35,12 @@ SKINS = {
                     folder="#2c5b88", panel="#f8f9fb", inherits="Yaru,Adwaita,hicolor"),
     "verdant": dict(accent="#b9ff8c", fg="#effbe9", dim="#a3cc95", fill="#b9ff8c", fillop="0.15",
                     folder="#8fe3b0", panel="#051408", inherits="Yaru-dark,Adwaita,hicolor"),
+    "sakura":  dict(accent="#ff5fa2", fg="#fff0f6", dim="#d29bb6", fill="#ff5fa2", fillop="0.15",
+                    folder="#f7b6d0", panel="#1e0915", inherits="Yaru-dark,Adwaita,hicolor"),
+    "paper":   dict(accent="#0e7c70", fg="#1e1b15", dim="#675f4e", fill="#0e7c70", fillop="0.14",
+                    folder="#0e7c70", panel="#fbf8f1", inherits="Yaru,Adwaita,hicolor"),
+    "void":    dict(accent="#4f9dff", fg="#e8ecf2", dim="#7c8596", fill="#4f9dff", fillop="0.15",
+                    folder="#7fb6ff", panel="#000000", inherits="Yaru-dark,Adwaita,hicolor"),
 }
 CONTEXTS = {  # directory -> index.theme Context
     "apps": "Applications", "places": "Places", "devices": "Devices", "mimetypes": "MimeTypes",

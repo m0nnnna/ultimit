@@ -1,6 +1,7 @@
 #!/bin/sh
 # Build and install the Ultimit GTK themes (idempotent):
-#   Ultimit-Mine, Ultimit-Amber, Ultimit-Silver, Ultimit-Verdant, and plain
+#   Ultimit-Mine, Ultimit-Amber, Ultimit-Silver, Ultimit-Verdant, Ultimit-Sakura,
+#   Ultimit-Paper, Ultimit-Void, and plain
 #   "Ultimit" = alias of the current skin (~/.config/ultimit/shell.json).
 # Install location is unchanged: ${XDG_DATA_HOME:-~/.local/share}/themes.
 # A Flatpak build of the same themes goes to ~/.themes: inside a sandbox GTK's
@@ -25,7 +26,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --skin) SKIN=$2; shift ;;
     --copy) ;;
-    *) echo "usage: $0 [--skin mine|amber|silver|verdant]" >&2; exit 2 ;;
+    *) echo "usage: $0 [--skin mine|amber|silver|verdant|sakura|paper|void]" >&2; exit 2 ;;
   esac
   shift
 done

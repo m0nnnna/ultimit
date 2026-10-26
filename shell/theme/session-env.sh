@@ -5,7 +5,7 @@
 # A skin change needs a new session (or restart of the GTK apps) to take effect.
 
 # Select the Ultimit GTK theme for the current skin (shell.json "skin": mine |
-# amber | silver | verdant) so GTK3, GTK4/libadwaita, Electron and Chromium
+# amber | silver | verdant | sakura | paper | void) so GTK3, GTK4/libadwaita, Electron and Chromium
 # (GTK mode) windows match the desktop. Falls back to Ultimit-Mine. Themes come
 # from install-gtk-theme.sh. NOTE: with GTK_THEME set, libadwaita does not load
 # its own stylesheet; our gtk.css re-imports it from the libadwaita gresource.
@@ -16,11 +16,14 @@ case "$_ul_skin" in
 	amber)   export GTK_THEME=Ultimit-Amber;   _ul_scheme=prefer-dark ;;
 	silver)  export GTK_THEME=Ultimit-Silver;  _ul_scheme=prefer-light ;;
 	verdant) export GTK_THEME=Ultimit-Verdant; _ul_scheme=prefer-dark ;;
+	sakura)  export GTK_THEME=Ultimit-Sakura;  _ul_scheme=prefer-dark ;;
+	paper)   export GTK_THEME=Ultimit-Paper;   _ul_scheme=prefer-light ;;
+	void)    export GTK_THEME=Ultimit-Void;    _ul_scheme=prefer-dark ;;
 	*)       export GTK_THEME=Ultimit-Mine;    _ul_scheme=prefer-dark ;;
 esac
 
-# libadwaita colour scheme per skin: dark for Mine/Amber/Verdant, light for
-# Silver (the theme imports the matching libadwaita stylesheet; this also makes
+# libadwaita colour scheme per skin: dark for all but Silver and Paper, which are light
+# (the theme imports the matching libadwaita stylesheet; this also makes
 # @media (prefers-color-scheme) rules match).
 export ADW_DEBUG_COLOR_SCHEME=$_ul_scheme
 
@@ -50,7 +53,7 @@ if [ -z "$QS_ICON_THEME" ]; then
 	if [ -z "$_us_skin" ] && [ -r "$HOME/.config/ultimit/shell.json" ]; then
 		_us_skin=$(sed -n 's/.*"skin"[[:space:]]*:[[:space:]]*"\([a-z]*\)".*/\1/p' "$HOME/.config/ultimit/shell.json" | head -n 1)
 	fi
-	case "$_us_skin" in mine|amber|silver|verdant) ;; *) _us_skin=mine ;; esac
+	case "$_us_skin" in mine|amber|silver|verdant|sakura|paper|void) ;; *) _us_skin=mine ;; esac
 	_us_theme="Ultimit-$(printf %s "$_us_skin" | cut -c1 | tr a-z A-Z)$(printf %s "$_us_skin" | cut -c2-)"
 	if [ -f "${XDG_DATA_HOME:-$HOME/.local/share}/icons/$_us_theme/index.theme" ] \
 	   || [ -f "/usr/share/icons/$_us_theme/index.theme" ]; then

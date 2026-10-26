@@ -21,7 +21,7 @@
 - **apps**: Games (Steam library front end with per-game GPU, Proton and
   Gamescope options), Mailer, News, Audio, Data and Accessory, following the
   mockup.
-- **skins**: Mine, Amber, Silver and Verdant. One token file per skin, shared
+- **skins**: Mine, Amber, Silver, Verdant, Sakura, Paper and Void. One token file per skin, shared
   by the compositor and the shell.
 
 ## Gaming rules

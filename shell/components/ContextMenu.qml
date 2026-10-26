@@ -30,7 +30,8 @@ PanelWindow {
 
     readonly property var skinList: [
         { id: "mine", n: "Mine" }, { id: "amber", n: "Amber" },
-        { id: "silver", n: "Silver" }, { id: "verdant", n: "Verdant" }
+        { id: "silver", n: "Silver" }, { id: "verdant", n: "Verdant" },
+        { id: "sakura", n: "Sakura" }, { id: "paper", n: "Paper" }, { id: "void", n: "Void" }
     ]
     // kind: "item" | "sep"
     readonly property var desktopItems: [

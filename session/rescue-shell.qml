@@ -28,18 +28,18 @@ ShellRoot {
                 spacing: 18
                 Text {
                     text: "[ ULTIMIT ]"
-                    color: "#d4ebff"; font.family: "Michroma"; font.pixelSize: 26; font.letterSpacing: 4
+                    color: "#d4ebff"; font.family: "Oxanium"; font.pixelSize: 26; font.letterSpacing: 4
                 }
                 Text {
                     width: parent.width; wrapMode: Text.WordWrap
                     text: "The desktop shell keeps crashing, so the taskbar and panels can't start. "
                         + "Your apps and files are fine. Try again, or open a terminal to look into it."
-                    color: "#eef1f4"; font.family: "Chakra Petch"; font.pixelSize: 16; lineHeight: 1.3
+                    color: "#eef1f4"; font.family: "Saira"; font.pixelSize: 16; lineHeight: 1.3
                 }
                 Text {
                     width: parent.width; wrapMode: Text.WrapAnywhere
                     text: "Log: " + root.log
-                    color: "#8d949e"; font.family: "Share Tech Mono"; font.pixelSize: 12
+                    color: "#8d949e"; font.family: "JetBrains Mono"; font.pixelSize: 12
                 }
                 Row {
                     spacing: 12
@@ -60,7 +60,7 @@ ShellRoot {
                                 id: lbl; anchors.centerIn: parent
                                 text: parent.modelData.label.toUpperCase()
                                 color: parent.index === 0 ? "#07090b" : "#eef1f4"
-                                font.family: "Chakra Petch"; font.pixelSize: 12; font.weight: Font.DemiBold; font.letterSpacing: 2
+                                font.family: "Saira"; font.pixelSize: 12; font.weight: Font.DemiBold; font.letterSpacing: 2
                             }
                             MouseArea { id: ma; anchors.fill: parent; hoverEnabled: true; onClicked: parent.modelData.run() }
                         }
