@@ -491,7 +491,7 @@ static struct ul_ghost *ghost_create(struct ul_view *view, enum ghost_kind kind)
 }
 
 static bool can_close_anim(struct ul_view *view) {
-	return animations_enabled() && !view->fullscreen && !view->minimized &&
+	return animations_enabled() && view->server->config.close_anim && !view->fullscreen && !view->minimized &&
 		view->tree->node.enabled && view->content && !view->ghost;
 }
 
@@ -576,12 +576,22 @@ static bool target_box(struct ul_view *view, struct wlr_box *out) {
 		*out = view->rail_rect;
 		return true;
 	}
-	/* No rail entry known: sink toward the bottom of the screen. */
+	/* No rail entry known: toward the rail (the strip the shell reserves on the left
+	 * edge) at the window's height, or the bottom of the screen if there's no rail. */
 	struct ul_output *output = output_at(view->server,
 		view->x + view->width / 2.0, view->y + view->height / 2.0);
 	if (!output) return false;
+	struct wlr_box full = output->full_area, usable = output->usable_area;
+	int rail = usable.x - full.x;
+	if (rail > 0 && rail < full.width / 4) {
+		int cy = view->y + view->height / 2;
+		if (cy < full.y + 25) cy = full.y + 25;
+		if (cy > full.y + full.height - 25) cy = full.y + full.height - 25;
+		*out = (struct wlr_box){ full.x, cy - 25, rail, 50 };
+		return true;
+	}
 	*out = (struct wlr_box){ view->x + view->width / 2 - 40,
-		output->full_area.y + output->full_area.height - 60, 80, 50 };
+		full.y + full.height - 60, 80, 50 };
 	return true;
 }
 
@@ -594,8 +604,8 @@ void anim_minimize(struct ul_view *view, bool minimize) {
 		ghost_destroy(view->ghost);
 	}
 	struct wlr_box target;
-	if (!animations_enabled() || view->fullscreen || !view->content ||
-			!target_box(view, &target)) {
+	if (!animations_enabled() || !view->server->config.minimize_anim || view->fullscreen ||
+			!view->content || !target_box(view, &target)) {
 		if (!minimize) {
 			wlr_scene_node_set_enabled(&view->tree->node, true);
 		}
