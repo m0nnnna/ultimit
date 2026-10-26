@@ -313,14 +313,21 @@ struct ul_layer_surface {
 struct ul_decoration {
 	struct wlr_scene_tree *tree;
 	struct wlr_scene_shadow *shadow;
+	struct wlr_scene_shadow *glow; /* accent glow of the focused window */
 	struct wlr_scene_rect *border; /* 1px outline around the frame */
 	struct wlr_scene_rect *glass[4]; /* frame sides: under the titlebar, left, right, bottom */
-	struct wlr_scene_rect *brackets[4];
+	/* HUD corner marks: 0-3 top-left and bottom-right (always), 4-7 top-right and
+	 * bottom-left (the focused window only, fading with focus_level) */
+	struct wlr_scene_rect *brackets[8];
 	struct wlr_scene_buffer *titlebar;
 	struct wlr_scene_rect *line; /* open animation */
 	struct wlr_scene_rect *sweep; /* focus sweep along the titlebar's bottom edge */
 	struct wl_event_source *sweep_timer;
 	uint32_t sweep_start;
+	/* Focus fade (glow, corner marks): 0 unfocused .. 1 focused, eased over ~150 ms. */
+	float focus_level, focus_from, focus_target;
+	uint32_t focus_start;
+	struct wl_event_source *focus_timer;
 	int button_x[3]; /* left edge of minimize, maximize, close, in titlebar coords */
 	int button_w[3];
 	/* What the titlebar buffer was last drawn with, to skip redundant redraws. */
@@ -552,6 +559,7 @@ void decoration_restyle_all(struct ul_server *server);
 void decoration_set_hover(struct ul_server *server, struct ul_view *view, int button);
 void decoration_focus_sweep(struct ul_view *view);
 bool decoration_sweep_frame(struct ul_view *view);
+bool decoration_focus_frame(struct ul_view *view);
 void decoration_finish(struct ul_view *view);
 
 /* capture.c */

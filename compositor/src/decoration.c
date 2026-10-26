@@ -3,8 +3,10 @@
  * accent square, the window title in the display face, the app id as a mono
  * subtitle, a rule that fades out toward the [ _ ] [ □ ] [ × ] buttons (which
  * light up under the cursor, close in red), a glass frame with a 1px outline, accent corner brackets top-left and
- * bottom-right, and a soft shadow. Client-side-decorated windows keep the
- * frame, brackets and shadow but get no titlebar.
+ * bottom-right, and a soft shadow. The focused window's frame also gets a soft accent glow
+ * and the two other corner marks, fading in and out with focus ([effects] focus_glow,
+ * focus_brackets). Client-side-decorated windows keep the frame, brackets, glow and
+ * shadow but get no titlebar.
  */
 
 #include <assert.h>
@@ -370,6 +372,8 @@ void decoration_create(struct ul_view *view) {
 	deco->shadow = wlr_scene_shadow_create(deco->tree, 0, 0, 0,
 		UL_SHADOW_SIGMA, color_shadow);
 	const struct ul_skin *k = &view->server->skin;
+	deco->glow = wlr_scene_shadow_create(deco->tree, 0, 0, 0, UL_GLOW_SIGMA, k->accent);
+	wlr_scene_node_set_enabled(&deco->glow->node, false);
 	deco->hover = -1;
 	for (int i = 0; i < 4; i++) {
 		deco->glass[i] = wlr_scene_rect_create(deco->tree, 0, 0, k->panel);
@@ -380,8 +384,11 @@ void decoration_create(struct ul_view *view) {
 	wlr_scene_buffer_set_backdrop_blur(deco->titlebar, true);
 	wlr_scene_buffer_set_backdrop_blur_optimized(deco->titlebar, true);
 	deco->border = wlr_scene_rect_create(deco->tree, 0, 0, k->line);
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < 8; i++) {
 		deco->brackets[i] = wlr_scene_rect_create(deco->tree, 0, 0, k->accent);
+		if (i >= 4) {
+			wlr_scene_node_set_enabled(&deco->brackets[i]->node, false);
+		}
 	}
 	deco->line = wlr_scene_rect_create(deco->tree, 0, 0, k->accent);
 	wlr_scene_node_set_enabled(&deco->line->node, false);
@@ -394,6 +401,160 @@ void decoration_finish(struct ul_view *view) {
 		wl_event_source_remove(view->deco.sweep_timer);
 		view->deco.sweep_timer = NULL;
 	}
+	if (view->deco.focus_timer) {
+		wl_event_source_remove(view->deco.focus_timer);
+		view->deco.focus_timer = NULL;
+	}
+}
+
+/* ---- focus fade: the accent glow and the extra corner marks come and go over
+ * FOCUS_MS when a window gains or loses focus ------------------------------- */
+
+#define FOCUS_MS 150
+
+static uint32_t msec_now(void) {
+	struct timespec now;
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	return now.tv_sec * 1000 + now.tv_nsec / 1000000;
+}
+
+static float mix(float a, float b, float t) {
+	return a + (b - a) * t;
+}
+
+/* Glow, corner marks and the always-on brackets' color for the current focus level. Only
+ * touches the glow and marks of a focused (or fading) window, so unfocused windows cost
+ * nothing more than before. */
+static void focus_apply(struct ul_view *view, int fx, int fy, int fw, int fh) {
+	struct ul_decoration *deco = &view->deco;
+	const struct ul_config *c = &view->server->config;
+	const struct ul_skin *k = &view->server->skin;
+	float lv = deco->focus_level;
+	bool shown = !anim_running(view); /* the open animation draws the frame itself */
+
+	/* Always-on brackets (top-left, bottom-right): dim accent -> accent. */
+	float b[4];
+	for (int i = 0; i < 4; i++) {
+		b[i] = mix(k->accent_dim[i], k->accent[i], lv);
+	}
+	for (int i = 0; i < 4; i++) {
+		wlr_scene_rect_set_color(deco->brackets[i], b);
+	}
+
+	/* The other two corners, so the focused frame reads as [ ]. */
+	bool marks = shown && c->focus_brackets && lv > 0.01f;
+	if (marks) {
+		struct { int x, y, w, h; } m[4] = {
+			{ fx + fw - UL_BRACKET_LEN, fy, UL_BRACKET_LEN, UL_BRACKET_W },     /* top-right */
+			{ fx + fw - UL_BRACKET_W, fy, UL_BRACKET_W, UL_BRACKET_LEN },
+			{ fx, fy + fh - UL_BRACKET_W, UL_BRACKET_LEN, UL_BRACKET_W },       /* bottom-left */
+			{ fx, fy + fh - UL_BRACKET_LEN, UL_BRACKET_W, UL_BRACKET_LEN },
+		};
+		float mc[4] = { k->accent[0], k->accent[1], k->accent[2], k->accent[3] * lv };
+		for (int i = 0; i < 4; i++) {
+			struct wlr_scene_rect *r = deco->brackets[4 + i];
+			wlr_scene_rect_set_size(r, m[i].w, m[i].h);
+			wlr_scene_node_set_position(&r->node, m[i].x, m[i].y);
+			wlr_scene_rect_set_color(r, mc);
+		}
+	}
+	for (int i = 4; i < 8; i++) {
+		wlr_scene_node_set_enabled(&deco->brackets[i]->node, marks);
+	}
+
+	/* Accent glow: a second, tighter shadow in the accent color over the plain one. */
+	bool glow = shown && c->focus_glow && lv > 0.01f;
+	if (glow) {
+		int sigma = (int)UL_GLOW_SIGMA;
+		float gc[4] = { k->accent[0], k->accent[1], k->accent[2], UL_GLOW_ALPHA * lv };
+		wlr_scene_shadow_set_color(deco->glow, gc);
+		wlr_scene_shadow_set_size(deco->glow, fw + 2 * sigma, fh + 2 * sigma);
+		wlr_scene_node_set_position(&deco->glow->node, fx - sigma, fy - sigma);
+		wlr_scene_shadow_set_clipped_region(deco->glow, (struct clipped_region){
+			.corner_radius = 0,
+			.corners = CORNER_LOCATION_NONE,
+			.area = { sigma, sigma, fw, fh },
+		});
+	}
+	wlr_scene_node_set_enabled(&deco->glow->node, glow);
+}
+
+static void focus_place(struct ul_view *view) {
+	int bar = view->ssd ? UL_TITLEBAR_H : 0;
+	focus_apply(view, -UL_BORDER, -bar - UL_BORDER, view->width + 2 * UL_BORDER,
+		view->height + bar + 2 * UL_BORDER);
+}
+
+static void focus_stop(struct ul_view *view) {
+	if (view->deco.focus_timer) {
+		wl_event_source_remove(view->deco.focus_timer);
+		view->deco.focus_timer = NULL;
+	}
+}
+
+/* One step of the fade: false once it has settled. While the open animation runs the
+ * level is held at 0, so the glow fades in once the window has drawn itself. */
+static bool focus_step(struct ul_view *view) {
+	struct ul_decoration *deco = &view->deco;
+	uint32_t now = msec_now();
+	if (anim_running(view) && deco->focus_target > 0) {
+		deco->focus_level = deco->focus_from = 0;
+		deco->focus_start = now;
+		return true;
+	}
+	double t = (now - deco->focus_start) / (double)FOCUS_MS;
+	if (t >= 1 || !anim_motion()) {
+		deco->focus_level = deco->focus_target;
+		return false;
+	}
+	double u = 1 - t;
+	deco->focus_level = mix(deco->focus_from, deco->focus_target, (float)(1 - u * u * u));
+	return true;
+}
+
+static int focus_tick(void *data) {
+	struct ul_view *view = data;
+	bool busy = focus_step(view);
+	if (view->mapped && !view->fullscreen && view->deco.tree->node.enabled) {
+		focus_place(view);
+	}
+	if (busy) {
+		wl_event_source_timer_update(view->deco.focus_timer, 33); /* fallback: output frames step it */
+	} else {
+		focus_stop(view);
+	}
+	return 0;
+}
+
+/* One step of a running focus fade from an output frame; true while it runs. */
+bool decoration_focus_frame(struct ul_view *view) {
+	if (!view->deco.focus_timer) {
+		return false;
+	}
+	focus_tick(view);
+	return view->deco.focus_timer != NULL;
+}
+
+/* Start fading toward `target` if that's new. */
+static void focus_set(struct ul_view *view, float target) {
+	struct ul_decoration *deco = &view->deco;
+	if (deco->focus_target == target) {
+		return;
+	}
+	deco->focus_target = target;
+	deco->focus_from = deco->focus_level;
+	deco->focus_start = msec_now();
+	if (!anim_motion()) {
+		deco->focus_level = target;
+		focus_stop(view);
+		return;
+	}
+	if (!deco->focus_timer) {
+		deco->focus_timer = wl_event_loop_add_timer(
+			wl_display_get_event_loop(view->server->display), focus_tick, view);
+	}
+	focus_step(view);
+	wl_event_source_timer_update(deco->focus_timer, 33);
 }
 
 /* ---- focus sweep: a short accent segment runs along the bottom edge of the
@@ -538,7 +699,6 @@ void decoration_update(struct ul_view *view) {
 	});
 
 	/* Brackets: top-left (horizontal, vertical), bottom-right (h, v). */
-	const float *accent = focused ? k->accent : k->accent_dim;
 	struct { int x, y, w, h; } b[4] = {
 		{ fx, fy, UL_BRACKET_LEN, UL_BRACKET_W },
 		{ fx, fy, UL_BRACKET_W, UL_BRACKET_LEN },
@@ -548,9 +708,10 @@ void decoration_update(struct ul_view *view) {
 	for (int i = 0; i < 4; i++) {
 		wlr_scene_rect_set_size(deco->brackets[i], b[i].w, b[i].h);
 		wlr_scene_node_set_position(&deco->brackets[i]->node, b[i].x, b[i].y);
-		wlr_scene_rect_set_color(deco->brackets[i], accent);
 	}
 	wlr_scene_rect_set_color(deco->line, k->accent);
+	focus_set(view, focused ? 1.0f : 0.0f);
+	focus_apply(view, fx, fy, fw, fh);
 
 	wlr_scene_node_set_enabled(&deco->titlebar->node, view->ssd);
 	if (view->ssd) {

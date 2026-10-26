@@ -16,6 +16,8 @@
 #define UL_BRACKET_LEN     14
 #define UL_BRACKET_W       2
 #define UL_SHADOW_SIGMA    24.0f
+#define UL_GLOW_SIGMA      14.0f /* focused window's accent glow ([effects] focus_glow) */
+#define UL_GLOW_ALPHA      0.30f
 #define UL_RESIZE_MARGIN   (UL_BORDER + 5) /* past the content edge */
 #define UL_BUTTON_W        30 /* titlebar button: hit cell (full titlebar height) */
 #define UL_BUTTON_H        22 /* its drawn box */

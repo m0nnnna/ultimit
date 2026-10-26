@@ -659,6 +659,7 @@ bool anim_frame(struct ul_server *server) {
 			busy |= view->anim_timer != NULL;
 		}
 		busy |= decoration_sweep_frame(view);
+		busy |= decoration_focus_frame(view);
 	}
 	struct ul_ghost *g, *tmp;
 	wl_list_for_each_safe(g, tmp, &server->ghosts, link) {
