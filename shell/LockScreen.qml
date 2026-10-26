@@ -26,6 +26,7 @@ Scope {
     readonly property bool dryRun: Quickshell.env("ULTIMIT_DRY_RUN") === "1"
 
     readonly property bool locked: sessionLock.locked
+    onLockedChanged: UiSounds.play(locked ? "lock" : "unlock")
     // shared lock-screen state (rendered by every LockSurface)
     property string password: ""          // typed text (kept here so any output can take keystrokes)
     property string authState: "idle"     // idle | auth | fail
