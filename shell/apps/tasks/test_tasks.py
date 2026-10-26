@@ -190,6 +190,19 @@ class Sample(unittest.TestCase):
         self.assertEqual({q["pid"]: q for q in t["procs"]}[100]["cpu"], 0.0)
 
 
+class GlanceTick(unittest.TestCase):
+    def test_glance(self):
+        g = tk.Glance(PROC, extra={"gpu": {"util": 33.0, "mem_used": 1 << 30, "mem_total": 4 << 30}})
+        t = g.tick(now=0.0)
+        self.assertEqual((t["cpu"], t["rx"], t["tx"]), (0.0, 0, 0))     # the first tick has no rates
+        self.assertEqual((t["gpu"], t["vram"]), (33.0, 25.0))
+        self.assertTrue(0 < t["mem"] < 100)
+        g.prev = (0.0, (0, 0), (0, 0))                                  # then rates, from the previous sample
+        t = g.tick(now=2.0)
+        self.assertTrue(t["rx"] > 0 and t["cpu"] > 0)
+        self.assertIsNone(tk.Glance(PROC).tick(now=1.0)["gpu"])        # no GPU known: null, not an error
+
+
 class Signals(unittest.TestCase):
     def test_signal(self):
         sent = []

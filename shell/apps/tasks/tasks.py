@@ -6,7 +6,9 @@ The parsers are pure functions over text, tested with fixtures/; `Sampler` keeps
 CPU, disk and network figures can be rates.
 
   tasks.py watch [SECONDS]              one JSON line per tick (default 1 s): cpu, memory, disk, net, gpu, processes
-  tasks.py once                         the same, a single line (CPU shows 0: it needs two samples)
+  tasks.py glance [SECONDS]             one small JSON line per tick (default 1 s): cpu %, memory %, gpu %, net rates;
+                                        what the desktop's status block draws (no process list, no per-core work)
+  tasks.py once                        the same, a single line (CPU shows 0: it needs two samples)
   tasks.py signal PID TERM|KILL|STOP|CONT [--force]
                                         send a signal; another user's process (EPERM) is retried through pkexec
                                         (polkit shows the password dialog). PID 1, the compositor and the shell
@@ -426,6 +428,63 @@ class Sampler:
                 "procs": procs}
 
 
+class Glance:
+    """The few numbers the status block graphs (CPU %, memory %, GPU %, network bytes/s), from the same
+    parsers as Sampler but without the process table: a tick reads three small /proc files."""
+    def __init__(self, root="/proc", extra=None):
+        self.root = root
+        self.extra = extra if extra is not None else {}
+        self.prev = None                 # (time, cpu (busy, total), net (rx, tx))
+
+    def read(self, name):
+        return _read("%s/%s" % (self.root, name))
+
+    def tick(self, now=None):
+        now = time.monotonic() if now is None else now
+        cpu, _ = parse_cpu_stat(self.read("stat"))
+        net = parse_net_dev(self.read("net/dev"))
+        mem = memory(parse_meminfo(self.read("meminfo")))
+        pc = rx = tx = 0.0
+        if self.prev:
+            t0, c0, n0 = self.prev
+            if cpu[1] > c0[1]:
+                pc = round((cpu[0] - c0[0]) * 100.0 / (cpu[1] - c0[1]), 1)
+            if now > t0:
+                rx, tx = (max(0, (a - b) / (now - t0)) for a, b in zip(net, n0))
+        self.prev = (now, cpu, net)
+        g = self.extra.get("gpu") or {}
+        vram = None
+        if g.get("mem_used") is not None and g.get("mem_total"):
+            vram = round(g["mem_used"] * 100.0 / g["mem_total"], 1)
+        return {"ok": True, "cpu": pc, "mem": round(mem["used"] * 100.0 / mem["total"], 1) if mem["total"] else 0.0,
+                "gpu": g.get("util"), "vram": vram, "rx": round(rx), "tx": round(tx)}
+
+
+def read_gpu_glance():
+    """One GPU dict (NVIDIA through nvidia-smi, else sysfs) or None; a single process call, no per-app query."""
+    g = parse_nvidia_gpu(run_text(["nvidia-smi", "--query-gpu=" + NVIDIA_GPU, "--format=csv,noheader,nounits"]))
+    return g[0] if g else read_drm()
+
+
+def glance(every=1.0):
+    extra = {}
+    if fake():
+        extra["gpu"] = {"util": 42.0, "mem_used": 3 << 30, "mem_total": 12 << 30}
+    else:
+        def loop():
+            while True:   # the GPU is a process to ask for: every few seconds, not every tick
+                extra["gpu"] = read_gpu_glance()
+                time.sleep(GPU_EVERY)
+        threading.Thread(target=loop, daemon=True).start()
+    g = Glance(extra=extra)
+    g.tick()
+    nxt = time.monotonic()
+    while True:
+        nxt += every
+        time.sleep(max(0.05, nxt - time.monotonic()))
+        out(g.tick())
+
+
 # ============================================================ slow sources (threads)
 
 def run_text(cmd, timeout=3):
@@ -568,7 +627,9 @@ def watch(every=1.0):
 def main(argv):
     cmd, args = (argv[0], argv[1:]) if argv else ("", [])
     try:
-        if cmd == "watch":
+        if cmd == "glance":
+            glance(float(args[0]) if args else 1.0)
+        elif cmd == "watch":
             watch(float(args[0]) if args else 1.0)
         elif cmd == "once":
             s = FakeSampler() if fake() else Sampler(extra=dict(zip(("gpu", "gpu_apps"), read_gpu()), windows=read_windows()))
