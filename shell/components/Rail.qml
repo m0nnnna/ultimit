@@ -56,6 +56,7 @@ PanelWindow {
                 target: watcher.modelData
                 function onAppIdChanged() { win.tick++; }
                 function onTitleChanged() { win.tick++; }
+                function onActivatedChanged() { win.tick++; }
             }
         }
     }
@@ -113,12 +114,17 @@ PanelWindow {
         }
     }
 
+    // The button whose window is active; the sliding marker follows it (kept after focus leaves the
+    // pins so the marker fades where it was instead of jumping).
+    property Item focusBtn: null
+
     Rectangle {
         id: railBg
         anchors.fill: parent
         color: Theme.rail
         // right border
         Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Theme.line }
+        GlowFrame { anchors.fill: parent; edges: "right"; travel: false }
 
         Column {
             id: btnCol
@@ -189,10 +195,26 @@ PanelWindow {
                             missing: modelData.builtin ? !Config.available(modelData.app) : !modelData.found
                             badge: modelData.builtin && modelData.id === "mailer" ? Config.mailUnread : 0
                             on: { win.tick; return win.pinToplevel(modelData) !== null; }
+                            focused: { win.tick; const t = win.pinToplevel(modelData); return t !== null && t.activated; }
+                            onFocusedChanged: if (focused) win.focusBtn = pb
+                            Component.onCompleted: if (focused) win.focusBtn = pb
                             onClicked: win.activatePin(modelData)
                             onRightClicked: gy => { Config.closeLauncher(); Pins.openMenu(modelData.id, gy, win.screen ? win.screen.name : ""); }
                         }
                     }
+                }
+                Rectangle {   // active-window marker: slides between buttons (Config.dur(); instant with motion off)
+                    id: marker
+                    x: pinCol.x - 6
+                    z: 2
+                    width: 3
+                    height: 38
+                    color: Theme.accent
+                    readonly property bool shown: win.focusBtn !== null && win.focusBtn.focused
+                    y: win.focusBtn ? win.focusBtn.y + 12 : 0
+                    opacity: shown ? 1 : 0
+                    Behavior on y { NumberAnimation { duration: Config.dur(200); easing.type: Easing.OutCubic } }
+                    Behavior on opacity { NumberAnimation { duration: Config.dur(160); easing.type: Easing.OutCubic } }
                 }
                 Rectangle {   // scroll indicator, only when the pins overflow
                     visible: pinsView.contentHeight > pinsView.height

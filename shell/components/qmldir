@@ -35,3 +35,8 @@ CrashNotice 1.0 CrashNotice.qml
 UpdateWatch 1.0 UpdateWatch.qml
 ShortcutSheet 1.0 ShortcutSheet.qml
 AltTab 1.0 AltTab.qml
+GlowFrame 1.0 GlowFrame.qml
+DecodeText 1.0 DecodeText.qml
+IconBadge 1.0 IconBadge.qml
+Spark 1.0 Spark.qml
+SegBar 1.0 SegBar.qml

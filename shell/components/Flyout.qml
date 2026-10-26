@@ -3,7 +3,7 @@
 // Overlay-layer, full-screen transparent window like Launcher.qml, so a click outside closes it,
 // but the tray cluster is punched out of its input region: the same icon toggles the flyout
 // closed and another icon switches to its flyout. It holds the keyboard (Escape closes) only
-// while shown and stays mapped until the fade-out ends. Fade plus 8 px slide, Config.dur().
+// while shown and stays mapped until the fade-out ends. Unfolds from the icon (scale) plus fade, Config.dur().
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
@@ -64,12 +64,20 @@ PanelWindow {
         height: Math.min((ld.item ? ld.item.implicitHeight : 60) + 28, maxH)
         // centred over the icon, clamped inside the output
         x: Math.max(8, Math.min(win.iconX - width / 2, win.width - width - 8))
-        y: win.height - Config.tickerHeight - 6 - height + (1 - win.reveal) * 8
+        y: win.height - Config.tickerHeight - 6 - height
         opacity: win.reveal * win.swap
+        // unfolds out of the tray icon: grows from the tick at its bottom edge (reveal is 0/1 without motion)
+        transform: Scale {
+            origin.x: Math.max(0, Math.min(win.iconX - panel.x, panel.width))
+            origin.y: panel.height
+            xScale: 0.9 + 0.1 * win.reveal
+            yScale: 0.55 + 0.45 * win.reveal
+        }
         color: Theme.panel
         border.width: 1
         border.color: Theme.lineStrong
         MouseArea { anchors.fill: parent; acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton }   // swallow clicks
+        GlowFrame { anchors.fill: parent }
         Brackets {}
 
         Rectangle {   // tick pointing at the icon

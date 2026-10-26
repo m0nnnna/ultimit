@@ -36,6 +36,7 @@ Rectangle {
     color: Theme.panel
     border.width: 1
     border.color: urgency === 2 ? Theme.bad : Theme.lineStrong
+    GlowFrame { anchors.fill: parent; color: card.accentColor; travel: !card.inHistory && card.urgency !== 0; strength: card.urgency === 2 ? 1.2 : 0.8 }
     Rectangle { x: -1; y: -1; width: 3; height: parent.height + 2; color: card.accentColor }
 
     opacity: 0
@@ -98,13 +99,14 @@ Rectangle {
             width: content.width - (pic.visible ? pic.width + content.spacing : 0)
             spacing: 3
 
-            Text {
+            DecodeText {
                 width: parent.width
                 text: card.app.toUpperCase()
                 visible: text !== ""
+                decode: !card.inHistory
                 elide: Text.ElideRight
                 color: Theme.dim
-                font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 2
+                font.family: Theme.mono; font.pixelSize: Theme.size.sm; font.letterSpacing: 2
             }
             Text {
                 width: parent.width

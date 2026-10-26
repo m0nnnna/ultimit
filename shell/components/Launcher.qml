@@ -101,6 +101,7 @@ PanelWindow {
         border.color: Theme.lineStrong
         // swallow clicks
         MouseArea { anchors.fill: parent }
+        GlowFrame { anchors.fill: parent }
         Brackets {}
 
         opacity: win.shown ? 1 : 0
@@ -116,10 +117,10 @@ PanelWindow {
             anchors.margins: 14
             spacing: 10
 
-            Text {
+            DecodeText {
                 text: "APPLICATIONS"
                 color: Theme.dim
-                font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 2.4
+                font.family: Theme.mono; font.pixelSize: Theme.size.sm; font.letterSpacing: 2.4
             }
 
             // search field
@@ -210,31 +211,11 @@ PanelWindow {
                             fillMode: Image.PreserveAspectFit
                             asynchronous: true
                         }
-                        Item {   // letter tile (other apps' icons, Config.appIcons): the WINDOWS list's chamfer frame
+                        IconBadge {   // letter badge (other apps' icons, Config.appIcons)
                             anchors.fill: parent
                             visible: row.iconSrc === ""
-                            Shape {
-                                anchors.fill: parent
-                                preferredRendererType: Shape.CurveRenderer
-                                ShapePath {
-                                    strokeWidth: 1
-                                    strokeColor: Theme.lineStrong
-                                    fillColor: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.08)
-                                    joinStyle: ShapePath.MiterJoin
-                                    startX: 0.5; startY: 0.5
-                                    PathLine { x: 22.5; y: 0.5 }
-                                    PathLine { x: 27.5; y: 5.5 }
-                                    PathLine { x: 27.5; y: 27.5 }
-                                    PathLine { x: 5.5; y: 27.5 }
-                                    PathLine { x: 0.5; y: 22.5 }
-                                    PathLine { x: 0.5; y: 0.5 }
-                                }
-                            }
-                            Text {
-                                anchors.centerIn: parent
-                                text: (row.modelData.name || "?").charAt(0).toUpperCase()
-                                color: Theme.fg; font.family: Theme.display; font.pixelSize: 12
-                            }
+                            size: 28
+                            letter: (row.modelData.name || "?").charAt(0).toUpperCase()
                         }
                     }
                     Column {

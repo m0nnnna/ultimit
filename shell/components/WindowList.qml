@@ -113,41 +113,12 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: Config.dur(150) } }
                 Behavior on scale { NumberAnimation { duration: Config.dur(120); easing.type: Easing.OutCubic } }
 
-                // Altimit frame: thin chamfered outline (top-right / bottom-left cut), accent when active.
-                Shape {
+                IconBadge {   // frame + icon, or the letter badge when no icon resolves (hex in "letters" mode)
                     anchors.fill: parent
-                    preferredRendererType: Shape.CurveRenderer
-                    ShapePath {
-                        strokeWidth: 1
-                        strokeColor: ent.active ? Theme.accent : Theme.line
-                        fillColor: ent.active ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.10) : "transparent"
-                        joinStyle: ShapePath.MiterJoin
-                        Behavior on strokeColor { ColorAnimation { duration: Config.dur(150) } }
-                        startX: 0.5; startY: 0.5
-                        PathLine { x: 29.5; y: 0.5 }
-                        PathLine { x: 35.5; y: 6.5 }
-                        PathLine { x: 35.5; y: 35.5 }
-                        PathLine { x: 6.5; y: 35.5 }
-                        PathLine { x: 0.5; y: 29.5 }
-                        PathLine { x: 0.5; y: 0.5 }
-                    }
-                }
-                Image {
-                    id: img
-                    anchors.centerIn: parent
-                    width: 26; height: 26
-                    visible: ent.iconSrc !== "" && status !== Image.Error
-                    source: ent.iconSrc
-                    sourceSize: Qt.size(52, 52)
-                    fillMode: Image.PreserveAspectFit
-                    asynchronous: true
-                }
-                Text {   // letter fallback, only when no icon resolves
-                    anchors.centerIn: parent
-                    visible: ent.iconSrc === "" || img.status === Image.Error
-                    text: ((ent.de && ent.de.name) || ent.title || ent.appId || "?").charAt(0).toUpperCase()
-                    color: ent.active ? Theme.accent : Theme.fg
-                    font.family: Theme.display; font.pixelSize: 12
+                    size: 36
+                    iconSrc: ent.iconSrc
+                    letter: ((ent.de && ent.de.name) || ent.title || ent.appId || "?").charAt(0).toUpperCase()
+                    active: ent.active
                 }
             }
             Rectangle {   // minimized marker
