@@ -42,6 +42,27 @@ Singleton {
     property string appIcons: "letters"
     // Mouse cursor style (theme/cursors), Settings > Appearance: "izy" white darts, "shard" crystal shards.
     property string cursorStyle: "izy"
+    // ---- effects (Settings > Appearance > Effects; Fx.qml, UiSounds.qml, SysStats.qml, WallpaperArt.qml) ----
+    // Soft accent glow along panel edges (rail, flyouts, launcher, notification cards): "off" | "still" | "travel"
+    // (a slow light runs along the frame; it stops with motion off or while a fullscreen window is up).
+    property string edgeGlow: "travel"
+    // Titles scramble for ~150 ms and settle when a panel opens (DecodeText.qml).
+    property bool decodeText: true
+    // The shard wallpaper reacts to the pointer, to the sound the PC plays, and shifts when the focused
+    // window changes (Ultimit has no workspaces). Shards only; all stop with motion off or a fullscreen window.
+    property bool reactPointer: true
+    property bool reactAudio: true
+    property bool reactWorkspace: true
+    // The desktop status block: "classic" (clock and date) | "graph" (adds CPU, GPU, RAM and network graphs).
+    property string statusStyle: "classic"
+    // A segmented seconds ring beside the clock.
+    property bool clockRing: false
+    // Short synthesized blips (assets/sounds); never while a fullscreen window is up.
+    property bool uiSounds: false
+    property int uiSoundVolume: 40
+    // A fullscreen window covers some screen: effects that cost frames stand down.
+    readonly property bool fullscreenActive: coveredScreens.length > 0
+
     // UI animation duration scale: 0 when motion is off (reduced motion), else 1.
     readonly property real motionScale: motion ? 1 : 0
     function dur(ms) { return Math.round(ms * motionScale); }

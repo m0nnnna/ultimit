@@ -10,10 +10,11 @@ Item {
     property color detailColor: Theme.dim
     width: parent ? parent.width : 300
     height: 20
-    SectionLabel { text: parent.text; anchors.verticalCenter: parent.verticalCenter }
+    SectionLabel { text: parent.text; decode: true; anchors.verticalCenter: parent.verticalCenter }
     Text {
         anchors { right: parent.right; verticalCenter: parent.verticalCenter }
         text: parent.detail.toUpperCase(); color: parent.detailColor
-        font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.6
+        font.family: Theme.mono; font.pixelSize: Theme.size.sm; font.letterSpacing: 1.6
+        font.features: Theme.tnum
     }
 }

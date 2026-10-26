@@ -9,6 +9,13 @@
 //   - hex flicker: a filled Shape per flickering cell, shown/hidden by opacity
 //   - turning arc and ticks: two Shapes rotated by a NumberAnimation
 // Every screen has its own copy; nothing ticks while `active` or `animate` is false.
+//
+// Reactions (Wallpaper.qml turns them on from Config.react*; all off for the lock screen), worked
+// out on the same slow step as the shards, so they add no timer and no per-event work:
+//   pointer  the shards nearest the pointer's bearing light up while it moves, fading after ~1 s
+//   audio    every shard brightens with the output level (AudioLevel, a PipeWire peak monitor that
+//            only exists while a wallpaper wants it)
+//   shift    kick(): the bright sweep jumps and settles back (the active window changed)
 import QtQuick
 import QtQuick.Shapes
 import ".."
@@ -27,7 +34,35 @@ Item {
     property real t: 0
     property real spin: 0   // turning arc, degrees (mockup: rot = t * .00025 rad)
     readonly property real sway: Math.sin(t * .00018) * .02
-    readonly property real sweep: -3.1 + ((t * .00012) % 1) * 3.6
+    readonly property real sweep: -3.1 + ((t * .00012) % 1) * 3.6 + kickV
+
+    // ---- reactions ----
+    property bool reactPointer: false
+    property bool reactAudio: false
+    property real rawX: -1          // last pointer position, written by Wallpaper.qml (not bound to anything)
+    property real rawY: -1
+    property real lastX: -1
+    property real lastY: -1
+    property real pa: 0             // bearing of the pointer from the shards' origin
+    property real pEnergy: 0        // 0..1, builds while the pointer moves
+    property real pulse: 0          // smoothed output level, 0..1
+    property real kickV: 0          // sweep offset after kick(), rad, decays to 0
+    function kick() { if (running) kickV = 1.1; }
+    readonly property bool audioOn: reactAudio && running
+    onAudioOnChanged: AudioLevel.users += audioOn ? 1 : -1
+    Component.onDestruction: if (audioOn) AudioLevel.users--
+    function react(dt) {
+        if (reactPointer && rawX >= 0) {
+            if (rawX !== lastX || rawY !== lastY) {
+                lastX = rawX; lastY = rawY;
+                pa = Math.atan2(rawY - py, rawX - px);
+                pEnergy = Math.min(1, pEnergy + dt / 250);
+            } else if (pEnergy > 0) pEnergy = Math.max(0, pEnergy - dt / 1000);
+        } else if (pEnergy > 0) pEnergy = 0;
+        const p = audioOn ? Math.round(Math.min(1, Math.max(AudioLevel.peak, pulse - dt / 350)) * 50) / 50 : 0;
+        if (p !== pulse) pulse = p;
+        if (kickV > 0) kickV = Math.max(0, kickV - dt / 800);
+    }
 
     // Shards and flicker are slow; Config.wallpaperFps steps are plenty for them.
     // The clock follows real elapsed time (timers fire late under load); a gap of more than a
@@ -48,7 +83,7 @@ Item {
             last = now;
             art.spin = (art.spin + dt * .00025 * 180 / Math.PI) % 360;
             pending += dt;
-            if (pending >= step) { art.t += pending; pending = 0; }
+            if (pending >= step) { art.t += pending; art.react(pending); pending = 0; }
         }
     }
 
@@ -249,6 +284,7 @@ Item {
             required property var modelData
             readonly property real ang: modelData.a + art.sway + Math.sin(art.t * .00025 + modelData.ph) * .012
             readonly property real da: ang - art.sweep
+            readonly property real dp: ang - art.pa
 
             // uniforms (see shaders/shard.frag)
             property size box: Qt.size(width, height)
@@ -256,7 +292,8 @@ Item {
             property real len: modelData.L * art.bigR
             property real tw: modelData.t * art.sc
             property real al: modelData.al
-            property real boost: art.animate ? Math.exp(-(da * da) / .012) * .4 : 0
+            property real boost: art.animate ? Math.exp(-(da * da) / .012) * .4 + art.pulse * .35
+                                              + (art.pEnergy > 0 ? art.pEnergy * Math.exp(-(dp * dp) / .03) * .55 : 0) : 0
             property real lightSkin: Theme.light ? 1 : 0
             property color shardC: art.rgb(Theme.shard)
             property color edgeC: art.rgb(Theme.edge)

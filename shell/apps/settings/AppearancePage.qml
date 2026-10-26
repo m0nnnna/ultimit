@@ -235,6 +235,8 @@ Page {
         onPicked: id => Config.cursorStyle = id
     }
 
+    EffectsSection { Layout.fillWidth: true }
+
     SectionLabel { text: "System" }
     // Reduced motion when off: window open/close/minimize, the focus sweep, panel transitions,
     // shard and rail-icon motion, the boot and lock animations.

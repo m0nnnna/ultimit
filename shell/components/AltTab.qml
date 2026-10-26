@@ -43,19 +43,21 @@ PanelWindow {
         border.color: Theme.lineStrong
         opacity: win.shown ? 1 : 0
         ShowBehavior on opacity { ms: 120 }
+        GlowFrame { anchors.fill: parent; travel: false }
         Brackets {}
 
-        Text {
+        DecodeText {
             x: win.pad; y: 14
             text: "SWITCH WINDOW"
             color: Theme.dim
-            font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 2.4
+            font.family: Theme.mono; font.pixelSize: Theme.size.sm; font.letterSpacing: 2.4
         }
         Text {
             anchors.right: parent.right; anchors.rightMargin: win.pad; y: 14
             text: (AltTabState.index + 1) + " / " + AltTabState.items.length
             color: Theme.dim
-            font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 2
+            font.family: Theme.mono; font.pixelSize: Theme.size.sm; font.letterSpacing: 2
+            font.features: Theme.tnum
         }
 
         Grid {
@@ -100,12 +102,12 @@ PanelWindow {
                             fillMode: Image.PreserveAspectFit
                             asynchronous: true
                         }
-                        Text {   // letter fallback when no icon resolves
+                        IconBadge {   // letter fallback when no icon resolves
                             anchors.centerIn: parent
                             visible: tile.iconSrc === "" || img.status === Image.Error
-                            text: ((tile.de && tile.de.name) || tile.title || tile.appId || "?").charAt(0).toUpperCase()
-                            color: tile.sel ? Theme.accent : Theme.fg
-                            font.family: Theme.display; font.pixelSize: 26
+                            size: 56
+                            letter: ((tile.de && tile.de.name) || tile.title || tile.appId || "?").charAt(0).toUpperCase()
+                            active: tile.sel
                         }
                     }
                     Text {

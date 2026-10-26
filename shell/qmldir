@@ -15,3 +15,7 @@ singleton Frames 1.0 Frames.qml
 singleton AppSearch 1.0 AppSearch.qml
 singleton AltTabState 1.0 AltTabState.qml
 ShowBehavior 1.0 ShowBehavior.qml
+singleton Fx 1.0 Fx.qml
+singleton AudioLevel 1.0 AudioLevel.qml
+singleton UiSounds 1.0 UiSounds.qml
+singleton SysStats 1.0 SysStats.qml

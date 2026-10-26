@@ -51,7 +51,35 @@ Scope {
         if (!root.envSuspend) Config.suspendAfter = a.suspendAfter;
         if (!root.envSuspendAC) Config.suspendOnAC = a.suspendOnAC;
         Frames.set(Frames.clean(a.frames));
+        root.applyFx(a);
         root.applyRailNews();
+    }
+
+    // ---- effects block: edge glow, decode text, wallpaper reaction, status block, UI sounds ----
+    // (self-contained; the fields are the adapter's "effects" properties below)
+    function applyFx(a) {
+        Config.edgeGlow = ["off", "still", "travel"].indexOf(a.edgeGlow) >= 0 ? a.edgeGlow : "travel";
+        Config.decodeText = a.decodeText !== false;
+        const r = a.wallpaperReact || {};
+        Config.reactPointer = r.pointer !== false;
+        Config.reactAudio = r.audio !== false;
+        Config.reactWorkspace = r.workspace !== false;
+        Config.statusStyle = a.statusStyle === "graph" ? "graph" : "classic";
+        Config.clockRing = a.clockRing === true;
+        Config.uiSounds = a.uiSounds === true;
+        Config.uiSoundVolume = Math.max(0, Math.min(100, Math.round(a.uiSoundVolume)));
+    }
+    function pushFx(a) {
+        let changed = false;
+        const r = { pointer: Config.reactPointer, audio: Config.reactAudio, workspace: Config.reactWorkspace };
+        if (a.edgeGlow !== Config.edgeGlow) { a.edgeGlow = Config.edgeGlow; changed = true; }
+        if (a.decodeText !== Config.decodeText) { a.decodeText = Config.decodeText; changed = true; }
+        if (JSON.stringify(a.wallpaperReact) !== JSON.stringify(r)) { a.wallpaperReact = r; changed = true; }
+        if (a.statusStyle !== Config.statusStyle) { a.statusStyle = Config.statusStyle; changed = true; }
+        if (a.clockRing !== Config.clockRing) { a.clockRing = Config.clockRing; changed = true; }
+        if (a.uiSounds !== Config.uiSounds) { a.uiSounds = Config.uiSounds; changed = true; }
+        if (a.uiSoundVolume !== Config.uiSoundVolume) { a.uiSoundVolume = Config.uiSoundVolume; changed = true; }
+        return changed;
     }
     function applyRailNews() {
         const a = store.adapter;
@@ -99,6 +127,7 @@ Scope {
         if (!root.envPins && JSON.stringify(a.pins) !== JSON.stringify(Pins.specs)) { a.pins = Pins.specs; changed = true; }
         if (!root.envFeeds && JSON.stringify(a.feeds) !== JSON.stringify(Feeds.urls)) { a.feeds = Feeds.urls; changed = true; }
         if (JSON.stringify(a.frames) !== JSON.stringify(Frames.list)) { a.frames = Frames.list; changed = true; }
+        if (root.pushFx(a)) changed = true;
         if (changed) save.restart();
     }
 
@@ -208,6 +237,18 @@ Scope {
         function onSuspendOnACChanged() { root.push(); }
     }
 
+    Connections {   // effects block
+        target: Config
+        function onEdgeGlowChanged() { root.push(); }
+        function onDecodeTextChanged() { root.push(); }
+        function onReactPointerChanged() { root.push(); }
+        function onReactAudioChanged() { root.push(); }
+        function onReactWorkspaceChanged() { root.push(); }
+        function onStatusStyleChanged() { root.push(); }
+        function onClockRingChanged() { root.push(); }
+        function onUiSoundsChanged() { root.push(); }
+        function onUiSoundVolumeChanged() { root.push(); }
+    }
     Connections {
         target: Pins
         function onSpecsChanged() { root.push(); }
@@ -266,6 +307,14 @@ Scope {
             property var pinsOffered: []   // Pins.laterIds already put into this rail once
             property var feeds: ["https://meowops.net/feed.xml"]   // news ticker feeds; [] = built-in headlines
             property var frames: []   // photo frames on the desktop (see Frames.qml)
+            // effects block (Config: edgeGlow ... uiSoundVolume)
+            property string edgeGlow: "travel"   // off | still | travel
+            property bool decodeText: true
+            property var wallpaperReact: ({ pointer: true, audio: true, workspace: true })
+            property string statusStyle: "classic"   // classic | graph
+            property bool clockRing: false
+            property bool uiSounds: false
+            property int uiSoundVolume: 40
         }
     }
 }

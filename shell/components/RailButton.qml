@@ -10,9 +10,10 @@ Item {
     property string appId: "games"
     property string label: "GAMES"
     property bool on: false
+    property bool focused: false   // its window is the active one: the rail's sliding marker sits here instead of the bar
     property bool missing: false   // no candidate app installed
     property int badge: 0          // unread-style count tag on the icon (MAILER); hidden at 0
-    // Pinned desktop apps: themed icon (URL from Icons.path) drawn inside a chamfered frame like the WINDOWS list;
+    // Pinned desktop apps: themed icon (URL from Icons.path) drawn inside an IconBadge (hex or chamfer, like the launcher and Alt-Tab);
     // `letter` is the fallback when it does not resolve. Built-ins leave `iconSrc` and `letter` empty.
     property string iconSrc: ""
     property string letter: ""
@@ -84,7 +85,7 @@ Item {
         x: -6
         anchors.verticalCenter: parent.verticalCenter
         width: 3
-        height: root.on ? parent.height - 24 : 0
+        height: root.on && !root.focused ? parent.height - 24 : 0
         color: Theme.accent
         visible: height > 0
         Behavior on height { NumberAnimation { duration: Config.dur(220); easing.type: Easing.OutCubic } }
@@ -120,44 +121,17 @@ Item {
                 angle: Config.motion && Config.railSpin !== "off" ? root.spinAngle : 0
             }
         }
-        Item {   // pinned desktop app: themed icon in the Altimit chamfer frame (same cut as WindowList)
+        Item {   // pinned desktop app: themed icon in the IconBadge
             id: frame
             visible: root.framed
             anchors.horizontalCenter: parent.horizontalCenter
             width: 30; height: 30
-            Shape {
+            IconBadge {
                 anchors.fill: parent
-                preferredRendererType: Shape.CurveRenderer
-                ShapePath {
-                    strokeWidth: 1
-                    strokeColor: root.on ? Theme.accent : Theme.lineStrong
-                    fillColor: root.on ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.10) : "transparent"
-                    joinStyle: ShapePath.MiterJoin
-                    startX: 0.5; startY: 0.5
-                    PathLine { x: 24.5; y: 0.5 }
-                    PathLine { x: 29.5; y: 5.5 }
-                    PathLine { x: 29.5; y: 29.5 }
-                    PathLine { x: 5.5; y: 29.5 }
-                    PathLine { x: 0.5; y: 24.5 }
-                    PathLine { x: 0.5; y: 0.5 }
-                }
-            }
-            Image {
-                id: img
-                anchors.centerIn: parent
-                width: 20; height: 20
-                visible: root.iconSrc !== "" && status !== Image.Error
-                source: root.iconSrc
-                sourceSize: Qt.size(40, 40)
-                fillMode: Image.PreserveAspectFit
-                asynchronous: true
-            }
-            Text {
-                anchors.centerIn: parent
-                visible: root.iconSrc === "" || img.status === Image.Error
-                text: root.letter
-                color: Theme.fg
-                font.family: Theme.display; font.pixelSize: 12
+                size: 30
+                letter: root.letter
+                iconSrc: root.iconSrc
+                active: root.on
             }
         }
         Text {

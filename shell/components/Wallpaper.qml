@@ -4,7 +4,8 @@
 // seeded PRNG, so the picture matches the mockup. Also hosts the Wordmark and the photo frames.
 //
 // Cost control: WallpaperArt draws the moving parts on the GPU and the still parts once.
-// Nothing runs when motion is off, or while a fullscreen window covers this screen.
+// Nothing runs when motion is off, or while a fullscreen window covers this screen (that includes the
+// pointer / audio / window-change reactions of the shards, see WallpaperArt.qml).
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
@@ -24,7 +25,20 @@ PanelWindow {
     readonly property bool covered: Config.isCovered(win.screen ? win.screen.name : "")
     readonly property bool picture: Config.wallpaper !== "" && pic.status !== Image.Error
     WallpaperArt { id: cv; anchors.fill: parent; visible: !win.picture; active: win.visible && !win.picture && !win.covered && !Config.desktopPaused
-                   animate: Config.motion && Config.wallpaperMotion }
+                   animate: Config.motion && Config.wallpaperMotion
+                   reactPointer: Config.reactPointer; reactAudio: Config.reactAudio }
+    // Reactive shards (settings: Appearance > Effects). The position is only stored; the art reads it
+    // on its own step. A picture wallpaper has nothing to react.
+    HoverHandler {
+        enabled: cv.running && Config.reactPointer
+        onPointChanged: { cv.rawX = point.position.x; cv.rawY = point.position.y; }
+        onHoveredChanged: if (!hovered) { cv.rawX = -1; cv.rawY = -1; }
+    }
+    Connections {   // Ultimit has no workspaces: the active window changing stands in for a switch
+        target: ToplevelManager
+        enabled: Config.reactWorkspace
+        function onActiveToplevelChanged() { cv.kick(); }
+    }
     Image {
         id: pic
         anchors.fill: parent

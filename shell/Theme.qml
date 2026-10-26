@@ -206,6 +206,14 @@ Singleton {
         return "#" + [v[0], v[1], v[2], Math.round(v[3] * 255)].map(n => n.toString(16).padStart(2, "0")).join("");
     }
 
+    // ---- spacing and type scale ----
+    // Components read these instead of bare numbers: space(n) is n steps of a 4 px grid
+    // (space(2) = 8), size.* the pixel sizes of text. Changing numbers (clocks, rates, counters)
+    // use tabular digits, `font.features: Theme.tnum`, so they don't jitter as the digits change.
+    function space(n) { return n * 4; }
+    readonly property var size: ({ xs: 9, sm: 10, md: 12, lg: 13, xl: 26 })
+    readonly property var tnum: ({ "tnum": 1 })
+
     // Display name used in captions, e.g. "MINE"
     readonly property string skinLabel: skin.toUpperCase()
 }
