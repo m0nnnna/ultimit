@@ -113,19 +113,61 @@ static void set_layer_blur(struct wlr_scene_buffer *buffer, int sx, int sy, void
 	}
 }
 
+/* panel_blur_exclude: is `ns` one of the listed namespaces (separated by commas or spaces)? */
+static bool blur_excluded(struct ul_server *server, const char *ns) {
+	const char *list = server->config.panel_blur_exclude;
+	size_t len = strlen(ns);
+	while (*list) {
+		list += strspn(list, ", \t");
+		size_t n = strcspn(list, ", \t");
+		if (n == len && n > 0 && strncmp(list, ns, n) == 0) {
+			return true;
+		}
+		list += n;
+	}
+	return false;
+}
+
 /* Glass behind the shell's own panels above the windows (menus, flyouts, launcher,
- * dialogs, the rail and ticker). SceneFX blurs only under pixels that aren't fully
- * transparent, so a panel's invisible click-catcher stays clear. Panels that reserve a
+ * dialogs, the rail and ticker, toasts, OSD). SceneFX blurs only under pixels that aren't
+ * fully transparent, so a panel's invisible click-catcher stays clear. Panels that reserve a
  * screen edge (rail, ticker) only ever have the wallpaper under them and use the cheap
- * cached blur; the rest float over windows and blur what is really there. Other clients'
- * layer surfaces are left alone. */
+ * cached blur; the rest float over windows and blur what is really there. Left out: other
+ * clients' layer surfaces, the full-screen dimming scrims ([effects] panel_blur_exclude:
+ * their translucent black would blur the whole screen), and any screen showing a
+ * fullscreen window, so a toast or the volume OSD over a game costs no blur pass. */
 static void layer_update_blur(struct ul_layer_surface *l) {
 	const char *ns = l->layer_surface->namespace;
+	struct ul_server *server = l->server;
 	struct layer_blur b = {
-		.enabled = !under_glass(l) && ns && strncmp(ns, "ultimit-", 8) == 0,
+		.enabled = server->config.panel_blur && !under_glass(l) &&
+			!(l->output && l->output->panel_blur_off) &&
+			ns && strncmp(ns, "ultimit-", 8) == 0 && !blur_excluded(server, ns),
 		.optimized = l->layer_surface->current.exclusive_zone > 0,
 	};
 	wlr_scene_node_for_each_buffer(&l->scene->tree->node, set_layer_blur, &b);
+}
+
+/* Re-decide the glass of a screen's panels (fullscreen window came or went, config reload). */
+void layer_update_output_blur(struct ul_output *output) {
+	static const enum zwlr_layer_shell_v1_layer layers[] = {
+		ZWLR_LAYER_SHELL_V1_LAYER_TOP, ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY,
+	};
+	for (size_t i = 0; i < 2; i++) {
+		struct ul_layer_surface *l;
+		wl_list_for_each(l, &output->layer_surfaces[layers[i]], link) {
+			if (l->mapped) {
+				layer_update_blur(l);
+			}
+		}
+	}
+}
+
+void layer_update_all_blur(struct ul_server *server) {
+	struct ul_output *output;
+	wl_list_for_each(output, &server->outputs, link) {
+		layer_update_output_blur(output);
+	}
 }
 
 static void layer_map(struct wl_listener *listener, void *data) {

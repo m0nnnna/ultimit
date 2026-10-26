@@ -16,7 +16,22 @@
  *                                 decimals (0.4) of the screen, 10-90%;
  *                                 the first is also the drag-to-edge width
  *
- * Missing file or keys fall back to these defaults.
+ *   [effects]
+ *   panel_blur = true             frosted glass behind the shell's translucent panels
+ *                                 (rail, ticker, flyouts, menus, launcher, toasts, OSD:
+ *                                 top and overlay layer surfaces named ultimit-*); never
+ *                                 over a screen with a fullscreen window
+ *   panel_blur_exclude = ultimit-boot, ultimit-dim, ultimit-polkit, ultimit-agents,
+ *                        ultimit-shortcuts
+ *                                 layer namespaces left unblurred: full-screen dimming
+ *                                 scrims would otherwise blur the whole screen
+ *   focus_glow = true             soft accent glow around the focused window's frame
+ *   focus_brackets = true         the focused window gets all four [ ] corner marks
+ *   close_animation = true        a closing window collapses into its accent line
+ *   minimize_animation = true     minimize/restore shrink into / grow out of the rail
+ *
+ * The focus fade and the animations also follow ULTIMIT_ANIMATIONS=0 and the shell's
+ * motion setting. Missing file or keys fall back to these defaults.
  */
 
 #include <ctype.h>
@@ -53,6 +68,12 @@ static void set_defaults(struct ul_config *c) {
 		.numlock = true,
 		.snap_widths = { 1.0 / 2, 1.0 / 3, 2.0 / 3 },
 		.snap_count = 3,
+		.panel_blur = true,
+		.panel_blur_exclude = "ultimit-boot, ultimit-dim, ultimit-polkit, ultimit-agents, ultimit-shortcuts",
+		.focus_glow = true,
+		.focus_brackets = true,
+		.close_anim = true,
+		.minimize_anim = true,
 	};
 	snprintf(c->layout, sizeof(c->layout), "us");
 }
@@ -136,6 +157,14 @@ void config_load(struct ul_server *server) {
 			else if (strcmp(key, "numlock") == 0) c->numlock = parse_bool(val);
 		} else if (strcmp(section, "windows") == 0) {
 			if (strcmp(key, "snap_widths") == 0) parse_snap_widths(c, val);
+		} else if (strcmp(section, "effects") == 0) {
+			if (strcmp(key, "panel_blur") == 0) c->panel_blur = parse_bool(val);
+			else if (strcmp(key, "panel_blur_exclude") == 0)
+				snprintf(c->panel_blur_exclude, sizeof(c->panel_blur_exclude), "%s", val);
+			else if (strcmp(key, "focus_glow") == 0) c->focus_glow = parse_bool(val);
+			else if (strcmp(key, "focus_brackets") == 0) c->focus_brackets = parse_bool(val);
+			else if (strcmp(key, "close_animation") == 0) c->close_anim = parse_bool(val);
+			else if (strcmp(key, "minimize_animation") == 0) c->minimize_anim = parse_bool(val);
 		}
 	}
 	fclose(f);
@@ -212,6 +241,8 @@ void config_reload(struct ul_server *server) {
 		config_apply_pointer(server, p->device);
 	}
 	input_reapply_keyboards(server);
+	layer_update_all_blur(server);
+	decoration_restyle_all(server);
 	wlr_log(WLR_INFO, "Config reloaded (tap=%d natural_scroll=%d layout=%s snap_widths=%d)",
 		server->config.tap, server->config.natural_scroll, server->config.layout,
 		server->config.snap_count);

@@ -202,6 +202,11 @@ static void output_frame(struct wl_listener *listener, void *data) {
 	 * they move once per frame at this monitor's rate. */
 	bool moving = anim_frame(output->server);
 	struct ul_view *game = fullscreen_view_on(output);
+	if ((game != NULL) != output->panel_blur_off) {
+		/* No glass over a game: a toast or OSD on top would blur every frame. */
+		output->panel_blur_off = game != NULL;
+		layer_update_output_blur(output);
+	}
 
 	if (wlr_scene_output_needs_frame(scene_output)) {
 		struct wlr_output_state state;

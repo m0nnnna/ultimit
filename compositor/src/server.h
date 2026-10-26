@@ -87,6 +87,13 @@ struct ul_config {
 	bool numlock; /* Num Lock on when a keyboard is plugged in or at login */
 	double snap_widths[UL_SNAP_MAX]; /* widths cycled by repeating Super+Left/Right, of the usable area */
 	int snap_count;                  /* at least 1 */
+	/* [effects] */
+	bool panel_blur;       /* frosted glass behind the shell's panels (layer.c) */
+	char panel_blur_exclude[512]; /* layer namespaces never blurred (full-screen scrims) */
+	bool focus_glow;       /* accent glow around the focused window's frame */
+	bool focus_brackets;   /* the focused window gets all four HUD corner marks */
+	bool close_anim;       /* window close animation */
+	bool minimize_anim;    /* minimize/restore animation toward the rail */
 };
 
 /* One [connector] section of ~/.config/ultimit/displays.conf (config.c),
@@ -278,6 +285,7 @@ struct ul_output {
 	struct wlr_scene_optimized_blur *blur;
 	struct wl_event_source *blur_timer; /* rate-limits refreshing it (output_refresh_blur) */
 	bool blur_pending;
+	bool panel_blur_off; /* a fullscreen window is on this screen: shell panels over it aren't blurred */
 	struct wl_list layer_surfaces[4]; /* ul_layer_surface.link, per zwlr layer */
 
 	struct wl_listener frame;
@@ -466,6 +474,8 @@ void server_update_backdrop(struct ul_server *server);
 /* layer.c */
 void layer_init(struct ul_server *server);
 void layer_arrange(struct ul_output *output);
+void layer_update_output_blur(struct ul_output *output);
+void layer_update_all_blur(struct ul_server *server);
 struct wlr_scene_tree *layer_popup_parent(struct wlr_layer_surface_v1 *layer_surface,
 	int *out_x, int *out_y, struct ul_output **out_output);
 
