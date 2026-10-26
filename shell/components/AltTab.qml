@@ -141,7 +141,7 @@ PanelWindow {
             elide: Text.ElideRight
             text: AltTabState.current ? (AltTabState.current.title || AltTabState.current.app_id) : ""
             color: Theme.accent
-            font.family: Theme.display; font.pixelSize: 11; font.capitalization: Font.SmallCaps
+            font.family: Theme.display; font.pixelSize: Theme.ds(11); font.capitalization: Font.SmallCaps
             font.letterSpacing: 1.2
         }
     }

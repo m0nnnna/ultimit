@@ -368,7 +368,7 @@ FloatingWindow {
 
                     Text {
                         text: "[ CLAUDE ]"
-                        color: Theme.fg; font.family: Theme.display; font.pixelSize: 15; font.letterSpacing: 3
+                        color: Theme.fg; font.family: Theme.display; font.pixelSize: Theme.ds(15); font.letterSpacing: Theme.dt(3)
                     }
                     Text {
                         Layout.fillWidth: true; Layout.topMargin: -6
@@ -502,7 +502,7 @@ FloatingWindow {
                             Text {
                                 width: parent.width; elide: Text.ElideRight
                                 text: win.proj ? win.proj.name.toUpperCase() : ""
-                                color: Theme.fg; font.family: Theme.display; font.pixelSize: 14; font.letterSpacing: 2
+                                color: Theme.fg; font.family: Theme.display; font.pixelSize: Theme.ds(14); font.letterSpacing: Theme.dt(2)
                             }
                             Text {
                                 width: parent.width; elide: Text.ElideMiddle

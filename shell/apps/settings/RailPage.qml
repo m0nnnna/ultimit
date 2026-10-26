@@ -108,7 +108,7 @@ Page {
                         anchors.centerIn: parent
                         visible: ar.modelData.kind === "app" && ar.src === ""
                         text: ar.modelData.name.charAt(0).toUpperCase()
-                        color: Theme.fg; font.family: Theme.display; font.pixelSize: 12
+                        color: Theme.fg; font.family: Theme.display; font.pixelSize: Theme.ds(12)
                     }
                 }
                 Column {

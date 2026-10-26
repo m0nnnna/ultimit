@@ -88,7 +88,7 @@ PanelWindow {
                 id: ttl
                 anchors { left: sq.right; leftMargin: 10; verticalCenter: parent.verticalCenter }
                 text: "KEYBOARD SHORTCUTS"; color: Theme.fg
-                font.family: Theme.display; font.pixelSize: 16; font.letterSpacing: 2
+                font.family: Theme.display; font.pixelSize: Theme.ds(16); font.letterSpacing: Theme.dt(2)
             }
             Text {
                 anchors { right: parent.right; verticalCenter: parent.verticalCenter }

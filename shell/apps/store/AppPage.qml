@@ -45,7 +45,7 @@ Flickable {
                 Text {
                     width: parent.width; elide: Text.ElideRight
                     text: root.a ? root.a.name : ""; color: Theme.fg
-                    font.family: Theme.display; font.pixelSize: 20; font.letterSpacing: 1
+                    font.family: Theme.display; font.pixelSize: Theme.ds(20); font.letterSpacing: Theme.dt(1)
                 }
                 Text {
                     width: parent.width; elide: Text.ElideRight

@@ -22,8 +22,8 @@ Column {
         Text {
             text: "ULTIMIT"
             color: Theme.fg
-            font.family: Theme.display; font.pixelSize: root.wordSize
-            font.letterSpacing: root.wordSize * 0.14
+            font.family: Theme.display; font.pixelSize: Theme.ds(root.wordSize)
+            font.letterSpacing: Theme.dt(root.wordSize * 0.14)
         }
         Text {
             text: "]"

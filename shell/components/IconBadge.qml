@@ -62,6 +62,6 @@ Item {
         visible: !root.hasImage
         text: root.letter
         color: root.textColor
-        font.family: Theme.display; font.pixelSize: Math.round(root.size * 0.4)
+        font.family: Theme.display; font.pixelSize: Theme.ds(Math.round(root.size * 0.4))
     }
 }

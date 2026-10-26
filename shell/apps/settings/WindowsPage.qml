@@ -128,7 +128,7 @@ Page {
             anchors.centerIn: snapped
             text: pg.label(pg.widths[pg.sel] || 0.5)
             color: Theme.fg
-            font.family: Theme.display; font.pixelSize: 18; font.letterSpacing: 1.6
+            font.family: Theme.display; font.pixelSize: Theme.ds(18); font.letterSpacing: Theme.dt(1.6)
         }
     }
 

@@ -38,7 +38,7 @@ Column {
             spacing: 2
             Text {
                 text: ((root.today.getHours() % 12) || 12) + ":" + root.p2(root.today.getMinutes()) + " " + (root.today.getHours() < 12 ? "AM" : "PM")
-                color: Theme.fg; font.family: Theme.display; font.pixelSize: 22
+                color: Theme.fg; font.family: Theme.display; font.pixelSize: Theme.ds(22)
             }
             Text {
                 text: root.days[root.today.getDay()] + "  " + root.today.getFullYear() + "." + root.p2(root.today.getMonth() + 1) + "." + root.p2(root.today.getDate())

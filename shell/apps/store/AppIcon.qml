@@ -24,7 +24,7 @@ Item {
         Text {
             anchors.centerIn: parent
             text: (root.app.name || "?").charAt(0).toUpperCase()
-            color: Theme.accent; font.family: Theme.display; font.pixelSize: root.size * 0.45
+            color: Theme.accent; font.family: Theme.display; font.pixelSize: Theme.ds(root.size * 0.45)
         }
     }
 }

@@ -128,7 +128,7 @@ Item {
             spacing: 14
             Text {
                 text: root.lst ? Disks.fmt(root.lst.size) : ""
-                color: Theme.fg; font.family: Theme.display; font.pixelSize: 20
+                color: Theme.fg; font.family: Theme.display; font.pixelSize: Theme.ds(20)
             }
             Text {
                 anchors.baseline: parent.children[0].baseline
@@ -222,7 +222,7 @@ Item {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: "Scanning…"
-            color: Theme.fg; font.family: Theme.display; font.pixelSize: 16
+            color: Theme.fg; font.family: Theme.display; font.pixelSize: Theme.ds(16)
         }
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
@@ -245,7 +245,7 @@ Item {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: Disks.noCache ? "Not scanned yet" : "See what takes up space"
-            color: Theme.fg; font.family: Theme.display; font.pixelSize: 16
+            color: Theme.fg; font.family: Theme.display; font.pixelSize: Theme.ds(16)
         }
         Text {
             width: parent.width

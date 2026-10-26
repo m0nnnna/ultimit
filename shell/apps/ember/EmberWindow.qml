@@ -234,7 +234,7 @@ FloatingWindow {
                     Text {
                         Layout.alignment: Qt.AlignHCenter
                         text: "[ EMBER ]"
-                        color: Theme.fg; font.family: Theme.display; font.pixelSize: 15; font.letterSpacing: 3
+                        color: Theme.fg; font.family: Theme.display; font.pixelSize: Theme.ds(15); font.letterSpacing: Theme.dt(3)
                     }
                     Text {
                         Layout.alignment: Qt.AlignHCenter; Layout.topMargin: -4
@@ -327,7 +327,7 @@ FloatingWindow {
                         x: 18; anchors.verticalCenter: parent.verticalCenter
                         width: parent.width - headBtns.width - 50; elide: Text.ElideRight
                         text: (win.chatTitle !== "" ? win.chatTitle : "New chat").toUpperCase()
-                        color: Theme.fg; font.family: Theme.display; font.pixelSize: 13; font.letterSpacing: 2
+                        color: Theme.fg; font.family: Theme.display; font.pixelSize: Theme.ds(13); font.letterSpacing: Theme.dt(2)
                     }
                     Row {
                         id: headBtns

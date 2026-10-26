@@ -190,11 +190,19 @@ Singleton {
         return (e && e in root.fontSets) ? e : "neo";
     }
     readonly property var fontSets: ({
-        "hud":   { n: "HUD",   display: "Michroma",      ui: "Chakra Petch", mono: "Share Tech Mono" },
-        "neo":   { n: "Neo",   display: "Oxanium",       ui: "Saira",        mono: "JetBrains Mono" },
-        "clean": { n: "Clean", display: "Space Grotesk", ui: "Inter",        mono: "JetBrains Mono" }
+        "hud":   { n: "HUD",   display: "Michroma",      scale: 1.0,  track: 1.0, trackAdd: 0,   ui: "Chakra Petch", mono: "Share Tech Mono" },
+        "neo":   { n: "Neo",   display: "Oxanium",       scale: 1.15, track: 1.2, trackAdd: 0.6, ui: "Saira",        mono: "JetBrains Mono" },
+        "clean": { n: "Clean", display: "Space Grotesk", scale: 1.1,  track: 1.0, trackAdd: 0.4, ui: "Inter",        mono: "JetBrains Mono" }
     })
     readonly property string display: fontSets[fontSet].display
+    // Michroma is very wide; the call sites of Theme.display were sized for it. ds() scales a
+    // display pixel size and dt() a display letter spacing per set, so Oxanium / Space Grotesk
+    // keep the HUD weight instead of looking small or cramped (hud: both unchanged).
+    readonly property real displayScale: fontSets[fontSet].scale
+    readonly property real displayTracking: fontSets[fontSet].track
+    readonly property real displayTrackingAdd: fontSets[fontSet].trackAdd
+    function ds(px) { return Math.round(px * displayScale); }
+    function dt(sp) { return sp * displayTracking + (sp > 0 ? displayTrackingAdd : 0); }
     readonly property string ui: fontSets[fontSet].ui
     readonly property string mono: fontSets[fontSet].mono
 

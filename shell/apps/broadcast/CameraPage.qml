@@ -91,7 +91,7 @@ Flickable {
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: Broadcast.camStarting ? "Starting the camera engine…" : (root.on ? "Waiting for the picture…" : "Camera is off")
-                        color: Theme.fg; font.family: Theme.display; font.pixelSize: 14; font.letterSpacing: 1
+                        color: Theme.fg; font.family: Theme.display; font.pixelSize: Theme.ds(14); font.letterSpacing: Theme.dt(1)
                     }
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter

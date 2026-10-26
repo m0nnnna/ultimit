@@ -174,8 +174,8 @@ Scope {
                         text: "[ ULTIMIT ]"
                         color: "#e9edf2"
                         font.family: Theme.display
-                        font.pixelSize: 30
-                        font.letterSpacing: 6   // .2em
+                        font.pixelSize: Theme.ds(30)
+                        font.letterSpacing: Theme.dt(6)  // .2em
                         opacity: Config.motion ? Math.max(0, Math.min(1, (boot.elapsed - 1100) / 600)) : 1
                     }
                     Text {

@@ -30,7 +30,7 @@ Column {
                 spacing: 8
                 Text {
                     text: SysState.battPct; color: root.tone
-                    font.family: Theme.display; font.pixelSize: 26
+                    font.family: Theme.display; font.pixelSize: Theme.ds(26)
                 }
                 Text {
                     anchors.baseline: parent.children[0].baseline

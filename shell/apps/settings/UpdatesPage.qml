@@ -174,7 +174,7 @@ Page {
                         : pg.total === 0 ? "Up to date"
                         : pg.total + (pg.total === 1 ? " update" : " updates") + (pg.security > 0 ? " · " + pg.security + " security" : "")
                     color: Theme.fg
-                    font.family: Theme.display; font.pixelSize: 14; font.letterSpacing: 1
+                    font.family: Theme.display; font.pixelSize: Theme.ds(14); font.letterSpacing: Theme.dt(1)
                 }
                 ChamferButton {
                     visible: st.helper === true

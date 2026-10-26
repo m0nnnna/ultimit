@@ -87,7 +87,7 @@ Row {
                 Text {
                     anchors.centerIn: parent
                     text: (ent.tip || "?").charAt(0).toUpperCase()
-                    color: Theme.fg; font.family: Theme.display; font.pixelSize: 8
+                    color: Theme.fg; font.family: Theme.display; font.pixelSize: Theme.ds(8)
                 }
             }
             Rectangle {   // needs-attention marker

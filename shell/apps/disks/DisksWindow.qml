@@ -137,7 +137,7 @@ FloatingWindow {
                             Text {
                                 width: parent.width; elide: Text.ElideRight
                                 text: win.d ? win.d.name : ""
-                                color: Theme.fg; font.family: Theme.display; font.pixelSize: 18
+                                color: Theme.fg; font.family: Theme.display; font.pixelSize: Theme.ds(18)
                             }
                             Row {
                                 spacing: 8
@@ -274,7 +274,7 @@ FloatingWindow {
                             spacing: 10
                             Text {
                                 text: "Unallocated space"
-                                color: Theme.fg; font.family: Theme.display; font.pixelSize: 16
+                                color: Theme.fg; font.family: Theme.display; font.pixelSize: Theme.ds(16)
                             }
                             Text {
                                 width: parent.width; wrapMode: Text.WordWrap
@@ -307,7 +307,7 @@ FloatingWindow {
                                 spacing: 10
                                 Text {
                                     text: win.v ? Disks.volName(win.v) : ""
-                                    color: Theme.fg; font.family: Theme.display; font.pixelSize: 16
+                                    color: Theme.fg; font.family: Theme.display; font.pixelSize: Theme.ds(16)
                                 }
                                 GChip { visible: !!(win.v && win.v.fs_name !== ""); text: win.v ? win.v.fs_name : ""; anchors.verticalCenter: parent.verticalCenter }
                                 GChip { visible: !!(win.v && win.v.mounted); text: "Mounted"; tone: Theme.ok; anchors.verticalCenter: parent.verticalCenter }

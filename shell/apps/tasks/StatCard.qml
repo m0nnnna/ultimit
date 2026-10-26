@@ -23,7 +23,7 @@ Rectangle {
             anchors { right: parent.right; verticalCenter: parent.verticalCenter }
             text: root.value
             color: root.tone
-            font.family: Theme.display; font.pixelSize: 16
+            font.family: Theme.display; font.pixelSize: Theme.ds(16)
         }
     }
     Text {

@@ -26,7 +26,7 @@ Item {
             Text {
                 text: root.title.toUpperCase()
                 color: Theme.fg
-                font.family: Theme.display; font.pixelSize: 15
+                font.family: Theme.display; font.pixelSize: Theme.ds(15)
                 font.letterSpacing: 2.4
             }
             Text {

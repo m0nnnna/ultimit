@@ -69,7 +69,7 @@ WlSessionLockSurface {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: ((surf.now.getHours() % 12) || 12) + ":" + surf.p2(surf.now.getMinutes()) + (surf.now.getHours() < 12 ? " AM" : " PM")
                 color: Theme.fg
-                font.family: Theme.display; font.pixelSize: 104 * surf.u; font.letterSpacing: 6 * surf.u
+                font.family: Theme.display; font.pixelSize: Theme.ds(104 * surf.u); font.letterSpacing: Theme.dt(6 * surf.u)
                 font.features: { "tnum": 1 }
             }
             Text {

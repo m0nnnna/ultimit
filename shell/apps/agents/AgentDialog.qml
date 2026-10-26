@@ -131,7 +131,7 @@ PanelWindow {
             Text {
                 text: win.title
                 color: Theme.accent
-                font.family: Theme.display; font.pixelSize: 13; font.letterSpacing: 2
+                font.family: Theme.display; font.pixelSize: Theme.ds(13); font.letterSpacing: Theme.dt(2)
             }
             Rectangle { Layout.fillWidth: true; height: 1; color: Theme.line }
 

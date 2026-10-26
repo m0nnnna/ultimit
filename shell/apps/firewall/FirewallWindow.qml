@@ -232,7 +232,7 @@ FloatingWindow {
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: "Nothing blocked recently"
                         color: Theme.fg
-                        font.family: Theme.display; font.pixelSize: 16; font.letterSpacing: 0.5
+                        font.family: Theme.display; font.pixelSize: Theme.ds(16); font.letterSpacing: Theme.dt(0.5)
                     }
                     Text {
                         width: Math.min(parent.width, 480)
@@ -266,7 +266,7 @@ FloatingWindow {
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: "No rules yet"
                         color: Theme.fg
-                        font.family: Theme.display; font.pixelSize: 16; font.letterSpacing: 0.5
+                        font.family: Theme.display; font.pixelSize: Theme.ds(16); font.letterSpacing: Theme.dt(0.5)
                     }
                     Text {
                         width: Math.min(parent.width, 460)

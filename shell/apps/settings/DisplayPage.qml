@@ -329,7 +329,7 @@ Item {
                 Text {
                     anchors.centerIn: parent; anchors.verticalCenterOffset: -14
                     text: idw.o ? idw.o.num : "?"
-                    color: Theme.accent; font.family: Theme.display; font.pixelSize: 110
+                    color: Theme.accent; font.family: Theme.display; font.pixelSize: Theme.ds(110)
                 }
                 Text {
                     anchors { bottom: parent.bottom; bottomMargin: 14; horizontalCenter: parent.horizontalCenter }
@@ -389,7 +389,7 @@ Item {
                     Text {
                         anchors.centerIn: parent; anchors.verticalCenterOffset: -6
                         text: mon.o.num; color: mon.cur ? Theme.accent : Theme.fg
-                        font.family: Theme.display; font.pixelSize: Math.max(14, Math.min(42, mon.height * 0.4))
+                        font.family: Theme.display; font.pixelSize: Theme.ds(Math.max(14, Math.min(42, mon.height * 0.4)))
                     }
                     Text {
                         anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 4 }
@@ -615,7 +615,7 @@ Item {
                 spacing: 14
                 Text {
                     text: "KEEP THESE SETTINGS?"
-                    color: Theme.fg; font.family: Theme.display; font.pixelSize: 14; font.letterSpacing: 2
+                    color: Theme.fg; font.family: Theme.display; font.pixelSize: Theme.ds(14); font.letterSpacing: Theme.dt(2)
                 }
                 Text {
                     Layout.fillWidth: true

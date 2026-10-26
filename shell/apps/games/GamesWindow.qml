@@ -161,7 +161,7 @@ FloatingWindow {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: "No games yet"
                     color: Theme.fg
-                    font.family: Theme.display; font.pixelSize: 16; font.letterSpacing: 0.5
+                    font.family: Theme.display; font.pixelSize: Theme.ds(16); font.letterSpacing: Theme.dt(0.5)
                 }
                 Text {
                     width: parent.width
@@ -372,7 +372,7 @@ FloatingWindow {
                             text: win.sel ? win.sel.name : ""
                             color: Theme.fg
                             wrapMode: Text.WordWrap
-                            font.family: Theme.display; font.pixelSize: 16; font.letterSpacing: 0.5
+                            font.family: Theme.display; font.pixelSize: Theme.ds(16); font.letterSpacing: Theme.dt(0.5)
                         }
                         Flow {
                             width: parent.width; spacing: 8
