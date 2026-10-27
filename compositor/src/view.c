@@ -405,10 +405,18 @@ void view_set_maximized(struct ul_view *view, bool maximized) {
 }
 
 static void set_backdrop_blur(struct wlr_scene_buffer *buffer, int sx, int sy, void *data) {
-	bool *enabled = data;
-	if (wlr_scene_surface_try_from_buffer(buffer)) {
-		wlr_scene_buffer_set_backdrop_blur(buffer, *enabled);
-		wlr_scene_buffer_set_backdrop_blur_optimized(buffer, *enabled);
+	bool enabled = *(bool *)data;
+	struct wlr_scene_surface *scene_surface = wlr_scene_surface_try_from_buffer(buffer);
+	if (scene_surface) {
+		/* Popups (menus, tooltips) hang under the window's tree but draw their own shadow
+		 * margin (Chromium's menus are rounded with a soft transparent border): glass there
+		 * comes out as a blurred halo around the menu. */
+		struct wlr_surface *root = wlr_surface_get_root_surface(scene_surface->surface);
+		if (wlr_xdg_popup_try_from_wlr_surface(root)) {
+			enabled = false;
+		}
+		wlr_scene_buffer_set_backdrop_blur(buffer, enabled);
+		wlr_scene_buffer_set_backdrop_blur_optimized(buffer, enabled);
 	}
 }
 
