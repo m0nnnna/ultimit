@@ -1,0 +1,326 @@
+// ultimit.script - Ultimit boot splash. Generated from ultimit.script.in by build-plymouth.py;
+// geometry is documented at the top of build-plymouth.py (same as shell/Boot.qml).
+// Plymouth script rules used here: functions use `fun`, every temporary is `local.x` (plain
+// names are GLOBAL), images/sprites are made once at start, the refresh callback runs ~50x/s.
+
+EMB = @@EMB@@;  EMB_GAP = @@EMB_GAP@@;  WM_H = @@WM_H@@;  LINE_GAP = @@LINE_GAP@@;
+LINE_W = @@LINE_W@@;  LINE_H = @@LINE_H@@;  GLOW = @@GLOW@@;
+NFRAMES = @@NFRAMES@@;  HZ = 50;
+DRAW_T = @@DRAW_T@@;  WM_T0 = @@WM_T0@@;  WM_T1 = @@WM_T1@@;  LINE_T0 = @@LINE_T0@@;  BREATH_T = @@BREATH_T@@;
+INPUT_W = @@INPUT_W@@;  BULLET_PITCH = @@BULLET_PITCH@@;  MAX_BULLETS = @@MAX_BULLETS@@;  BULLET_D = @@BULLET_D@@;
+CELL_W2 = @@CELL_W2@@;  CELL_H2 = @@CELL_H2@@;  MAXCH = @@MAXCH@@;
+PI2 = 6.28318531;
+charset = "@@CHARSET@@";
+
+Window.SetBackgroundTopColor(0, 0, 0);
+Window.SetBackgroundBottomColor(0, 0, 0);
+
+// ---------------------------------------------------------------- monitors
+nheads = 0;
+while (nheads < 8 && Window.GetWidth(nheads) > 0) {
+    nheads = nheads + 1;
+}
+if (nheads < 1) {
+    nheads = 1;
+}
+
+// shared source images (2x)
+line_src = Image("line.png");
+track_src = Image("track.png");
+gmid_src = Image("glow-mid.png");
+glow_l_src = Image("glow-l.png");
+glow_r_src = Image("glow-r.png");
+bullet_src = Image("bullet.png");
+wordmark_src = Image("wordmark.png");
+glow_src = Image("glow.png");
+
+// character -> glyph index
+for (local.k = 0; local.k < charset.Length(); local.k++) {
+    cmap_has["k" + charset.CharAt(local.k)] = 1;
+    cmap["k" + charset.CharAt(local.k)] = local.k;
+}
+
+for (local.i = 0; local.i < nheads; local.i++) {
+    local.hx = Window.GetX(local.i);
+    local.hy = Window.GetY(local.i);
+    local.hw = Window.GetWidth(local.i);
+    local.hh = Window.GetHeight(local.i);
+    local.s = 1;
+    if (local.hh >= 2000) {
+        local.s = 2;
+    }
+    h_s[local.i] = local.s;
+    h_x[local.i] = local.hx;
+    h_y[local.i] = local.hy;
+    h_w[local.i] = local.hw;
+    h_h[local.i] = local.hh;
+    local.cx = local.hx + Math.Int(local.hw / 2);
+    local.cy = local.hy + Math.Int(local.hh / 2);
+    h_cx[local.i] = local.cx;
+    h_cy[local.i] = local.cy;
+
+    // emblem frames, scaled from 2x to this monitor
+    local.es = EMB * local.s;
+    for (local.f = 0; local.f < NFRAMES; local.f++) {
+        local.im = Image("emblem-" + local.f + ".png");
+        emb_img[local.i * 64 + local.f] = local.im.Scale(local.es, local.es);
+    }
+    emb[local.i] = Sprite();
+    emb[local.i].SetImage(emb_img[local.i * 64]);
+    emb[local.i].SetPosition(local.cx - Math.Int(local.es / 2), local.cy - Math.Int(local.es / 2), 20);
+
+    local.gs = Math.Int(@@GLOW_PX2@@ * local.s / 2);
+    local.gim = glow_src.Scale(local.gs, local.gs);
+    glow[local.i] = Sprite(local.gim);
+    glow[local.i].SetPosition(local.cx - Math.Int(local.gs / 2), local.cy - Math.Int(local.gs / 2), 10);
+    glow[local.i].SetOpacity(0);
+
+    // wordmark: top = centre.y + EMB/2 + EMB_GAP
+    local.wmw = Math.Int(@@WM_W2@@ * local.s / 2);
+    local.wmh = Math.Int(@@WM_H2@@ * local.s / 2);
+    local.wim = wordmark_src.Scale(local.wmw, local.wmh);
+    wm[local.i] = Sprite(local.wim);
+    wm[local.i].SetPosition(local.cx - Math.Int(local.wmw / 2), local.cy + Math.Int((EMB / 2 + EMB_GAP) * local.s), 20);
+    wm[local.i].SetOpacity(0);
+
+    // progress line
+    local.ly = local.cy + Math.Int((EMB / 2 + EMB_GAP + WM_H + LINE_GAP) * local.s);
+    h_ly[local.i] = local.ly;
+    local.tim = track_src.Scale(LINE_W * local.s, LINE_H * local.s);
+    track[local.i] = Sprite(local.tim);
+    track[local.i].SetPosition(local.cx - Math.Int(LINE_W * local.s / 2), local.ly, 15);
+    track[local.i].SetOpacity(0);
+    core[local.i] = Sprite();
+    core[local.i].SetOpacity(0);
+    gmid[local.i] = Sprite();
+    gmid[local.i].SetOpacity(0);
+    local.gw = GLOW * local.s;
+    local.gh = (LINE_H + 2 * GLOW) * local.s;
+    glc_l[local.i] = Sprite(glow_l_src.Scale(local.gw, local.gh));
+    glc_r[local.i] = Sprite(glow_r_src.Scale(local.gw, local.gh));
+    glc_l[local.i].SetOpacity(0);
+    glc_r[local.i].SetOpacity(0);
+    h_lw[local.i] = -1;
+
+    // password prompt / question / message sprites (hidden until used)
+    ibox[local.i] = Sprite(line_src.Scale(INPUT_W * local.s, LINE_H * local.s));
+    ibox[local.i].SetOpacity(0);
+    iglow[local.i] = Sprite(gmid_src.Scale(INPUT_W * local.s, local.gh));
+    iglow[local.i].SetOpacity(0);
+    local.bs = BULLET_D * local.s;
+    for (local.k = 0; local.k < MAX_BULLETS; local.k++) {
+        bul[local.i * 32 + local.k] = Sprite(bullet_src.Scale(local.bs, local.bs));
+        bul[local.i * 32 + local.k].SetOpacity(0);
+    }
+    for (local.k = 0; local.k < MAXCH; local.k++) {
+        ptx[local.i * MAXCH + local.k] = Sprite();
+        etx[local.i * MAXCH + local.k] = Sprite();
+        mtx[local.i * MAXCH + local.k] = Sprite();
+    }
+}
+
+// ---------------------------------------------------------------- text from the glyph atlas
+fun glyph(sc, idx, dim) {
+    local.key = "g" + sc + "_" + dim + "_" + idx;
+    if (gc_has[local.key] != 1) {
+        local.pre = "g";
+        if (dim == 1) {
+            local.pre = "d";
+        }
+        local.im = Image(local.pre + idx + ".png");
+        gc[local.key] = local.im.Scale(Math.Int(CELL_W2 * sc / 2), Math.Int(CELL_H2 * sc / 2));
+        gc_has[local.key] = 1;
+    }
+    return gc[local.key];
+}
+
+// Draws `str` centred on head hd at top y `ytop` (px, already scaled) using sprite list sp.
+fun set_text(sp, hd, str, dim, ytop) {
+    local.n = str.Length();
+    if (local.n > MAXCH) {
+        local.n = MAXCH;
+    }
+    local.sc = h_s[hd];
+    local.cw = Math.Int(CELL_W2 * local.sc / 2);
+    local.x0 = h_cx[hd] - Math.Int(local.n * local.cw / 2);
+    for (local.k = 0; local.k < MAXCH; local.k++) {
+        local.spr = sp[hd * MAXCH + local.k];
+        local.show = 0;
+        if (local.k < local.n) {
+            local.c = str.CharAt(local.k);
+            if (cmap_has["k" + local.c] == 1) {
+                local.spr.SetImage(glyph(local.sc, cmap["k" + local.c], dim));
+                local.spr.SetPosition(local.x0 + local.k * local.cw, ytop, 30);
+                local.show = 1;
+            }
+        }
+        local.spr.SetOpacity(local.show);
+    }
+}
+
+// ---------------------------------------------------------------- UI state (prompt / messages)
+ui_mode = 0;          // 0 = splash only, 1 = password, 2 = question
+pw_prompt = "";
+pw_bullets = 0;
+q_prompt = "";
+q_entry = "";
+msg_text = "";
+
+fun apply_ui() {
+    for (local.i = 0; local.i < nheads; local.i++) {
+        local.sc = h_s[local.i];
+        local.py = h_ly[local.i] + Math.Int((LINE_H + 40) * local.sc);
+        local.iy = local.py + Math.Int((CELL_H2 / 2 + 20) * local.sc);
+        local.on = 0;
+        if (ui_mode != 0) {
+            local.on = 1;
+        }
+        if (ui_mode == 1) {
+            set_text(ptx, local.i, pw_prompt, 0, local.py);
+            set_text(etx, local.i, "", 0, local.py);
+        } else if (ui_mode == 2) {
+            set_text(ptx, local.i, q_prompt, 0, local.py);
+            set_text(etx, local.i, q_entry, 0, local.iy - Math.Int((CELL_H2 / 2 + 6) * local.sc));
+        } else {
+            set_text(ptx, local.i, "", 0, local.py);
+            set_text(etx, local.i, "", 0, local.py);
+        }
+        local.ix = h_cx[local.i] - Math.Int(INPUT_W * local.sc / 2);
+        ibox[local.i].SetPosition(local.ix, local.iy, 30);
+        ibox[local.i].SetOpacity(local.on);
+        iglow[local.i].SetPosition(local.ix, local.iy - GLOW * local.sc, 29);
+        iglow[local.i].SetOpacity(local.on);
+        // bullets: the last MAX_BULLETS typed, centred above the input line
+        local.nb = pw_bullets;
+        if (ui_mode != 1) {
+            local.nb = 0;
+        }
+        if (local.nb > MAX_BULLETS) {
+            local.nb = MAX_BULLETS;
+        }
+        local.bx = h_cx[local.i] - Math.Int(local.nb * BULLET_PITCH * local.sc / 2);
+        for (local.k = 0; local.k < MAX_BULLETS; local.k++) {
+            local.b = bul[local.i * 32 + local.k];
+            if (local.k < local.nb) {
+                local.b.SetPosition(local.bx + Math.Int((local.k * BULLET_PITCH + (BULLET_PITCH - BULLET_D) / 2) * local.sc),
+                                    local.iy - Math.Int((8 + BULLET_D) * local.sc), 31);
+                local.b.SetOpacity(1);
+            } else {
+                local.b.SetOpacity(0);
+            }
+        }
+        set_text(mtx, local.i, msg_text, 1, h_y[local.i] + h_h[local.i] - Math.Int(64 * local.sc));
+    }
+}
+
+fun display_normal() {
+    ui_mode = 0;
+    apply_ui();
+}
+fun display_password(prompt, bullets) {
+    ui_mode = 1;
+    pw_prompt = prompt;
+    pw_bullets = bullets;
+    apply_ui();
+}
+fun display_question(prompt, entry) {
+    ui_mode = 2;
+    q_prompt = prompt;
+    q_entry = entry;
+    apply_ui();
+}
+fun display_message(text) {
+    msg_text = text;
+    apply_ui();
+}
+fun hide_message(text) {
+    msg_text = "";
+    apply_ui();
+}
+
+// ---------------------------------------------------------------- boot progress + animation
+prog_target = 0;
+prog_cur = 0;
+tick = 0;
+cur_frame = 0;
+
+fun boot_progress(duration, progress) {
+    prog_target = progress;
+}
+
+fun update_bar(hd, frac, alpha) {
+    local.sc = h_s[hd];
+    local.w = 2 * Math.Int(frac * LINE_W * local.sc / 2);
+    if (local.w != h_lw[hd]) {
+        h_lw[hd] = local.w;
+        local.cx = h_cx[hd];
+        local.ly = h_ly[hd];
+        local.lh = LINE_H * local.sc;
+        local.gh = (LINE_H + 2 * GLOW) * local.sc;
+        local.gw = GLOW * local.sc;
+        local.x = local.cx - Math.Int(local.w / 2);
+        if (local.w >= 2) {
+            core[hd].SetImage(line_src.Scale(local.w, local.lh));
+            core[hd].SetPosition(local.x, local.ly, 17);
+            gmid[hd].SetImage(gmid_src.Scale(local.w, local.gh));
+            gmid[hd].SetPosition(local.x, local.ly - local.gw, 16);
+            glc_l[hd].SetPosition(local.x - local.gw, local.ly - local.gw, 16);
+            glc_r[hd].SetPosition(local.x + local.w, local.ly - local.gw, 16);
+        }
+    }
+    local.a = alpha;
+    if (local.w < 2) {
+        local.a = 0;
+    }
+    core[hd].SetOpacity(local.a);
+    gmid[hd].SetOpacity(local.a);
+    glc_l[hd].SetOpacity(local.a);
+    glc_r[hd].SetOpacity(local.a);
+}
+
+fun refresh() {
+    tick = tick + 1;
+    local.t = tick / HZ;
+
+    // emblem draw-in
+    local.f = Math.Int(local.t / DRAW_T * (NFRAMES - 1));
+    if (local.f > NFRAMES - 1) {
+        local.f = NFRAMES - 1;
+    }
+    // wordmark fade-in
+    local.wa = (local.t - WM_T0) / WM_T1;
+    if (local.wa < 0) { local.wa = 0; }
+    if (local.wa > 1) { local.wa = 1; }
+    // line fade-in
+    local.la = (local.t - LINE_T0) / 0.4;
+    if (local.la < 0) { local.la = 0; }
+    if (local.la > 1) { local.la = 1; }
+    // breathing glow once drawn
+    local.ga = 0;
+    if (local.t > DRAW_T + 0.3) {
+        local.ga = 0.275 - 0.275 * Math.Cos((local.t - DRAW_T - 0.3) / BREATH_T * PI2);
+    }
+    // smooth progress
+    prog_cur = prog_cur + (prog_target - prog_cur) * 0.08;
+    if (prog_cur > 1) { prog_cur = 1; }
+    if (prog_cur < 0) { prog_cur = 0; }
+
+    for (local.i = 0; local.i < nheads; local.i++) {
+        if (local.f != cur_frame) {
+            emb[local.i].SetImage(emb_img[local.i * 64 + local.f]);
+        }
+        wm[local.i].SetOpacity(local.wa);
+        glow[local.i].SetOpacity(local.ga);
+        track[local.i].SetOpacity(local.la);
+        update_bar(local.i, prog_cur, local.la);
+    }
+    cur_frame = local.f;
+}
+
+Plymouth.SetRefreshFunction(refresh);
+Plymouth.SetBootProgressFunction(boot_progress);
+Plymouth.SetDisplayNormalFunction(display_normal);
+Plymouth.SetDisplayPasswordFunction(display_password);
+Plymouth.SetDisplayQuestionFunction(display_question);
+Plymouth.SetDisplayMessageFunction(display_message);
+Plymouth.SetHideMessageFunction(hide_message);

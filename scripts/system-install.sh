@@ -13,13 +13,14 @@
 #   --apps-new             only the apps this release added to the lists since the version it
 #                          replaces (updates: an app you removed stays removed)
 #   --keep-login-screen    don't make greetd/the Ultimit login screen the display manager
+#   --no-splash            skip the Plymouth boot splash (shell/theme/plymouth)
 #   --desktop-network      let NetworkManager run all networking (systems installed from Ubuntu's
 #                          server image use systemd-networkd, which NetworkManager can't manage)
 #
 # Every step is safe to repeat.
 set -euo pipefail
 PREFIX=/opt/ultimit
-TREE="" RELEASE="" APPS=now SWITCH_DM=true DESKTOP_NET=false
+TREE="" RELEASE="" APPS=now SWITCH_DM=true DESKTOP_NET=false SPLASH=true
 while [ $# -gt 0 ]; do
 	case "$1" in
 	--tree) TREE=$2; shift ;;
@@ -27,8 +28,9 @@ while [ $# -gt 0 ]; do
 	--no-apps) APPS=no ;;
 	--apps-at-first-boot) APPS=firstboot ;;
 	--keep-login-screen) SWITCH_DM=false ;;
+	--no-splash) SPLASH=false ;;
 	--desktop-network) DESKTOP_NET=true ;;
-	-h | --help) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+	-h | --help) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
 	*) echo "unknown option: $1" >&2; exit 2 ;;
 	esac
 	shift
@@ -227,6 +229,11 @@ CONF
 	systemctl set-default graphical.target
 	[ "$(readlink -f /etc/systemd/system/display-manager.service)" = "$(readlink -f /usr/lib/systemd/system/greetd.service)" ] \
 		|| die "greetd didn't become the login screen"
+fi
+
+if $SPLASH; then
+	step "Installing the Ultimit boot splash (Plymouth)"
+	"$P/shell/theme/plymouth/install-plymouth.sh" || warn "the boot splash didn't install (run $P/shell/theme/plymouth/install-plymouth.sh later)"
 fi
 
 # ------------------------------------------------------------------------------------ apps
