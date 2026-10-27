@@ -37,11 +37,27 @@ refresh_boot() {
 	update-initramfs -u >/dev/null && say "update-initramfs -u done"
 }
 
+# The default theme: plymouth-set-default-theme where it exists, else Theme= in plymouthd.conf
+# (Ubuntu 26.04 ships plymouth without that script).
+CONF=/etc/plymouth/plymouthd.conf
+get_theme() {
+	if command -v plymouth-set-default-theme >/dev/null; then plymouth-set-default-theme 2>/dev/null; return; fi
+	sed -n 's/^[[:space:]]*Theme[[:space:]]*=[[:space:]]*//p' "$CONF" 2>/dev/null | tail -1
+}
+set_theme() {   # set_theme <name> ; empty name drops our Theme= line (back to the distro default)
+	if command -v plymouth-set-default-theme >/dev/null; then plymouth-set-default-theme "${1:-bgrt}"; return; fi
+	mkdir -p "$(dirname "$CONF")"; touch "$CONF"
+	sed -i '/^[[:space:]]*Theme[[:space:]]*=/d' "$CONF"
+	[ -n "$1" ] || return 0
+	grep -q '^\[Daemon\]' "$CONF" || printf '[Daemon]\n' >>"$CONF"
+	sed -i "/^\[Daemon\]/a Theme=$1" "$CONF"
+}
+
 if $UNINSTALL; then
 	echo "Removing the Ultimit boot splash"
-	if command -v plymouth-set-default-theme >/dev/null && [ -f "$STATE" ]; then
+	if [ -f "$STATE" ]; then
 		prev=$(cat "$STATE")
-		plymouth-set-default-theme "${prev:-bgrt}" 2>/dev/null && say "default theme back to ${prev:-bgrt}" || true
+		set_theme "$prev" 2>/dev/null && say "default theme back to ${prev:-the distro default}" || true
 	fi
 	rm -rf "$THEME" "$STATE" "$GRUBD" "$NVCONF"
 	rm -f "$QUITD"; rmdir "$(dirname "$QUITD")" 2>/dev/null || true
@@ -73,11 +89,11 @@ find /usr/lib -name script.so -path '*plymouth*' 2>/dev/null | grep -q . || say 
 # remember the previous default theme once, then make ours the default
 mkdir -p /var/lib/ultimit
 if [ ! -f "$STATE" ]; then
-	prev=$(plymouth-set-default-theme 2>/dev/null || true)
+	prev=$(get_theme || true)
 	[ "$prev" = ultimit ] && prev=""
 	printf '%s\n' "$prev" >"$STATE"
 fi
-plymouth-set-default-theme ultimit && say "default Plymouth theme: ultimit"
+set_theme ultimit && say "default Plymouth theme: ultimit"
 
 # kernel command line, via a drop-in (never edits /etc/default/grub). Ubuntu's grub scripts add
 # vt.handoff=7 themselves once "splash" is present.
