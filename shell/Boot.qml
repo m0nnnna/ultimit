@@ -4,8 +4,8 @@
 //   0-1500 ms     the emblem is re-traced in the accent colour with a soft glow, then settles
 //   500 ms +      the log lines type in (real data: kernel from `uname -r`, GPUs from `lspci -mm`)
 //   reveal (1300) an accent line sweeps out from the emblem across the screen while the black stage
-//                 breaks into shards, radiating from the emblem (staggered tiles: swell a little,
-//                 then fall away). Click skips straight to the reveal.
+//                 breaks into shards, radiating from the emblem (a crack lights along the shard borders, then each
+//                 shard drifts outward, turns, shrinks and fades, staggered by distance). Click skips straight to the reveal.
 // Shown once at startup (unless Config.bootOnStart is false) and whenever Config.playBoot() is called
 // (Accessory button, rail emblem). Reduced motion: no tracing or shards, the stage just crossfades out.
 // One linear clock (`elapsed`) drives everything; the overlay unmaps and nothing runs when it ends.
@@ -79,7 +79,7 @@ Scope {
 
     readonly property int lineStart: 500
     readonly property int lineStep: 260
-    readonly property int revealMs: 1300
+    readonly property int revealMs: 1400
     // when the reveal starts: after the last log line has settled (moved up by a click to skip)
     property real revealStart: 1800
     readonly property int shown: {
@@ -195,43 +195,19 @@ Scope {
                 Behavior on opacity { NumberAnimation { duration: Config.motion ? 0 : 250 } }
             }
 
-            // ---- the stage breaking into shards (tiles radiating from the emblem) ----
-            Item {
-                id: shards
+            // ---- the stage cracking into shards that fall away (one shader, shaders/bootshards.frag) ----
+            ShaderEffect {
                 anchors.fill: parent
-                visible: win.revealing
-                readonly property real cell: Math.max(130, win.width / 14)
-                readonly property int cols: Math.ceil(win.width / cell)
-                readonly property int rows: Math.ceil(win.height / cell)
-                readonly property real far: Math.hypot(Math.max(win.cx, win.width - win.cx), Math.max(win.cy, win.height - win.cy))
-                Repeater {
-                    model: shards.visible ? shards.cols * shards.rows : 0
-                    Rectangle {
-                        id: tile
-                        required property int index
-                        readonly property int col: index % shards.cols
-                        readonly property int row: Math.floor(index / shards.cols)
-                        // cell centre's distance from the emblem sets when it lets go; a hash jitters it
-                        readonly property real h1: (Math.sin(index * 12.9898) * 43758.5453) % 1
-                        readonly property real h2: (Math.sin(index * 78.233 + 1.7) * 24634.6345) % 1
-                        readonly property real dist: Math.hypot(x + width / 2 - win.cx, y + height / 2 - win.cy) / shards.far
-                        // 0 intact .. 1 gone
-                        readonly property real k: Anim.seg(win.r, 180 + dist * 520 + Math.abs(h1) * 90, 180 + dist * 520 + Math.abs(h1) * 90 + 440)
-                        readonly property real fall: Anim.inOut(Anim.seg(k, .18, 1))
-                        x: col * shards.cell - 1; y: row * shards.cell - 1
-                        width: shards.cell + 2; height: shards.cell + 2
-                        visible: k < 1
-                        color: "#000000"
-                        // a crack of accent as the tile lets go
-                        border.width: 1
-                        border.color: Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, k > 0 ? Math.sin(Math.PI * Anim.seg(k, 0, .35)) * .55 : 0)
-                        opacity: 1 - Anim.seg(k, .35, 1)
-                        // swell a touch (the overshoot), then shrink, tilt and drift away
-                        scale: (1 + Anim.out3(Anim.seg(k, 0, .18)) * .05) * (1 - fall * .55)
-                        rotation: fall * h2 * 28
-                        transform: Translate { y: tile.fall * (10 + Math.abs(tile.h1) * 40) }
-                    }
-                }
+                visible: win.revealing && win.r < boot.revealMs
+                property size box: Qt.size(width, height)
+                property point ctr: Qt.point(win.cx, win.cy)
+                property real t: win.r
+                property real far: Math.hypot(Math.max(win.cx, win.width - win.cx), Math.max(win.cy, win.height - win.cy))
+                property real r0: Math.max(40, win.height * 0.10)
+                property real seed: 0.37
+                property color accent: Theme.accent
+                property color edgeC: Theme.light ? "#ffffff" : Qt.rgba(Theme._csv(Theme.edge)[0] / 255, Theme._csv(Theme.edge)[1] / 255, Theme._csv(Theme.edge)[2] / 255, 1)
+                fragmentShader: Qt.resolvedUrl("components/shaders/bootshards.frag.qsb")
             }
 
             // ---- the click target (skip) ----
