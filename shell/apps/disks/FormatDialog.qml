@@ -100,6 +100,7 @@ Item {
                                 width: ft.implicitWidth + 20; height: 28
                                 opacity: off ? 0.4 : 1
                                 color: on ? Theme.selection : Theme.field
+                                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                                 Text { id: ft; anchors.centerIn: parent; text: modelData.name; color: parent.on ? Theme.accent : Theme.fg
                                     font.family: Theme.ui; font.pixelSize: Theme.type.label }
                                 MouseArea { anchors.fill: parent; enabled: !parent.off; cursorShape: Qt.PointingHandCursor; onClicked: root.fs = modelData.id }

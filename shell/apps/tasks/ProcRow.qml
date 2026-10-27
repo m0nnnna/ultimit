@@ -22,7 +22,9 @@ Rectangle {
 
     height: 30
     color: on ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.12) : (m.containsMouse ? Theme.panel2 : "transparent")
+    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
     border.color: on ? Theme.accent : "transparent"
+    Behavior on border.color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
     border.width: 1
 
     readonly property string iconUrl: app === "" ? "" : Icons.app(Icons.windowIcon(app, title.replace(/  \+\d+$/, "")) || app.split(".").pop().replace(/_/g, "-"))

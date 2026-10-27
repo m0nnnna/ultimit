@@ -322,7 +322,7 @@ PanelWindow {
                             height: parent.height; width: parent.width * .28; color: Theme.accent
                             property real t: 0
                             x: (parent.width - width) * (.5 + .5 * Math.sin(t))
-                            NumberAnimation on t { from: 0; to: Math.PI * 2; duration: 2600; loops: Animation.Infinite; running: ctl.page === "installing" }
+                            NumberAnimation on t { from: 0; to: Math.PI * 2; duration: Config.dur(Theme.motion.ambient * 3); loops: Animation.Infinite; running: ctl.page === "installing" && Config.motion }
                         }
                     }
                     Body { text: "This takes 10 to 20 minutes, longer on a slow connection. Keep the computer plugged in and on."; dim: true }

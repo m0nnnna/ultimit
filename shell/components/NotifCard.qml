@@ -160,6 +160,7 @@ Surface {
                 width: parent.width
                 spacing: Theme.space(2)
                 topPadding: Theme.space(1)
+                add: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
                 Repeater {
                     model: card.actionList
                     delegate: ChamferButton {
@@ -168,6 +169,7 @@ Surface {
                         height: 28
                         implicitHeight: 28
                         primary: index === 0 && card.urgency === 2
+                        caps: !/\s/.test(modelData.text.trim())   // one-word actions stay caps, phrases read in sentence case
                         text: modelData.text
                         onClicked: Notifs.invoke(card.nid, modelData.id)
                     }

@@ -150,10 +150,14 @@ Singleton {
     // Icon sizes: tray and rail use md, launcher rows lg.
     readonly property var icon: ({ sm: 16, md: 20, lg: 24, xl: 32 })
     // Motion: durations in ms (wrap in Config.dur() so reduced motion is honoured) and easings.
-    readonly property var motion: ({ fast: 100, base: 180, slow: 280 })
+    readonly property var motion: ({ fast: 100, base: 180, slow: 280, skin: 400, ambient: 900 })
     readonly property int easeFast: Easing.OutCubic
     readonly property int easeBase: Easing.OutCubic
     readonly property int easeSlow: Easing.OutQuint
+    readonly property int easeIn: Easing.InCubic
+    readonly property real showScale: 0.96
+    readonly property real pressScale: 0.94
+    readonly property real pressScaleLarge: 0.98
     // Elevation: drop shadows (blur radius px, y offset px, colour).
     readonly property var elev1: ({ blur: 16, y: 2, color: Qt.rgba(0, 0, 0, 0.30) })
     readonly property var elev2: ({ blur: 32, y: 8, color: Qt.rgba(0, 0, 0, 0.45) })

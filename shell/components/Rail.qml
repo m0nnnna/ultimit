@@ -64,7 +64,7 @@ PanelWindow {
                     anchors.fill: parent
                     size: 40
                     color: Theme.fg
-                    scale: embMouse.pressed ? 0.92 : (embMouse.containsMouse ? 1.06 : 1)
+                    scale: embMouse.pressed ? Theme.pressScale : (embMouse.containsMouse ? 1.06 : 1)
                     Behavior on scale { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 }
                 Rectangle {

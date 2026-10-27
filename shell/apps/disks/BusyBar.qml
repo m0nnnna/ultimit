@@ -40,7 +40,7 @@ Column {
             height: parent.height
             width: root.known ? Math.max(2, parent.width * root.job.progress) : 0
             color: Theme.accent
-            Behavior on width { NumberAnimation { duration: 400 } }
+            Behavior on width { NumberAnimation { duration: Config.dur(Theme.motion.skin); easing.type: Theme.easeBase } }
         }
         Rectangle {
             id: sweep
@@ -49,10 +49,10 @@ Column {
             width: parent.width * 0.25
             color: Theme.accent
             SequentialAnimation on x {
-                running: sweep.visible
+                running: sweep.visible && Config.motion
                 loops: Animation.Infinite
-                NumberAnimation { from: 0; to: track.width - sweep.width; duration: 900; easing.type: Easing.InOutQuad }
-                NumberAnimation { from: track.width - sweep.width; to: 0; duration: 900; easing.type: Easing.InOutQuad }
+                NumberAnimation { from: 0; to: track.width - sweep.width; duration: Config.dur(Theme.motion.ambient); easing.type: Easing.InOutQuad }
+                NumberAnimation { from: track.width - sweep.width; to: 0; duration: Config.dur(Theme.motion.ambient); easing.type: Easing.InOutQuad }
             }
         }
     }

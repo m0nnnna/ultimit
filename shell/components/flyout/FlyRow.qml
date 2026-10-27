@@ -38,6 +38,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text: root.selected ? "■" : "□"
             color: root.selected ? Theme.accent : Theme.dim
+            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             font.family: Theme.mono; font.pixelSize: Theme.type.label
         }
     }

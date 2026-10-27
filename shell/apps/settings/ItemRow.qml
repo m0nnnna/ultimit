@@ -17,8 +17,16 @@ Item {
     Layout.fillWidth: true
     implicitHeight: 48
 
-    Rectangle { anchors.fill: parent; color: Theme.panel2; opacity: m.containsMouse ? 1 : 0 }
-    Rectangle { x: 0; width: 2; height: parent.height; color: Theme.accent; visible: root.selected }
+    Rectangle {
+        anchors.fill: parent; color: Theme.panel2; opacity: m.containsMouse ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
+    }
+    Rectangle {   // selected marker grows out of the row's centre
+        x: 0; width: 2; anchors.verticalCenter: parent.verticalCenter
+        height: root.selected ? parent.height : 0
+        color: Theme.accent; visible: height > 0
+        Behavior on height { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
+    }
     MouseArea { id: m; anchors.fill: parent; hoverEnabled: true; onClicked: root.clicked() }
     Column {
         anchors.left: parent.left; anchors.leftMargin: 10; anchors.verticalCenter: parent.verticalCenter
@@ -28,6 +36,7 @@ Item {
             spacing: 8
             Text {
                 text: root.title; color: root.titleColor; elide: Text.ElideRight
+                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 font.family: Theme.ui; font.pixelSize: Theme.type.body
             }
             Text {

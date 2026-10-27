@@ -75,7 +75,7 @@ Row {
                 sourceSize: Qt.size(Theme.icon.md * 2, Theme.icon.md * 2)
                 fillMode: Image.PreserveAspectFit
                 asynchronous: true
-                scale: mouse.pressed ? 0.92 : 1
+                scale: mouse.pressed ? Theme.pressScale : 1
                 Behavior on scale { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 visible: status === Image.Ready && !ent.tintDark
                 onStatusChanged: if (status === Image.Ready && Theme.light) probe.loadImage(ent.modelData.icon)
@@ -112,7 +112,8 @@ Row {
                 visible: ent.tintDark
                 colorization: 1.0
                 colorizationColor: Theme.fg
-                scale: mouse.pressed ? 0.92 : 1
+                scale: mouse.pressed ? Theme.pressScale : 1
+                Behavior on scale { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             }
             Rectangle {   // fallback when the icon cannot be resolved
                 anchors.centerIn: parent

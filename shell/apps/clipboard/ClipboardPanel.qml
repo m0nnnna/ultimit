@@ -33,8 +33,11 @@ PanelWindow {
         color: Theme.panel
         border.color: Theme.lineStrong
         opacity: win.shown ? 1 : 0
-        ShowBehavior on opacity { ms: 160 }
-        transform: Translate { y: win.shown ? 0 : 12; ShowBehavior on y { ms: 160; hidden: 12 } }
+        ShowBehavior on opacity {}
+        transformOrigin: Item.BottomRight
+        scale: win.shown ? 1 : Theme.showScale
+        ShowBehavior on scale { hidden: Theme.showScale }
+        transform: Translate { y: win.shown ? 0 : Theme.showOffset; ShowBehavior on y { hidden: Theme.showOffset } }
         MouseArea { anchors.fill: parent }   // clicks inside don't close
 
         // corner brackets, as on windows
@@ -71,6 +74,7 @@ PanelWindow {
                 anchors { right: parent.right; verticalCenter: parent.verticalCenter }
                 visible: Clipboard.items.some(i => !i.pinned)
                 text: "CLEAR ALL"; color: clr.hovered ? Theme.fg : Theme.accent
+                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.6
                 HoverHandler { id: clr; cursorShape: Qt.PointingHandCursor }
                 TapHandler { onTapped: Clipboard.clear() }
@@ -103,7 +107,9 @@ PanelWindow {
                 width: ListView.view.width - 6
                 height: modelData.kind === "image" ? 96 : Math.min(84, txt.implicitHeight + 24)
                 color: cur || rh.hovered ? Theme.panel2 : "transparent"
+                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 border.color: cur ? Theme.accent : Theme.line
+                Behavior on border.color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 HoverHandler { id: rh; onHoveredChanged: if (hovered) list.currentIndex = row.index }
                 TapHandler { onTapped: Clipboard.paste(row.modelData.id) }
 
@@ -138,6 +144,7 @@ PanelWindow {
                             required property var modelData
                             width: tl.implicitWidth + 12; height: 20
                             color: th.hovered ? Theme.panel : "transparent"
+                            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                             border.color: modelData.id === "pin" && row.modelData.pinned ? Theme.accent : Theme.line
                             Text {
                                 id: tl; anchors.centerIn: parent; text: parent.modelData.label

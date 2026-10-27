@@ -95,6 +95,7 @@ Item {
             GLabel {
                 text: (root.advanced ? "▾ " : "▸ ") + "Advanced"
                 color: advMouse.containsMouse ? Theme.accent : Theme.dim
+                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 MouseArea { id: advMouse; anchors.fill: parent; anchors.margins: -4; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                     onClicked: root.advanced = !root.advanced }
             }

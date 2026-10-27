@@ -107,9 +107,9 @@ Flickable {
                             id: sweep
                             width: 70; height: parent.height; color: Theme.accent
                             SequentialAnimation on x {
-                                running: Broadcast.camStarting; loops: Animation.Infinite
-                                NumberAnimation { from: 0; to: 150; duration: 900; easing.type: Easing.InOutQuad }
-                                NumberAnimation { from: 150; to: 0; duration: 900; easing.type: Easing.InOutQuad }
+                                running: Broadcast.camStarting && Config.motion; loops: Animation.Infinite
+                                NumberAnimation { from: 0; to: 150; duration: Config.dur(Theme.motion.ambient); easing.type: Easing.InOutQuad }
+                                NumberAnimation { from: 150; to: 0; duration: Config.dur(Theme.motion.ambient); easing.type: Easing.InOutQuad }
                             }
                         }
                     }

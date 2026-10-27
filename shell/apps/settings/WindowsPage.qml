@@ -111,7 +111,7 @@ Page {
             x: 1; y: 1; height: parent.height - 2
             width: (parent.width - 2) * (pg.widths[pg.sel] || 0.5)
             color: Theme.accent; opacity: 0.35
-            Behavior on width { NumberAnimation { duration: Config.dur(150); easing.type: Easing.OutCubic } }
+            Behavior on width { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
         }
         Rectangle { x: snapped.width; y: 1; width: 2; height: parent.height - 2; color: Theme.accent }
         Repeater {   // the other stops in the cycle
@@ -152,6 +152,7 @@ Page {
             Rectangle {   // selects the row for the preview
                 Layout.preferredWidth: 2; Layout.fillHeight: true
                 color: pg.sel === row.index ? Theme.accent : "transparent"
+                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             }
             SliderField {
                 Layout.fillWidth: true

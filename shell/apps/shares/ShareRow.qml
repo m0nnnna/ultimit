@@ -48,6 +48,7 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "Copy address"
                 color: copyMouse.containsMouse ? Theme.accent : Theme.dim
+                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 MouseArea {
                     id: copyMouse
                     anchors.fill: parent; anchors.margins: -4
@@ -60,6 +61,7 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "Copy smb link"
                 color: copyUrlMouse.containsMouse ? Theme.accent : Theme.dim
+                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 MouseArea {
                     id: copyUrlMouse
                     anchors.fill: parent; anchors.margins: -4

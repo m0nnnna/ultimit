@@ -18,10 +18,11 @@
 #include <scenefx/types/fx/clipped_region.h>
 #include "server.h"
 #include "theme.h"
+#include "motion.h"
 
-#define LINE_MS 120  /* the accent line draws out from the centre */
-#define WIPE_AT 70   /* the content starts wiping down: the line is ~93 % out by then */
-#define WIPE_MS 220
+#define LINE_MS UL_OPEN_LINE_MS /* the accent line draws out from the centre */
+#define WIPE_AT UL_OPEN_WIPE_AT /* the content starts wiping down: the line is nearly out by then */
+#define WIPE_MS UL_OPEN_WIPE_MS
 #define FALLBACK_MS 33 /* ticks when no output frame comes */
 
 static uint32_t now_ms(void) {
@@ -30,13 +31,9 @@ static uint32_t now_ms(void) {
 	return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
-/* Ease-out cubic, close to the mockup's cubic-bezier(.2,.8,.2,1). */
-static double ease(double t) {
-	if (t < 0) t = 0;
-	if (t > 1) t = 1;
-	double u = 1 - t;
-	return 1 - u * u * u;
-}
+/* OutCubic for the 100-180 ms motions, OutQuint for the 280 ms ones (motion.h). */
+static double ease(double t) { return ul_ease_out_cubic(t); }
+static double ease_slow(double t) { return ul_ease_out_quint(t); }
 
 static void set_chrome_enabled(struct ul_view *view, bool enabled) {
 	struct ul_decoration *deco = &view->deco;
@@ -75,7 +72,7 @@ static int tick(void *data) {
 	int fw = view->width + 2 * UL_BORDER;
 
 	/* The line keeps drawing out while the content already wipes in. */
-	int w = fw * ease(elapsed / (double)LINE_MS);
+	int w = fw * ease_slow(elapsed / (double)LINE_MS);
 	if (w < 2) w = 2;
 	if (elapsed < WIPE_AT) {
 		wlr_scene_rect_set_size(deco->line, w, UL_BRACKET_W);
@@ -85,7 +82,7 @@ static int tick(void *data) {
 		set_chrome_enabled(view, false);
 		wlr_scene_node_set_enabled(&view->content->node, false);
 	} else if (elapsed < WIPE_AT + WIPE_MS) {
-		double p = ease((elapsed - WIPE_AT) / (double)WIPE_MS);
+		double p = ease_slow((elapsed - WIPE_AT) / (double)WIPE_MS);
 		wlr_scene_rect_set_size(deco->line, w, UL_BRACKET_W);
 		wlr_scene_node_set_position(&deco->line->node, fx + (fw - w) / 2, fy);
 		wlr_scene_node_set_enabled(&deco->line->node, true);
@@ -152,10 +149,10 @@ bool anim_running(struct ul_view *view) {
  */
 
 /* Leaving is quicker than arriving. */
-#define CLOSE_WIPE_MS 150
-#define CLOSE_LINE_MS 100
-#define MINIMIZE_MS 220
-#define MORPH_MS 200
+#define CLOSE_WIPE_MS UL_CLOSE_WIPE_MS
+#define CLOSE_LINE_MS UL_CLOSE_LINE_MS
+#define MINIMIZE_MS UL_MINIMIZE_MS
+#define MORPH_MS UL_MORPH_MS
 #define MORPH_SHOW 0.6 /* fraction of MORPH_MS: the real window shows, the copy starts to fade */
 
 enum ghost_kind { GHOST_CLOSE, GHOST_MINIMIZE, GHOST_RESTORE, GHOST_MORPH };
@@ -447,7 +444,7 @@ static int ghost_tick(void *data) {
 			return 0;
 		}
 		double t = elapsed / (double)MINIMIZE_MS;
-		double p = g->kind == GHOST_MINIMIZE ? ease(t) : 1 - ease(t);
+		double p = g->kind == GHOST_MINIMIZE ? ease_slow(t) : 1 - ease_slow(t);
 		/* Uniform scale that fits the frame into the target. */
 		double sx = g->target.width / (double)g->frame.width;
 		double sy = g->target.height / (double)g->frame.height;

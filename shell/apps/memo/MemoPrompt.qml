@@ -44,7 +44,7 @@ Item {
                     model: root.buttons
                     delegate: ChamferButton {
                         required property var modelData
-                        text: modelData.text; primary: !!modelData.primary
+                        caps: false; text: modelData.text; primary: !!modelData.primary
                         onClicked: root.chosen(modelData.id)
                     }
                 }

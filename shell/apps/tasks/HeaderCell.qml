@@ -18,6 +18,7 @@ Item {
         anchors.leftMargin: root.leftPadding; anchors.rightMargin: root.rightPadding
         text: root.text.toUpperCase() + (root.on ? (Tasks.sortDesc ? "  ▼" : "  ▲") : "")
         color: root.on ? Theme.accent : (m.containsMouse ? Theme.fg : Theme.dim)
+        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.4
     }
     MouseArea { id: m; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Tasks.sortBy(root.key) }

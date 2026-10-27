@@ -62,6 +62,8 @@ Singleton {
     property bool reactPointer: true
     property bool reactAudio: true
     property bool reactWorkspace: true
+    // Height of the desktop clock block (StatusBlock.qml writes it); the toasts start below it.
+    property real clockHeight: 56
     // The desktop status block: "classic" (clock and date) | "graph" (adds CPU, GPU, RAM and network graphs).
     property string statusStyle: "classic"
     // A segmented seconds ring beside the clock.
@@ -303,7 +305,8 @@ Singleton {
     // Desktop entries the launcher never lists (by id): helpers and duplicates
     // that installed packages ship. Foot stays; its client/server variants go.
     readonly property var launcherHidden: [
-        "footclient", "foot-server", "debian-xterm", "debian-uxterm", "xterm", "uxterm"
+        "footclient", "foot-server", "debian-xterm", "debian-uxterm", "xterm", "uxterm",
+        "com.anthropic.Claude"   // the Claude desktop app: Ultimit's own CLAUDE (ultimit-claude) is the one listed
     ]
 
     // Terminal candidates for the desktop menu.

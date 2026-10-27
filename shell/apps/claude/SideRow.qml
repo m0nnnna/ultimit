@@ -34,6 +34,7 @@ Item {
             width: parent.width; elide: Text.ElideRight
             text: root.text
             color: root.selected ? Theme.accent : Theme.fg
+            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             font.family: Theme.ui; font.pixelSize: Theme.type.body; font.weight: root.selected ? Font.DemiBold : Font.Normal
         }
         Text {
@@ -51,11 +52,13 @@ Item {
         Text {
             width: 24; height: 24; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
             text: "✎"; color: renA.containsMouse ? Theme.accent : Theme.dim; font.pixelSize: Theme.type.label
+            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             MouseArea { id: renA; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.rename() }
         }
         Text {
             width: 24; height: 24; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
             text: "✕"; color: rmA.containsMouse ? Theme.bad : Theme.dim; font.pixelSize: Theme.type.label
+            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             MouseArea { id: rmA; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.remove() }
         }
     }

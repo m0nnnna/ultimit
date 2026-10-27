@@ -200,6 +200,7 @@ ColumnLayout {
             Rectangle {
                 Layout.fillWidth: true; Layout.preferredHeight: 150
                 color: Theme.field; border.color: cfg.activeFocus ? Theme.accent : "transparent"
+                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 ScrollView {
                     anchors.fill: parent; anchors.margins: 6
                     TextArea {

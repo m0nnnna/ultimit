@@ -21,6 +21,7 @@
 #include <scenefx/types/fx/clipped_region.h>
 #include <scenefx/types/fx/corner_location.h>
 #include <wlr/interfaces/wlr_buffer.h>
+#include "motion.h"
 #include "server.h"
 #include "theme.h"
 
@@ -468,7 +469,14 @@ void decoration_finish(struct ul_view *view) {
 /* ---- focus fade: the accent glow and the extra corner marks come and go over
  * FOCUS_MS when a window gains or loses focus ------------------------------- */
 
-#define FOCUS_MS 150
+#define FOCUS_MS UL_FOCUS_MS
+
+/* Light skins (paper): the panel is nearly white. A coloured glow and a coloured outline read
+ * as a muddy smudge on it, so there the glow is dropped and the frame gets a crisp neutral edge
+ * (docs/design/polish.md: neutral elev2 shadow, 1px edge in the skin's line colour). */
+static bool skin_light(const struct ul_skin *k) {
+	return 0.2126f * k->panel[0] + 0.7152f * k->panel[1] + 0.0722f * k->panel[2] > 0.5f;
+}
 
 static uint32_t msec_now(void) {
 	struct timespec now;
@@ -521,7 +529,7 @@ static void focus_apply(struct ul_view *view, int fx, int fy, int fw, int fh) {
 	}
 
 	/* Accent glow: a second, tighter shadow in the accent color over the plain one. */
-	bool glow = shown && c->focus_glow && lv > 0.01f;
+	bool glow = shown && c->focus_glow && lv > 0.01f && !skin_light(k);
 	if (glow) {
 		int sigma = (int)UL_GLOW_SIGMA;
 		float gc[4] = { k->accent[0], k->accent[1], k->accent[2], UL_GLOW_ALPHA * lv };
@@ -618,7 +626,7 @@ static void focus_set(struct ul_view *view, float target) {
 /* ---- focus sweep: a short accent segment runs along the bottom edge of the
  * titlebar when a window gains focus ---------------------------------------- */
 
-#define SWEEP_MS 260
+#define SWEEP_MS UL_SWEEP_MS
 #define SWEEP_W  96
 
 static void sweep_stop(struct ul_view *view) {
@@ -642,7 +650,7 @@ static int sweep_tick(void *data) {
 		return 0;
 	}
 	double t = elapsed / (double)SWEEP_MS;
-	t = 1 - (1 - t) * (1 - t) * (1 - t); /* ease out */
+	t = ul_ease_out_quint(t);
 	int fw = view->width + 2 * UL_BORDER;
 	int x0 = -UL_BORDER + (int)((fw + SWEEP_W) * t) - SWEEP_W;
 	int x1 = x0 + SWEEP_W;
@@ -741,7 +749,12 @@ void decoration_update(struct ul_view *view) {
 	int fw = view->width + 2 * UL_BORDER;
 	int fh = view->height + bar + 2 * UL_BORDER;
 
-	wlr_scene_rect_set_color(deco->border, focused ? k->line_strong : k->line);
+	if (skin_light(k)) {
+		float e[4] = { k->line[0], k->line[1], k->line[2], focused ? 0.6f : 0.35f };
+		wlr_scene_rect_set_color(deco->border, e);
+	} else {
+		wlr_scene_rect_set_color(deco->border, focused ? k->line_strong : k->line);
+	}
 	for (int i = 0; i < 4; i++) {
 		wlr_scene_rect_set_color(deco->glass[i], focused ? k->panel : k->panel_dim);
 	}

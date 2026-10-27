@@ -35,6 +35,7 @@ Scope {
             color: Theme.panel
             border.width: 1; border.color: Theme.lineStrong
             Brackets { size: 6 }
+            PopIn { target: tipBox; shown: WindowUi.tipText !== "" && !WindowUi.menuOpen }
             Text {
                 id: tipTxt
                 anchors.verticalCenter: parent.verticalCenter
@@ -122,6 +123,7 @@ Scope {
             x: Config.railWidth + 6
             y: Math.max(8, Math.min(WindowUi.menuY - 22, mwin.height - height - 8))
             width: 190; height: mwin.items.length * mwin.rowH + 12
+            PopIn { target: menu; shown: mwin.visible }
             color: Theme.panel
             border.width: 1; border.color: Theme.lineStrong
             MouseArea { anchors.fill: parent; acceptedButtons: Qt.LeftButton | Qt.RightButton }
@@ -139,12 +141,14 @@ Scope {
                     Rectangle {
                         anchors.fill: parent; anchors.leftMargin: 1; anchors.rightMargin: 1
                         color: row.hot ? Theme.panel2 : "transparent"
+                        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                         Rectangle { width: 2; height: parent.height; color: Theme.accent; visible: row.hot }
                     }
                     Text {
                         x: 14; anchors.verticalCenter: parent.verticalCenter
                         text: row.modelData.label.toUpperCase()
                         color: row.hot ? Theme.accent : Theme.fg
+                        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                         font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.6
                     }
                     MouseArea {

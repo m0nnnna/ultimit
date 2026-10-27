@@ -27,7 +27,7 @@ Item {
         border.width: 2
         border.color: Theme.accent
         opacity: root.selected ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: Config.dur(150); easing.type: Easing.OutCubic } }
+        Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
     }
     Rectangle {
         anchors.fill: parent; anchors.margins: -3
@@ -41,10 +41,11 @@ Item {
         id: card
         anchors.fill: parent
         color: mouse.containsMouse ? Theme.panel2 : "transparent"
+        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         border.width: 1
         border.color: Theme.line
-        scale: mouse.pressed ? 0.98 : 1
-        Behavior on scale { NumberAnimation { duration: Config.dur(100); easing.type: Easing.OutCubic } }
+        scale: mouse.pressed ? Theme.pressScaleLarge : 1
+        Behavior on scale { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
 
         Item {
             id: pv

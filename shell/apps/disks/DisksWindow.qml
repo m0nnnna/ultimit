@@ -150,6 +150,7 @@ FloatingWindow {
                                     visible: !!(win.d && win.d.serial !== "")
                                     text: win.showSerial ? "serial " + (win.d ? win.d.serial : "") : "show serial"
                                     color: sm.containsMouse ? Theme.accent : Theme.dim
+                                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                                     font.family: Theme.mono; font.pixelSize: Theme.type.label; font.underline: !win.showSerial
                                     MouseArea { id: sm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                                         onClicked: win.showSerial = !win.showSerial }
@@ -168,6 +169,7 @@ FloatingWindow {
                                 width: hl.implicitWidth + 18; height: 26
                                 anchors.verticalCenter: parent.verticalCenter
                                 color: hm.containsMouse ? Theme.panel2 : "transparent"
+                                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                                 border.color: tone
                                 Text {
                                     id: hl; anchors.centerIn: parent
@@ -236,6 +238,7 @@ FloatingWindow {
                             visible: !!(win.d && win.d.table_why === "")
                             text: "NEW PARTITION TABLE…"
                             color: nm.containsMouse ? Disks.danger : Theme.dim
+                            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                             font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.4
                             MouseArea { id: nm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                                 enabled: Disks.busy === ""; onClicked: Disks.overlay = "table" }

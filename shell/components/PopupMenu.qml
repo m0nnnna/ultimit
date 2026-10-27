@@ -14,6 +14,7 @@ Surface {
     signal activated(var item)
 
     width: 192; height: items.length * rowH + Theme.space(4)
+    PopIn { target: menu; shown: menu.visible }
     MouseArea { anchors.fill: parent; acceptedButtons: Qt.LeftButton | Qt.RightButton }
 
     Repeater {

@@ -100,7 +100,7 @@ PanelWindow {
         opacity: Config.motion ? 1 : introFade.v
         Rectangle { visible: !win.started; width: 1; height: 1; x: win.swaps % 2; opacity: .01 }   // keeps frames coming
         QtObject { id: introFade; property real v: 0
-                   Behavior on v { NumberAnimation { duration: 250 } } Component.onCompleted: v = 1 }
+                   Behavior on v { NumberAnimation { duration: Config.dur(Theme.motion.slow); easing.type: Theme.easeBase } } Component.onCompleted: v = 1 }
 
         // the shard wallpaper, assembling in behind everything
         Item {
@@ -136,7 +136,7 @@ PanelWindow {
                 Rectangle { width: 8; height: 8; anchors.verticalCenter: parent.verticalCenter; color: Theme.accent
                             SequentialAnimation on opacity {
                                 loops: Animation.Infinite; running: Config.motion && win.uiOp > .01
-                                NumberAnimation { to: .25; duration: 900 } NumberAnimation { to: 1; duration: 900 } } }
+                                NumberAnimation { to: .25; duration: Config.dur(Theme.motion.ambient) } NumberAnimation { to: 1; duration: Config.dur(Theme.motion.ambient) } } }
                 Text { text: "AWAITING LOGIN" + (win.ctl.demo ? " \u00b7 DEMO" : ""); color: Theme.dim
                        font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 3.3 }
             }

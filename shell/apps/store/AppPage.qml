@@ -24,6 +24,7 @@ Flickable {
 
         Text {
             text: "‹  BACK"; color: bk.hovered ? Theme.fg : Theme.accent
+            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.6
             HoverHandler { id: bk; cursorShape: Qt.PointingHandCursor }
             TapHandler { onTapped: Store.back() }

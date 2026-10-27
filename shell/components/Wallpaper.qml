@@ -58,7 +58,18 @@ PanelWindow {
         onClicked: mouse => Config.openMenu(win.screen ? win.screen.name : "", mouse.x, mouse.y)
     }
 
+    // The shell has no cheap window geometry (the foreign-toplevel protocol carries none), so the
+    // wordmark fades whenever a non-minimized window is on this output.
+    readonly property bool windowsHere: {
+        const name = win.screen ? win.screen.name : "";
+        for (const t of ToplevelManager.toplevels.values) {
+            if (t.minimized) continue;
+            for (const s of t.screens) if (s && s.name === name) return true;
+        }
+        return false;
+    }
     Wordmark {
+        dimmed: win.windowsHere
         anchors.right: parent.right
         anchors.rightMargin: 30
         anchors.bottom: parent.bottom

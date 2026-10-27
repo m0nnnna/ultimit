@@ -38,8 +38,10 @@ PanelWindow {
         color: Theme.panel
         border.width: 1; border.color: Theme.lineStrong
         opacity: Osd.shown ? 1 : 0
-        ShowBehavior on opacity { ms: 200 }
-        transform: Translate { y: Osd.shown ? 0 : 6; ShowBehavior on y { ms: 200; hidden: 6 } }
+        ShowBehavior on opacity {}
+        scale: Osd.shown ? 1 : Theme.showScale
+        ShowBehavior on scale { hidden: Theme.showScale }
+        transform: Translate { y: Osd.shown ? 0 : Theme.showOffset; ShowBehavior on y { hidden: Theme.showOffset } }
         Brackets { size: 8 }
 
         Item {
@@ -83,7 +85,7 @@ PanelWindow {
                 height: parent.height
                 width: parent.width * Math.max(0, Math.min(100, Osd.muted ? 0 : Osd.value)) / 100
                 color: Theme.accent
-                Behavior on width { NumberAnimation { duration: Config.dur(160); easing.type: Easing.OutCubic } }
+                Behavior on width { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
             }
         }
         Text {

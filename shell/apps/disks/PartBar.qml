@@ -56,6 +56,7 @@ Item {
                 anchors.fill: parent
                 color: seg.free ? "transparent" : Qt.rgba(seg.base.r, seg.base.g, seg.base.b, 0.22)
                 border.color: seg.on ? Theme.fg : seg.free ? Theme.dim : Qt.rgba(seg.base.r, seg.base.g, seg.base.b, 0.9)
+                Behavior on border.color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 border.width: seg.on ? 2 : 1
             }
             // used part

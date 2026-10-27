@@ -18,6 +18,7 @@ Item {
     Text {
         anchors { right: parent.right; verticalCenter: hd.verticalCenter }
         text: "OPEN UPDATES"; color: up.hovered ? Theme.fg : Theme.accent
+        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.4
         HoverHandler { id: up; cursorShape: Qt.PointingHandCursor }
         TapHandler { onTapped: Quickshell.execDetached(["ultimit-settings", "updates"]) }
@@ -33,7 +34,7 @@ Item {
             required property var modelData
             readonly property string jobKind: Store.jobFor(modelData.id)
             width: ListView.view.width; height: 56
-            Rectangle { anchors.fill: parent; color: rh.hovered ? Theme.panel2 : "transparent" }
+            Rectangle { anchors.fill: parent; color: rh.hovered ? Theme.panel2 : "transparent"; Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } } }
             HoverHandler { id: rh }
             Column {
                 x: 12; anchors.verticalCenter: parent.verticalCenter

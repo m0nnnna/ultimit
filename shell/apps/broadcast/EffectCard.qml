@@ -17,6 +17,7 @@ Rectangle {
     implicitHeight: col.implicitHeight + 24
     color: Theme.panel2
     border.color: root.checked && root.available ? Theme.lineStrong : Theme.line
+    Behavior on border.color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
     border.width: 1
 
     Column {

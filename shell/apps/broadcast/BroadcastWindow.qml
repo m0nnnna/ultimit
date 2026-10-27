@@ -75,6 +75,7 @@ FloatingWindow {
                             anchors.centerIn: parent
                             text: tb.modelData.label.toUpperCase()
                             color: tb.on ? Theme.accent : (tm.containsMouse ? Theme.fg : Theme.dim)
+                            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                             font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.8
                         }
                         Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 2; color: Theme.accent; visible: tb.on }

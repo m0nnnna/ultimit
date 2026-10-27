@@ -29,7 +29,7 @@ Item {
         && (Config.railSpin === "always" || mouse.containsMouse || spinAngle % 360 !== 0)
     property bool covered: false   // a fullscreen window hides the rail: hold the spin
     property real spinSpeed: mouse.containsMouse ? 200 : 36   // degrees per second
-    Behavior on spinSpeed { NumberAnimation { duration: Config.dur(400); easing.type: Easing.OutCubic } }
+    Behavior on spinSpeed { NumberAnimation { duration: Config.dur(Theme.motion.skin); easing.type: Theme.easeBase } }
     // 30 steps a second on the rail's shared clock (Config.railTick): smooth enough, and the rail
     // repaints once per step for all icons instead of once per icon.
     readonly property bool ticking: root.spinning && root.visible && !root.covered && !Config.desktopPaused
@@ -105,7 +105,7 @@ Item {
         spacing: Theme.space(1)
         opacity: root.missing ? 0.45 : (root.minimized ? 0.6 : 1)
         Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
-        scale: root.pressed ? 0.94 : 1
+        scale: root.pressed ? Theme.pressScale : 1
         Behavior on scale { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         Icon {
             id: coreIcon
@@ -154,7 +154,12 @@ Item {
     // Count tag: tiny chamfered accent tag at the icon's top-right (hidden at 0).
     Item {
         id: tag
-        visible: root.badge > 0 && !root.framed
+        readonly property bool want: root.badge > 0 && !root.framed
+        opacity: want ? 1 : 0
+        scale: want ? 1 : Theme.showScale
+        visible: opacity > 0
+        Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
+        Behavior on scale { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
         x: content.x + coreIcon.x + coreIcon.width - 8
         y: content.y + coreIcon.y - 7
         width: Math.max(16, tagText.implicitWidth + 8)
@@ -188,12 +193,18 @@ Item {
     }
     // Window count pip (2+ windows): top-right corner, mono label in an accent outline.
     Rectangle {
-        visible: root.count > 1
+        readonly property bool want: root.count > 1
+        opacity: want ? 1 : 0
+        scale: want ? 1 : Theme.showScale
+        visible: opacity > 0
+        Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
+        Behavior on scale { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
         x: root.width - width - 4
         y: 4
         width: Math.max(14, pipText.implicitWidth + 6); height: 14
         color: Theme.light ? Qt.rgba(1, 1, 1, 0.94) : Qt.rgba(0.02, 0.025, 0.03, 0.94)
         border.width: 1; border.color: root.minimized ? Theme.dim : Theme.accent
+        Behavior on border.color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         Text {
             id: pipText
             anchors.centerIn: parent

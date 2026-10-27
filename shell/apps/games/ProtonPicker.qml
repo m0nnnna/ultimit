@@ -25,12 +25,13 @@ Column {
                 width: lbl.implicitWidth + 24
                 height: 28
                 color: on ? Theme.selection : (m.containsMouse ? Theme.hover : Theme.field)
-                Behavior on color { ColorAnimation { duration: Config.dur(120) } }
+                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
                 Text {
                     id: lbl
                     anchors.centerIn: parent
                     text: seg.modelData.name
                     color: seg.on ? Theme.accent : Theme.fg
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                     font.family: Theme.mono
                     font.pixelSize: Theme.type.label
                     font.letterSpacing: 1.4

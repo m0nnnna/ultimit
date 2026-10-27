@@ -40,6 +40,7 @@ Item {
         Rectangle {
             y: 16; width: parent.width; height: 30
             color: m.containsMouse ? Theme.hover : Theme.field
+            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             border.width: root.open || root.activeFocus ? 1 : 0; border.color: Theme.accent
             Text {
                 anchors.left: parent.left; anchors.leftMargin: 10; anchors.verticalCenter: parent.verticalCenter
@@ -92,12 +93,14 @@ Item {
             readonly property bool sel: String(modelData.id) === root.current
             width: list.width; height: 30
             color: rm.containsMouse ? Theme.panel2 : "transparent"
+            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             Rectangle { width: 2; height: parent.height; color: Theme.accent; visible: row.sel }
             Text {
                 anchors.left: parent.left; anchors.leftMargin: 12; anchors.verticalCenter: parent.verticalCenter
                 width: parent.width - 24; elide: Text.ElideRight
                 text: String(row.modelData.label)
                 color: row.sel ? Theme.accent : Theme.fg
+                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 font.family: Theme.ui; font.pixelSize: Theme.type.body
             }
             MouseArea {

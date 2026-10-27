@@ -32,21 +32,47 @@ PanelWindow {
     property var results: []
 
     // ---- filtering (AppSearch.qml, shared with Settings -> Rail) ----
-    function refilter() {
+    // `results` (entries, best first) is what the keys and Enter use; `rows` mirrors its ids in a
+    // ListModel so the list can run a displaced transition: rows slide into place while typing
+    // instead of the whole list being rebuilt. Only removals and moves animate; adds just appear.
+    property var byId: ({})
+    ListModel { id: rows }
+    function syncRows(reset) {
+        const ids = results.map(e => e.id);
+        if (reset) {
+            rows.clear();
+            for (const id of ids) rows.append({ eid: id });
+            return;
+        }
+        const want = {};
+        for (const id of ids) want[id] = true;
+        for (let i = rows.count - 1; i >= 0; i--) if (!want[rows.get(i).eid]) rows.remove(i);
+        for (let i = 0; i < ids.length; i++) {
+            if (i < rows.count && rows.get(i).eid === ids[i]) continue;
+            let j = -1;
+            for (let k = i + 1; k < rows.count; k++) if (rows.get(k).eid === ids[i]) { j = k; break; }
+            if (j >= 0) rows.move(j, i, 1);
+            else rows.insert(i, { eid: ids[i] });
+        }
+    }
+    function refilter(reset) {
         results = AppSearch.filter(query);
+        const m = {};
+        for (const e of results) m[e.id] = e;
+        byId = m;
+        syncRows(reset === true);
         list.currentIndex = results.length ? 0 : -1;
     }
     onQueryChanged: refilter()
     Connections {
         target: DesktopEntries.applications
-        function onValuesChanged() { win.refilter(); }
+        function onValuesChanged() { win.refilter(true); }
     }
     onShownChanged: {
         if (shown) {
-            query = ""; search.text = ""; refilter();
+            query = ""; search.text = ""; refilter(true);
             list.positionViewAtBeginning();
             search.forceActiveFocus();
-            powerRow.disarmAll();
         }
         ctxOpen = false;
     }
@@ -77,10 +103,6 @@ PanelWindow {
         if (!e) return;
         Config.closeLauncher();
         e.execute();
-    }
-    function power(cmd) {
-        Config.closeLauncher();
-        Quickshell.execDetached(["sh", "-c", cmd]);
     }
 
     // click outside the panel closes
@@ -176,19 +198,23 @@ PanelWindow {
             ListView {
                 id: list
                 width: parent.width
-                height: parent.height - y - powerRow.height - Theme.space(3)
+                height: parent.height - y
                 clip: true
-                model: win.results
+                model: rows
                 currentIndex: 0
                 boundsBehavior: Flickable.StopAtBounds
                 highlightMoveDuration: 0
                 keyNavigationEnabled: false
                 spacing: 0
+                displaced: Transition {
+                    NumberAnimation { properties: "y"; duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase }
+                }
 
                 delegate: Rectangle {
                     id: row
-                    required property var modelData
+                    required property string eid
                     required property int index
+                    readonly property var modelData: win.byId[eid] || ({ id: eid, name: "", icon: "" })
                     readonly property bool cur: ListView.isCurrentItem
                     width: list.width
                     height: Theme.space(11)
@@ -200,12 +226,15 @@ PanelWindow {
                         Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                     }
 
-                    readonly property string iconSrc: modelData.icon ? Icons.app(modelData.icon) : ""
+                    // A real icon wins over the letter badge in every icon mode (Icons.path: skin theme, user hicolor,
+                    // then the system and Flatpak icon themes); the badge is the last resort.
+                    readonly property string iconSrc: modelData.icon ? Icons.path(modelData.icon) : ""
                     Item {
                         id: ico
                         x: Theme.space(3); anchors.verticalCenter: parent.verticalCenter
                         width: Theme.icon.lg; height: Theme.icon.lg
                         Image {
+                            id: iconImg
                             anchors.fill: parent
                             visible: row.iconSrc !== "" && status === Image.Ready
                             source: row.iconSrc
@@ -215,7 +244,8 @@ PanelWindow {
                         }
                         IconBadge {   // letter badge (other apps' icons, Config.appIcons)
                             anchors.fill: parent
-                            visible: row.iconSrc === ""
+                            visible: row.iconSrc === "" || iconImg.status !== Image.Ready
+                            opacity: 0.7
                             size: Theme.icon.lg
                             letter: (row.modelData.name || "?").charAt(0).toUpperCase()
                         }
@@ -226,7 +256,7 @@ PanelWindow {
                         anchors.verticalCenter: parent.verticalCenter
                         Text {
                             width: parent.width; elide: Text.ElideRight
-                            text: row.modelData.name
+                            text: AppSearch.label(row.modelData)
                             color: Theme.fg
                             font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: Theme.type.body
                         }
@@ -267,9 +297,9 @@ PanelWindow {
                 Text {
                     anchors.centerIn: parent
                     visible: list.count === 0
-                    text: "NO MATCHES"
+                    text: "No matches"
                     color: Theme.dim
-                    font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 2
+                    font.family: Theme.ui; font.pixelSize: Theme.type.body
                 }
             }
         }
@@ -291,48 +321,6 @@ PanelWindow {
                 y: Math.max(4, Math.min(win.ctxY, panel.height - height - 4))
                 items: win.ctxItems
                 onActivated: item => win.ctxActivate(item)
-            }
-        }
-
-        // bottom row: power actions
-        Item {
-            id: powerRow
-            anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
-            anchors.margins: Theme.space(4)
-            height: pflow.height
-            function disarmAll() { lockB.disarm(); outB.disarm(); hibB.disarm(); rebB.disarm(); offB.disarm(); }
-            // One line: compact buttons, stretched to share the width.
-            RowLayout {
-                id: pflow
-                width: parent.width
-                spacing: Theme.space(1)
-                PowerButton { id: lockB; compact: true; Layout.fillWidth: true; text: "Lock"; onActivated: { Config.closeLauncher(); Config.lock(); } }
-                PowerButton {
-                    id: outB; compact: true; Layout.fillWidth: true
-                    text: "Log out"; confirm: true
-                    onActivated: win.power("loginctl terminate-session \"$XDG_SESSION_ID\"")
-                    onArmedChanged: if (armed) { hibB.disarm(); rebB.disarm(); offB.disarm(); }
-                }
-                PowerButton { id: susB; compact: true; Layout.fillWidth: true; text: "Sleep"; onActivated: win.power("systemctl suspend") }
-                PowerButton {
-                    id: hibB; compact: true; Layout.fillWidth: true
-                    text: "Hibernate"; confirm: true
-                    visible: SysState.canHibernate
-                    onActivated: win.power("systemctl hibernate")
-                    onArmedChanged: if (armed) { outB.disarm(); rebB.disarm(); offB.disarm(); }
-                }
-                PowerButton {
-                    id: rebB; compact: true; Layout.fillWidth: true
-                    text: "Restart"; confirm: true
-                    onActivated: win.power("systemctl reboot")
-                    onArmedChanged: if (armed) { outB.disarm(); hibB.disarm(); offB.disarm(); }
-                }
-                PowerButton {
-                    id: offB; compact: true; Layout.fillWidth: true
-                    text: "Shut down"; confirm: true
-                    onActivated: win.power("systemctl poweroff")
-                    onArmedChanged: if (armed) { outB.disarm(); hibB.disarm(); rebB.disarm(); }
-                }
             }
         }
     }

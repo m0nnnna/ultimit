@@ -27,12 +27,13 @@ Item {
                 color: on ? Theme.selection : (m.containsMouse && !off ? Theme.hover : Theme.field)
                 opacity: off ? 0.45 : 1
                 z: on ? 1 : 0
-                Behavior on color { ColorAnimation { duration: Config.dur(120) } }
+                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
                 Text {
                     id: lbl
                     anchors.centerIn: parent
                     text: seg.modelData.label
                     color: seg.on ? Theme.accent : Theme.fg
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                     font.family: Theme.mono
                     font.pixelSize: Theme.type.label
                     font.letterSpacing: 1.4

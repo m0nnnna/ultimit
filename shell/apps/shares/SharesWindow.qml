@@ -90,6 +90,7 @@ FloatingWindow {
                             anchors.centerIn: parent
                             text: tb.modelData.label.toUpperCase()
                             color: tb.on ? Theme.accent : (tm.containsMouse ? Theme.fg : Theme.dim)
+                            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                             font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.8
                         }
                         Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 2; color: Theme.accent; visible: tb.on }
@@ -156,6 +157,7 @@ FloatingWindow {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "Copy"
                     color: c1.containsMouse ? Theme.accent : Theme.dim
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                     MouseArea { id: c1; anchors.fill: parent; anchors.margins: -4; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                         onClicked: Shares.copy("\\\\" + Shares.host) }
                 }
@@ -171,6 +173,7 @@ FloatingWindow {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "Copy"
                     color: c2.containsMouse ? Theme.accent : Theme.dim
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                     MouseArea { id: c2; anchors.fill: parent; anchors.margins: -4; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                         onClicked: Shares.copy("smb://" + Shares.addr.ip) }
                 }

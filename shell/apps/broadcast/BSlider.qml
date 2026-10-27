@@ -60,7 +60,7 @@ Item {
             color: Theme.accent
             border.width: root.activeFocus ? 1 : 0
             border.color: Theme.fg
-            Behavior on width { NumberAnimation { duration: Config.dur(100); easing.type: Easing.OutCubic } }
+            Behavior on width { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         }
         MouseArea {
             id: drag

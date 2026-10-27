@@ -19,7 +19,7 @@ PanelWindow {
 
     // Keep the window mapped while the close animation plays.
     property real reveal: SysState.qsOpen ? 1 : 0
-    ShowBehavior on reveal { ms: 180 }
+    ShowBehavior on reveal {}
 
     visible: (SysState.qsOpen || reveal > 0) && SysState.isQsScreen(screenName)
     anchors { left: true; right: true; top: true; bottom: true }
@@ -275,9 +275,14 @@ PanelWindow {
         width: 360
         x: win.width - (atBottom ? 8 : 24) - width
         height: Math.min(flick.contentHeight + win.pad * 2, maxH)
-        y: atBottom ? win.height - Config.tickerHeight - 6 - height + (1 - win.reveal) * 10
-                    : topY - (1 - win.reveal) * 10
+        y: atBottom ? win.height - Config.tickerHeight - 6 - height + (1 - win.reveal) * Theme.showOffset
+                    : topY - (1 - win.reveal) * Theme.showOffset
         opacity: win.reveal
+        transform: Scale {
+            origin.x: panel.width; origin.y: panel.atBottom ? panel.height : 0
+            xScale: Theme.showScale + (1 - Theme.showScale) * win.reveal
+            yScale: xScale
+        }
         MouseArea { anchors.fill: parent }   // swallow clicks
 
         FocusScope {
@@ -561,6 +566,7 @@ PanelWindow {
                                     width: parent.width - Theme.space(4); elide: Text.ElideRight
                                     text: SysState.nodeLabel(drow.modelData)
                                     color: drow.cur ? Theme.accent : Theme.fg
+                                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                                     font.family: Theme.ui; font.pixelSize: Theme.type.body
                                 }
                                 MouseArea { id: dm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor

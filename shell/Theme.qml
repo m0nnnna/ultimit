@@ -159,20 +159,41 @@ Singleton {
     function _rgba(a) { return Qt.rgba(a[0] / 255, a[1] / 255, a[2] / 255, a[3]); }
 
     // ---- colors ----
-    readonly property color bg1: cur.bg1
-    readonly property color bg2: cur.bg2
-    readonly property color panel: _rgba(cur.panel)
-    readonly property color panel2: _rgba(cur.panel2)
-    readonly property color rail: _rgba(cur.rail)
-    readonly property color fg: cur.fg
-    readonly property color dim: cur.dim
-    readonly property color line: _rgba(cur.line)
-    readonly property color lineStrong: _rgba(cur.lineStrong)
-    readonly property color accent: eff.accent
-    readonly property color onAccent: eff.onAccent
-    readonly property color ok: cur.ok
-    readonly property color warn: cur.warn
-    readonly property color bad: eff.bad
+    property color bg1: cur.bg1
+    property color bg2: cur.bg2
+    property color panel: _rgba(cur.panel)
+    property color panel2: _rgba(cur.panel2)
+    property color rail: _rgba(cur.rail)
+    property color fg: cur.fg
+    property color dim: cur.dim
+    property color line: _rgba(cur.line)
+    property color lineStrong: _rgba(cur.lineStrong)
+    property color accent: eff.accent
+    property color onAccent: eff.onAccent
+    property color ok: cur.ok
+    property color warn: cur.warn
+    property color bad: eff.bad
+
+    // Skin change crossfade: the base colour tokens glide to the new skin over motion.skin instead
+    // of snapping, and everything derived from them (hover, press, selection...) follows. The
+    // Behaviors stay off until startup is done (so the loaded skin does not fade in from the
+    // default) and cost nothing while the skin is not changing.
+    property bool fadeSkin: false
+    Timer { interval: 2500; running: true; onTriggered: root.fadeSkin = true }
+    Behavior on bg1 { enabled: root.fadeSkin; ColorAnimation { duration: Config.dur(root.motion.skin); easing.type: root.easeSlow } }
+    Behavior on bg2 { enabled: root.fadeSkin; ColorAnimation { duration: Config.dur(root.motion.skin); easing.type: root.easeSlow } }
+    Behavior on panel { enabled: root.fadeSkin; ColorAnimation { duration: Config.dur(root.motion.skin); easing.type: root.easeSlow } }
+    Behavior on panel2 { enabled: root.fadeSkin; ColorAnimation { duration: Config.dur(root.motion.skin); easing.type: root.easeSlow } }
+    Behavior on rail { enabled: root.fadeSkin; ColorAnimation { duration: Config.dur(root.motion.skin); easing.type: root.easeSlow } }
+    Behavior on fg { enabled: root.fadeSkin; ColorAnimation { duration: Config.dur(root.motion.skin); easing.type: root.easeSlow } }
+    Behavior on dim { enabled: root.fadeSkin; ColorAnimation { duration: Config.dur(root.motion.skin); easing.type: root.easeSlow } }
+    Behavior on line { enabled: root.fadeSkin; ColorAnimation { duration: Config.dur(root.motion.skin); easing.type: root.easeSlow } }
+    Behavior on lineStrong { enabled: root.fadeSkin; ColorAnimation { duration: Config.dur(root.motion.skin); easing.type: root.easeSlow } }
+    Behavior on accent { enabled: root.fadeSkin; ColorAnimation { duration: Config.dur(root.motion.skin); easing.type: root.easeSlow } }
+    // (no Behavior on onAccent: a property named on<Capital> crashes the QML engine's Behavior)
+    Behavior on ok { enabled: root.fadeSkin; ColorAnimation { duration: Config.dur(root.motion.skin); easing.type: root.easeSlow } }
+    Behavior on warn { enabled: root.fadeSkin; ColorAnimation { duration: Config.dur(root.motion.skin); easing.type: root.easeSlow } }
+    Behavior on bad { enabled: root.fadeSkin; ColorAnimation { duration: Config.dur(root.motion.skin); easing.type: root.easeSlow } }
 
     // ---- wallpaper palette (see components/Wallpaper.qml) ----
     readonly property string shard: cur.shard
@@ -222,7 +243,7 @@ Singleton {
     // a modal. hl = the 1px top highlight of every L1 surface (skin edge colour; dark skins .14,
     // light skins .55).
     function _csv(s) { const p = s.split(","); return [parseInt(p[0]), parseInt(p[1]), parseInt(p[2])]; }
-    function _fgA(a) { const c = Qt.color(cur.fg); return Qt.rgba(c.r, c.g, c.b, a); }
+    function _fgA(a) { const c = fg; return Qt.rgba(c.r, c.g, c.b, a); }
     readonly property color field: cur.light ? Qt.rgba(0.08, 0.1, 0.14, 0.05) : Qt.rgba(0, 0, 0, 0.20)
     readonly property color hover: _fgA(0.06)
     readonly property color press: _fgA(0.10)
@@ -243,10 +264,18 @@ Singleton {
     // Icon sizes: tray and rail use md, launcher rows lg.
     readonly property var icon: ({ sm: 16, md: 20, lg: 24, xl: 32 })
     // Motion: durations in ms (wrap in Config.dur() so reduced motion is honoured) and easings.
-    readonly property var motion: ({ fast: 100, base: 180, slow: 280 })
+    // ambient = deliberately long (breathing pulses, lock dim, skin crossfade); still via Config.dur.
+    readonly property var motion: ({ fast: 100, base: 180, slow: 280, skin: 400, ambient: 900 })
     readonly property int easeFast: Easing.OutCubic
     readonly property int easeBase: Easing.OutCubic
     readonly property int easeSlow: Easing.OutQuint
+    readonly property int easeIn: Easing.InCubic     // leaving: gets out of the way
+    // Panel open recipe: fade + scale from showScale to 1 (+ showOffset px from an anchored edge).
+    readonly property real showScale: 0.96
+    readonly property real showOffset: 8
+    // Press feedback: icon buttons / large surfaces and cards.
+    readonly property real pressScale: 0.94
+    readonly property real pressScaleLarge: 0.98
     // Elevation: drop shadows (blur radius px, y offset px, colour).
     readonly property var elev1: ({ blur: 16, y: 2, color: Qt.rgba(0, 0, 0, 0.30) })
     readonly property var elev2: ({ blur: 32, y: 8, color: Qt.rgba(0, 0, 0, 0.45) })

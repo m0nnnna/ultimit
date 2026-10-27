@@ -7,6 +7,12 @@ Column {
     id: root
     spacing: 2
 
+    // A window is on this output: the wordmark drops to a whisper instead of peeking out from
+    // behind it as half a word ("MIT ]"). Set by Wallpaper.qml.
+    property bool dimmed: false
+    opacity: dimmed ? 0.15 : 1
+    Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.slow); easing.type: Theme.easeSlow } }
+
     // clamp(28px, 4.2vw, 54px) in the mockup
     readonly property real wordSize: Math.max(28, Math.min(54, (Window.width || 1280) * 0.042))
 

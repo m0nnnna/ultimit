@@ -98,6 +98,7 @@ FocusScope {
                     x: 14; anchors.verticalCenter: parent.verticalCenter
                     text: row.modelData.label || ""
                     color: row.off ? Theme.dim : (row.hot ? Theme.accent : Theme.fg)
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                     opacity: row.off ? 0.55 : 1
                     font.family: Theme.ui; font.pixelSize: Theme.type.body
                 }

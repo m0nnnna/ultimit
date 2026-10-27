@@ -183,7 +183,7 @@ Item {
             }
             Row {
                 width: parent.width; spacing: 10
-                MemoToggle { text: "HIDDEN"; on: root.showHidden; onClicked: root.showHidden = !root.showHidden; anchors.verticalCenter: parent.verticalCenter }
+                MemoToggle { text: "Hidden"; on: root.showHidden; onClicked: root.showHidden = !root.showHidden; anchors.verticalCenter: parent.verticalCenter }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     width: parent.width - 330
@@ -198,8 +198,8 @@ Item {
             anchors.right: parent.right; anchors.rightMargin: 18
             anchors.bottom: parent.bottom; anchors.bottomMargin: 16
             spacing: 10
-            ChamferButton { text: "Cancel"; onClicked: root.cancelled() }
-            ChamferButton { text: root.confirmOver ? "Overwrite" : (root.saveMode ? "Save" : "Open"); primary: true; onClicked: root.submit() }
+            ChamferButton { caps: false; text: "Cancel"; onClicked: root.cancelled() }
+            ChamferButton { caps: false; text: root.confirmOver ? "Overwrite" : (root.saveMode ? "Save" : "Open"); primary: true; onClicked: root.submit() }
         }
     }
 }

@@ -80,6 +80,7 @@ FocusScope {
             anchors.right: parent.right; anchors.rightMargin: 14
             visible: root.multi
             text: root.expanded ? "▴" : "◂▸"; color: root.activeFocus ? Theme.accent : Theme.dim
+            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             font.family: Theme.mono; font.pixelSize: 12
         }
         MouseArea {
@@ -99,8 +100,13 @@ FocusScope {
                 required property int index
                 width: root.width; height: root.rowH
                 color: index === root.hl ? Theme.panel2 : "transparent"
+                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 border.width: 0
-                Rectangle { width: 2; height: parent.height; color: Theme.accent; visible: index === root.hl }
+                Rectangle {
+                    width: 2; anchors.verticalCenter: parent.verticalCenter; color: Theme.accent
+                    height: index === root.hl ? parent.height : 0; visible: height > 0
+                    Behavior on height { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
+                }
                 Text {
                     x: 14; anchors.verticalCenter: parent.verticalCenter
                     width: parent.width * .5 - 20; elide: Text.ElideRight

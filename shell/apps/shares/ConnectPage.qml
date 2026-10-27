@@ -21,6 +21,7 @@ Item {
     component Link: GLabel {
         signal clicked()
         color: m.containsMouse ? Theme.accent : Theme.dim
+        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         MouseArea { id: m; anchors.fill: parent; anchors.margins: -4; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: parent.clicked() }
     }
     component Row2: Rectangle {      // a bordered list row with an accent stripe
@@ -97,7 +98,7 @@ Item {
                             width: 8; height: 8; rotation: 45
                             anchors.verticalCenter: parent.verticalCenter
                             color: Theme.accent
-                            RotationAnimator on rotation { running: Shares.discovering; from: 45; to: 405; duration: 900; loops: Animation.Infinite }
+                            RotationAnimator on rotation { running: Shares.discovering && Config.motion; from: 45; to: 405; duration: Config.dur(Theme.motion.ambient); loops: Animation.Infinite }
                         }
                         Link { anchors.verticalCenter: parent.verticalCenter; text: Shares.discovering ? "Looking…" : "Refresh"
                                onClicked: if (!Shares.discovering) Shares.discover() }
@@ -114,6 +115,7 @@ Item {
                             readonly property bool on: Shares.browseServer !== null && Shares.browseServer.host === modelData.host
                             width: 206; height: 52
                             color: on ? Theme.selection : (cm.containsMouse ? Theme.hover : Theme.field)
+                            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                             Column {
                                 anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: 12 }
                                 spacing: 3

@@ -391,19 +391,19 @@ FloatingWindow {
                     id: tbFlow
                     x: 10; y: 7; width: parent.width - 20
                     spacing: 6
-                    ChamferButton { implicitHeight: 30; text: "New"; onClicked: { Memo.newDoc(); ta.forceActiveFocus() } }
-                    ChamferButton { implicitHeight: 30; text: "Open"; onClicked: { win.overlay = "open"; ta.forceActiveFocus() } }
-                    ChamferButton { implicitHeight: 30; text: "Save"; primary: win.modified; onClicked: { win.save(); ta.forceActiveFocus() } }
-                    ChamferButton { implicitHeight: 30; text: "Save as"; onClicked: { win.overlay = "saveas"; ta.forceActiveFocus() } }
+                    ChamferButton { caps: false; implicitHeight: 30; text: "New"; onClicked: { Memo.newDoc(); ta.forceActiveFocus() } }
+                    ChamferButton { caps: false; implicitHeight: 30; text: "Open"; onClicked: { win.overlay = "open"; ta.forceActiveFocus() } }
+                    ChamferButton { caps: false; implicitHeight: 30; text: "Save"; primary: win.modified; onClicked: { win.save(); ta.forceActiveFocus() } }
+                    ChamferButton { caps: false; implicitHeight: 30; text: "Save as"; onClicked: { win.overlay = "saveas"; ta.forceActiveFocus() } }
                     Item { width: 8; height: 1 }
-                    ChamferButton { implicitHeight: 30; text: "Undo"; onClicked: { ta.undo(); ta.forceActiveFocus() } }
-                    ChamferButton { implicitHeight: 30; text: "Redo"; onClicked: { ta.redo(); ta.forceActiveFocus() } }
+                    ChamferButton { caps: false; implicitHeight: 30; text: "Undo"; onClicked: { ta.undo(); ta.forceActiveFocus() } }
+                    ChamferButton { caps: false; implicitHeight: 30; text: "Redo"; onClicked: { ta.redo(); ta.forceActiveFocus() } }
                     Item { width: 8; height: 1 }
-                    ChamferButton { implicitHeight: 30; text: "Find"; onClicked: { win.openFind(false); ta.forceActiveFocus() } }
-                    ChamferButton { implicitHeight: 30; text: "Goto"; onClicked: { win.gotoOpen = true; win.findOpen = false; Qt.callLater(() => { gotoField.text = ""; gotoField.forceActiveFocus(); }); ta.forceActiveFocus() } }
+                    ChamferButton { caps: false; implicitHeight: 30; text: "Find"; onClicked: { win.openFind(false); ta.forceActiveFocus() } }
+                    ChamferButton { caps: false; implicitHeight: 30; text: "Goto"; onClicked: { win.gotoOpen = true; win.findOpen = false; Qt.callLater(() => { gotoField.text = ""; gotoField.forceActiveFocus(); }); ta.forceActiveFocus() } }
                     Item { width: 8; height: 1 }
-                    MemoToggle { text: "WRAP"; on: Memo.wrap; implicitHeight: 30; onClicked: Memo.wrap = !Memo.wrap }
-                    MemoToggle { text: "TAB=4SP"; on: Memo.tabSpaces; implicitHeight: 30; onClicked: Memo.tabSpaces = !Memo.tabSpaces }
+                    MemoToggle { text: "Wrap"; on: Memo.wrap; implicitHeight: 30; onClicked: Memo.wrap = !Memo.wrap }
+                    MemoToggle { text: "Tab = 4 spaces"; on: Memo.tabSpaces; implicitHeight: 30; onClicked: Memo.tabSpaces = !Memo.tabSpaces }
                 }
             }
 
@@ -427,8 +427,8 @@ FloatingWindow {
                     id: bannerBtns
                     anchors.right: parent.right; anchors.rightMargin: 10; anchors.verticalCenter: parent.verticalCenter
                     spacing: 8
-                    ChamferButton { visible: win.banner === "changed"; implicitHeight: 26; text: "Reload"; onClicked: win.reload() }
-                    ChamferButton { visible: win.banner === "recovered"; implicitHeight: 26; text: "Discard"; onClicked: win.doClose() }
+                    ChamferButton { caps: false; visible: win.banner === "changed"; implicitHeight: 26; text: "Reload"; onClicked: win.reload() }
+                    ChamferButton { caps: false; visible: win.banner === "recovered"; implicitHeight: 26; text: "Discard"; onClicked: win.doClose() }
                     ChamferButton {
                         implicitHeight: 26
                         text: win.banner === "recovered" ? "Keep" : (win.banner === "changed" || win.banner === "deleted" ? "Keep mine" : "Dismiss")
@@ -468,10 +468,10 @@ FloatingWindow {
                                 Text { visible: findField.text === ""; text: "find"; color: Theme.dim; font: findField.font }
                             }
                         }
-                        ChamferButton { implicitHeight: 28; text: "Prev"; onClicked: win.findNext(true) }
-                        ChamferButton { implicitHeight: 28; text: "Next"; onClicked: win.findNext(false) }
+                        ChamferButton { caps: false; implicitHeight: 28; text: "Prev"; onClicked: win.findNext(true) }
+                        ChamferButton { caps: false; implicitHeight: 28; text: "Next"; onClicked: win.findNext(false) }
                         MemoToggle { text: "Aa"; on: win.matchCase; y: 1; onClicked: { win.matchCase = !win.matchCase; win.recount(); } }
-                        MemoToggle { text: "REPLACE"; on: win.replaceOpen; y: 1; onClicked: win.replaceOpen = !win.replaceOpen }
+                        MemoToggle { text: "Replace"; on: win.replaceOpen; y: 1; onClicked: win.replaceOpen = !win.replaceOpen }
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             text: findField.text === "" ? "" : win.matchCount + (win.matchCount === 1 ? " match" : " matches")
@@ -497,8 +497,8 @@ FloatingWindow {
                                 Text { visible: replField.text === ""; text: "replace with"; color: Theme.dim; font: replField.font }
                             }
                         }
-                        ChamferButton { implicitHeight: 28; text: "Replace"; onClicked: win.replaceOne() }
-                        ChamferButton { implicitHeight: 28; text: "Replace all"; onClicked: win.replaceAll() }
+                        ChamferButton { caps: false; implicitHeight: 28; text: "Replace"; onClicked: win.replaceOne() }
+                        ChamferButton { caps: false; implicitHeight: 28; text: "Replace all"; onClicked: win.replaceAll() }
                     }
                 }
             }
@@ -510,7 +510,7 @@ FloatingWindow {
                 color: Theme.panel2
                 Row {
                     x: 10; y: 7; spacing: 8
-                    Text { anchors.verticalCenter: parent.verticalCenter; text: "GO TO LINE"; color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.5 }
+                    Text { anchors.verticalCenter: parent.verticalCenter; text: "Go to line"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.body }
                     Rectangle {
                         width: 120; height: 28; color: Theme.field
                         border.width: gotoField.activeFocus ? 1 : 0; border.color: Theme.accent

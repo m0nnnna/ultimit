@@ -14,8 +14,10 @@ Rectangle {
 
     implicitHeight: col.implicitHeight + 24
     color: selected ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, .10) : (mouse.containsMouse && enabled ? Theme.panel2 : "transparent")
+    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
     border.width: selected ? 2 : 1
     border.color: !enabled ? Theme.line : selected ? (danger ? Theme.bad : Theme.accent) : Theme.lineStrong
+    Behavior on border.color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
     opacity: enabled ? 1 : .5
     activeFocusOnTab: enabled
     Keys.onPressed: e => { if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter || e.key === Qt.Key_Space) { root.picked(); e.accepted = true; } }
@@ -35,6 +37,7 @@ Rectangle {
             wrapMode: Text.WordWrap
             text: root.title
             color: root.danger && root.selected ? Theme.bad : Theme.fg
+            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             font.family: Theme.ui; font.pixelSize: 16; font.weight: Font.DemiBold
         }
         Text {

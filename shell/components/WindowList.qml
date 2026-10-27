@@ -43,8 +43,8 @@ Item {
         }
         remove: Transition {
             ParallelAnimation {
-                NumberAnimation { property: "opacity"; to: 0; duration: Config.dur(Theme.motion.base); easing.type: Easing.InCubic }
-                NumberAnimation { property: "x"; to: -24; duration: Config.dur(Theme.motion.base); easing.type: Easing.InCubic }
+                NumberAnimation { property: "opacity"; to: 0; duration: Config.dur(Theme.motion.base); easing.type: Theme.easeIn }
+                NumberAnimation { property: "x"; to: -24; duration: Config.dur(Theme.motion.base); easing.type: Theme.easeIn }
             }
         }
         displaced: Transition {
@@ -91,7 +91,7 @@ Item {
             }
             function tip() {
                 const p = ent.mapToGlobal(0, ent.height / 2);
-                WindowUi.showTip(ent.title || ent.appId || "Untitled", p.y, root.screenName);
+                WindowUi.showTip(AppSearch.windowTitle(ent.title, ent.appId) || ent.appId || "Untitled", p.y, root.screenName);
             }
 
             Rectangle {
@@ -113,7 +113,7 @@ Item {
                 anchors.centerIn: parent
                 width: Theme.icon.xl; height: Theme.icon.xl
                 opacity: ent.mini ? 0.35 : 1
-                scale: mouse.pressed ? 0.92 : 1
+                scale: mouse.pressed ? Theme.pressScale : 1
                 Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 Behavior on scale { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
 

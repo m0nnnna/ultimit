@@ -134,7 +134,18 @@ Column {
         boundsBehavior: Flickable.StopAtBounds
         model: Notifs.list
         delegate: NotifCard { width: nl.width; inHistory: true }
-        remove: Transition { NumberAnimation { property: "opacity"; to: 0; duration: Config.dur(Theme.motion.fast) } }
+        add: Transition {
+            ParallelAnimation {
+                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase }
+                NumberAnimation { property: "x"; from: -24; to: 0; duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase }
+            }
+        }
+        remove: Transition {
+            ParallelAnimation {
+                NumberAnimation { property: "opacity"; to: 0; duration: Config.dur(Theme.motion.base); easing.type: Theme.easeIn }
+                NumberAnimation { property: "x"; to: -24; duration: Config.dur(Theme.motion.base); easing.type: Theme.easeIn }
+            }
+        }
         displaced: Transition { NumberAnimation { properties: "y"; duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
         Text {
             visible: Notifs.count === 0

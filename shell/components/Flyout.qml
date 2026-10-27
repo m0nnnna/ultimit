@@ -18,7 +18,7 @@ PanelWindow {
 
     readonly property bool shown: FlyoutState.open && FlyoutState.screen === screenName
     property real reveal: shown ? 1 : 0
-    ShowBehavior on reveal { ms: Theme.motion.base }
+    ShowBehavior on reveal {}
     property real swap: 1          // quick re-fade when switching icons while open
     NumberAnimation { id: swapAnim; target: win; property: "swap"; from: 0; to: 1; duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase }
     Connections {
@@ -68,12 +68,12 @@ PanelWindow {
         x: Math.max(8, Math.min(win.iconX - width / 2, win.width - width - 8))
         y: win.height - Config.tickerHeight - 6 - height
         opacity: win.reveal * win.swap
-        // unfolds out of the tray icon: grows from the tick at its bottom edge (reveal is 0/1 without motion)
+        // scales out of the tray icon (the shared panel recipe): grows from the tick at its bottom edge (reveal is 0/1 without motion)
         transform: Scale {
             origin.x: Math.max(0, Math.min(win.iconX - panel.x, panel.width))
             origin.y: panel.height
-            xScale: 0.9 + 0.1 * win.reveal
-            yScale: 0.55 + 0.45 * win.reveal
+            xScale: Theme.showScale + (1 - Theme.showScale) * win.reveal
+            yScale: Theme.showScale + (1 - Theme.showScale) * win.reveal
         }
         MouseArea { anchors.fill: parent; acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton }   // swallow clicks
 

@@ -91,6 +91,7 @@ Item {
                         Rectangle {
                             anchors.fill: parent
                             color: place.here ? Theme.panel2 : (placeMa.containsMouse ? Qt.rgba(Theme.panel2.r, Theme.panel2.g, Theme.panel2.b, Theme.panel2.a * 0.6) : "transparent")
+                            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                         }
                         Rectangle { visible: place.here; width: 2; height: parent.height; color: Theme.accent }
                         Text {
@@ -98,6 +99,7 @@ Item {
                             text: place.modelData.n
                             elide: Text.ElideRight
                             color: place.here ? Theme.accent : (placeMa.containsMouse ? Theme.fg : Theme.dim)
+                            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                             font.family: Theme.ui; font.pixelSize: 13
                         }
                         MouseArea {
@@ -182,7 +184,7 @@ Item {
                                 cache: true
                                 // fade in as it decodes, so the grid fills in without popping
                                 opacity: status === Image.Ready ? (tile.modelData.d ? 0.55 : 1) : 0
-                                Behavior on opacity { NumberAnimation { duration: Config.dur(140); easing.type: Easing.OutCubic } }
+                                Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
                             }
                             Text {
                                 visible: thumb.status === Image.Error

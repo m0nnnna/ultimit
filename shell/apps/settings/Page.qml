@@ -24,10 +24,9 @@ Item {
             spacing: 14
 
             Text {
-                text: root.title.toUpperCase()
+                text: root.title
                 color: Theme.fg
-                font.family: Theme.display; font.pixelSize: Theme.ds(15)
-                font.letterSpacing: 2.4
+                font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: Theme.type.head
             }
             Text {
                 visible: root.subtitle !== ""

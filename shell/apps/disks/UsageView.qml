@@ -51,10 +51,12 @@ Item {
                     readonly property bool on: Disks.usageRoot === modelData.path
                     width: pl.implicitWidth + 20; height: 28
                     color: on ? Theme.selection : (pm.containsMouse ? Theme.hover : Theme.field)
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                     Text {
                         id: pl; anchors.centerIn: parent
                         text: modelData.label.toUpperCase()
                         color: parent.on ? Theme.accent : Theme.fg
+                        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                         font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.2
                     }
                     MouseArea { id: pm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; enabled: !Disks.scanning
@@ -107,6 +109,7 @@ Item {
                     readonly property bool last: index === root.crumbs.length - 1
                     text: modelData.label
                     color: last ? Theme.fg : (cm.containsMouse ? Theme.accent : Theme.dim)
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                     font.family: Theme.mono; font.pixelSize: Theme.type.label; font.underline: cm.containsMouse && !last
                     MouseArea { id: cm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                         onClicked: if (!parent.last) Disks.browse(modelData.path) }

@@ -22,13 +22,13 @@ Item {
     Shape {
         anchors.fill: parent
         preferredRendererType: Shape.CurveRenderer
-        scale: mouse.pressed ? 0.97 : 1
-        Behavior on scale { NumberAnimation { duration: Config.dur(100); easing.type: Easing.OutCubic } }
+        scale: mouse.pressed ? Theme.pressScaleLarge : 1
+        Behavior on scale { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         ShapePath {
             strokeColor: root.primary ? Theme.accent : (root.activeFocus ? Theme.accent : Theme.lineStrong)
             strokeWidth: 1
             fillColor: root.primary ? Theme.accent : (mouse.containsMouse ? Theme.panel2 : "transparent")
-            Behavior on fillColor { ColorAnimation { duration: Config.dur(150) } }
+            Behavior on fillColor { ColorAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
             startX: root.c + .5; startY: .5
             PathLine { x: root.width - .5; y: .5 }
             PathLine { x: root.width - .5; y: root.height - root.c - .5 }

@@ -55,6 +55,8 @@ PanelWindow {
             : Math.max(8, Math.min(TrayUi.y - 20, win.height - height - 8))
         width: win.menuW
         height: col.implicitHeight + Theme.space(4)
+        PopIn { id: pop; target: menu; shown: win.visible }
+        Connections { target: TrayUi; function onPathChanged() { if (win.visible) pop.restart(); } }   // submenu swap
         MouseArea { anchors.fill: parent; acceptedButtons: Qt.LeftButton | Qt.RightButton }
 
         Column {

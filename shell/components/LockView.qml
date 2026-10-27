@@ -76,7 +76,7 @@ FocusScope {
 
     opacity: Config.motion ? 1 : fade.v
     QtObject { id: fade; property real v: 0
-               Behavior on v { NumberAnimation { duration: 250 } } Component.onCompleted: v = 1 }
+               Behavior on v { NumberAnimation { duration: Config.dur(Theme.motion.slow); easing.type: Theme.easeBase } } Component.onCompleted: v = 1 }
 
     // ---- shards, dimmed ----
     Item {
@@ -120,7 +120,7 @@ FocusScope {
             Rectangle { width: 8; height: 8; anchors.verticalCenter: parent.verticalCenter; color: Theme.accent
                         SequentialAnimation on opacity {
                             loops: Animation.Infinite; running: Config.motion && view.visible && view.tU === 0
-                            NumberAnimation { to: .25; duration: 900 } NumberAnimation { to: 1; duration: 900 } } }
+                            NumberAnimation { to: .25; duration: Config.dur(Theme.motion.ambient) } NumberAnimation { to: 1; duration: Config.dur(Theme.motion.ambient) } } }
             Text { text: "SESSION LOCKED"; color: Theme.dim
                    font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 3.3 }
         }
@@ -170,8 +170,8 @@ FocusScope {
                             font.features: { "tnum": 1 }
                             SequentialAnimation {
                                 id: tick
-                                ColorAnimation { target: secText; property: "color"; to: Theme.accent; duration: 1 }
-                                ColorAnimation { target: secText; property: "color"; to: Theme.dim; duration: 800; easing.type: Easing.OutCubic }
+                                ColorAnimation { target: secText; property: "color"; to: Theme.accent; duration: Config.dur(Theme.motion.fast) }
+                                ColorAnimation { target: secText; property: "color"; to: Theme.dim; duration: Config.dur(Theme.motion.ambient); easing.type: Theme.easeBase }
                             }
                             Connections { target: view; function onNowChanged() { if (Config.motion && view.visible && view.tU === 0) tick.restart(); } }
                         }
@@ -183,7 +183,7 @@ FocusScope {
                         Rectangle {
                             width: parent.width * (view.now.getSeconds() + 1) / 60; height: parent.height
                             color: Theme.accent; opacity: .75
-                            Behavior on width { enabled: view.now.getSeconds() > 0; NumberAnimation { duration: Config.dur(400); easing.type: Easing.OutCubic } }
+                            Behavior on width { enabled: view.now.getSeconds() > 0; NumberAnimation { duration: Config.dur(Theme.motion.skin); easing.type: Theme.easeBase } }
                         }
                     }
                     Text {

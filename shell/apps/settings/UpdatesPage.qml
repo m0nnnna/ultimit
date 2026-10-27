@@ -191,7 +191,7 @@ Page {
             Text {
                 Layout.fillWidth: true
                 wrapMode: Text.WordWrap
-                color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 0.6
+                color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                 text: "Last checked " + pg.ago(st.checkedAt)
                     + (st.auto ? "  ·  automatic updates ran " + st.auto.time.slice(0, 16) + (st.auto.text ? ": " + st.auto.text : "") : "")
                     + (st.reboot && st.rebootPkgs && st.rebootPkgs.length ? "  ·  restart needed for " + st.rebootPkgs.join(", ") : "")
@@ -300,7 +300,7 @@ Page {
     Text {
         visible: !!ul.latest && ul.newer === true
         text: "Release notes on GitHub"
-        color: Theme.accent; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.2
+        color: Theme.accent; font.family: Theme.ui; font.pixelSize: Theme.type.body
         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Qt.openUrlExternally(pg.ul.latest.url) }
     }
 
@@ -343,7 +343,7 @@ Page {
     Text {
         visible: pg.apt.length > 8
         text: pg.showAll ? "Show fewer" : "Show all " + pg.apt.length
-        color: Theme.accent; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.2
+        color: Theme.accent; font.family: Theme.ui; font.pixelSize: Theme.type.body
         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: pg.showAll = !pg.showAll }
     }
     Text {

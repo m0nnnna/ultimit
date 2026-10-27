@@ -20,13 +20,13 @@ Item {
         anchors.fill: parent
         color: Theme.panel2
         opacity: mouse.containsMouse ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: Config.dur(150); easing.type: Easing.OutCubic } }
+        Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
     }
     Text {
         anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
         text: root.text
         color: Theme.fg
-        font.family: Theme.ui; font.pixelSize: 13
+        font.family: Theme.ui; font.pixelSize: Theme.type.body
     }
     Rectangle {
         id: sw
@@ -40,8 +40,8 @@ Item {
             x: root.checked ? 20 : 2
             width: 10; height: 10
             color: root.checked ? Theme.accent : Theme.dim
-            Behavior on x { NumberAnimation { duration: Config.dur(150); easing.type: Easing.OutCubic } }
-            Behavior on color { ColorAnimation { duration: Config.dur(150) } }
+            Behavior on x { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
+            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
         }
     }
     Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }

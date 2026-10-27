@@ -42,7 +42,9 @@ PanelWindow {
         border.width: 1
         border.color: Theme.lineStrong
         opacity: win.shown ? 1 : 0
-        ShowBehavior on opacity { ms: 120 }
+        ShowBehavior on opacity {}
+        scale: win.shown ? 1 : Theme.showScale
+        ShowBehavior on scale { hidden: Theme.showScale }
         GlowFrame { anchors.fill: parent; travel: false }
         Brackets {}
 
@@ -82,9 +84,10 @@ PanelWindow {
 
                     width: win.tileW; height: win.tileH
                     color: sel ? Theme.panel2 : "transparent"
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                     border.width: 1
                     border.color: sel ? Theme.accent : "transparent"
-                    Behavior on border.color { ColorAnimation { duration: Config.dur(90) } }
+                    Behavior on border.color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                     Brackets { visible: tile.sel; size: 8 }
 
                     Item {
@@ -115,11 +118,12 @@ PanelWindow {
                         y: 80
                         width: parent.width - 16
                         horizontalAlignment: Text.AlignHCenter
-                        text: tile.title !== "" ? tile.title : ((tile.de && tile.de.name) || tile.appId || "Untitled")
+                        text: tile.title !== "" ? AppSearch.windowTitle(tile.title, tile.appId) : ((tile.de && tile.de.name) || tile.appId || "Untitled")
                         elide: Text.ElideRight
                         maximumLineCount: 2
                         wrapMode: Text.Wrap
                         color: tile.sel ? Theme.fg : Theme.dim
+                        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                         font.family: Theme.ui; font.pixelSize: 12; font.capitalization: Font.SmallCaps
                         font.letterSpacing: 0.6
                     }
@@ -139,7 +143,7 @@ PanelWindow {
             width: parent.width - 2 * win.pad
             horizontalAlignment: Text.AlignHCenter
             elide: Text.ElideRight
-            text: AltTabState.current ? (AltTabState.current.title || AltTabState.current.app_id) : ""
+            text: AltTabState.current ? (AppSearch.windowTitle(AltTabState.current.title, AltTabState.current.app_id) || AltTabState.current.app_id) : ""
             color: Theme.accent
             font.family: Theme.display; font.pixelSize: Theme.ds(11); font.capitalization: Font.SmallCaps
             font.letterSpacing: 1.2

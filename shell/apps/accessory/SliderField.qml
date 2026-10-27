@@ -32,14 +32,14 @@ Item {
             width: parent.width - valueText.implicitWidth
             text: root.label.toUpperCase()
             color: Theme.dim
-            font.family: Theme.mono; font.pixelSize: 10
+            font.family: Theme.mono; font.pixelSize: Theme.type.label
             font.letterSpacing: 1.8   // .18em
         }
         Text {
             id: valueText
             text: root.valueText !== "" ? root.valueText : root.value
             color: Theme.fg
-            font.family: Theme.mono; font.pixelSize: 10
+            font.family: Theme.mono; font.pixelSize: Theme.type.label
         }
     }
     Item {

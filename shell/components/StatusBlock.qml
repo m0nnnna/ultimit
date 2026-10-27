@@ -40,6 +40,8 @@ PanelWindow {
     Component.onCompleted: if (graphOn) SysStats.users++
     Component.onDestruction: if (graphOn) SysStats.users--
 
+    Binding { target: Config; property: "clockHeight"; value: block.height }
+
     Column {
         id: block
         anchors.right: parent.right
@@ -72,6 +74,7 @@ PanelWindow {
             Text {
                 text: ((win.now.getHours() % 12) || 12) + ":" + win.p2(win.now.getMinutes()) + (Config.desktopPaused ? "" : ":" + win.p2(win.now.getSeconds())) + (win.now.getHours() < 12 ? " AM" : " PM")
                 color: hit.containsMouse || SysState.qsOpen ? Theme.accent : Theme.fg
+                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 font.family: Theme.mono; font.pixelSize: Theme.size.xl
                 font.letterSpacing: 1.56
                 font.features: Theme.tnum

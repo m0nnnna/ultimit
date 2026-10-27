@@ -290,6 +290,7 @@ FloatingWindow {
         Text {
             anchors.centerIn: parent; text: tb.glyph
             color: tb.active ? Theme.accent : Theme.fg
+            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             font.family: Theme.mono; font.pixelSize: Theme.type.body
         }
         MouseArea { id: tm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (tb.on) tb.clicked() }
@@ -341,6 +342,7 @@ FloatingWindow {
             width: parent.width - 44 - (sr.eject ? 34 : 12) - (subT.visible && !sr.stacked ? subT.implicitWidth + 8 : 0)
             text: sr.label; elide: Text.ElideRight
             color: sr.current ? Theme.accent : Theme.fg
+            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             font.family: Theme.ui; font.pixelSize: Theme.type.body
         }
         Text {
@@ -723,6 +725,7 @@ FloatingWindow {
                                     Text {
                                         anchors.centerIn: parent; text: "×"
                                         color: closeMa.containsMouse ? Theme.accent : Theme.dim
+                                        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                                         font.family: Theme.mono; font.pixelSize: Theme.type.body
                                     }
                                     MouseArea { id: closeMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Data.closeTab(tabItem.index) }
@@ -743,6 +746,7 @@ FloatingWindow {
                     Text {
                         anchors.centerIn: parent; text: "+"
                         color: plusMa.containsMouse ? Theme.accent : Theme.dim
+                        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                         font.family: Theme.mono; font.pixelSize: Theme.type.body
                     }
                     MouseArea { id: plusMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Data.newTab("", false) }
@@ -774,6 +778,7 @@ FloatingWindow {
                     Rectangle {   // filter field
                         width: 160; height: 32
                         color: Theme.field; border.width: filterInput.activeFocus ? 1 : 0
+                        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                         border.color: Theme.accent
                         Text {
                             x: 8; anchors.verticalCenter: parent.verticalCenter
@@ -925,6 +930,7 @@ FloatingWindow {
                                 Text {
                                     id: rootT; anchors.verticalCenter: parent.verticalCenter
                                     text: Data.isArc ? Data.basename(Data.arcFile) + " /" : "/"; color: rootMa.containsMouse || rootDrop.containsDrag ? Theme.accent : (crumb.segs.length === 0 ? Theme.fg : Theme.dim)
+                                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                                     font.family: Theme.mono; font.pixelSize: Theme.type.label
                                 }
                                 MouseArea { id: rootMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Data.goTo(Data.isArc ? Data.arcLoc(Data.arcFile, "") : "/") }
@@ -949,6 +955,7 @@ FloatingWindow {
                                             id: segT; anchors.verticalCenter: parent.verticalCenter
                                             text: modelData.label
                                             color: segMa.containsMouse || segDrop.containsDrag ? Theme.accent : (index === crumb.segs.length - 1 ? Theme.fg : Theme.dim)
+                                            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                                             font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 0.7
                                         }
                                         MouseArea { id: segMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; acceptedButtons: Qt.LeftButton | Qt.MiddleButton
@@ -1055,6 +1062,7 @@ FloatingWindow {
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
                     cacheBuffer: 320
+                    displaced: Transition { NumberAnimation { properties: "y"; duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
                     ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
                     delegate: Item {
                         id: row
@@ -1145,6 +1153,7 @@ FloatingWindow {
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
                     cellWidth: 112; cellHeight: 116
+                    displaced: Transition { NumberAnimation { properties: "x,y"; duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
                     ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
                     delegate: Item {
                         id: cell
@@ -1255,7 +1264,7 @@ FloatingWindow {
                     x: 16; y: 26; width: parent.width - 120; height: 6
                     color: Theme.press
                     Rectangle { height: parent.height; width: parent.width * Data.jobFrac; color: Theme.accent
-                        Behavior on width { NumberAnimation { duration: Config.dur(120) } } }
+                        Behavior on width { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } } }
                 }
                 Text {
                     anchors.right: parent.right; anchors.rightMargin: 16; anchors.verticalCenter: parent.verticalCenter

@@ -93,6 +93,7 @@ FloatingWindow {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "Rescan"
                 color: rescanMouse.containsMouse ? Theme.accent : Theme.dim
+                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 MouseArea {
                     id: rescanMouse
                     anchors.fill: parent; anchors.margins: -4
@@ -256,7 +257,7 @@ FloatingWindow {
                                 anchors.fill: parent
                                 game: cell.modelData
                                 scale: tileMouse.containsMouse || cell.isSel ? 1.04 : 1
-                                Behavior on scale { NumberAnimation { duration: Config.dur(300); easing.type: Easing.OutCubic } }
+                                Behavior on scale { NumberAnimation { duration: Config.dur(Theme.motion.slow); easing.type: Theme.easeBase } }
                             }
                             // glass sheen: light top edge, dark label scrim
                             Rectangle {
@@ -305,6 +306,7 @@ FloatingWindow {
                         Rectangle {
                             anchors.fill: parent; color: "transparent"
                             border.color: tileMouse.containsMouse ? Theme.lineStrong : Theme.line
+                            Behavior on border.color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                             border.width: 1
                         }
                         MouseArea {
@@ -321,7 +323,7 @@ FloatingWindow {
                         x: tile.x - 3; y: tile.y - 3
                         width: tile.width + 6; height: tile.height + 6
                         opacity: cell.isSel ? 1 : 0
-                        Behavior on opacity { NumberAnimation { duration: Config.dur(150) } }
+                        Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
                         Brackets { color: Theme.accent; size: 14; thickness: 2 }
                     }
                 }

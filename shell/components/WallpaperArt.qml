@@ -179,6 +179,14 @@ Item {
         return d;
     }
 
+    // ---- skin change: the old still layer fades out over the new one ----
+    // A one-shot snapshot of the canvas (taken just before it is repainted) sits above it and
+    // fades over motion.skin; the Loader drops it afterwards, so nothing exists while idle.
+    property string oldFrame: ""
+    function fadeFromOld() {
+        if (!Theme.fadeSkin || !Config.motion || !visible || width < 2 || !base.available) return;
+        oldFrame = base.toDataURL("image/png");
+    }
     // ---- still layer: painted once per size / skin change ----
     Canvas {
         id: base
@@ -191,8 +199,8 @@ Item {
 
             // background gradient + vignette
             const g = c.createLinearGradient(0, h, w * .9, 0);
-            g.addColorStop(0, "" + Theme.bg1);
-            g.addColorStop(1, "" + Theme.bg2);
+            g.addColorStop(0, "" + Theme.cur.bg1);   // the skin's own value, not the gliding token
+            g.addColorStop(1, "" + Theme.cur.bg2);
             c.fillStyle = g;
             c.fillRect(0, 0, w, h);
             const vg = c.createRadialGradient(w * .5, h * .5, Math.min(w, h) * .2, w * .5, h * .5, Math.max(w, h) * .75);
@@ -215,6 +223,21 @@ Item {
             [70, 98, 150].forEach(function (rr) {
                 c.beginPath(); c.arc(art.rx, art.ry, rr * art.sc, 0, 6.283); c.stroke();
             });
+        }
+    }
+
+    Loader {
+        anchors.fill: parent
+        active: art.oldFrame !== ""
+        sourceComponent: Image {
+            source: art.oldFrame
+            opacity: 1
+            smooth: false
+            NumberAnimation on opacity {
+                running: true; from: 1; to: 0
+                duration: Config.dur(Theme.motion.skin); easing.type: Theme.easeSlow
+                onFinished: art.oldFrame = ""
+            }
         }
     }
 
@@ -321,7 +344,7 @@ Item {
 
     Connections {
         target: Theme
-        function onSkinChanged() { base.requestPaint(); }
+        function onSkinChanged() { art.fadeFromOld(); base.requestPaint(); }
     }
     Connections {
         target: Config

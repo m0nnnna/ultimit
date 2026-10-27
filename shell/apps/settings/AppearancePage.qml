@@ -105,8 +105,8 @@ Page {
         // the swatch under the pointer, else the current accent
         readonly property var shown: pg.accentHover
             || Theme.accentPresets.find(p => p.c === Theme.accentOverride) || { n: "", c: Theme.accentOverride }
-        text: shown.c === "" ? "SKIN'S OWN" : (shown.n ? shown.n.toUpperCase() + " · " : "") + shown.c
-        color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 2.2
+        text: shown.c === "" ? "Skin's own" : (shown.n ? shown.n + " · " : "") + shown.c
+        color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
     }
     // the most vivid colour of the current wallpaper picture (off for the generative shards)
     RowLayout {
@@ -121,13 +121,13 @@ Page {
         }
         Text {
             Layout.fillWidth: true; elide: Text.ElideRight
-            text: parent.note !== "" ? parent.note : (Config.wallpaper === "" ? "NEEDS A PICTURE WALLPAPER" : "")
-            color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 2.2
+            text: parent.note !== "" ? parent.note : (Config.wallpaper === "" ? "Needs a picture wallpaper" : "")
+            color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
         }
         WallpaperAccent {
             id: wpAccent
-            onPicked: hex => { Theme.accentOverride = hex; parent.note = "PICKED · " + hex; }
-            onFailed: parent.note = "NO VIVID COLOUR IN THIS PICTURE"
+            onPicked: hex => { Theme.accentOverride = hex; parent.note = "Picked · " + hex; }
+            onFailed: parent.note = "No vivid colour in this picture"
         }
     }
 

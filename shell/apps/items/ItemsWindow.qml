@@ -50,7 +50,9 @@ FloatingWindow {
                         width: parent.width
                         height: 52
                         color: on ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14) : (dm.containsMouse ? Theme.panel : "transparent")
+                        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                         border.color: on ? Theme.accent : "transparent"
+                        Behavior on border.color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                         Column {
                             anchors { left: parent.left; leftMargin: 10; right: parent.right; rightMargin: 8; verticalCenter: parent.verticalCenter }
                             spacing: 3
@@ -175,6 +177,7 @@ FloatingWindow {
                                 value: Items.prof ? Items.prof.color : ""
                                 placeholder: "ff8800"
                                 border.color: Items.prof && !Items.colorOk(Items.prof.color) ? Theme.bad : (input.activeFocus ? Theme.accent : Theme.line)
+                                Behavior on border.color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                                 onEdited: v => Items.setProf("color", v.trim())
                             }
                             Repeater {
@@ -221,6 +224,7 @@ FloatingWindow {
                                         width: 96
                                         value: Items.prof ? String(Items.prof.dpi[dpiCol.index]) : ""
                                         border.color: dpiCol.err !== "" ? Theme.bad : (input.activeFocus ? Theme.accent : Theme.line)
+                                        Behavior on border.color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                                         onEdited: v => Items.setDpi(dpiCol.index, v.trim())
                                     }
                                     FieldError { text: dpiCol.err; width: 96; wrapMode: Text.WordWrap }
@@ -267,6 +271,7 @@ FloatingWindow {
                                         anchors { left: btnLabel.right; right: parent.right }
                                         value: btnRow.val
                                         border.color: btnRow.err !== "" ? Theme.bad : (input.activeFocus ? Theme.accent : Theme.line)
+                                        Behavior on border.color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                                         onEdited: v => Items.setButton(btnRow.modelData.id, v)
                                     }
                                     FieldError { x: btnLabel.width; y: 33; text: btnRow.err }

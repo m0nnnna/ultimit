@@ -59,7 +59,7 @@ PanelWindow {
         anchors.fill: parent
         color: "#000000"
         opacity: win.shown ? 0.55 : 0
-        Behavior on opacity { NumberAnimation { duration: Config.dur(180); easing.type: Easing.OutCubic } }
+        Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
         MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons }
     }
 
@@ -72,7 +72,7 @@ PanelWindow {
         border.width: 1
         border.color: Theme.lineStrong
         opacity: win.shown ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: Config.dur(180); easing.type: Easing.OutCubic } }
+        Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
         MouseArea { anchors.fill: parent }
         Brackets {}
 
@@ -134,8 +134,10 @@ PanelWindow {
                         Layout.fillWidth: true
                         height: 30
                         color: (sel || idMouse.containsMouse) ? Theme.panel2 : "transparent"
+                        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                         border.width: 1
                         border.color: sel ? Theme.accent : Theme.line
+                        Behavior on border.color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                         Rectangle { x: 0; width: 2; height: parent.height; color: Theme.accent; visible: sel }
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
@@ -167,6 +169,7 @@ PanelWindow {
                 color: Theme.panel2
                 border.width: 1
                 border.color: win.errorText !== "" ? Theme.bad : (pw.activeFocus ? Theme.accent : Theme.line)
+                Behavior on border.color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 opacity: win.busy ? 0.5 : 1
                 Text {
                     x: 10; anchors.verticalCenter: parent.verticalCenter

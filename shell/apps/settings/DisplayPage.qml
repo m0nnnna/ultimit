@@ -368,8 +368,8 @@ Item {
             Rectangle { anchors.fill: parent; color: Theme.panel2; border.width: 1; border.color: Theme.line }
             Text {
                 anchors { right: parent.right; bottom: parent.bottom; margins: 8 }
-                text: pg.duplicate ? "DUPLICATED" : (pg.enabledOuts.length > 1 ? "DRAG TO ARRANGE  ·  HOLD SHIFT: NO SNAPPING" : "")
-                color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.6
+                text: pg.duplicate ? "Duplicated" : (pg.enabledOuts.length > 1 ? "Drag to arrange  ·  hold Shift for no snapping" : "")
+                color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
             }
             Repeater {
                 model: pg.outs.length
@@ -385,6 +385,7 @@ Item {
                     width: pg.lw(o) * canvas.k; height: pg.lh(o) * canvas.k
                     z: cur ? 2 : 1
                     color: cur ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.18) : Theme.panel
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                     border.width: cur ? 2 : 1; border.color: cur ? Theme.accent : Theme.lineStrong
                     Text {
                         anchors.centerIn: parent; anchors.verticalCenterOffset: -6
@@ -500,8 +501,8 @@ Item {
                 }
                 Text {
                     visible: !!od.o && od.o.primary
-                    text: "■ MAIN DISPLAY  ·  launcher, notifications and new windows open here"
-                    color: Theme.accent; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.2
+                    text: "■ Main display  ·  launcher, notifications and new windows open here"
+                    color: Theme.accent; font.family: Theme.ui; font.pixelSize: Theme.type.label
                 }
             }
             ToggleRow {
@@ -530,7 +531,7 @@ Item {
                 spacing: 8
                 Text {
                     visible: pg.enabledOuts.length > 1 && !pg.duplicate
-                    text: "POSITION  (TOP-LEFT CORNER, LOGICAL PIXELS)"; color: Theme.dim
+                    text: "Position (top-left corner, logical pixels)"; color: Theme.dim
                     font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.8
                 }
                 RowLayout {   // exact placement; Enter moves it (it stays touching a neighbour)

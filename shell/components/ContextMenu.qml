@@ -140,6 +140,7 @@ PanelWindow {
         x: Math.max(8, Math.min(Config.menuX, win.width - width - 8))
         y: Math.max(8, Math.min(Config.menuY, win.height - height - 8))
         width: win.menuW; height: win.menuH
+        PopIn { target: menu; shown: win.visible }
         MouseArea { anchors.fill: parent; acceptedButtons: Qt.LeftButton | Qt.RightButton }
 
         Repeater {
@@ -184,6 +185,7 @@ PanelWindow {
                     readonly property bool on: !!row.modelData.check && win.checked(row.modelData)
                     text: row.modelData.sub ? "▸" : (on ? "■" : (row.modelData.check ? "□" : ""))
                     color: on ? Theme.accent : Theme.dim
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                     font.family: Theme.mono; font.pixelSize: Theme.type.label
                 }
                 MouseArea {
@@ -213,6 +215,7 @@ PanelWindow {
         x: flip ? menu.x - width - 2 : menu.x + menu.width + 2
         y: Math.max(8, Math.min(skinRowY - Theme.space(2), win.height - height - 8))
         width: win.subW; height: win.skinList.length * win.rowH + Theme.space(4)
+        PopIn { target: sub; shown: sub.visible }
         MouseArea { anchors.fill: parent; acceptedButtons: Qt.LeftButton | Qt.RightButton }
 
         Repeater {

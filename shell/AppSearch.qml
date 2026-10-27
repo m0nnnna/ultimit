@@ -26,6 +26,28 @@ Singleton {
     }
     function visible(e) { return !e.noDisplay && Config.launcherHidden.indexOf(e.id) < 0; }
 
+    // The name a list shows: the desktop entry's Name. Ultimit's own entries are all caps there
+    // (BROADCAST, CALC: the app's window title); the launcher lists them in title case so the
+    // column reads as one ("Broadcast" next to "Deluge").
+    function label(e) {
+        const n = (e && e.name) || "";
+        if ((e.id || "").indexOf("ultimit-") === 0 && n === n.toUpperCase() && /[A-Z]/.test(n))
+            return n.charAt(0) + n.slice(1).toLowerCase();
+        return n;
+    }
+
+    // A window's title as the shell shows it (tooltips, Alt-Tab). Many programs leave the title as
+    // the raw program / app_id ("foot"); when it is that and a desktop entry exists for the app_id,
+    // show the entry's Name ("Foot") instead. Real titles pass through untouched.
+    function windowTitle(title, appId) {
+        const t = (title || "").trim();
+        if (!appId) return t;
+        const low = t.toLowerCase();
+        if (t !== "" && low !== appId.toLowerCase() && low !== appId.split(".").pop().toLowerCase()) return t;
+        const de = DesktopEntries.heuristicLookup(appId);
+        return de && de.name ? de.name : t;
+    }
+
     // The program an entry runs, without the field codes (%U, %f ...): the identity of the entry.
     function exec(e) { return (e.command || []).filter(a => !/^%/.test(a)).join(" "); }
     // The same app listed twice under two ids (a copy in ~/.local/share/applications next to the

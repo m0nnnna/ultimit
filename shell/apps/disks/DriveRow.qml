@@ -11,6 +11,7 @@ Rectangle {
 
     implicitHeight: 62
     color: on ? Theme.selection : (m.containsMouse ? Theme.hover : Theme.field)
+    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
 
     GChip {
         id: chip

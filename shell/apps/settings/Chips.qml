@@ -9,6 +9,9 @@ Flow {
     property string current: ""
     signal picked(string id)
     spacing: 8
+    // Caps tracked labels only while every option is one short word (ON / OFF, LETTERS); a row with
+    // any phrase reads in sentence case.
+    readonly property bool caps: options.every(o => !/\s/.test(String(o.label).trim()))
 
     Repeater {
         model: root.options
@@ -24,10 +27,12 @@ Flow {
             Text {
                 id: t
                 anchors.centerIn: parent
-                text: String(chip.modelData.label).toUpperCase()
+                text: root.caps ? String(chip.modelData.label).toUpperCase() : String(chip.modelData.label)
                 color: chip.sel ? Theme.onAccent : Theme.fg
-                font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: Theme.type.label
-                font.letterSpacing: 1.4
+                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
+                font.family: Theme.ui; font.weight: Font.DemiBold
+                font.pixelSize: root.caps ? Theme.type.label : Theme.type.body
+                font.letterSpacing: root.caps ? 1.4 : 0
             }
             MouseArea {
                 id: m

@@ -84,6 +84,7 @@ Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "Already done"
                         color: markMouse.containsMouse ? Theme.accent : Theme.dim
+                        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                         MouseArea {
                             id: markMouse
                             anchors.fill: parent; anchors.margins: -4

@@ -2,6 +2,7 @@
 // Accent "NEWS" tab on the left, headlines scrolling right-to-left, and the system tray cluster
 // (StatusTray.qml) at the right end on the primary screen. The ticker clips before the tray.
 import QtQuick
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Wayland
 import ".."
@@ -31,16 +32,39 @@ PanelWindow {
         color: Theme.rail
 
         Item {
+            id: fadeMask
+            anchors.fill: viewport
+            visible: false
+            layer.enabled: true
+            Rectangle {
+                id: ramp
+                anchors.fill: parent
+                readonly property real f: Math.min(0.5, 24 / Math.max(1, width))
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0; color: "transparent" }
+                    GradientStop { position: ramp.f; color: "black" }
+                    GradientStop { position: 1 - ramp.f; color: "black" }
+                    GradientStop { position: 1; color: "transparent" }
+                }
+            }
+        }
+
+        Item {
             id: viewport
             anchors { left: tab.right; right: tray.visible ? tray.left : parent.right; top: parent.top; bottom: parent.bottom }
             clip: true
 
+            // Soft 24px fade at both ends (at the NEWS tab and at the tray) instead of a hard cut:
+            // the scrolling text is masked by a transparent-opaque-transparent ramp.
+            layer.enabled: true
+            layer.effect: MultiEffect { maskEnabled: true; maskSource: fadeMask }
             // "<time> headline  ◆  ..." scrolling right-to-left. Feed text is untrusted: PlainText only.
             Row {
                 id: msg
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 0
-                x: Config.motion ? viewport.width : 16
+                x: Config.motion ? viewport.width : 28
 
                 // Constant speed (~48 px/s); restarts when the text or viewport changes. Paused while hovered
                 // or while a fullscreen window is up on any screen.
@@ -51,6 +75,8 @@ PanelWindow {
                     to: -msg.implicitWidth
                     duration: Math.max(1000, (viewport.width + msg.implicitWidth) / 48 * 1000)
                     loops: Animation.Infinite
+                    // Reduce motion: the marquee stops and the text sits at the left, static.
+                    onRunningChanged: if (!running) msg.x = 28
                 }
 
                 Repeater {

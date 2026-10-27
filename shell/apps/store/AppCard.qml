@@ -10,7 +10,9 @@ Rectangle {
     readonly property bool installed: Store.isInstalled(app.id)
 
     color: hov.hovered ? Theme.panel2 : "transparent"
+    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
     border.color: hov.hovered ? Theme.lineStrong : Theme.line
+    Behavior on border.color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
     border.width: 1
 
     HoverHandler { id: hov; cursorShape: Qt.PointingHandCursor }

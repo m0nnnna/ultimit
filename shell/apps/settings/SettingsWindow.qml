@@ -81,9 +81,13 @@ Scope {
                                 Keys.onPressed: e => {
                                     if (e.key === Qt.Key_Return || e.key === Qt.Key_Space) { root.page = nav.modelData.id; e.accepted = true; }
                                 }
-                                Rectangle { anchors.fill: parent; color: Theme.panel2; opacity: nm.containsMouse && !nav.sel ? 1 : 0 }
-                                Rectangle { anchors.fill: parent; color: Theme.accent; opacity: nav.sel ? 0.12 : 0 }
-                                Rectangle { width: 2; height: parent.height; color: Theme.accent; visible: nav.sel }
+                                Rectangle { anchors.fill: parent; color: Theme.panel2; opacity: nm.containsMouse && !nav.sel ? 1 : 0; Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } } }
+                                Rectangle { anchors.fill: parent; color: Theme.accent; opacity: nav.sel ? 0.12 : 0; Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } } }
+                                Rectangle {
+                                    width: 2; anchors.verticalCenter: parent.verticalCenter; color: Theme.accent
+                                    height: nav.sel ? parent.height : 0; visible: height > 0
+                                    Behavior on height { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
+                                }
                                 Rectangle {
                                     anchors.fill: parent; anchors.margins: 2; color: "transparent"
                                     border.width: 1; border.color: Theme.fg; visible: nav.activeFocus && !nav.sel
@@ -92,6 +96,7 @@ Scope {
                                     x: 18; anchors.verticalCenter: parent.verticalCenter
                                     text: nav.modelData.n.toUpperCase()
                                     color: nav.sel ? Theme.accent : Theme.fg
+                                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                                     font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: Theme.type.label
                                     font.letterSpacing: 1.6
                                 }

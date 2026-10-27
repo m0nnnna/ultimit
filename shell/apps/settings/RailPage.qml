@@ -138,8 +138,8 @@ Page {
             Text {
                 anchors.centerIn: parent
                 visible: addList.count === 0
-                text: Pins.canAdd() ? "NO MATCHES" : "RAIL IS FULL"
-                color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 2
+                text: Pins.canAdd() ? "No matches" : "Rail is full"
+                color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.body
             }
         }
     }

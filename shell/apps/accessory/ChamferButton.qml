@@ -8,6 +8,9 @@ Item {
     id: root
     property string text: ""
     property bool primary: false
+    // Caps tracked label for a one-word button (OK, CANCEL); a phrase ("From wallpaper") reads in
+    // sentence case in the body size. Set explicitly to override.
+    property bool caps: !/\s/.test(text.trim())
     signal clicked()
 
     implicitWidth: label.implicitWidth + 32
@@ -23,7 +26,7 @@ Item {
     Shape {
         anchors.fill: parent
         preferredRendererType: Shape.CurveRenderer
-        scale: mouse.pressed ? 0.97 : 1
+        scale: mouse.pressed ? Theme.pressScaleLarge : 1
         Behavior on scale { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         ShapePath {
             strokeColor: root.primary ? Theme.accent : (root.activeFocus ? Theme.accent : Theme.lineStrong)
@@ -42,10 +45,11 @@ Item {
     Text {
         id: label
         anchors.centerIn: parent
-        text: root.text.toUpperCase()
+        text: root.caps ? root.text.toUpperCase() : root.text
         color: root.primary ? Theme.onAccent : Theme.fg
-        font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: Theme.type.label
-        font.letterSpacing: 1.76
+        font.family: Theme.ui; font.weight: Font.DemiBold
+        font.pixelSize: root.caps ? Theme.type.label : Theme.type.body
+        font.letterSpacing: root.caps ? 1.76 : 0
     }
     MouseArea {
         id: mouse

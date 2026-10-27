@@ -72,11 +72,14 @@ FloatingWindow {
                         : (Store.view === "results" && Store.category === modelData.id && Store.query === "")
                     width: ct.implicitWidth + 20; height: 26
                     color: on ? Theme.accent : (ch.hovered ? Theme.panel2 : "transparent")
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                     border.color: on ? Theme.accent : Theme.line
+                    Behavior on border.color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                     Text {
                         id: ct; anchors.centerIn: parent
                         text: modelData.label.toUpperCase()
                         color: parent.on ? Theme.onAccent : Theme.fg
+                        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                         font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.4
                     }
                     HoverHandler { id: ch; cursorShape: Qt.PointingHandCursor }

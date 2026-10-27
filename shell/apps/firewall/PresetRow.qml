@@ -15,7 +15,7 @@ Rectangle {
     border.color: Theme.line
     border.width: 1
 
-    Rectangle { width: 2; height: parent.height; color: root.on ? Theme.accent : root.preset.state === "partial" ? Theme.warn : Theme.line }
+    Rectangle { width: 2; height: parent.height; color: root.on ? Theme.accent : root.preset.state === "partial" ? Theme.warn : Theme.line; Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } } }
 
     Column {
         id: col
@@ -47,6 +47,7 @@ Rectangle {
             elide: Text.ElideRight
             text: root.preset.portsText
             color: root.on ? Theme.fg : Theme.dim
+            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             font.family: Theme.mono; font.pixelSize: 11
         }
     }
@@ -58,6 +59,7 @@ Rectangle {
         width: 40; height: 20
         color: "transparent"
         border.color: swMouse.containsMouse ? Theme.accent : Theme.lineStrong
+        Behavior on border.color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         border.width: 1
         opacity: enabled ? 1 : 0.5
         enabled: Firewall.busy === "" && Firewall.ready
@@ -65,7 +67,8 @@ Rectangle {
             y: 3; width: 14; height: 14
             x: root.on ? 23 : 3
             color: root.on ? Theme.accent : root.preset.state === "partial" ? Theme.warn : Theme.dim
-            Behavior on x { NumberAnimation { duration: Config.dur(150) } }
+            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
+            Behavior on x { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
         }
         MouseArea {
             id: swMouse

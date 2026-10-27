@@ -14,6 +14,7 @@ Item {
     Rectangle {
         anchors.fill: parent; anchors.margins: 2
         color: root.fill ? Theme.accent : (ma.pressed ? Theme.lineStrong : (ma.containsMouse ? Theme.panel2 : (root.kind === "num" ? Theme.panel2 : "transparent")))
+        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         border.width: 1; border.color: root.fill ? Theme.accent : (root.kind === "op" ? Theme.lineStrong : Theme.line)
         Text {
             anchors.centerIn: parent

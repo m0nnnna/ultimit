@@ -99,6 +99,7 @@ FloatingWindow {
                     anchors.right: parent.right; anchors.rightMargin: 12; anchors.bottom: parent.bottom; anchors.bottomMargin: 8
                     text: "COPY RESULT"
                     color: copyMa.containsMouse ? Theme.accent : Theme.dim
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                     font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.6
                     MouseArea { id: copyMa; anchors.fill: parent; anchors.margins: -6; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Calc.copyResult() }
                 }
@@ -118,6 +119,7 @@ FloatingWindow {
                         visible: Calc.history.length > 0
                         anchors.right: parent.right; anchors.rightMargin: 8; anchors.verticalCenter: parent.verticalCenter
                         text: "CLEAR"; color: clrMa.containsMouse ? Theme.accent : Theme.dim
+                        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                         font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1.4
                         MouseArea { id: clrMa; anchors.fill: parent; anchors.margins: -4; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Calc.clearHistory() }
                     }
@@ -134,6 +136,7 @@ FloatingWindow {
                         required property var modelData
                         width: hist.width; height: 40
                         color: hm.containsMouse ? Theme.panel2 : "transparent"
+                        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                         Text {
                             anchors.left: parent.left; anchors.leftMargin: 10; anchors.right: parent.right; anchors.rightMargin: 10
                             y: 3; height: 16; horizontalAlignment: Text.AlignRight; elide: Text.ElideLeft

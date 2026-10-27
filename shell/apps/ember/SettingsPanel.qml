@@ -188,6 +188,7 @@ Rectangle {
                         required property string modelData
                         width: ListView.view.width; height: 26
                         color: modelData === modelEntry.text ? Theme.panel2 : mm.containsMouse ? Qt.rgba(Theme.panel2.r, Theme.panel2.g, Theme.panel2.b, 0.5) : "transparent"
+                        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                         Text {
                             x: 10; anchors.verticalCenter: parent.verticalCenter
                             text: parent.modelData
@@ -268,7 +269,7 @@ Rectangle {
                     width: 16; height: 16; y: 4
                     x: Ember.trust ? parent.width - 20 : 4
                     color: Ember.trust ? Theme.onAccent : Theme.dim
-                    Behavior on x { NumberAnimation { duration: 120 } }
+                    Behavior on x { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
                 }
                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Ember.setTrust(!Ember.trust) }
             }

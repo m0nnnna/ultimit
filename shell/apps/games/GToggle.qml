@@ -40,7 +40,8 @@ Item {
             y: 2; width: 10; height: 10
             x: root.checked && root.available ? 20 : 2
             color: root.checked && root.available ? Theme.accent : Theme.dim
-            Behavior on x { NumberAnimation { duration: Config.dur(150) } }
+            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
+            Behavior on x { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
         }
     }
     MouseArea {

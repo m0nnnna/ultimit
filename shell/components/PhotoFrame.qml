@@ -44,6 +44,7 @@ Item {
         color: Theme.panel
         border.width: 1
         border.color: hover.containsMouse && !fr.locked ? Theme.accent : Theme.lineStrong
+        Behavior on border.color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         Brackets { size: 10; visible: hover.containsMouse || fr.locked }
     }
 

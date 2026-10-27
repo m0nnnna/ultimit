@@ -68,6 +68,7 @@ Rectangle {
             anchors.right: parent.right
             text: "Custom rule…"
             color: customMouse.containsMouse ? Theme.accent : Theme.dim
+            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             MouseArea {
                 id: customMouse
                 anchors.fill: parent; anchors.margins: -4

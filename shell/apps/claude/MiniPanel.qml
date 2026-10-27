@@ -288,6 +288,7 @@ PanelWindow {
                                 width: parent.width - 20; elide: Text.ElideRight
                                 text: (modelData.id === win.projectId ? "✓ " : "") + modelData.name
                                 color: pHover.hovered ? Theme.onAccent : Theme.fg
+                                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                                 font.family: Theme.ui; font.pixelSize: Theme.type.body
                             }
                             HoverHandler { id: pHover; cursorShape: Qt.PointingHandCursor }

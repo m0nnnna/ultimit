@@ -170,8 +170,8 @@ Item {
                             SequentialAnimation on opacity {
                                 running: pb.modelData.id === "rec" && Config.motion
                                 loops: Animation.Infinite
-                                NumberAnimation { to: 0.2; duration: 600 }
-                                NumberAnimation { to: 1; duration: 600 }
+                                NumberAnimation { to: 0.2; duration: Config.dur(Theme.motion.ambient) }
+                                NumberAnimation { to: 1; duration: Config.dur(Theme.motion.ambient) }
                             }
                         }
                         Text {

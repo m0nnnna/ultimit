@@ -100,7 +100,7 @@ PanelWindow {
         anchors.fill: parent
         color: "#000000"
         opacity: win.shown ? 0.55 : 0
-        Behavior on opacity { NumberAnimation { duration: Config.dur(180); easing.type: Easing.OutCubic } }
+        Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
         MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons }
     }
 
@@ -113,7 +113,7 @@ PanelWindow {
         border.width: 1
         border.color: Theme.lineStrong
         opacity: win.shown ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: Config.dur(180); easing.type: Easing.OutCubic } }
+        Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
         MouseArea { anchors.fill: parent }
         Brackets {}
 
@@ -193,6 +193,7 @@ PanelWindow {
                         color: Theme.panel2
                         border.width: 1
                         border.color: (win.pd.retry && fd.index === 0) ? Theme.bad : (inp.activeFocus ? Theme.accent : Theme.line)
+                        Behavior on border.color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                         Text {
                             x: 10; anchors.verticalCenter: parent.verticalCenter
                             text: "›"; color: Theme.accent

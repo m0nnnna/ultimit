@@ -704,6 +704,7 @@ FloatingWindow {
                                             anchors.right: parent.right; anchors.top: parent.top
                                             width: 20; height: 20
                                             color: rmHover.hovered ? Theme.bad : Theme.scrim
+                                            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                                             Text {
                                                 anchors.centerIn: parent; text: "×"
                                                 color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.body
@@ -904,6 +905,7 @@ FloatingWindow {
             x: 20; anchors.verticalCenter: parent.verticalCenter
             text: tg.text
             color: tg.checked ? Theme.fg : Theme.dim
+            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             font.family: Theme.ui; font.pixelSize: Theme.type.label
         }
         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: tg.toggled() }

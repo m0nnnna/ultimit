@@ -55,7 +55,7 @@ Page {
         Item { Layout.fillWidth: true }
         Text {
             visible: pg.ad && pg.ad.discovering
-            text: "SCANNING…"; color: Theme.warn
+            text: "SCANNING…"; color: Theme.warn   // status chip
             font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.8
         }
         ChamferButton {

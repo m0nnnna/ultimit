@@ -46,7 +46,7 @@ PanelWindow {
         anchors.fill: parent
         color: "black"
         opacity: win.shown ? 0.35 : 0
-        ShowBehavior on opacity { ms: 140 }
+        ShowBehavior on opacity {}
         MouseArea { anchors.fill: parent; onClicked: Config.shortcutsOpen = false }
     }
 
@@ -58,7 +58,9 @@ PanelWindow {
         color: Theme.panel
         border.color: Theme.lineStrong
         opacity: win.shown ? 1 : 0
-        ShowBehavior on opacity { ms: 140 }
+        ShowBehavior on opacity {}
+        scale: win.shown ? 1 : Theme.showScale
+        ShowBehavior on scale { hidden: Theme.showScale }
         MouseArea { anchors.fill: parent }
 
         Rectangle { x: -1; y: -1; width: 14; height: 2; color: Theme.accent }

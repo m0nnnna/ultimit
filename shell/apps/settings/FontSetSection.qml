@@ -24,8 +24,10 @@ ColumnLayout {
                 Layout.fillWidth: true
                 implicitHeight: pv.implicitHeight + 24
                 color: ma.containsMouse ? Theme.panel2 : "transparent"
+                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 border.width: sel ? 2 : 1
                 border.color: sel ? Theme.accent : (ma.containsMouse ? Theme.lineStrong : Theme.line)
+                Behavior on border.color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 activeFocusOnTab: true
                 Keys.onPressed: e => { if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter || e.key === Qt.Key_Space) { Theme.fontSet = modelData; e.accepted = true; } }
                 Column {

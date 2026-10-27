@@ -17,6 +17,7 @@ Rectangle {
     readonly property bool rolled: entry.kind === "other" && !entry.path
     implicitHeight: 38
     color: m.containsMouse ? Theme.panel2 : "transparent"
+    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
 
     MouseArea {
         id: m
@@ -90,6 +91,7 @@ Rectangle {
                     id: tl; anchors.centerIn: parent
                     text: modelData.t.toUpperCase()
                     color: bm.containsMouse ? modelData.c : Theme.dim
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                     font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.2
                 }
                 MouseArea {

@@ -219,6 +219,7 @@ Rectangle {
             anchors.centerIn: parent
             text: chip.text
             color: chip.sel ? Theme.onAccent : Theme.fg
+            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: Theme.type.label
         }
         MouseArea { id: cm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: chip.clicked() }
