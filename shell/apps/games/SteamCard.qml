@@ -32,7 +32,7 @@ Rectangle {
             width: parent.width
             wrapMode: Text.WordWrap
             color: Theme.dim
-            font.family: Theme.ui; font.pixelSize: 12
+            font.family: Theme.ui; font.pixelSize: Theme.type.label
             text: root.mode === "missing"
                 ? "Steam isn't installed. Install it here: a terminal opens for your password and Valve's licence. Ultimit lists its games once it is."
                 : root.mode === "setup"

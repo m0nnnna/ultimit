@@ -219,7 +219,6 @@ FloatingWindow {
             Rectangle {
                 Layout.fillHeight: true; Layout.preferredWidth: 380
                 color: Theme.panel
-                Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Theme.line }
 
                 ColumnLayout {
                     anchors.fill: parent; anchors.margins: 14; anchors.rightMargin: 15
@@ -240,7 +239,7 @@ FloatingWindow {
                         Layout.alignment: Qt.AlignHCenter; Layout.topMargin: -4
                         text: win.moodText + (win.busy && win.mood !== "asking" ? dots.s : "")
                         color: win.mood === "asking" ? Theme.warn : win.mood === "error" ? Theme.bad : Theme.dim
-                        font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.8
+                        font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.8
                         Timer {
                             id: dots
                             property string s: ""
@@ -252,8 +251,8 @@ FloatingWindow {
                     // the AI she thinks with
                     Rectangle {
                         Layout.fillWidth: true; Layout.preferredHeight: 46; Layout.topMargin: 4
-                        color: provMa.containsMouse ? Theme.panel2 : "transparent"
-                        border.width: 1; border.color: Theme.lineStrong
+                        color: provMa.containsMouse ? Theme.selection : Theme.field
+                        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                         Rectangle {
                             x: 12; anchors.verticalCenter: parent.verticalCenter
                             width: 8; height: 8; radius: 4
@@ -264,17 +263,17 @@ FloatingWindow {
                             Text {
                                 width: parent.width; elide: Text.ElideRight
                                 text: Ember.current ? Ember.current.name + "  ·  " + Ember.current.maker : "…"
-                                color: Theme.fg; font.family: Theme.ui; font.pixelSize: 13; font.weight: Font.DemiBold
+                                color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.body; font.weight: Font.DemiBold
                             }
                             Text {
                                 width: parent.width; elide: Text.ElideMiddle
-                                text: Ember.current && Ember.current.model !== "" ? Ember.current.model.toUpperCase() : "NO MODEL PICKED"
-                                color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1
+                                text: Ember.current && Ember.current.model !== "" ? Ember.current.model : "No model picked"
+                                color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 0.4
                             }
                         }
                         Text {
                             anchors.right: parent.right; anchors.rightMargin: 12; anchors.verticalCenter: parent.verticalCenter
-                            text: "▾"; color: Theme.dim; font.pixelSize: 12
+                            text: "▾"; color: Theme.dim; font.pixelSize: Theme.type.label
                         }
                         MouseArea { id: provMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                                     onClicked: mouse => win.providerMenu(provMa, mouse.x, mouse.y) }
@@ -296,7 +295,7 @@ FloatingWindow {
                             required property var modelData
                             width: ListView.view.width
                             text: modelData.title || "Chat"
-                            sub: win.when(modelData.updated) + (modelData.model ? " · " + modelData.model.toUpperCase() : "")
+                            sub: win.when(modelData.updated) + (modelData.model ? " · " + modelData.model : "")
                             selected: modelData.id === win.chatId
                             actions: true
                             onClicked: win.openChat(modelData.id)
@@ -308,7 +307,7 @@ FloatingWindow {
                             visible: Ember.chats.length === 0
                             width: parent.width; wrapMode: Text.Wrap
                             text: "No chats yet."
-                            color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+                            color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                         }
                     }
                 }
@@ -322,11 +321,10 @@ FloatingWindow {
                 Rectangle {
                     Layout.fillWidth: true; Layout.preferredHeight: 56
                     color: Theme.panel
-                    Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
                     Text {
                         x: 18; anchors.verticalCenter: parent.verticalCenter
                         width: parent.width - headBtns.width - 50; elide: Text.ElideRight
-                        text: (win.chatTitle !== "" ? win.chatTitle : "New chat").toUpperCase()
+                        text: (win.chatTitle !== "" ? win.chatTitle : "New chat")
                         color: Theme.fg; font.family: Theme.display; font.pixelSize: Theme.ds(13); font.letterSpacing: Theme.dt(2)
                     }
                     Row {
@@ -383,14 +381,14 @@ FloatingWindow {
                         Text {
                             width: parent.width; horizontalAlignment: Text.AlignHCenter
                             text: "OH. IT'S YOU."
-                            color: Theme.dim; font.family: Theme.mono; font.pixelSize: 12; font.letterSpacing: 2
+                            color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 2
                         }
                         Text {
                             width: parent.width; horizontalAlignment: Text.AlignHCenter; wrapMode: Text.Wrap
                             text: Ember.ready
                                 ? "Well? I can poke around this PC, open your apps, look things up and do the chores you can't be bothered with. I'll even ask before I change anything. Not that you deserve the courtesy."
                                 : "Hmph. I can't think without a brain, dummy. Open Settings and plug in Claude, GPT, Grok or a local model."
-                            color: Theme.fg; font.family: Theme.ui; font.pixelSize: 14
+                            color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.body
                         }
                         Flow {
                             width: parent.width; spacing: 8
@@ -401,9 +399,9 @@ FloatingWindow {
                                 Rectangle {
                                     required property string modelData
                                     width: sug.implicitWidth + 22; height: 30
-                                    color: sm.containsMouse ? Theme.panel2 : "transparent"
-                                    border.width: 1; border.color: Theme.lineStrong
-                                    Text { id: sug; anchors.centerIn: parent; text: parent.modelData; color: Theme.fg; font.family: Theme.ui; font.pixelSize: 12 }
+                                    color: sm.containsMouse ? Theme.selection : Theme.field
+                                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
+                                    Text { id: sug; anchors.centerIn: parent; text: parent.modelData; color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.label }
                                     MouseArea { id: sm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                                                 onClicked: { input.text = parent.modelData; input.forceActiveFocus(); input.cursorPosition = input.length; } }
                                 }
@@ -424,7 +422,6 @@ FloatingWindow {
                     Layout.fillWidth: true
                     Layout.preferredHeight: askCol.implicitHeight + 28
                     color: Theme.panel
-                    Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Theme.lineStrong }
                     Rectangle { width: 3; height: parent.height; color: Theme.warn }
                     Column {
                         id: askCol
@@ -433,17 +430,17 @@ FloatingWindow {
                         Text {
                             text: win.ask ? ("Ember would like to " + ({ run_command: "run a command", write_file: "write a file",
                                                                          window: "close a window" })[win.ask.name] || win.ask.name).toUpperCase() : ""
-                            color: Theme.warn; font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.8
+                            color: Theme.warn; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.8
                         }
                         Text {
                             width: parent.width; wrapMode: Text.WrapAnywhere; maximumLineCount: 6; elide: Text.ElideRight
                             text: win.ask ? win.ask.summary : ""
-                            color: Theme.fg; font.family: Theme.mono; font.pixelSize: 13
+                            color: Theme.fg; font.family: Theme.mono; font.pixelSize: Theme.type.body
                         }
                         Rectangle {
                             visible: askMore.checked
                             width: parent.width; height: Math.min(detail.implicitHeight + 16, 220)
-                            color: Theme.bg1; border.width: 1; border.color: Theme.line
+                            color: Theme.field
                             Flickable {
                                 anchors.fill: parent; anchors.margins: 8
                                 contentHeight: detail.implicitHeight; clip: true
@@ -453,7 +450,7 @@ FloatingWindow {
                                     width: parent.width; readOnly: true; selectByMouse: true; wrapMode: TextEdit.WrapAnywhere
                                     text: win.ask ? win.ask.detail : ""
                                     color: Theme.fg; selectionColor: Theme.accent; selectedTextColor: Theme.onAccent
-                                    font.family: Theme.mono; font.pixelSize: 11
+                                    font.family: Theme.mono; font.pixelSize: Theme.type.label
                                 }
                             }
                         }
@@ -478,11 +475,10 @@ FloatingWindow {
                     Layout.fillWidth: true
                     Layout.preferredHeight: Math.min(Math.max(input.contentHeight + 24, 48), 220) + 46
                     color: Theme.panel
-                    Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Theme.line }
                     Rectangle {
                         x: 14; y: 12; width: parent.width - 28; height: parent.height - 52
-                        color: "transparent"
-                        border.width: 1; border.color: input.activeFocus ? Theme.accent : Theme.lineStrong
+                        color: Theme.field
+                        border.width: input.activeFocus ? 1 : 0; border.color: Theme.accent
                         ScrollView {
                             anchors.fill: parent; anchors.margins: 1
                             TextArea {
@@ -493,7 +489,7 @@ FloatingWindow {
                                 color: Theme.fg; selectionColor: Theme.accent; selectedTextColor: Theme.onAccent
                                 placeholderText: Ember.ready ? "Ask Ember anything, or tell her what to do…" : "Plug in an AI in Settings first"
                                 placeholderTextColor: Theme.dim
-                                font.family: Theme.ui; font.pixelSize: 14
+                                font.family: Theme.ui; font.pixelSize: Theme.type.body
                                 Keys.onPressed: e => {
                                     if ((e.key === Qt.Key_Return || e.key === Qt.Key_Enter) && !(e.modifiers & Qt.ShiftModifier)) {
                                         win.sendNow(); e.accepted = true;
@@ -508,13 +504,13 @@ FloatingWindow {
                         Text {
                             text: Ember.trust ? "● ACTS WITHOUT ASKING" : "○ ASKS BEFORE ACTING"
                             color: Ember.trust ? Theme.warn : Theme.dim
-                            font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.2
+                            font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.2
                             MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: win.overlay = "settings" }
                         }
                         Text {
                             visible: win.usage.input + win.usage.output > 0
                             text: "TOKENS " + win.usage.input + " IN · " + win.usage.output + " OUT"
-                            color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.2
+                            color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.2
                         }
                     }
                     Row {
@@ -525,7 +521,7 @@ FloatingWindow {
                             anchors.verticalCenter: parent.verticalCenter
                             text: "ENTER SENDS · SHIFT+ENTER NEW LINE"
                             visible: !win.busy
-                            color: Theme.dim; font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1.2
+                            color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.2
                         }
                         ChamferButton { implicitHeight: 28; text: "Stop"; visible: win.busy; onClicked: win.interrupt() }
                         ChamferButton { implicitHeight: 28; text: "Send"; primary: win.canSend; onClicked: win.sendNow() }
@@ -570,7 +566,6 @@ FloatingWindow {
             Rectangle {
                 implicitHeight: col.implicitHeight + 40
                 color: Theme.bg1
-                border.width: 1; border.color: Theme.lineStrong
                 Keys.onEscapePressed: win.overlay = ""
                 Column {
                     id: col
@@ -581,7 +576,7 @@ FloatingWindow {
                         visible: win.overlay === "rmchat"
                         width: parent.width; wrapMode: Text.Wrap
                         text: "Remove \"" + (win.target ? win.target.title : "") + "\"? It can't be brought back."
-                        color: Theme.fg; font.family: Theme.ui; font.pixelSize: 14
+                        color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.body
                     }
                     C.Entry {
                         id: nameEntry

@@ -82,8 +82,6 @@ Item {
         width: Math.min(520, parent.width - 32)
         height: Math.min(col.implicitHeight + 40, parent.height - 24)
         color: Theme.bg1
-        border.color: Theme.lineStrong
-        border.width: 1
         MouseArea { anchors.fill: parent }
         Rectangle { anchors.fill: parent; color: Theme.panel }
         Brackets { color: Theme.accent; size: 12 }
@@ -125,7 +123,7 @@ Item {
                     Text {
                         visible: root.pathErr !== ""
                         width: parent.width; wrapMode: Text.WordWrap
-                        color: Theme.bad; font.family: Theme.ui; font.pixelSize: 11
+                        color: Theme.bad; font.family: Theme.ui; font.pixelSize: Theme.type.label
                         text: root.pathErr
                     }
                 }
@@ -145,13 +143,13 @@ Item {
                     Text {
                         visible: root.nameErr !== ""
                         width: parent.width; wrapMode: Text.WordWrap
-                        color: Theme.bad; font.family: Theme.ui; font.pixelSize: 11
+                        color: Theme.bad; font.family: Theme.ui; font.pixelSize: Theme.type.label
                         text: root.nameErr
                     }
                     Text {
                         visible: root.nameErr === "" && root.effName !== ""
                         width: parent.width; elide: Text.ElideRight
-                        color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11
+                        color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
                         text: Shares.uncPath(root.effName)
                     }
                 }
@@ -167,7 +165,7 @@ Item {
                     }
                     Text {
                         width: parent.width; wrapMode: Text.WordWrap
-                        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 11
+                        color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                         text: root.access === "writable"
                             ? "Other computers can add, change and delete files in this folder."
                             : "Other computers can look at and copy files, but not change them."
@@ -188,7 +186,7 @@ Item {
                     Text {
                         visible: root.guest
                         width: parent.width; wrapMode: Text.WordWrap
-                        color: Theme.warn; font.family: Theme.ui; font.pixelSize: 11
+                        color: Theme.warn; font.family: Theme.ui; font.pixelSize: Theme.type.label
                         text: "Anyone on your network can open this share without a password."
                     }
                     Repeater {
@@ -200,7 +198,7 @@ Item {
                             spacing: 6
                             Text {
                                 width: parent.width; wrapMode: Text.WordWrap
-                                color: Theme.warn; font.family: Theme.ui; font.pixelSize: 11
+                                color: Theme.warn; font.family: Theme.ui; font.pixelSize: Theme.type.label
                                 text: wl.modelData.message
                             }
                             GButton {
@@ -229,7 +227,7 @@ Item {
                 Text {
                     visible: root.failure !== ""
                     width: parent.width; wrapMode: Text.WordWrap
-                    color: Theme.bad; font.family: Theme.ui; font.pixelSize: 12
+                    color: Theme.bad; font.family: Theme.ui; font.pixelSize: Theme.type.label
                     text: root.failure
                 }
 

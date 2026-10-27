@@ -20,13 +20,13 @@ Column {
             width: parent.width - when.implicitWidth - 12
             elide: Text.ElideRight
             text: Disks.busyText
-            color: Theme.fg; font.family: Theme.ui; font.pixelSize: 13
+            color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.body
         }
         Text {
             id: when
             anchors.right: parent.right
             text: Disks.busyDetail
-            color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+            color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
         }
     }
     Rectangle {

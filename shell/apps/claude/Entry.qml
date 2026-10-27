@@ -10,15 +10,15 @@ Rectangle {
     signal accepted()
     function focusEntry() { ti.forceActiveFocus(); }
     function selectAll() { ti.selectAll(); }
-    implicitWidth: 180; implicitHeight: 32
-    color: "transparent"
-    border.width: 1; border.color: ti.activeFocus ? Theme.accent : Theme.lineStrong
+    implicitWidth: 180; implicitHeight: 36
+    color: Theme.field
+    border.width: ti.activeFocus ? 1 : 0; border.color: Theme.accent
     TextInput {
         id: ti
         anchors.fill: parent; anchors.margins: 8
         verticalAlignment: TextInput.AlignVCenter
         color: Theme.fg; selectionColor: Theme.accent; selectedTextColor: Theme.onAccent
-        font.family: root.mono ? Theme.mono : Theme.ui; font.pixelSize: 13
+        font.family: root.mono ? Theme.mono : Theme.ui; font.pixelSize: Theme.type.body
         selectByMouse: true
         clip: true
         onAccepted: root.accepted()

@@ -48,8 +48,6 @@ Item {
         width: Math.min(520, parent.width - 32)
         height: Math.min(col.implicitHeight + 40, parent.height - 24)
         color: Theme.bg1
-        border.color: Theme.lineStrong
-        border.width: 1
         MouseArea { anchors.fill: parent }
         Rectangle { anchors.fill: parent; color: Theme.panel }
         Brackets { color: Disks.danger; size: 12 }
@@ -79,7 +77,7 @@ Item {
                         id: warn
                         x: 12; y: 10; width: parent.width - 24
                         wrapMode: Text.WordWrap
-                        color: Theme.fg; font.family: Theme.ui; font.pixelSize: 13
+                        color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.body
                         text: root.v ? "This erases everything on " + root.v.device + " (" + Disks.fmt(root.v.size) + (root.v.fs_name ? ", " + root.v.fs_name : "") + "). It cannot be undone."
                                        + (root.v.used ? "\n\nThere is " + Disks.fmt(root.v.used) + " of data on it." : "")
                                        + (root.contents ? "\n\nIncluding: " + root.contents.names.map(n => n.name).join(", ") + (root.contents.total > root.contents.names.length ? " and " + (root.contents.total - root.contents.names.length) + " more" : "") : "")
@@ -101,10 +99,9 @@ Item {
                                 readonly property bool off: false
                                 width: ft.implicitWidth + 20; height: 28
                                 opacity: off ? 0.4 : 1
-                                color: on ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14) : "transparent"
-                                border.color: on ? Theme.accent : Theme.line
+                                color: on ? Theme.selection : Theme.field
                                 Text { id: ft; anchors.centerIn: parent; text: modelData.name; color: parent.on ? Theme.accent : Theme.fg
-                                    font.family: Theme.ui; font.pixelSize: 12 }
+                                    font.family: Theme.ui; font.pixelSize: Theme.type.label }
                                 MouseArea { anchors.fill: parent; enabled: !parent.off; cursorShape: Qt.PointingHandCursor; onClicked: root.fs = modelData.id }
                             }
                         }
@@ -113,7 +110,7 @@ Item {
                         width: parent.width; wrapMode: Text.WordWrap
                         visible: root.fsInfo !== null && root.fsInfo.bad !== ""
                         text: root.fsInfo ? "Names cannot contain: " + root.fsInfo.bad : ""
-                        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+                        color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                     }
                 }
                 Column {

@@ -57,7 +57,7 @@ Page {
     }
     Text {
         visible: SysState.wifiDev === null && !SysState.wifiEnabled
-        text: "No Wi-Fi adapter."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
+        text: "No Wi-Fi adapter."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.body
     }
 
     ColumnLayout {
@@ -114,7 +114,7 @@ Page {
         }
         Text {
             visible: SysState.netList.length === 0
-            text: "Scanning for networks…"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
+            text: "Scanning for networks…"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.body
         }
     }
 
@@ -150,7 +150,7 @@ Page {
         Text {
             Layout.fillWidth: true; wrapMode: Text.WordWrap
             text: "Choose which devices and apps can reach this computer (game hosting, Remote Play, VTube Studio...), and see what was blocked."
-            color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+            color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
         }
         ChamferButton { text: "Open FIREWALL"; onClicked: Quickshell.execDetached([Quickshell.shellPath("bin/ultimit-firewall")]) }
     }

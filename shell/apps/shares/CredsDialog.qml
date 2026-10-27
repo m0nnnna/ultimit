@@ -45,8 +45,6 @@ Item {
         width: Math.min(460, parent.width - 32)
         height: col.implicitHeight + 40
         color: Theme.bg1
-        border.color: Theme.lineStrong
-        border.width: 1
         MouseArea { anchors.fill: parent }
         Rectangle { anchors.fill: parent; color: Theme.panel }
         Brackets { color: Theme.accent; size: 12 }
@@ -65,7 +63,7 @@ Item {
                 width: parent.width
                 wrapMode: Text.WordWrap
                 color: Theme.fg
-                font.family: Theme.ui; font.pixelSize: 13
+                font.family: Theme.ui; font.pixelSize: Theme.type.body
                 text: root.req ? (root.req.kind === "browse" ? "“" + root.req.name + "” needs a user name and password to show its shares."
                                                               : "“" + root.req.name + "” needs a user name and password.") : ""
             }
@@ -73,7 +71,7 @@ Item {
                 visible: root.req !== null && root.req.wrong === true
                 width: parent.width
                 color: Theme.bad
-                font.family: Theme.ui; font.pixelSize: 12
+                font.family: Theme.ui; font.pixelSize: Theme.type.label
                 text: "That user name or password was not accepted. Try again."
             }
             Column {
@@ -115,7 +113,7 @@ Item {
             }
             Text {
                 width: parent.width; wrapMode: Text.WordWrap
-                color: Theme.dim; font.family: Theme.ui; font.pixelSize: 11
+                color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                 text: root.remember ? "Saved in your keyring, so you are not asked again. If the keyring is locked the password is used once and not saved."
                                     : "Used for this connection only."
             }

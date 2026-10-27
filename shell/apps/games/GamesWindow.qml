@@ -169,7 +169,7 @@ FloatingWindow {
                     wrapMode: Text.WordWrap
                     text: "Ultimit lists your installed Steam games and any app with a Game desktop entry. You can also add a Windows program (run with Wine) or any command by hand."
                     color: Theme.dim
-                    font.family: Theme.ui; font.pixelSize: 13
+                    font.family: Theme.ui; font.pixelSize: Theme.type.body
                 }
                 GButton { anchors.horizontalCenter: parent.horizontalCenter; primary: true; text: "Add game…"; onClicked: addDlg.open() }
                 SteamCard { width: parent.width; mode: Games.steamState === "ready" ? "tip" : Games.steamState }
@@ -284,7 +284,7 @@ FloatingWindow {
                                 maximumLineCount: 3
                                 elide: Text.ElideRight
                                 lineHeight: 1.0
-                                font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: 12
+                                font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: Theme.type.label
                             }
                         }
                         // source chip
@@ -299,7 +299,7 @@ FloatingWindow {
                                 anchors.centerIn: parent
                                 text: win.sourceChip(cell.modelData).toUpperCase()
                                 color: cell.modelData.source === "steam" ? "#ffffff" : Theme.accent
-                                font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1.4
+                                font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.4
                             }
                         }
                         Rectangle {
@@ -390,7 +390,7 @@ FloatingWindow {
                             wrapMode: Text.WordWrap
                             text: win.sel ? (win.sel.comment || "") : ""
                             color: Theme.dim
-                            font.family: Theme.ui; font.pixelSize: 12
+                            font.family: Theme.ui; font.pixelSize: Theme.type.label
                         }
                         Grid {
                             columns: 1; rowSpacing: 5
@@ -415,7 +415,7 @@ FloatingWindow {
                                         text: kvRow.modelData[1]
                                         color: Theme.fg
                                         wrapMode: Text.WrapAnywhere
-                                        font.family: Theme.ui; font.pixelSize: 12
+                                        font.family: Theme.ui; font.pixelSize: Theme.type.label
                                     }
                                 }
                             }
@@ -440,7 +440,7 @@ FloatingWindow {
                             width: parent.width
                             wrapMode: Text.WordWrap
                             color: Theme.dim
-                            font.family: Theme.ui; font.pixelSize: 12
+                            font.family: Theme.ui; font.pixelSize: Theme.type.label
                             text: "Steam controls how this game starts. Set the options below, then paste the generated line into Steam."
                         }
 
@@ -460,7 +460,7 @@ FloatingWindow {
                             Text {
                                 visible: !Games.tools.nvidia
                                 width: parent.width; wrapMode: Text.WordWrap
-                                color: Theme.warn; font.family: Theme.ui; font.pixelSize: 11
+                                color: Theme.warn; font.family: Theme.ui; font.pixelSize: Theme.type.label
                                 text: "No NVIDIA driver is loaded, so Discrete is unavailable."
                             }
                         }
@@ -483,7 +483,7 @@ FloatingWindow {
                             }
                             Text {
                                 width: parent.width; wrapMode: Text.WordWrap
-                                color: Theme.dim; font.family: Theme.ui; font.pixelSize: 11
+                                color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                                 text: "MangoHud is 64-bit only here (mangohud:i386 isn't packaged), so 32-bit games can't show the overlay."
                             }
                         }
@@ -544,12 +544,12 @@ FloatingWindow {
                                 Text {
                                     visible: !Games.tools.umu
                                     width: parent.width; wrapMode: Text.WordWrap
-                                    color: Theme.warn; font.family: Theme.ui; font.pixelSize: 11
+                                    color: Theme.warn; font.family: Theme.ui; font.pixelSize: Theme.type.label
                                     text: "umu-launcher not installed; Proton games cannot start without umu-run."
                                 }
                                 Text {
                                     width: parent.width; wrapMode: Text.WordWrap
-                                    color: Theme.dim; font.family: Theme.ui; font.pixelSize: 11
+                                    color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                                     text: "Proton brings its own DXVK and vkd3d-proton; the prefix is set up by umu on first launch."
                                 }
                             }
@@ -565,7 +565,7 @@ FloatingWindow {
                             Text {
                                 visible: !win.cfg || win.cfg.runner !== "proton"
                                 width: parent.width; wrapMode: Text.WordWrap
-                                color: Theme.dim; font.family: Theme.ui; font.pixelSize: 11
+                                color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                                 text: "Copies Ultimit's DXVK (d3d9, d3d10core, d3d11, dxgi) into the Wine prefix at launch."
                             }
                             GLabel { text: "Wine prefix" }
@@ -584,7 +584,7 @@ FloatingWindow {
                             }
                             Text {
                                 width: parent.width; wrapMode: Text.WordWrap
-                                color: Theme.dim; font.family: Theme.ui; font.pixelSize: 11
+                                color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                                 text: win.cfg && win.cfg.prefix === "default" ? "Shared: " + Games.winePrefix : "Created on first launch if it doesn't exist."
                             }
                         }
@@ -634,7 +634,7 @@ FloatingWindow {
                                 }
                                 Text {
                                     width: parent.width; wrapMode: Text.WordWrap
-                                    color: Theme.dim; font.family: Theme.ui; font.pixelSize: 11
+                                    color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                                     text: "Paste into Steam > right-click the game > Properties > General > Launch options. "
                                         + "Steam, not Ultimit, starts this game, so these settings only apply through that line. "
                                         + (win.isSteam ? Games.steamOptionsNote(win.sel.id) : "")

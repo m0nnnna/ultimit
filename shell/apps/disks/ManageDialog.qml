@@ -88,8 +88,6 @@ Item {
         width: Math.min(540, parent.width - 32)
         height: Math.min(col.implicitHeight + 40, parent.height - 24)
         color: Theme.bg1
-        border.color: Theme.lineStrong
-        border.width: 1
         MouseArea { anchors.fill: parent }
         Rectangle { anchors.fill: parent; color: Theme.panel }
         Brackets { color: root.destructive ? Disks.danger : Theme.accent; size: 12 }
@@ -129,7 +127,7 @@ Item {
                         id: warn
                         x: 12; y: 10; width: parent.width - 24
                         wrapMode: Text.WordWrap
-                        color: Theme.fg; font.family: Theme.ui; font.pixelSize: 13
+                        color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.body
                         text: {
                             if (root.mode === "delete" && root.v)
                                 return "This deletes " + root.v.device + " (" + Disks.fmt(root.v.size) + (root.v.fs_name ? ", " + root.v.fs_name : "")
@@ -178,7 +176,7 @@ Item {
                     Text {
                         width: parent.width; wrapMode: Text.WordWrap
                         color: root.sizeOk ? Theme.dim : Theme.warn
-                        font.family: Theme.mono; font.pixelSize: 11
+                        font.family: Theme.mono; font.pixelSize: Theme.type.label
                         text: root.mode === "create"
                             ? (root.hi < 1048576 ? "That free space is too small."
                                : Disks.fmt(root.bytes) + " of " + Disks.fmt(root.hi) + " free" + (root.hi - root.bytes >= 1048576 ? " · " + Disks.fmt(root.hi - root.bytes) + " stays unallocated" : ""))
@@ -204,10 +202,9 @@ Item {
                                 readonly property bool off: false
                                 width: ft.implicitWidth + 20; height: 28
                                 opacity: off ? 0.4 : 1
-                                color: on ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14) : "transparent"
-                                border.color: on ? Theme.accent : Theme.line
+                                color: on ? Theme.selection : Theme.field
                                 Text { id: ft; anchors.centerIn: parent; text: modelData.name; color: parent.on ? Theme.accent : Theme.fg
-                                    font.family: Theme.ui; font.pixelSize: 12 }
+                                    font.family: Theme.ui; font.pixelSize: Theme.type.label }
                                 MouseArea { anchors.fill: parent; enabled: !parent.off; cursorShape: Qt.PointingHandCursor; onClicked: root.fs = modelData.id }
                             }
                         }
@@ -243,7 +240,7 @@ Item {
                     Text {
                         visible: root.labelErr !== ""
                         width: parent.width; wrapMode: Text.WordWrap
-                        text: root.labelErr; color: Theme.warn; font.family: Theme.ui; font.pixelSize: 12
+                        text: root.labelErr; color: Theme.warn; font.family: Theme.ui; font.pixelSize: Theme.type.label
                     }
                 }
 

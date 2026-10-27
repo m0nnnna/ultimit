@@ -76,7 +76,6 @@ FloatingWindow {
             x: 20; anchors.top: header.bottom; anchors.topMargin: 2
             width: parent.width - 40
             height: 32
-            Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
             Row {
                 spacing: 4
                 Repeater {
@@ -91,7 +90,7 @@ FloatingWindow {
                             anchors.centerIn: parent
                             text: tb.modelData.label.toUpperCase()
                             color: tb.on ? Theme.accent : (tm.containsMouse ? Theme.fg : Theme.dim)
-                            font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.8
+                            font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.8
                         }
                         Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 2; color: Theme.accent; visible: tb.on }
                         MouseArea { id: tm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
@@ -142,9 +141,7 @@ FloatingWindow {
             x: 20; anchors.top: statusRow.bottom; anchors.topMargin: 10
             width: parent.width - 40
             height: 40
-            color: Theme.panel2
-            border.color: Theme.line
-            border.width: 1
+            color: Theme.field
             visible: Shares.loaded && Shares.tab === "mine"
             Row {
                 anchors { left: parent.left; leftMargin: 14; verticalCenter: parent.verticalCenter }
@@ -153,7 +150,7 @@ FloatingWindow {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "\\\\" + Shares.host
-                    color: Theme.fg; font.family: Theme.mono; font.pixelSize: 14
+                    color: Theme.fg; font.family: Theme.mono; font.pixelSize: Theme.type.body
                 }
                 GLabel {
                     anchors.verticalCenter: parent.verticalCenter
@@ -167,7 +164,7 @@ FloatingWindow {
                     anchors.verticalCenter: parent.verticalCenter
                     visible: Shares.addr !== null
                     text: Shares.addr ? "smb://" + Shares.addr.ip : ""
-                    color: Theme.fg; font.family: Theme.mono; font.pixelSize: 14
+                    color: Theme.fg; font.family: Theme.mono; font.pixelSize: Theme.type.body
                 }
                 GLabel {
                     visible: Shares.addr !== null
@@ -195,7 +192,7 @@ FloatingWindow {
             elide: Text.ElideRight
             text: Shares.note
             color: Shares.noteKind === "error" ? Theme.bad : Theme.dim
-            font.family: Theme.ui; font.pixelSize: 12
+            font.family: Theme.ui; font.pixelSize: Theme.type.label
             visible: Shares.note !== "" && Shares.tab === "mine"
         }
 
@@ -266,7 +263,7 @@ FloatingWindow {
                             ? "Pick a folder and other computers on your home network can open it. You decide whether they can change files."
                             : "Finish the setup above, then pick a folder to share with other computers on your home network."
                         color: Theme.dim
-                        font.family: Theme.ui; font.pixelSize: 13
+                        font.family: Theme.ui; font.pixelSize: Theme.type.body
                     }
                     GButton {
                         visible: Shares.canShare
@@ -279,7 +276,7 @@ FloatingWindow {
                 Text {
                     visible: Shares.listError !== ""
                     width: parent.width; wrapMode: Text.WordWrap
-                    color: Theme.warn; font.family: Theme.ui; font.pixelSize: 12
+                    color: Theme.warn; font.family: Theme.ui; font.pixelSize: Theme.type.label
                     text: "Could not read the share list: " + Shares.listError
                 }
             }

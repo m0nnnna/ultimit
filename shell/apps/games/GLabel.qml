@@ -6,7 +6,7 @@ Text {
     property bool strong: false
     color: strong ? Theme.fg : Theme.dim
     font.family: Theme.mono
-    font.pixelSize: 10
+    font.pixelSize: Theme.type.label
     font.letterSpacing: 1.8
     font.capitalization: Font.AllUppercase
 }

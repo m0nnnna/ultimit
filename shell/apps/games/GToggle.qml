@@ -13,7 +13,6 @@ Item {
     implicitHeight: 34
     opacity: available ? 1 : 0.55
 
-    Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
     Row {
         anchors.verticalCenter: parent.verticalCenter
         spacing: 10
@@ -22,7 +21,7 @@ Item {
             text: root.label
             color: Theme.fg
             font.family: Theme.ui
-            font.pixelSize: 13
+            font.pixelSize: Theme.type.body
         }
         GChip {
             visible: !root.available
@@ -37,8 +36,6 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: 34; height: 16
         color: "transparent"
-        border.color: Theme.lineStrong
-        border.width: 1
         Rectangle {
             y: 2; width: 10; height: 10
             x: root.checked && root.available ? 20 : 2

@@ -72,8 +72,8 @@ Page {
     Rectangle {
         Layout.fillWidth: true
         implicitHeight: 264
-        color: "transparent"
-        border.width: 1; border.color: Theme.line
+        color: Theme.field
+        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         ListView {
             id: addList
             anchors.fill: parent; anchors.margins: 1
@@ -118,12 +118,12 @@ Page {
                     Text {
                         width: parent.width; elide: Text.ElideRight
                         text: ar.modelData.name; color: Theme.fg
-                        font.family: Theme.ui; font.pixelSize: 13
+                        font.family: Theme.ui; font.pixelSize: Theme.type.body
                     }
                     Text {
                         width: parent.width; elide: Text.ElideRight
                         text: ar.modelData.sub; color: Theme.dim
-                        font.family: Theme.mono; font.pixelSize: 10
+                        font.family: Theme.mono; font.pixelSize: Theme.type.label
                     }
                 }
                 ChamferButton {
@@ -139,7 +139,7 @@ Page {
                 anchors.centerIn: parent
                 visible: addList.count === 0
                 text: Pins.canAdd() ? "NO MATCHES" : "RAIL IS FULL"
-                color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 2
+                color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 2
             }
         }
     }
@@ -147,6 +147,6 @@ Page {
         Layout.fillWidth: true
         text: Pins.canAdd() ? "" : "The rail is full (" + Pins.maxPins + " pins). Remove one to add another."
         visible: text !== ""
-        color: Theme.warn; font.family: Theme.ui; font.pixelSize: 12
+        color: Theme.warn; font.family: Theme.ui; font.pixelSize: Theme.type.label
     }
 }

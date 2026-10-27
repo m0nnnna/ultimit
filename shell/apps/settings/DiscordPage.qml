@@ -71,14 +71,14 @@ Page {
         visible: pg.loaded && pg.st.installed === false
         Layout.fillWidth: true
         implicitHeight: instRow.implicitHeight + 28
-        color: Theme.panel2; border.color: Theme.warn
+        color: Theme.field; border.color: Theme.warn
         RowLayout {
             id: instRow
             x: 16; y: 14; width: parent.width - 32
             Text {
                 Layout.fillWidth: true; wrapMode: Text.WordWrap
                 text: "Vesktop isn't installed. Install it from STORE, then come back here: the accounts appear in the launcher by themselves."
-                color: Theme.fg; font.family: Theme.ui; font.pixelSize: 12
+                color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.label
             }
             ChamferButton {
                 primary: true; text: "Open in STORE"
@@ -142,14 +142,14 @@ Page {
         visible: pg.mode === "remove"
         Layout.fillWidth: true
         implicitHeight: rmRow.implicitHeight + 28
-        color: Theme.panel2; border.color: Theme.bad
+        color: Theme.field; border.color: Theme.bad
         RowLayout {
             id: rmRow
             x: 16; y: 14; width: parent.width - 32
             Text {
                 Layout.fillWidth: true; wrapMode: Text.WordWrap
                 text: "Remove this account? Its launcher entry goes, and it is signed out: its Vencord plugins and settings are deleted too. Your Discord account itself is not touched."
-                color: Theme.fg; font.family: Theme.ui; font.pixelSize: 12
+                color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.label
             }
             ChamferButton { text: "Cancel"; onClicked: { pg.mode = ""; pg.sel = ""; } }
             ChamferButton {
@@ -163,7 +163,7 @@ Page {
     Text {
         visible: pg.note !== ""
         Layout.fillWidth: true; wrapMode: Text.WordWrap
-        text: pg.note; color: pg.noteColor; font.family: Theme.ui; font.pixelSize: 12
+        text: pg.note; color: pg.noteColor; font.family: Theme.ui; font.pixelSize: Theme.type.label
     }
 
     // ================= add =================
@@ -186,6 +186,6 @@ Page {
     Text {
         Layout.fillWidth: true; wrapMode: Text.WordWrap
         text: "New accounts start with the Ultimit theme and title bar. The theme follows your skin when Discord starts. Rich Presence (the game you're playing as your status) is on for the first account only."
-        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+        color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
     }
 }

@@ -1,4 +1,4 @@
-// SmallLink.qml - a small mono caps text button (sidebar "+ NEW", "DETAILS").
+// SmallLink.qml - a small text button (sidebar "+ NEW", "DETAILS").
 import QtQuick
 import "../.."
 
@@ -6,7 +6,8 @@ Text {
     id: root
     signal clicked()
     color: lm.containsMouse ? Theme.fg : Theme.accent
-    font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.6
+    font.family: Theme.ui; font.pixelSize: Theme.type.label; font.weight: Font.DemiBold
+    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
     MouseArea {
         id: lm
         anchors.fill: parent; anchors.margins: -4

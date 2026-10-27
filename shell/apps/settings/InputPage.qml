@@ -97,7 +97,7 @@ Page {
     Text {
         Layout.fillWidth: true
         text: "Warning: on this laptop's ELAN touchpad, disable-while-typing blocked every tap and click. Leave it off unless you need it."
-        color: Theme.warn; font.family: Theme.ui; font.pixelSize: 12; wrapMode: Text.WordWrap
+        color: Theme.warn; font.family: Theme.ui; font.pixelSize: Theme.type.label; wrapMode: Text.WordWrap
     }
 
     SectionLabel { text: "Pointer" }

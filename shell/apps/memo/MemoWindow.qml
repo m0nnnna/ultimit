@@ -387,7 +387,6 @@ FloatingWindow {
             Rectangle {
                 Layout.fillWidth: true; Layout.preferredHeight: tbFlow.implicitHeight + 14
                 color: Theme.panel2
-                Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
                 Flow {
                     id: tbFlow
                     x: 10; y: 7; width: parent.width - 20
@@ -422,7 +421,7 @@ FloatingWindow {
                         : win.banner === "deleted" ? "File was deleted or moved on disk."
                         : win.banner === "recovered" ? "Recovered unsaved changes."
                         : win.banner
-                    color: Theme.fg; font.family: Theme.ui; font.pixelSize: 13
+                    color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.body
                 }
                 Row {
                     id: bannerBtns
@@ -447,19 +446,18 @@ FloatingWindow {
                 visible: win.findOpen
                 Layout.fillWidth: true; Layout.preferredHeight: win.replaceOpen ? 76 : 42
                 color: Theme.panel2
-                Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
                 Column {
                     x: 10; y: 6; spacing: 6
                     Row {
                         spacing: 6
                         Rectangle {
-                            width: 240; height: 28; color: "transparent"
-                            border.width: 1; border.color: findField.activeFocus ? Theme.accent : Theme.lineStrong
+                            width: 240; height: 28; color: Theme.field
+                            border.width: findField.activeFocus ? 1 : 0; border.color: Theme.accent
                             TextInput {
                                 id: findField
                                 anchors.fill: parent; anchors.margins: 6; clip: true
                                 color: Theme.fg; selectionColor: Theme.accent; selectedTextColor: Theme.onAccent
-                                font.family: Theme.mono; font.pixelSize: 13
+                                font.family: Theme.mono; font.pixelSize: Theme.type.body
                                 onTextChanged: win.recount()
                                 KeyNavigation.tab: replField
                                 onAccepted: win.findNext(false)
@@ -478,20 +476,20 @@ FloatingWindow {
                             anchors.verticalCenter: parent.verticalCenter
                             text: findField.text === "" ? "" : win.matchCount + (win.matchCount === 1 ? " match" : " matches")
                             color: findField.text !== "" && win.matchCount === 0 ? Theme.bad : Theme.dim
-                            font.family: Theme.mono; font.pixelSize: 11
+                            font.family: Theme.mono; font.pixelSize: Theme.type.label
                         }
                     }
                     Row {
                         visible: win.replaceOpen
                         spacing: 6
                         Rectangle {
-                            width: 240; height: 28; color: "transparent"
-                            border.width: 1; border.color: replField.activeFocus ? Theme.accent : Theme.lineStrong
+                            width: 240; height: 28; color: Theme.field
+                            border.width: replField.activeFocus ? 1 : 0; border.color: Theme.accent
                             TextInput {
                                 id: replField
                                 anchors.fill: parent; anchors.margins: 6; clip: true
                                 color: Theme.fg; selectionColor: Theme.accent; selectedTextColor: Theme.onAccent
-                                font.family: Theme.mono; font.pixelSize: 13
+                                font.family: Theme.mono; font.pixelSize: Theme.type.body
                                 KeyNavigation.tab: findField
                                 KeyNavigation.backtab: findField
                                 onAccepted: win.replaceOne()
@@ -510,24 +508,23 @@ FloatingWindow {
                 visible: win.gotoOpen
                 Layout.fillWidth: true; Layout.preferredHeight: 42
                 color: Theme.panel2
-                Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
                 Row {
                     x: 10; y: 7; spacing: 8
-                    Text { anchors.verticalCenter: parent.verticalCenter; text: "GO TO LINE"; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.5 }
+                    Text { anchors.verticalCenter: parent.verticalCenter; text: "GO TO LINE"; color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.5 }
                     Rectangle {
-                        width: 120; height: 28; color: "transparent"
-                        border.width: 1; border.color: gotoField.activeFocus ? Theme.accent : Theme.lineStrong
+                        width: 120; height: 28; color: Theme.field
+                        border.width: gotoField.activeFocus ? 1 : 0; border.color: Theme.accent
                         TextInput {
                             id: gotoField
                             anchors.fill: parent; anchors.margins: 6; clip: true
                             color: Theme.fg; selectionColor: Theme.accent; selectedTextColor: Theme.onAccent
-                            font.family: Theme.mono; font.pixelSize: 13
+                            font.family: Theme.mono; font.pixelSize: Theme.type.body
                             validator: IntValidator { bottom: 1 }
                             onAccepted: { const n = parseInt(text); if (!isNaN(n)) win.gotoLine(n); win.closeBars(); }
                             Keys.onEscapePressed: win.closeBars()
                         }
                     }
-                    Text { anchors.verticalCenter: parent.verticalCenter; text: "1 - " + win.lineCount; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11 }
+                    Text { anchors.verticalCenter: parent.verticalCenter; text: "1 - " + win.lineCount; color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label }
                 }
             }
 
@@ -542,7 +539,6 @@ FloatingWindow {
                     width: Math.max(44, String(win.lineCount).length * (Memo.fontSize * 0.62) + 22)
                     height: parent.height
                     color: Theme.panel2
-                    Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Theme.line }
                     Item {
                         anchors.fill: parent; clip: true
                         Repeater {
@@ -661,20 +657,19 @@ FloatingWindow {
             Rectangle {
                 Layout.fillWidth: true; Layout.preferredHeight: 26
                 color: Theme.panel2
-                Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Theme.line }
                 Text {
                     anchors.left: parent.left; anchors.leftMargin: 12; anchors.verticalCenter: parent.verticalCenter
                     width: parent.width / 2 - 20
                     elide: Text.ElideMiddle
                     text: win.path === "" ? "UNSAVED DOCUMENT" : win.path
-                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11
+                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
                 }
                 Text {
                     anchors.right: parent.right; anchors.rightMargin: 12; anchors.verticalCenter: parent.verticalCenter
                     text: "LN " + win.line + ", COL " + win.col + "   " + win.lineCount + " LINES   UTF-8   " + win.eol.toUpperCase()
                         + (win.modified ? "   ● MODIFIED" : "   SAVED")
                     color: win.modified ? Theme.warn : Theme.dim
-                    font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 0.8
+                    font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 0.8
                 }
             }
         }

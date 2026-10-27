@@ -84,13 +84,13 @@ ColumnLayout {
     Text {
         visible: root.error !== ""
         Layout.fillWidth: true; wrapMode: Text.WordWrap
-        text: root.error; color: Theme.bad; font.family: Theme.ui; font.pixelSize: 12
+        text: root.error; color: Theme.bad; font.family: Theme.ui; font.pixelSize: Theme.type.label
     }
     Text {
         visible: root.vpns.length === 0 && root.error === ""
         Layout.fillWidth: true; wrapMode: Text.WordWrap
         text: "No VPNs yet. Add one from the file your VPN service gives you: WireGuard (.conf) or OpenVPN (.ovpn)."
-        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+        color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
     }
 
     Repeater {
@@ -135,7 +135,7 @@ ColumnLayout {
                 visible: root.loginFor === vr.modelData.uuid
                 Layout.fillWidth: true
                 implicitHeight: lg.implicitHeight + 24
-                color: Theme.panel2; border.color: Theme.line
+                color: Theme.field
                 ColumnLayout {
                     id: lg
                     x: 14; y: 12; width: parent.width - 28
@@ -143,9 +143,9 @@ ColumnLayout {
                     GridLayout {
                         Layout.fillWidth: true
                         columns: 2; columnSpacing: 12; rowSpacing: 8
-                        Text { text: "User name"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12 }
+                        Text { text: "User name"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label }
                         TextEntry { id: user; Layout.fillWidth: true; placeholder: "from your VPN service (PIA: p1234567)" }
-                        Text { text: "Password"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12 }
+                        Text { text: "Password"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label }
                         TextEntry { id: pw; Layout.fillWidth: true; secret: true }
                     }
                     ToggleRow { id: remember; Layout.fillWidth: true; text: "Remember the password (in your keyring)"; checked: true }
@@ -172,7 +172,7 @@ ColumnLayout {
     Text {
         visible: root.note !== ""
         Layout.fillWidth: true; wrapMode: Text.WordWrap
-        text: root.note; color: root.noteColor; font.family: Theme.ui; font.pixelSize: 12
+        text: root.note; color: root.noteColor; font.family: Theme.ui; font.pixelSize: Theme.type.label
     }
 
     Flow {
@@ -187,26 +187,26 @@ ColumnLayout {
         visible: root.pasting
         Layout.fillWidth: true
         implicitHeight: ps.implicitHeight + 24
-        color: Theme.panel2; border.color: Theme.line
+        color: Theme.field
         ColumnLayout {
             id: ps
             x: 14; y: 12; width: parent.width - 28
             spacing: 8
             RowLayout {
                 Layout.fillWidth: true
-                Text { text: "Name"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12 }
+                Text { text: "Name"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label }
                 TextEntry { id: pasteName; Layout.fillWidth: true; placeholder: "Home, Office, Proton…" }
             }
             Rectangle {
                 Layout.fillWidth: true; Layout.preferredHeight: 150
-                color: "transparent"; border.color: cfg.activeFocus ? Theme.accent : Theme.lineStrong
+                color: Theme.field; border.color: cfg.activeFocus ? Theme.accent : "transparent"
                 ScrollView {
                     anchors.fill: parent; anchors.margins: 6
                     TextArea {
                         id: cfg
                         placeholderText: "[Interface]\nPrivateKey = …\nAddress = …\n\n[Peer]\nPublicKey = …\nAllowedIPs = 0.0.0.0/0\nEndpoint = …"
                         placeholderTextColor: Theme.dim
-                        color: Theme.fg; font.family: Theme.mono; font.pixelSize: 11
+                        color: Theme.fg; font.family: Theme.mono; font.pixelSize: Theme.type.label
                         background: null
                         wrapMode: TextEdit.NoWrap
                     }
@@ -229,6 +229,6 @@ ColumnLayout {
     Text {
         Layout.fillWidth: true; wrapMode: Text.WordWrap
         text: "Private Internet Access: their Linux app works here (its icon shows in the tray). Without it, download PIA's OpenVPN files, add one here and sign in with your PIA user name and password."
-        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 11
+        color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
     }
 }

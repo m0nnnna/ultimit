@@ -40,8 +40,6 @@ Item {
         width: Math.min(460, parent.width - 32)
         height: col.implicitHeight + 40
         color: Theme.bg1
-        border.color: Theme.lineStrong
-        border.width: 1
         MouseArea { anchors.fill: parent }
         Rectangle { anchors.fill: parent; color: Theme.panel }
         Brackets { color: Theme.accent; size: 12 }
@@ -60,7 +58,7 @@ Item {
                 width: parent.width
                 wrapMode: Text.WordWrap
                 color: Theme.dim
-                font.family: Theme.ui; font.pixelSize: 12
+                font.family: Theme.ui; font.pixelSize: Theme.type.label
                 text: "This is the password other computers use to open your shares. It can differ from your login password. It is stored by Samba, not by SHARES."
             }
             Column {
@@ -91,7 +89,7 @@ Item {
                 visible: root.hint !== ""
                 width: parent.width
                 color: Theme.warn
-                font.family: Theme.ui; font.pixelSize: 11
+                font.family: Theme.ui; font.pixelSize: Theme.type.label
                 text: root.hint
             }
             Row {

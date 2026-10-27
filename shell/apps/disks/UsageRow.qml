@@ -17,8 +17,6 @@ Rectangle {
     readonly property bool rolled: entry.kind === "other" && !entry.path
     implicitHeight: 38
     color: m.containsMouse ? Theme.panel2 : "transparent"
-    border.color: Theme.line
-    border.width: 1
 
     MouseArea {
         id: m
@@ -33,7 +31,7 @@ Rectangle {
         width: 14
         text: root.folder ? "▸" : root.rolled ? "…" : "·"
         color: root.folder ? Theme.accent : Theme.dim
-        font.family: Theme.mono; font.pixelSize: 13
+        font.family: Theme.mono; font.pixelSize: Theme.type.body
     }
     Text {
         id: nm
@@ -42,7 +40,7 @@ Rectangle {
         elide: Text.ElideMiddle
         text: root.entry.name + (root.entry.errors > 0 ? "  ⚠" : "")
         color: root.rolled ? Theme.dim : Theme.fg
-        font.family: Theme.ui; font.pixelSize: 13
+        font.family: Theme.ui; font.pixelSize: Theme.type.body
     }
     Rectangle {
         id: track
@@ -60,21 +58,21 @@ Rectangle {
         anchors { right: pct.left; rightMargin: 8; verticalCenter: parent.verticalCenter }
         width: 72; horizontalAlignment: Text.AlignRight
         text: Disks.fmt(root.entry.size)
-        color: Theme.fg; font.family: Theme.mono; font.pixelSize: 12
+        color: Theme.fg; font.family: Theme.mono; font.pixelSize: Theme.type.label
     }
     Text {
         id: pct
         anchors { right: cnt.left; rightMargin: 4; verticalCenter: parent.verticalCenter }
         width: 48; horizontalAlignment: Text.AlignRight
         text: root.showPct ? (root.entry.pct < 0.1 ? "<0.1" : root.entry.pct.toFixed(1)) + "%" : ""
-        color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11
+        color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
     }
     Text {
         id: cnt
         anchors { right: acts.left; rightMargin: 4; verticalCenter: parent.verticalCenter }
         width: 76; horizontalAlignment: Text.AlignRight
         text: root.folder || root.rolled ? Disks.count(root.entry.items) + (root.entry.items === 1 ? " item" : " items") : ""
-        color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11
+        color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
     }
     Row {
         id: acts
@@ -92,7 +90,7 @@ Rectangle {
                     id: tl; anchors.centerIn: parent
                     text: modelData.t.toUpperCase()
                     color: bm.containsMouse ? modelData.c : Theme.dim
-                    font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1.2
+                    font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.2
                 }
                 MouseArea {
                     id: bm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor

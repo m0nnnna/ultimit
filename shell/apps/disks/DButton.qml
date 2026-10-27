@@ -37,7 +37,7 @@ Item {
         color: root.solid ? "#ffffff" : root.red
         font.family: Theme.ui
         font.weight: Font.DemiBold
-        font.pixelSize: 11
+        font.pixelSize: Theme.type.label
         font.letterSpacing: 1.76
     }
     MouseArea {

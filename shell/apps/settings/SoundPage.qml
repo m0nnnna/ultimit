@@ -38,7 +38,7 @@ Page {
         }
         Text {
             visible: pg.outputs.length === 0
-            text: "No output devices."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
+            text: "No output devices."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.body
         }
     }
     // Display audio: which HDMI/DisplayPort connector a graphics card plays to (its profile; one at a
@@ -78,7 +78,7 @@ Page {
                 Layout.topMargin: 8; Layout.bottomMargin: 4
                 text: "Screen speakers: " + dc.modelData.name + " plays to one screen at a time."
                 Layout.fillWidth: true; wrapMode: Text.WordWrap
-                color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+                color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
             }
             Repeater {
                 model: dc.modelData.outputs
@@ -126,7 +126,7 @@ Page {
         }
         Text {
             visible: pg.inputs.length === 0
-            text: "No input devices."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
+            text: "No input devices."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.body
         }
     }
     SliderField {
@@ -164,6 +164,6 @@ Page {
     }
     Text {
         visible: pg.streams.length === 0
-        text: "No applications are playing audio."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
+        text: "No applications are playing audio."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.body
     }
 }

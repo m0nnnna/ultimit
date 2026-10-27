@@ -359,8 +359,7 @@ FloatingWindow {
             // ---------------------------------------------------- sidebar
             Rectangle {
                 Layout.fillHeight: true; Layout.preferredWidth: 270
-                color: Theme.panel
-                Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Theme.line }
+                color: Theme.field
 
                 ColumnLayout {
                     anchors.fill: parent; anchors.margins: 14; anchors.rightMargin: 15
@@ -372,16 +371,16 @@ FloatingWindow {
                     }
                     Text {
                         Layout.fillWidth: true; Layout.topMargin: -6
-                        text: Claude.cliVersion !== "" ? "CLAUDE CODE " + Claude.cliVersion : (Claude.cliChecked ? "CLAUDE CODE NOT INSTALLED" : "")
+                        text: Claude.cliVersion !== "" ? "Claude Code " + Claude.cliVersion : (Claude.cliChecked ? "Claude Code not installed" : "")
                         color: Claude.cliVersion !== "" ? Theme.dim : Theme.warn
-                        font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.6
+                        font.family: Theme.ui; font.pixelSize: Theme.type.label
                     }
 
                     // the account this chat uses
                     Rectangle {
                         Layout.fillWidth: true; Layout.preferredHeight: 52; Layout.topMargin: 4
-                        color: accMa.containsMouse ? Theme.panel2 : "transparent"
-                        border.width: 1; border.color: Theme.lineStrong
+                        color: accMa.containsMouse ? Theme.hover : Theme.press
+                        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                         Rectangle {
                             x: 12; anchors.verticalCenter: parent.verticalCenter
                             width: 8; height: 8; radius: 4
@@ -392,13 +391,13 @@ FloatingWindow {
                             Text {
                                 width: parent.width; elide: Text.ElideRight
                                 text: Claude.accountName(win.accountId) || "No account"
-                                color: Theme.fg; font.family: Theme.ui; font.pixelSize: 13; font.weight: Font.DemiBold
+                                color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.body; font.weight: Font.DemiBold
                             }
                             Text {
                                 width: parent.width; elide: Text.ElideRight
-                                text: win.accountStatus.checking ? "CHECKING" : win.accountStatus.loggedIn
-                                    ? (win.accountStatus.email || win.accountStatus.method || "SIGNED IN") : "NOT SIGNED IN"
-                                color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1
+                                text: win.accountStatus.checking ? "Checking" : win.accountStatus.loggedIn
+                                    ? (win.accountStatus.email || win.accountStatus.method || "Signed in") : "Not signed in"
+                                color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                             }
                         }
                         MouseArea { id: accMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: mouse => win.accountMenu(accMa, mouse.x, mouse.y) }
@@ -413,12 +412,12 @@ FloatingWindow {
                     RowLayout {
                         Layout.fillWidth: true; Layout.topMargin: 6
                         SectionLabel { text: "Projects"; Layout.fillWidth: true }
-                        SmallLink { text: "+ NEW"; onClicked: win.editProject(null) }
+                        SmallLink { text: "+ New"; onClicked: win.editProject(null) }
                     }
                     ListView {
                         id: projList
                         Layout.fillWidth: true
-                        Layout.preferredHeight: Math.min(contentHeight, 40 * 6)
+                        Layout.preferredHeight: Math.min(contentHeight, 48 * 5)
                         clip: true
                         boundsBehavior: Flickable.StopAtBounds
                         model: Claude.projects
@@ -428,7 +427,7 @@ FloatingWindow {
                             required property var modelData
                             width: ListView.view.width
                             text: modelData.name
-                            sub: modelData.builtin ? "TROUBLESHOOT · SYSTEM" : win.tilde(modelData.dir)
+                            sub: modelData.builtin ? "Troubleshoot · system" : win.tilde(modelData.dir)
                             selected: modelData.id === win.projectId
                             onClicked: if (modelData.id !== win.projectId) win.selectProject(modelData.id)
                             onMenu: (x, y) => win.projectMenu(projRow, modelData, x, y)
@@ -439,7 +438,7 @@ FloatingWindow {
                     RowLayout {
                         Layout.fillWidth: true; Layout.topMargin: 6
                         SectionLabel { text: "Chats"; Layout.fillWidth: true }
-                        SmallLink { text: "+ NEW"; onClicked: win.newChat() }
+                        SmallLink { text: "+ New"; onClicked: win.newChat() }
                     }
                     ListView {
                         Layout.fillWidth: true; Layout.fillHeight: true
@@ -453,9 +452,9 @@ FloatingWindow {
                             width: ListView.view.width
                             text: modelData.title || "Chat"
                             readonly property string running: win.chatState(win.projectId, modelData.id)
-                            sub: (running !== "" ? running.toUpperCase() + " · " : "") + win.when(modelData.updated)
+                            sub: (running !== "" ? running + " · " : "") + win.when(modelData.updated)
                                  + (modelData.account && modelData.account !== win.proj.account
-                                    ? " · " + (Claude.accountName(modelData.account) || "removed account").toUpperCase() : "")
+                                    ? " · " + (Claude.accountName(modelData.account) || "removed account") : "")
                             selected: modelData.id === chat.chatId
                             actions: true
                             onClicked: win.openChat(modelData)
@@ -467,7 +466,7 @@ FloatingWindow {
                             visible: win.chats.length === 0
                             width: parent.width; wrapMode: Text.Wrap
                             text: "No chats here yet."
-                            color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+                            color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                         }
                     }
                 }
@@ -494,21 +493,20 @@ FloatingWindow {
                     Rectangle {
                         Layout.fillWidth: true; Layout.preferredHeight: 64
                         color: Theme.panel
-                        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
                         Column {
                             x: 18; anchors.verticalCenter: parent.verticalCenter
                             width: parent.width - headBtns.width - 50
                             spacing: 3
                             Text {
                                 width: parent.width; elide: Text.ElideRight
-                                text: win.proj ? win.proj.name.toUpperCase() : ""
+                                text: win.proj ? win.proj.name : ""
                                 color: Theme.fg; font.family: Theme.display; font.pixelSize: Theme.ds(14); font.letterSpacing: Theme.dt(2)
                             }
                             Text {
                                 width: parent.width; elide: Text.ElideMiddle
                                 text: win.proj ? [win.tilde(win.proj.dir), (win.proj.model || chat.modelName || "default model"),
-                                                  win.permLabels[win.proj.perm || "default"]].join("   ·   ").toUpperCase() : ""
-                                color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.2
+                                                  win.permLabels[win.proj.perm || "default"]].join("   ·   ") : ""
+                                color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                             }
                         }
                         Row {
@@ -564,7 +562,7 @@ FloatingWindow {
                                 Text {
                                     visible: chat.busy && chat.liveText === ""
                                     text: (chat.thinking ? "THINKING" : chat.statusText !== "" ? chat.statusText.toUpperCase() : "WORKING") + dots.s
-                                    color: Theme.accent; font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.6
+                                    color: Theme.accent; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.6
                                     Timer {
                                         id: dots
                                         property string s: ""
@@ -584,14 +582,14 @@ FloatingWindow {
                             Text {
                                 width: parent.width; horizontalAlignment: Text.AlignHCenter
                                 text: win.projectId === "system" ? "WHAT'S UP WITH THIS PC?" : "NEW CHAT"
-                                color: Theme.dim; font.family: Theme.mono; font.pixelSize: 12; font.letterSpacing: 2
+                                color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 2
                             }
                             Text {
                                 width: parent.width; horizontalAlignment: Text.AlignHCenter; wrapMode: Text.Wrap
                                 text: win.projectId === "system"
                                     ? "Describe the problem. Claude gets a summary of this PC (Ultimit version, graphics, monitors, recent errors) with your first message, can read the logs, and asks before it changes anything."
                                     : "Claude works in " + win.tilde(win.proj ? win.proj.dir : "") + " and keeps to this project's notes. Chats stay in the list on the left, so you can pick one up later."
-                                color: Theme.fg; font.family: Theme.ui; font.pixelSize: 14
+                                color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.body
                             }
                         }
                     }
@@ -602,7 +600,7 @@ FloatingWindow {
                         Layout.fillWidth: true
                         Layout.preferredHeight: askCol.implicitHeight + 28
                         color: Theme.panel
-                        Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Theme.lineStrong }
+                        
                         Rectangle { width: 3; height: parent.height; color: Theme.warn }
                         Column {
                             id: askCol
@@ -612,7 +610,7 @@ FloatingWindow {
                             Text {
                                 visible: askCol.isQuestion
                                 text: "CLAUDE HAS A QUESTION" + (chat.askQueue.length ? "   (+" + chat.askQueue.length + " MORE)" : "")
-                                color: Theme.warn; font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.8
+                                color: Theme.warn; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.8
                             }
                             QuestionPanel {
                                 visible: askCol.isQuestion
@@ -624,24 +622,24 @@ FloatingWindow {
                             Text {
                                 visible: !askCol.isQuestion
                                 text: chat.ask ? ("Claude wants to use " + chat.ask.tool).toUpperCase() + (chat.askQueue.length ? "   (+" + chat.askQueue.length + " MORE)" : "") : ""
-                                color: Theme.warn; font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.8
+                                color: Theme.warn; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.8
                             }
                             Text {
                                 visible: !askCol.isQuestion
                                 width: parent.width; wrapMode: Text.WrapAnywhere; maximumLineCount: 6; elide: Text.ElideRight
                                 text: chat.ask ? chat.ask.summary : ""
-                                color: Theme.fg; font.family: Theme.mono; font.pixelSize: 13
+                                color: Theme.fg; font.family: Theme.mono; font.pixelSize: Theme.type.body
                             }
                             Text {
                                 visible: !askCol.isQuestion && !!chat.ask && chat.ask.reason !== "" && chat.ask.reason !== chat.ask.summary
                                 width: parent.width; wrapMode: Text.Wrap
                                 text: chat.ask ? chat.ask.reason : ""
-                                color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+                                color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                             }
                             Rectangle {
                                 visible: askMore.checked && !askCol.isQuestion
                                 width: parent.width; height: Math.min(detail.implicitHeight + 16, 220)
-                                color: Theme.bg1; border.width: 1; border.color: Theme.line
+                                color: Theme.field
                                 Flickable {
                                     anchors.fill: parent; anchors.margins: 8
                                     contentHeight: detail.implicitHeight; clip: true
@@ -651,7 +649,7 @@ FloatingWindow {
                                         width: parent.width; readOnly: true; selectByMouse: true; wrapMode: TextEdit.WrapAnywhere
                                         text: chat.ask ? chat.ask.detail : ""
                                         color: Theme.fg; selectionColor: Theme.accent; selectedTextColor: Theme.onAccent
-                                        font.family: Theme.mono; font.pixelSize: 11
+                                        font.family: Theme.mono; font.pixelSize: Theme.type.label
                                     }
                                 }
                             }
@@ -677,7 +675,7 @@ FloatingWindow {
                         Layout.fillWidth: true
                         Layout.preferredHeight: Math.min(Math.max(input.contentHeight + 24, 48), 220) + 46 + strip.height
                         color: Theme.panel
-                        Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Theme.line }
+                        
 
                         // images going with the next message, and why one couldn't be attached
                         Item {
@@ -695,7 +693,7 @@ FloatingWindow {
                                         required property var modelData
                                         required property int index
                                         width: 84; height: 64
-                                        color: Theme.bg1; border.width: 1; border.color: Theme.lineStrong
+                                        color: Theme.field
                                         Image {
                                             anchors.fill: parent; anchors.margins: 1
                                             source: "file://" + thumb.modelData.path
@@ -705,10 +703,10 @@ FloatingWindow {
                                         Rectangle {
                                             anchors.right: parent.right; anchors.top: parent.top
                                             width: 20; height: 20
-                                            color: rmHover.hovered ? Theme.bad : Qt.rgba(0, 0, 0, 0.6)
+                                            color: rmHover.hovered ? Theme.bad : Theme.scrim
                                             Text {
                                                 anchors.centerIn: parent; text: "×"
-                                                color: Theme.fg; font.family: Theme.ui; font.pixelSize: 14
+                                                color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.body
                                             }
                                             HoverHandler { id: rmHover; cursorShape: Qt.PointingHandCursor }
                                             TapHandler { onTapped: win.removeAttachment(thumb.index) }
@@ -719,7 +717,7 @@ FloatingWindow {
                                     visible: win.attachNote !== ""
                                     height: 64; verticalAlignment: Text.AlignVCenter
                                     text: win.attachNote
-                                    color: Theme.bad; font.family: Theme.mono; font.pixelSize: 11
+                                    color: Theme.bad; font.family: Theme.mono; font.pixelSize: Theme.type.label
                                 }
                             }
                         }
@@ -740,8 +738,8 @@ FloatingWindow {
                         Rectangle {
                             id: box
                             x: 14; y: 12 + strip.height; width: parent.width - 28; height: parent.height - 52 - strip.height
-                            color: "transparent"
-                            border.width: 1; border.color: input.activeFocus ? Theme.accent : Theme.lineStrong
+                            color: Theme.field
+                            border.width: input.activeFocus ? 1 : 0; border.color: Theme.accent
                             ScrollView {
                                 anchors.fill: parent; anchors.margins: 1
                                 TextArea {
@@ -753,7 +751,7 @@ FloatingWindow {
                                     placeholderText: win.projectId === "system" ? "Describe what's wrong, or ask anything about this PC…"
                                                                                  : "Ask Claude about " + (win.proj ? win.proj.name : "this project") + "…"
                                     placeholderTextColor: Theme.dim
-                                    font.family: Theme.ui; font.pixelSize: 14
+                                    font.family: Theme.ui; font.pixelSize: Theme.type.body
                                     enabled: win.ready
                                     ContextMenu.menu: null      // ours below, in the app's style
                                     Keys.onPressed: e => {
@@ -795,7 +793,7 @@ FloatingWindow {
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: [chat.info, win.usageText, chat.limit].filter(s => s !== "").join("   ·   ").toUpperCase()
-                                color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.2
+                                color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.2
                             }
                         }
                         Row {
@@ -806,7 +804,7 @@ FloatingWindow {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: "ENTER SENDS · SHIFT+ENTER NEW LINE"
                                 visible: !chat.busy
-                                color: Theme.dim; font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1.2
+                                color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.2
                             }
                             ChamferButton { implicitHeight: 28; text: "Stop"; visible: chat.busy; onClicked: chat.interrupt() }
                             ChamferButton { implicitHeight: 28; text: "Send"; primary: win.canSend; onClicked: win.sendNow() }
@@ -845,7 +843,6 @@ FloatingWindow {
             Rectangle {
                 implicitHeight: col.implicitHeight + 40
                 color: Theme.bg1
-                border.width: 1; border.color: Theme.lineStrong
                 Keys.onEscapePressed: win.overlay = ""
                 Column {
                     id: col
@@ -856,7 +853,7 @@ FloatingWindow {
                         visible: win.overlay === "rmchat"
                         width: parent.width; wrapMode: Text.Wrap
                         text: "Remove \"" + (win.target ? win.target.title : "") + "\" from this list? Claude Code keeps its own copy of the conversation in the account's folder."
-                        color: Theme.fg; font.family: Theme.ui; font.pixelSize: 14
+                        color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.body
                     }
                     Entry {
                         id: nameEntry
@@ -898,16 +895,16 @@ FloatingWindow {
         property string text: ""
         property bool checked: false
         signal toggled()
-        width: tgT.implicitWidth + 30; height: 24
-        color: checked ? Theme.panel2 : "transparent"
-        border.width: 1; border.color: checked ? Theme.accent : Theme.lineStrong
+        width: tgT.implicitWidth + 32; height: 28
+        color: checked ? Theme.selection : Theme.field
+        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         Rectangle { x: 8; anchors.verticalCenter: parent.verticalCenter; width: 6; height: 6; color: tg.checked ? Theme.accent : Theme.dim }
         Text {
             id: tgT
             x: 20; anchors.verticalCenter: parent.verticalCenter
             text: tg.text
             color: tg.checked ? Theme.fg : Theme.dim
-            font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.4
+            font.family: Theme.ui; font.pixelSize: Theme.type.label
         }
         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: tg.toggled() }
     }

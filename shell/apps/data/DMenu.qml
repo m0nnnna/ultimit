@@ -13,8 +13,8 @@ FocusScope {
 
     property var items: []
     property int cur: -1
-    readonly property int rowH: 28
-    readonly property int menuW: 236
+    readonly property int rowH: 32
+    readonly property int menuW: 260
     signal picked(string id)
     signal dismissed()
 
@@ -70,7 +70,6 @@ FocusScope {
         id: menu
         width: root.menuW; height: root.menuH
         color: Qt.rgba(Theme.bg1.r, Theme.bg1.g, Theme.bg1.b, 0.97)
-        border.width: 1; border.color: Theme.lineStrong
         MouseArea { anchors.fill: parent; acceptedButtons: Qt.LeftButton | Qt.RightButton }
         Rectangle { anchors.fill: parent; color: Theme.panel }
         Brackets { size: 8 }
@@ -87,20 +86,20 @@ FocusScope {
                 width: menu.width; height: sep ? 9 : root.rowH
                 readonly property bool hot: root.cur === index && !off
 
-                Rectangle { visible: row.sep; x: 10; anchors.verticalCenter: parent.verticalCenter; width: parent.width - 20; height: 1; color: Theme.line }
+                Rectangle { visible: row.sep; x: 10; anchors.verticalCenter: parent.verticalCenter; width: parent.width - 20; height: 1; color: Theme.divider }
                 Rectangle {
                     visible: !row.sep
                     anchors.fill: parent; anchors.leftMargin: 1; anchors.rightMargin: 1
-                    color: row.hot ? Theme.panel2 : "transparent"
-                    Rectangle { width: 2; height: parent.height; color: Theme.accent; visible: row.hot }
+                    color: row.hot ? Theme.selection : Theme.clear(Theme.selection)
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 }
                 Text {
                     visible: !row.sep
                     x: 14; anchors.verticalCenter: parent.verticalCenter
-                    text: row.modelData.label ? row.modelData.label.toUpperCase() : ""
+                    text: row.modelData.label || ""
                     color: row.off ? Theme.dim : (row.hot ? Theme.accent : Theme.fg)
                     opacity: row.off ? 0.55 : 1
-                    font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.6
+                    font.family: Theme.ui; font.pixelSize: Theme.type.body
                 }
                 Text {
                     visible: !row.sep
@@ -108,7 +107,7 @@ FocusScope {
                     anchors.verticalCenter: parent.verticalCenter
                     text: row.modelData.check === true ? "■" : (row.modelData.hint || "")
                     color: row.modelData.check === true ? Theme.accent : Theme.dim
-                    font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1
+                    font.family: Theme.mono; font.pixelSize: Theme.type.label
                 }
                 MouseArea {
                     enabled: !row.sep && !row.off

@@ -24,9 +24,7 @@ Column {
                 readonly property bool on: root.current === modelData.path
                 width: lbl.implicitWidth + 24
                 height: 28
-                color: on ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14) : (m.containsMouse ? Theme.panel2 : "transparent")
-                border.color: on ? Theme.accent : Theme.line
-                border.width: 1
+                color: on ? Theme.selection : (m.containsMouse ? Theme.hover : Theme.field)
                 Behavior on color { ColorAnimation { duration: Config.dur(120) } }
                 Text {
                     id: lbl
@@ -34,7 +32,7 @@ Column {
                     text: seg.modelData.name
                     color: seg.on ? Theme.accent : Theme.fg
                     font.family: Theme.mono
-                    font.pixelSize: 10
+                    font.pixelSize: Theme.type.label
                     font.letterSpacing: 1.4
                     font.capitalization: Font.AllUppercase
                 }
@@ -52,7 +50,7 @@ Column {
         width: parent.width
         wrapMode: Text.WordWrap
         color: root.missing ? Theme.warn : Theme.dim
-        font.family: Theme.ui; font.pixelSize: 11
+        font.family: Theme.ui; font.pixelSize: Theme.type.label
         text: root.missing ? "Chosen Proton not found; Auto is used instead."
             : Games.protons.length === 0 ? "No Proton installed (try ProtonPlus). umu-run will download UMU-Proton on first launch."
             : root.current === "" ? "Auto: newest GE/DW-Proton, else Proton - Experimental."

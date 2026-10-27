@@ -18,10 +18,9 @@ Rectangle {
     signal downPressed()
 
     implicitHeight: 32
-    color: Theme.panel2
-    border.color: field.activeFocus ? Theme.accent : Theme.line
-    border.width: 1
-    Behavior on border.color { ColorAnimation { duration: Config.dur(120) } }
+    color: Theme.field
+    border.color: Theme.accent
+    border.width: field.activeFocus ? 1 : 0
 
     TextInput {
         id: field
@@ -32,7 +31,7 @@ Rectangle {
         selectedTextColor: Theme.onAccent
         selectByMouse: true
         font.family: Theme.ui
-        font.pixelSize: 13
+        font.pixelSize: Theme.type.body
         onEditingFinished: root.committed(text)
         onTextEdited: root.edited(text)
         onAccepted: root.accepted()
@@ -46,7 +45,7 @@ Rectangle {
         color: Theme.dim
         opacity: 0.7
         font.family: Theme.mono
-        font.pixelSize: 10
+        font.pixelSize: Theme.type.label
         font.letterSpacing: 1.4
     }
 }

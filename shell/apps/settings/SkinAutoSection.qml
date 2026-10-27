@@ -25,18 +25,18 @@ ColumnLayout {
         visible: root.a.enabled
         Layout.fillWidth: true
         spacing: 10
-        Text { text: "DAY SKIN"; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 2.2 }
+        Text { text: "DAY SKIN"; color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 2.2 }
         Chips { Layout.fillWidth: true; options: root.skinOptions; current: root.a.day; onPicked: id => root.set({ day: id }) }
-        Text { text: "NIGHT SKIN"; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 2.2 }
+        Text { text: "NIGHT SKIN"; color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 2.2 }
         Chips { Layout.fillWidth: true; options: root.skinOptions; current: root.a.night; onPicked: id => root.set({ night: id }) }
         RowLayout {
             spacing: 10
-            Text { text: "DAY FROM"; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 2.2 }
+            Text { text: "DAY FROM"; color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 2.2 }
             TextEntry {
                 implicitWidth: 72; placeholder: "07:00"; text: root.a.dayStart
                 onAccepted: { if (Theme.validTime(text.trim())) root.set({ dayStart: text.trim() }); else text = root.a.dayStart; }
             }
-            Text { text: "NIGHT FROM"; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 2.2 }
+            Text { text: "NIGHT FROM"; color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 2.2 }
             TextEntry {
                 implicitWidth: 72; placeholder: "19:00"; text: root.a.nightStart
                 onAccepted: { if (Theme.validTime(text.trim())) root.set({ nightStart: text.trim() }); else text = root.a.nightStart; }
@@ -45,7 +45,7 @@ ColumnLayout {
         Text {
             Layout.fillWidth: true; wrapMode: Text.WordWrap
             text: "24-hour HH:MM, Enter to apply. Picking a skin by hand holds until the next switch."
-            color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+            color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
         }
     }
 }

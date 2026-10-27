@@ -104,8 +104,8 @@ Page {
     Rectangle {   // a screen with the selected width snapped left and the rest of the cycle marked
         Layout.fillWidth: true
         Layout.preferredHeight: Math.round(width / 5)
-        color: "transparent"
-        border.width: 1; border.color: Theme.lineStrong
+        color: Theme.field
+        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         Rectangle {
             id: snapped
             x: 1; y: 1; height: parent.height - 2
@@ -176,6 +176,6 @@ Page {
     Text {
         Layout.fillWidth: true
         text: "Widths are 10–90% of the screen. Super+Down (or the opposite arrow) puts a snapped window back as it was."
-        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12; wrapMode: Text.WordWrap
+        color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label; wrapMode: Text.WordWrap
     }
 }

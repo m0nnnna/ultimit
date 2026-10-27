@@ -50,7 +50,7 @@ Page {
     Text {
         visible: !SysState.hasBattery
         text: "No battery detected."
-        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
+        color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.body
     }
 
     SectionLabel { text: "Power profile"; visible: SysState.profilesAvailable }
@@ -68,7 +68,7 @@ Page {
     Text {
         Layout.fillWidth: true
         text: "Applies to the lock screen's idle handling. Fullscreen windows and video players hold idle off."
-        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12; wrapMode: Text.WordWrap
+        color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label; wrapMode: Text.WordWrap
     }
     Dropdown {
         label: "Dim screen after"
@@ -112,6 +112,6 @@ Page {
     Text {
         Layout.fillWidth: true
         text: "Handled by systemd-logind (HandleLidSwitch in /etc/systemd/logind.conf), not by Ultimit. Read-only here."
-        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12; wrapMode: Text.WordWrap
+        color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label; wrapMode: Text.WordWrap
     }
 }

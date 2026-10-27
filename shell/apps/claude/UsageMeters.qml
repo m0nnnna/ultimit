@@ -35,7 +35,7 @@ Column {
         visible: root.rows.length === 0
         width: parent.width; wrapMode: Text.Wrap
         text: "PLAN USAGE SHOWS AFTER A MESSAGE"
-        color: Theme.dim; font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1
+        color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1
     }
     Repeater {
         model: root.rows
@@ -50,12 +50,12 @@ Column {
                 Text {
                     text: root.label(modelData.key) + "  " + (past ? "—" : Math.round(used * 100) + "%")
                     color: used >= 0.9 ? Theme.bad : used >= 0.75 ? Theme.warn : Theme.fg
-                    font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1
+                    font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1
                 }
                 Text {
                     anchors.right: parent.right
                     text: root.resetText(modelData.resets)
-                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1
+                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1
                 }
             }
             Rectangle {
@@ -71,6 +71,6 @@ Column {
     Text {
         visible: !!root.usage && root.usage.overage
         text: "USING EXTRA USAGE"
-        color: Theme.warn; font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1
+        color: Theme.warn; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1
     }
 }

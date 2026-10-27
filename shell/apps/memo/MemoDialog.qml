@@ -93,7 +93,6 @@ Item {
         width: Math.min(root.width - 40, 640)
         height: Math.min(root.height - 40, 520)
         color: Theme.bg1
-        border.width: 1; border.color: Theme.lineStrong
         Rectangle { anchors.fill: parent; color: Theme.panel }
 
         Column {
@@ -103,13 +102,13 @@ Item {
                 SectionLabel { text: root.saveMode ? "Save as" : "Open file" }
             }
             Rectangle {
-                width: parent.width; height: 32; color: "transparent"
-                border.width: 1; border.color: pathField.activeFocus ? Theme.accent : Theme.lineStrong
+                width: parent.width; height: 32; color: Theme.field
+                border.width: pathField.activeFocus ? 1 : 0; border.color: Theme.accent
                 TextInput {
                     id: pathField
                     anchors.fill: parent; anchors.margins: 8
                     color: Theme.fg; selectionColor: Theme.accent; selectedTextColor: Theme.onAccent
-                    font.family: Theme.mono; font.pixelSize: 13
+                    font.family: Theme.mono; font.pixelSize: Theme.type.body
                     clip: true
                     onTextEdited: {
                         root.confirmOver = false;
@@ -135,7 +134,7 @@ Item {
             }
             Rectangle {
                 width: parent.width; height: box.height - 170
-                color: "transparent"; border.width: 1; border.color: Theme.line
+                color: Theme.field
                 clip: true
                 ListView {
                     id: list
@@ -153,20 +152,20 @@ Item {
                             x: 12; anchors.verticalCenter: parent.verticalCenter
                             text: modelData.d ? "▸" : " "
                             color: root.sel === index ? Theme.onAccent : Theme.accent
-                            font.family: Theme.mono; font.pixelSize: 13
+                            font.family: Theme.mono; font.pixelSize: Theme.type.body
                         }
                         Text {
                             x: 32; width: parent.width - 120; anchors.verticalCenter: parent.verticalCenter
                             text: modelData.n + (modelData.d && modelData.n !== ".." ? "/" : "")
                             color: tc; elide: Text.ElideRight
-                            font.family: Theme.mono; font.pixelSize: 13
+                            font.family: Theme.mono; font.pixelSize: Theme.type.body
                         }
                         Text {
                             anchors.right: parent.right; anchors.rightMargin: 12; anchors.verticalCenter: parent.verticalCenter
                             visible: !modelData.d
                             text: modelData.s < 1024 ? modelData.s + " B" : (modelData.s < 1048576 ? (modelData.s / 1024).toFixed(1) + " KB" : (modelData.s / 1048576).toFixed(1) + " MB")
                             color: root.sel === index ? Theme.onAccent : Theme.dim
-                            font.family: Theme.mono; font.pixelSize: 11
+                            font.family: Theme.mono; font.pixelSize: Theme.type.label
                         }
                         MouseArea {
                             id: m; anchors.fill: parent; hoverEnabled: true
@@ -178,7 +177,7 @@ Item {
                         anchors.centerIn: parent; visible: root.err !== "" || (root.shown.length === 0)
                         text: root.err !== "" ? root.err : "no matches"
                         color: root.err !== "" ? Theme.bad : Theme.dim
-                        font.family: Theme.mono; font.pixelSize: 12
+                        font.family: Theme.mono; font.pixelSize: Theme.type.label
                     }
                 }
             }
@@ -190,7 +189,7 @@ Item {
                     width: parent.width - 330
                     visible: root.confirmOver
                     text: "file exists - press again to overwrite"
-                    color: Theme.warn; font.family: Theme.mono; font.pixelSize: 11; elide: Text.ElideRight
+                    color: Theme.warn; font.family: Theme.mono; font.pixelSize: Theme.type.label; elide: Text.ElideRight
                 }
                 Item { width: 1; height: 1; visible: !root.confirmOver }
             }

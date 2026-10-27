@@ -34,7 +34,7 @@ Item {
                 Layout.fillWidth: true
                 text: root.subtitle
                 color: Theme.dim
-                font.family: Theme.ui; font.pixelSize: 12
+                font.family: Theme.ui; font.pixelSize: Theme.type.label
                 wrapMode: Text.WordWrap
             }
         }

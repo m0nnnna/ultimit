@@ -24,7 +24,6 @@ Rectangle {
 
     implicitHeight: picking ? 480 : col.implicitHeight + 40
     color: Theme.bg1
-    border.width: 1; border.color: Theme.lineStrong
     Keys.onEscapePressed: if (picking) picking = false; else host.overlay = ""
 
     function save() {
@@ -124,7 +123,7 @@ Rectangle {
             text: "How hard the chat itself thinks (Default is medium). Either way Claude hands grunt work to cheaper "
                   + "Haiku and Sonnet helpers and scales up to an Opus helper only for hard problems."
             color: Theme.dim
-            font.family: Theme.ui; font.pixelSize: 12
+            font.family: Theme.ui; font.pixelSize: Theme.type.label
         }
 
         Label_ { text: "Without asking, Claude may" }
@@ -150,14 +149,14 @@ Rectangle {
                      plan: "Claude only reads and plans; it changes nothing.",
                      bypassPermissions: "Claude runs anything without asking. Only for a folder you can afford to lose." })[root.perm] || ""
             color: root.perm === "bypassPermissions" ? Theme.warn : Theme.dim
-            font.family: Theme.ui; font.pixelSize: 12
+            font.family: Theme.ui; font.pixelSize: Theme.type.label
         }
 
         Label_ { text: root.builtin ? "Notes about this PC (Claude reads them in every chat)" : "Notes (Claude reads them in every chat in this project)" }
         Rectangle {
             Layout.fillWidth: true; Layout.preferredHeight: 110
-            color: "transparent"
-            border.width: 1; border.color: notes.activeFocus ? Theme.accent : Theme.lineStrong
+            color: Theme.field
+            border.width: notes.activeFocus ? 1 : 0; border.color: Theme.accent
             ScrollView {
                 anchors.fill: parent; anchors.margins: 1
                 TextArea {
@@ -168,7 +167,7 @@ Rectangle {
                     placeholderText: root.builtin ? "e.g. three monitors, RTX 4070 on the NVIDIA driver; I play through Steam with DW-Proton"
                                                   : "e.g. Godot 4 game in C#; run tests with ./test.sh; never push to main"
                     placeholderTextColor: Theme.dim
-                    font.family: Theme.ui; font.pixelSize: 13
+                    font.family: Theme.ui; font.pixelSize: Theme.type.body
                 }
             }
         }
@@ -176,7 +175,7 @@ Rectangle {
         Text {
             visible: root.err !== ""
             Layout.fillWidth: true; wrapMode: Text.Wrap
-            text: root.err; color: Theme.bad; font.family: Theme.ui; font.pixelSize: 13
+            text: root.err; color: Theme.bad; font.family: Theme.ui; font.pixelSize: Theme.type.body
         }
         RowLayout {
             Layout.fillWidth: true; Layout.topMargin: 4
@@ -197,14 +196,14 @@ Rectangle {
             visible: root.confirmRemove
             Layout.fillWidth: true; wrapMode: Text.Wrap
             text: "Removes the project and its chats from CLAUDE. The folder and its files stay as they are."
-            color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+            color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
         }
     }
 
     component Label_: Text {
         Layout.topMargin: 4
         color: Theme.dim
-        font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.8
+        font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.8
         font.capitalization: Font.AllUppercase
     }
     component Chip: Rectangle {
@@ -212,15 +211,15 @@ Rectangle {
         property string text: ""
         property bool sel: false
         signal clicked()
-        width: ct.implicitWidth + 24; height: 28
-        color: sel ? Theme.accent : (cm.containsMouse ? Theme.panel2 : "transparent")
-        border.width: 1; border.color: sel ? Theme.accent : Theme.lineStrong
+        width: ct.implicitWidth + 24; height: 32
+        color: sel ? Theme.accent : (cm.containsMouse ? Theme.press : Theme.field)
+        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         Text {
             id: ct
             anchors.centerIn: parent
-            text: chip.text.toUpperCase()
+            text: chip.text
             color: chip.sel ? Theme.onAccent : Theme.fg
-            font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: 11; font.letterSpacing: 1.4
+            font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: Theme.type.label
         }
         MouseArea { id: cm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: chip.clicked() }
     }

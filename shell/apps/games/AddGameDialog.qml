@@ -51,8 +51,6 @@ Item {
         width: Math.min(480, parent.width - 32)
         height: col.implicitHeight + 40
         color: Theme.bg1
-        border.color: Theme.lineStrong
-        border.width: 1
         MouseArea { anchors.fill: parent }          // swallow clicks
         Rectangle { anchors.fill: parent; color: Theme.panel }
         Brackets { color: Theme.accent; size: 12 }
@@ -128,7 +126,7 @@ Item {
                     width: parent.width
                     wrapMode: Text.WordWrap
                     color: Theme.warn
-                    font.family: Theme.ui; font.pixelSize: 11
+                    font.family: Theme.ui; font.pixelSize: Theme.type.label
                     text: "umu-launcher not installed; Proton games cannot start without umu-run."
                 }
             }
@@ -154,7 +152,7 @@ Item {
                     width: parent.width
                     wrapMode: Text.WordWrap
                     color: Theme.dim
-                    font.family: Theme.ui; font.pixelSize: 11
+                    font.family: Theme.ui; font.pixelSize: Theme.type.label
                     text: root.prefixMode === "default"
                         ? "All games with the shared prefix live in " + Games.winePrefix + ". A custom prefix is created on first launch."
                         : "A folder for this game's own Wine prefix. It is created on first launch."

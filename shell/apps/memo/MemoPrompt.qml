@@ -25,7 +25,6 @@ Item {
         width: Math.min(root.width - 40, 440)
         height: col.implicitHeight + 40
         color: Theme.panel
-        border.width: 1; border.color: Theme.lineStrong
         Rectangle { anchors.fill: parent; color: Theme.bg1; z: -1 }
         Column {
             id: col
@@ -36,7 +35,7 @@ Item {
                 width: parent.width
                 text: root.message
                 color: Theme.fg; wrapMode: Text.Wrap
-                font.family: Theme.ui; font.pixelSize: 14
+                font.family: Theme.ui; font.pixelSize: Theme.type.body
             }
             Row {
                 spacing: 10

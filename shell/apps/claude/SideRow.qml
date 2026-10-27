@@ -14,11 +14,11 @@ Item {
     signal remove()
     signal menu(real x, real y)
 
-    height: 40
+    height: 48
     Rectangle {
         anchors.fill: parent
-        color: root.selected ? Theme.panel2 : (ma.containsMouse ? Qt.rgba(Theme.panel2.r, Theme.panel2.g, Theme.panel2.b, Theme.panel2.a * 0.6) : "transparent")
-        Rectangle { width: 2; height: parent.height; color: Theme.accent; visible: root.selected }
+        color: root.selected ? Theme.selection : (ma.containsMouse ? Theme.hover : Theme.clear(Theme.hover))
+        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
     }
     MouseArea {
         id: ma
@@ -27,20 +27,20 @@ Item {
         onClicked: mouse => mouse.button === Qt.RightButton ? root.menu(mouse.x, mouse.y) : root.clicked()
     }
     Column {
-        x: 10; anchors.verticalCenter: parent.verticalCenter
-        width: parent.width - 20 - (acts.visible ? acts.width + 6 : 0)
-        spacing: 2
+        x: 12; anchors.verticalCenter: parent.verticalCenter
+        width: parent.width - 24 - (acts.visible ? acts.width + 6 : 0)
+        spacing: 0
         Text {
             width: parent.width; elide: Text.ElideRight
             text: root.text
-            color: root.selected ? Theme.fg : Theme.fg
-            font.family: Theme.ui; font.pixelSize: 13; font.weight: root.selected ? Font.DemiBold : Font.Normal
+            color: root.selected ? Theme.accent : Theme.fg
+            font.family: Theme.ui; font.pixelSize: Theme.type.body; font.weight: root.selected ? Font.DemiBold : Font.Normal
         }
         Text {
             visible: root.sub !== ""
             width: parent.width; elide: Text.ElideMiddle
             text: root.sub
-            color: Theme.dim; font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1
+            color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
         }
     }
     Row {
@@ -49,13 +49,13 @@ Item {
         anchors.right: parent.right; anchors.rightMargin: 6; anchors.verticalCenter: parent.verticalCenter
         spacing: 2
         Text {
-            width: 20; height: 20; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
-            text: "✎"; color: renA.containsMouse ? Theme.accent : Theme.dim; font.pixelSize: 12
+            width: 24; height: 24; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+            text: "✎"; color: renA.containsMouse ? Theme.accent : Theme.dim; font.pixelSize: Theme.type.label
             MouseArea { id: renA; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.rename() }
         }
         Text {
-            width: 20; height: 20; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
-            text: "✕"; color: rmA.containsMouse ? Theme.bad : Theme.dim; font.pixelSize: 11
+            width: 24; height: 24; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+            text: "✕"; color: rmA.containsMouse ? Theme.bad : Theme.dim; font.pixelSize: Theme.type.label
             MouseArea { id: rmA; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.remove() }
         }
     }

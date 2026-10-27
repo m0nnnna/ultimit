@@ -26,9 +26,7 @@ Item {
     component Row2: Rectangle {      // a bordered list row with an accent stripe
         property color stripe: Theme.accent
         implicitHeight: 62
-        color: Theme.panel2
-        border.color: Theme.line
-        border.width: 1
+        color: Theme.field
         Rectangle { width: 2; height: parent.height; color: parent.stripe }
     }
 
@@ -71,14 +69,14 @@ Item {
                 Text {
                     visible: Shares.loaded && Shares.caps.smb === false
                     width: parent.width; wrapMode: Text.WordWrap
-                    color: Theme.warn; font.family: Theme.ui; font.pixelSize: 12
+                    color: Theme.warn; font.family: Theme.ui; font.pixelSize: Theme.type.label
                     text: "The network file support (gvfs-backends) is not available yet, so connecting will not work until it is installed."
                 }
                 Text {
                     visible: Shares.note !== ""
                     width: parent.width; elide: Text.ElideRight
                     color: Shares.noteKind === "error" ? Theme.bad : Theme.dim
-                    font.family: Theme.ui; font.pixelSize: 12
+                    font.family: Theme.ui; font.pixelSize: Theme.type.label
                     text: Shares.note
                 }
             }
@@ -115,16 +113,14 @@ Item {
                             required property var modelData
                             readonly property bool on: Shares.browseServer !== null && Shares.browseServer.host === modelData.host
                             width: 206; height: 52
-                            color: on ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14) : (cm.containsMouse ? Theme.panel2 : "transparent")
-                            border.color: on ? Theme.accent : Theme.line
-                            border.width: 1
+                            color: on ? Theme.selection : (cm.containsMouse ? Theme.hover : Theme.field)
                             Column {
                                 anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: 12 }
                                 spacing: 3
                                 Text { width: parent.width; elide: Text.ElideRight; text: card.modelData.name; color: Theme.fg
-                                       font.family: Theme.ui; font.pixelSize: 14; font.weight: Font.DemiBold }
+                                       font.family: Theme.ui; font.pixelSize: Theme.type.body; font.weight: Font.DemiBold }
                                 Text { width: parent.width; elide: Text.ElideRight; text: card.modelData.address || card.modelData.host; color: Theme.dim
-                                       font.family: Theme.mono; font.pixelSize: 11 }
+                                       font.family: Theme.mono; font.pixelSize: Theme.type.label }
                             }
                             MouseArea { id: cm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                                         onClicked: Shares.browseHost({ name: card.modelData.name, host: card.modelData.host }) }
@@ -134,7 +130,7 @@ Item {
                 Text {
                     visible: !Shares.discovering && Shares.servers.length === 0
                     width: parent.width; wrapMode: Text.WordWrap
-                    color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+                    color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                     text: Shares.discoverNote !== "" ? "Could not look for computers: " + Shares.discoverNote
                         : "No computers found. Windows PCs often do not announce themselves; type their address above."
                 }
@@ -146,9 +142,7 @@ Item {
                 visible: Shares.browseServer !== null
                 width: parent.width
                 height: bcol.implicitHeight + 28
-                color: Theme.panel2
-                border.color: Theme.lineStrong
-                border.width: 1
+                color: Theme.field
                 Column {
                     id: bcol
                     x: 14; y: 14
@@ -163,12 +157,12 @@ Item {
                     Text {
                         visible: Shares.browseError !== ""
                         width: parent.width; wrapMode: Text.WordWrap
-                        color: Theme.bad; font.family: Theme.ui; font.pixelSize: 12
+                        color: Theme.bad; font.family: Theme.ui; font.pixelSize: Theme.type.label
                         text: Shares.browseError
                     }
                     Text {
                         visible: !Shares.browsing && Shares.browseError === "" && Shares.browseShares.length === 0 && !Shares.credReq
-                        width: parent.width; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+                        width: parent.width; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                         text: "No shared folders are visible on this computer."
                     }
                     Repeater {
@@ -179,9 +173,8 @@ Item {
                             readonly property string uri: Shares.browseServer ? "smb://" + Shares.browseServer.host + "/" + srow.modelData : ""
                             readonly property bool mounted: Shares.isMounted(uri)
                             width: bcol.width; height: 38
-                            Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Theme.line }
                             Text { anchors { left: parent.left; verticalCenter: parent.verticalCenter } text: srow.modelData; color: Theme.fg
-                                   font.family: Theme.ui; font.pixelSize: 14 }
+                                   font.family: Theme.ui; font.pixelSize: Theme.type.body }
                             GButton {
                                 anchors { right: parent.right; verticalCenter: parent.verticalCenter }
                                 height: 28
@@ -202,7 +195,7 @@ Item {
                 Head { text: "Connected"; extra: Shares.mounts.length + (Shares.mounts.length === 1 ? " location" : " locations") }
                 Text {
                     visible: Shares.mounts.length === 0
-                    width: parent.width; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+                    width: parent.width; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                     text: "Nothing connected."
                 }
                 Repeater {
@@ -215,9 +208,9 @@ Item {
                             anchors { left: parent.left; right: mbtns.left; verticalCenter: parent.verticalCenter; leftMargin: 16; rightMargin: 12 }
                             spacing: 4
                             Text { width: parent.width; elide: Text.ElideRight; text: mrow.modelData.name; color: Theme.fg
-                                   font.family: Theme.ui; font.pixelSize: 15; font.weight: Font.DemiBold }
+                                   font.family: Theme.ui; font.pixelSize: Theme.type.body; font.weight: Font.DemiBold }
                             Text { width: parent.width; elide: Text.ElideMiddle; text: mrow.modelData.uri; color: Theme.dim
-                                   font.family: Theme.mono; font.pixelSize: 11 }
+                                   font.family: Theme.mono; font.pixelSize: Theme.type.label }
                         }
                         Row {
                             id: mbtns
@@ -239,7 +232,7 @@ Item {
                 Head { text: "Saved"; extra: Shares.saved.length + (Shares.saved.length === 1 ? " connection" : " connections") }
                 Text {
                     visible: Shares.saved.length === 0
-                    width: parent.width; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+                    width: parent.width; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                     text: "Connect to a share, then press Save to keep it here."
                 }
                 Repeater {
@@ -255,12 +248,12 @@ Item {
                             Row {
                                 spacing: 10
                                 Text { anchors.verticalCenter: parent.verticalCenter; text: srow2.modelData.name; color: Theme.fg
-                                       font.family: Theme.ui; font.pixelSize: 15; font.weight: Font.DemiBold }
+                                       font.family: Theme.ui; font.pixelSize: Theme.type.body; font.weight: Font.DemiBold }
                                 GChip { visible: srow2.modelData.user !== ""; anchors.verticalCenter: parent.verticalCenter; text: srow2.modelData.user; tone: Theme.dim }
                                 GChip { visible: Shares.isMounted(srow2.modelData.uri); anchors.verticalCenter: parent.verticalCenter; text: "Connected"; tone: Theme.ok }
                             }
                             Text { width: parent.width; elide: Text.ElideMiddle; text: srow2.modelData.uri; color: Theme.dim
-                                   font.family: Theme.mono; font.pixelSize: 11 }
+                                   font.family: Theme.mono; font.pixelSize: Theme.type.label }
                         }
                         GToggle {
                             id: rec

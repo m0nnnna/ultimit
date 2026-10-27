@@ -10,13 +10,13 @@ Rectangle {
     signal accepted()
     function focusEntry() { ti.forceActiveFocus(); }
     implicitWidth: 180; implicitHeight: 32
-    color: "transparent"
-    border.width: 1; border.color: ti.activeFocus ? Theme.accent : Theme.lineStrong
+    color: Theme.field
+    border.width: ti.activeFocus ? 1 : 0; border.color: Theme.accent
     TextInput {
         id: ti
         anchors.fill: parent; anchors.margins: 8
         color: Theme.fg; selectionColor: Theme.accent; selectedTextColor: Theme.onAccent
-        font.family: Theme.ui; font.pixelSize: 13
+        font.family: Theme.ui; font.pixelSize: Theme.type.body
         echoMode: root.secret ? TextInput.Password : TextInput.Normal
         clip: true
         onAccepted: root.accepted()

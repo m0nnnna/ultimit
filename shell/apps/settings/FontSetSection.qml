@@ -35,22 +35,22 @@ ColumnLayout {
                     spacing: 5
                     Text {
                         text: card.f.n.toUpperCase()
-                        color: Theme.fg; font.family: card.f.display; font.pixelSize: 15; font.letterSpacing: 2.4
+                        color: Theme.fg; font.family: card.f.display; font.pixelSize: Theme.type.body; font.letterSpacing: 2.4
                     }
                     Text {
                         width: parent.width; elide: Text.ElideRight
                         text: "The quick brown fox"
-                        color: Theme.fg; font.family: card.f.ui; font.weight: Font.DemiBold; font.pixelSize: 13
+                        color: Theme.fg; font.family: card.f.ui; font.weight: Font.DemiBold; font.pixelSize: Theme.type.body
                     }
                     Text {
                         width: parent.width; elide: Text.ElideRight
                         text: "0123 ULTIMIT [ OK ]"
-                        color: Theme.dim; font.family: card.f.mono; font.pixelSize: 11; font.letterSpacing: 1
+                        color: Theme.dim; font.family: card.f.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1
                     }
                     Text {
                         width: parent.width; elide: Text.ElideRight
                         text: (card.f.display + " / " + card.f.ui).toUpperCase()
-                        color: Theme.dim; font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1.4
+                        color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.4
                     }
                 }
                 MouseArea {

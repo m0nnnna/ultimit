@@ -14,7 +14,7 @@ ColumnLayout {
         Layout.fillWidth: true; wrapMode: Text.WordWrap
         text: "While a game is fullscreen (or a Steam / Wine game is focused) the wallpaper, glow and other shell animations stop, "
             + "UI sounds go quiet and notifications wait until you are done. Browsers and video players do not count."
-        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+        color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
     }
     ToggleRow {
         Layout.fillWidth: true

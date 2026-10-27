@@ -19,7 +19,6 @@ Rectangle {
 
     implicitHeight: col.implicitHeight + 40
     color: Theme.bg1
-    border.width: 1; border.color: Theme.lineStrong
     Keys.onEscapePressed: host.overlay = ""
 
     function say(t, bad) { note = t; noteBad = !!bad; }
@@ -61,7 +60,7 @@ Rectangle {
         Text {
             width: parent.width; wrapMode: Text.Wrap
             text: "Choose the AI Ember thinks with. She keeps your chats whichever you use, and can switch mid-conversation."
-            color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
+            color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.body
         }
 
         // the providers
@@ -72,8 +71,8 @@ Rectangle {
                 Rectangle {
                     required property var modelData
                     width: (col.width - 16) / 3; height: 54
-                    color: root.sel === modelData.id ? Theme.panel2 : (pm.containsMouse ? Qt.rgba(Theme.panel2.r, Theme.panel2.g, Theme.panel2.b, 0.5) : "transparent")
-                    border.width: 1; border.color: root.sel === modelData.id ? Theme.accent : Theme.lineStrong
+                    color: root.sel === modelData.id ? Theme.selection : (pm.containsMouse ? Theme.hover : Theme.field)
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                     Rectangle {
                         x: 10; y: 12; width: 7; height: 7; radius: 4
                         color: Ember.usable(modelData) ? Theme.ok : Theme.dim
@@ -83,12 +82,12 @@ Rectangle {
                         Text {
                             width: parent.width; elide: Text.ElideRight
                             text: modelData.name + (Ember.provider === modelData.id ? "  ·  IN USE" : "")
-                            color: Theme.fg; font.family: Theme.ui; font.pixelSize: 13; font.weight: Font.DemiBold
+                            color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.body; font.weight: Font.DemiBold
                         }
                         Text {
                             width: parent.width; elide: Text.ElideRight
-                            text: modelData.maker.toUpperCase()
-                            color: Theme.dim; font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1.2
+                            text: modelData.maker
+                            color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 0.4
                         }
                     }
                     MouseArea { id: pm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.pick(parent.modelData.id) }
@@ -105,13 +104,13 @@ Rectangle {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "API KEY"
-                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.6
+                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.6
                 }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: root.p.hasKey ? "SET ✓" : "NOT SET"
                     color: root.p.hasKey ? Theme.ok : Theme.warn
-                    font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.6
+                    font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.6
                 }
                 C.SmallLink {
                     anchors.verticalCenter: parent.verticalCenter
@@ -130,15 +129,15 @@ Rectangle {
                 width: parent.width; spacing: 8
                 Rectangle {
                     width: parent.width - keyBtn.width - 8; height: 32
-                    color: "transparent"
-                    border.width: 1; border.color: keyEntry.activeFocus ? Theme.accent : Theme.lineStrong
+                    color: Theme.field
+                    border.width: keyEntry.activeFocus ? 1 : 0; border.color: Theme.accent
                     TextInput {
                         id: keyEntry
                         anchors.fill: parent; anchors.margins: 8
                         verticalAlignment: TextInput.AlignVCenter
                         echoMode: TextInput.Password
                         color: Theme.fg; selectionColor: Theme.accent; selectedTextColor: Theme.onAccent
-                        font.family: Theme.mono; font.pixelSize: 13
+                        font.family: Theme.mono; font.pixelSize: Theme.type.body
                         clip: true
                         onAccepted: root.saveKey()
                         Text {
@@ -157,7 +156,7 @@ Rectangle {
             width: parent.width; spacing: 6
             Text {
                 text: root.sel === "local" ? "SERVER ADDRESS  ·  OLLAMA :11434/v1  ·  LM STUDIO :1234/v1  ·  LLAMA.CPP :8080/v1" : "API ADDRESS"
-                color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.6
+                color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.6
             }
             C.Entry { id: baseEntry; width: parent.width; mono: true; placeholder: "https://…/v1"; onAccepted: root.fetchModels() }
         }
@@ -170,7 +169,7 @@ Rectangle {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "MODEL"
-                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.6
+                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.6
                 }
                 C.SmallLink { anchors.verticalCenter: parent.verticalCenter; text: root.fetching ? "LOADING…" : "LIST MODELS"; onClicked: if (!root.fetching) root.fetchModels() }
             }
@@ -178,7 +177,7 @@ Rectangle {
             Rectangle {
                 visible: root.models.length > 0
                 width: parent.width; height: Math.min(modelList.contentHeight + 2, 150)
-                color: "transparent"; border.width: 1; border.color: Theme.line
+                color: Theme.field
                 ListView {
                     id: modelList
                     anchors.fill: parent; anchors.margins: 1
@@ -193,7 +192,7 @@ Rectangle {
                             x: 10; anchors.verticalCenter: parent.verticalCenter
                             text: parent.modelData
                             color: parent.modelData === modelEntry.text ? Theme.accent : Theme.fg
-                            font.family: Theme.mono; font.pixelSize: 12
+                            font.family: Theme.mono; font.pixelSize: Theme.type.label
                         }
                         MouseArea { id: mm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                                     onClicked: { modelEntry.text = parent.modelData; root.saveFields(); } }
@@ -209,7 +208,7 @@ Rectangle {
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "EFFORT"
-                color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.6
+                color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.6
                 width: 60
             }
             Repeater {
@@ -217,13 +216,13 @@ Rectangle {
                 Rectangle {
                     required property string modelData
                     width: et.implicitWidth + 18; height: 26
-                    color: root.p.effort === modelData ? Theme.accent : "transparent"
-                    border.width: 1; border.color: root.p.effort === modelData ? Theme.accent : Theme.lineStrong
+                    color: root.p.effort === modelData ? Theme.accent : Theme.field
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                     Text {
                         id: et; anchors.centerIn: parent
-                        text: parent.modelData.toUpperCase()
+                        text: parent.modelData
                         color: root.p.effort === parent.modelData ? Theme.onAccent : Theme.fg
-                        font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1
+                        font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 0.4
                     }
                     MouseArea {
                         anchors.fill: parent; cursorShape: Qt.PointingHandCursor
@@ -238,7 +237,7 @@ Rectangle {
             width: parent.width; wrapMode: Text.Wrap
             text: root.note
             color: root.noteBad ? Theme.bad : Theme.dim
-            font.family: Theme.mono; font.pixelSize: 11
+            font.family: Theme.mono; font.pixelSize: Theme.type.label
         }
 
         Rectangle { width: parent.width; height: 1; color: Theme.line }
@@ -252,19 +251,19 @@ Rectangle {
                 spacing: 3
                 Text {
                     text: "Let Ember act without asking"
-                    color: Theme.fg; font.family: Theme.ui; font.pixelSize: 14
+                    color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.body
                 }
                 Text {
                     width: parent.width; wrapMode: Text.Wrap
                     text: "Off: you approve every command, file she writes and window she closes. On: she just does it."
-                    color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+                    color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                 }
             }
             Rectangle {
                 anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
                 width: 48; height: 24
-                color: Ember.trust ? Theme.accent : "transparent"
-                border.width: 1; border.color: Ember.trust ? Theme.accent : Theme.lineStrong
+                color: Ember.trust ? Theme.accent : Theme.field
+                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 Rectangle {
                     width: 16; height: 16; y: 4
                     x: Ember.trust ? parent.width - 20 : 4

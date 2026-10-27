@@ -89,7 +89,7 @@ Page {
         visible: pg.st.helper === false
         Layout.fillWidth: true
         implicitHeight: setupCol.implicitHeight + 28
-        color: Theme.panel2; border.color: Theme.warn
+        color: Theme.field; border.color: Theme.warn
         ColumnLayout {
             id: setupCol
             x: 16; y: 14; width: parent.width - 32
@@ -99,7 +99,7 @@ Page {
                 Text {
                     Layout.fillWidth: true; wrapMode: Text.WordWrap
                     text: "One-time setup: adding and changing other people's accounts needs a small helper installed in the system. You can change your own password without it."
-                    color: Theme.fg; font.family: Theme.ui; font.pixelSize: 12
+                    color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.label
                 }
                 ChamferButton {
                     primary: true
@@ -111,7 +111,7 @@ Page {
             Text {
                 Layout.fillWidth: true; wrapMode: Text.WrapAnywhere
                 text: pg.setupCmd ? pg.setupCmd.display : ""
-                color: Theme.dim; font.family: Theme.mono; font.pixelSize: 9
+                color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
             }
         }
     }
@@ -147,7 +147,7 @@ Page {
     Text {
         visible: pg.note !== ""
         Layout.fillWidth: true; wrapMode: Text.WordWrap
-        text: pg.note; color: pg.noteColor; font.family: Theme.ui; font.pixelSize: 12
+        text: pg.note; color: pg.noteColor; font.family: Theme.ui; font.pixelSize: Theme.type.label
     }
 
     // ================= add someone =================
@@ -155,7 +155,7 @@ Page {
         visible: pg.mode === "add"
         Layout.fillWidth: true
         implicitHeight: addCol.implicitHeight + 28
-        color: Theme.panel2; border.color: Theme.line
+        color: Theme.field
         ColumnLayout {
             id: addCol
             x: 16; y: 14; width: parent.width - 32
@@ -164,20 +164,20 @@ Page {
             GridLayout {
                 Layout.fillWidth: true
                 columns: 2; columnSpacing: 12; rowSpacing: 8
-                Text { text: "Full name"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12 }
+                Text { text: "Full name"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label }
                 TextEntry {
                     id: newName; Layout.fillWidth: true; placeholder: "Alex Doe"
                     onTextChanged: if (!newUser.edited) newUser.text = pg.slug(text)
                 }
-                Text { text: "User name"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12 }
+                Text { text: "User name"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label }
                 TextEntry {
                     id: newUser; Layout.fillWidth: true; placeholder: "alex"
                     property bool edited: false
                     onTextChanged: if (activeFocus) edited = true
                 }
-                Text { text: "Password"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12 }
+                Text { text: "Password"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label }
                 TextEntry { id: pw1; Layout.fillWidth: true; secret: true; placeholder: "at least 8 characters" }
-                Text { text: "Again"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12 }
+                Text { text: "Again"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label }
                 TextEntry { id: pw2; Layout.fillWidth: true; secret: true }
             }
             Chips {
@@ -212,7 +212,7 @@ Page {
         visible: pg.cur !== null && pg.mode !== "add"
         Layout.fillWidth: true
         implicitHeight: accCol.implicitHeight + 28
-        color: Theme.panel2; border.color: Theme.line
+        color: Theme.field
         ColumnLayout {
             id: accCol
             x: 16; y: 14; width: parent.width - 32
@@ -246,18 +246,18 @@ Page {
                 visible: pg.mode === "mypw" || pg.mode === "pw"
                 Layout.fillWidth: true
                 columns: 2; columnSpacing: 12; rowSpacing: 8
-                Text { visible: pg.mode === "mypw"; text: "Current password"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12 }
+                Text { visible: pg.mode === "mypw"; text: "Current password"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label }
                 TextEntry { id: pw0; visible: pg.mode === "mypw"; Layout.fillWidth: true; secret: true }
-                Text { text: "New password"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12 }
+                Text { text: "New password"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label }
                 TextEntry { id: pwA; Layout.fillWidth: true; secret: true; placeholder: "at least 8 characters" }
-                Text { text: "Again"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12 }
+                Text { text: "Again"; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label }
                 TextEntry { id: pwB; Layout.fillWidth: true; secret: true }
             }
             Text {
                 visible: pg.mode === "mypw"
                 Layout.fillWidth: true; wrapMode: Text.WordWrap
                 text: "Your keyring (saved Wi-Fi and app passwords) still opens with your old password: the next time it asks, give the old one."
-                color: Theme.dim; font.family: Theme.ui; font.pixelSize: 11
+                color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
             }
             RowLayout {
                 visible: pg.mode === "mypw" || pg.mode === "pw"
@@ -288,7 +288,7 @@ Page {
                 Text {
                     Layout.fillWidth: true; wrapMode: Text.WordWrap
                     text: pg.cur ? "Delete " + pg.cur.name + "'s account? They can't sign in any more. Their files in " + pg.cur.home + " can stay (you can still open them as an administrator) or go too." : ""
-                    color: Theme.fg; font.family: Theme.ui; font.pixelSize: 12
+                    color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.label
                 }
                 RowLayout {
                     Layout.fillWidth: true

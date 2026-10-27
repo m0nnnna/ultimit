@@ -66,7 +66,6 @@ Scope {
                     id: side
                     width: 190; height: parent.height
                     color: Theme.panel2
-                    Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Theme.line }
 
                     Column {
                         x: 0; y: 14; width: parent.width - 1
@@ -93,7 +92,7 @@ Scope {
                                     x: 18; anchors.verticalCenter: parent.verticalCenter
                                     text: nav.modelData.n.toUpperCase()
                                     color: nav.sel ? Theme.accent : Theme.fg
-                                    font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: 12
+                                    font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: Theme.type.label
                                     font.letterSpacing: 1.6
                                 }
                                 MouseArea {

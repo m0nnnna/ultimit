@@ -43,13 +43,13 @@ FocusScope {
         property string hint: ""
         property Item next: null          // Tab goes here
         signal accepted()
-        height: 30
-        color: Theme.bg1
-        border.width: 1; border.color: ti.activeFocus ? Theme.accent : Theme.lineStrong
+        height: 36
+        color: Theme.field
+        border.width: ti.activeFocus ? 1 : 0; border.color: Theme.accent
         Text {
             anchors { left: parent.left; leftMargin: 8; verticalCenter: parent.verticalCenter }
             visible: ti.text === "" && fld.hint !== ""
-            text: fld.hint; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11
+            text: fld.hint; color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
         }
         TextInput {
             id: ti
@@ -57,7 +57,7 @@ FocusScope {
             verticalAlignment: TextInput.AlignVCenter
             echoMode: fld.echo; passwordCharacter: "•"
             color: Theme.fg; selectionColor: Theme.accent; selectedTextColor: Theme.onAccent
-            font.family: Theme.mono; font.pixelSize: 12; clip: true
+            font.family: Theme.mono; font.pixelSize: Theme.type.label; clip: true
             onAccepted: fld.accepted()
             KeyNavigation.tab: fld.next
         }
@@ -77,7 +77,7 @@ FocusScope {
         else event.accepted = false;
     }
 
-    Rectangle { anchors.fill: parent; color: Qt.rgba(0, 0, 0, 0.55) }
+    Rectangle { anchors.fill: parent; color: Theme.scrim }
     MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons; hoverEnabled: true }
 
     Rectangle {
@@ -86,7 +86,6 @@ FocusScope {
         width: Math.min(root.width - 40, d && d.kind === "conflict" ? 480 : (d && d.kind === "input" ? 520 : 440))
         height: content.implicitHeight + 40
         color: Theme.bg1
-        border.width: 1; border.color: Theme.lineStrong
         Rectangle { anchors.fill: parent; color: Theme.panel }
         Brackets {}
 
@@ -101,11 +100,11 @@ FocusScope {
                 Rectangle { id: sq; width: 6; height: 6; anchors.verticalCenter: parent.verticalCenter; color: Theme.accent }
                 Text {
                     anchors.left: sq.right; anchors.leftMargin: 8; anchors.verticalCenter: parent.verticalCenter
-                    text: !d ? "" : (d.kind === "confirm" || d.kind === "password" || d.kind === "input") ? d.title.toUpperCase()
+                    text: !d ? "" : (d.kind === "confirm" || d.kind === "password" || d.kind === "input") ? d.title
                         : d.kind === "conflict" ? "NAME CONFLICT" : d.kind === "props" ? "PROPERTIES"
                         : d.kind === "compress" ? "COMPRESS" : "OPEN WITH"
                     color: Theme.fg
-                    font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.8
+                    font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.8
                 }
             }
 
@@ -114,19 +113,19 @@ FocusScope {
                 visible: d && d.kind === "confirm"
                 width: parent.width; wrapMode: Text.WordWrap
                 text: d && d.kind === "confirm" ? d.text : ""
-                color: Theme.fg; font.family: Theme.ui; font.pixelSize: 13
+                color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.body
             }
             // ---- password / input / compress
             Text {
                 visible: d && (d.kind === "password" || d.kind === "input")
                 width: parent.width; wrapMode: Text.WordWrap
                 text: d && (d.kind === "password" || d.kind === "input") ? d.text : ""
-                color: Theme.fg; font.family: Theme.ui; font.pixelSize: 13
+                color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.body
             }
             Field {
                 id: pwF
                 visible: d && d.kind === "password"
-                width: parent.width; echo: TextInput.Password; hint: "PASSWORD"
+                width: parent.width; echo: TextInput.Password; hint: "Password"
                 onAccepted: root.submit()
             }
             Field {
@@ -141,7 +140,7 @@ FocusScope {
                 Text {
                     width: parent.width; wrapMode: Text.WordWrap
                     text: d && d.kind === "compress" ? "Compress " + (d.count === 1 ? "1 item" : d.count + " items") + " into an archive next to " + (d.count === 1 ? "it" : "them") + ". A taken name becomes “name (1)”." : ""
-                    color: Theme.fg; font.family: Theme.ui; font.pixelSize: 13
+                    color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.body
                 }
                 Row {
                     spacing: 8
@@ -150,16 +149,16 @@ FocusScope {
                         delegate: Rectangle {
                             required property string modelData
                             readonly property bool on: root.cFmt === modelData
-                            width: fl.implicitWidth + 24; height: 26
-                            color: on ? Theme.panel2 : "transparent"
-                            border.width: 1; border.color: on ? Theme.accent : Theme.lineStrong
-                            Text { id: fl; anchors.centerIn: parent; text: modelData.toUpperCase(); color: parent.on ? Theme.accent : Theme.fg
-                                   font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.6 }
+                            width: fl.implicitWidth + 24; height: 32
+                            color: on ? Theme.selection : Theme.field
+                            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
+                            Text { id: fl; anchors.centerIn: parent; text: modelData; color: parent.on ? Theme.accent : Theme.fg
+                                   font.family: Theme.mono; font.pixelSize: Theme.type.label }
                             MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.cFmt = parent.modelData }
                         }
                     }
                 }
-                Field { id: nameF; width: parent.width; hint: "NAME"; next: cpwF.input; onAccepted: root.submit() }
+                Field { id: nameF; width: parent.width; hint: "Name"; next: cpwF.input; onAccepted: root.submit() }
                 Field {
                     id: cpwF
                     width: parent.width; echo: TextInput.Password; enabled: root.cFmt !== "tar.gz"; opacity: enabled ? 1 : 0.4
@@ -170,12 +169,12 @@ FocusScope {
                     visible: root.cFmt !== "tar.gz"
                     width: parent.width; wrapMode: Text.WordWrap
                     text: root.cFmt === "zip" ? "With a password the zip uses AES-256." : "With a password the 7z hides file names too (AES-256)."
-                    color: Theme.dim; font.family: Theme.ui; font.pixelSize: 11
+                    color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                 }
                 Text {
                     width: parent.width; elide: Text.ElideRight
                     text: nameF.text.trim() === "" ? "" : "→ " + nameF.text.trim() + (nameF.text.trim().toLowerCase().endsWith("." + root.cFmt) ? "" : "." + root.cFmt)
-                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11
+                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
                 }
             }
             // ---- conflict
@@ -183,20 +182,20 @@ FocusScope {
                 visible: d && d.kind === "conflict"
                 width: parent.width; wrapMode: Text.WordWrap
                 text: d && d.kind === "conflict" ? "“" + d.name + "” already exists in " + (Data.basename(d.dstDir) || "/") + ". What should happen?" : ""
-                color: Theme.fg; font.family: Theme.ui; font.pixelSize: 13
+                color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.body
             }
             Item {
                 visible: d && d.kind === "conflict" && d.remaining > 1
                 width: parent.width; height: 22
                 Rectangle {
                     id: cb; width: 14; height: 14; anchors.verticalCenter: parent.verticalCenter
-                    color: "transparent"; border.width: 1; border.color: Theme.lineStrong
+                    color: Theme.field
                     Rectangle { anchors.centerIn: parent; width: 8; height: 8; color: Theme.accent; visible: root.applyAll }
                 }
                 Text {
                     anchors.left: cb.right; anchors.leftMargin: 8; anchors.verticalCenter: parent.verticalCenter
                     text: "Apply to all " + (d && d.kind === "conflict" ? d.remaining : 0) + " conflicts"
-                    color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+                    color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                 }
                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.applyAll = !root.applyAll }
             }
@@ -229,17 +228,17 @@ FocusScope {
                     }
                     delegate: Item {
                         required property var modelData
-                        width: parent.width; height: 26
-                        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
+                        width: parent.width; height: 28
+                        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.divider }
                         Text {
                             x: 0; width: 96; anchors.verticalCenter: parent.verticalCenter
-                            text: modelData[0].toUpperCase(); color: Theme.dim
-                            font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.4
+                            text: modelData[0]; color: Theme.dim
+                            font.family: Theme.ui; font.pixelSize: Theme.type.label
                         }
                         Text {
                             x: 100; width: parent.width - 100; anchors.verticalCenter: parent.verticalCenter
                             text: modelData[1]; color: Theme.fg; elide: Text.ElideMiddle
-                            font.family: Theme.mono; font.pixelSize: 12
+                            font.family: Theme.mono; font.pixelSize: Theme.type.label
                         }
                     }
                 }
@@ -252,12 +251,12 @@ FocusScope {
                 Text {
                     width: parent.width; elide: Text.ElideMiddle
                     text: d && d.kind === "openwith" ? d.entry.n + "  ·  " + d.entry.t : ""
-                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11
+                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
                 }
                 Text {
                     visible: Data.apps.length === 0
                     text: "No applications found for this type."
-                    color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
+                    color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.body
                 }
                 Repeater {
                     model: Data.apps
@@ -267,8 +266,8 @@ FocusScope {
                         width: parent.width; height: 34
                         readonly property bool hot: root.appSel === index
                         Rectangle {
-                            anchors.fill: parent; color: hot ? Theme.panel2 : "transparent"
-                            Rectangle { width: 2; height: parent.height; color: Theme.accent; visible: hot }
+                            anchors.fill: parent; color: hot ? Theme.selection : Theme.clear(Theme.selection)
+                            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                         }
                         Image {
                             x: 10; anchors.verticalCenter: parent.verticalCenter; width: 22; height: 22
@@ -278,7 +277,7 @@ FocusScope {
                         Text {
                             x: 44; anchors.verticalCenter: parent.verticalCenter
                             text: modelData.name; color: hot ? Theme.accent : Theme.fg
-                            font.family: Theme.ui; font.pixelSize: 13
+                            font.family: Theme.ui; font.pixelSize: Theme.type.body
                         }
                         GChip { visible: modelData.default; anchors.right: parent.right; anchors.rightMargin: 8; anchors.verticalCenter: parent.verticalCenter; text: "default"; tone: Theme.ok }
                         MouseArea {

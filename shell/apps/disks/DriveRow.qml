@@ -10,9 +10,7 @@ Rectangle {
     signal picked()
 
     implicitHeight: 62
-    color: on ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.12) : (m.containsMouse ? Theme.panel2 : "transparent")
-    border.color: on ? Theme.accent : Theme.line
-    border.width: 1
+    color: on ? Theme.selection : (m.containsMouse ? Theme.hover : Theme.field)
 
     GChip {
         id: chip
@@ -29,14 +27,14 @@ Rectangle {
             elide: Text.ElideRight
             text: root.drive.name
             color: Theme.fg
-            font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: 13
+            font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: Theme.type.body
         }
         Text {
             width: parent.width
             elide: Text.ElideRight
             text: Disks.fmt(root.drive.size) + (root.drive.is_system ? " · system" : root.drive.removable ? " · removable" : "")
             color: Theme.dim
-            font.family: Theme.mono; font.pixelSize: 11
+            font.family: Theme.mono; font.pixelSize: Theme.type.label
         }
     }
     MouseArea { id: m; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.picked() }

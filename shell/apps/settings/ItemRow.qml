@@ -28,20 +28,20 @@ Item {
             spacing: 8
             Text {
                 text: root.title; color: root.titleColor; elide: Text.ElideRight
-                font.family: Theme.ui; font.pixelSize: 13
+                font.family: Theme.ui; font.pixelSize: Theme.type.body
             }
             Text {
                 visible: root.badge !== ""
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.badge.toUpperCase(); color: root.badgeColor
-                font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1.6
+                font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.6
             }
         }
         Text {
             visible: root.subtitle !== ""
             width: parent.width; elide: Text.ElideRight
             text: root.subtitle; color: Theme.dim
-            font.family: Theme.mono; font.pixelSize: 10
+            font.family: Theme.mono; font.pixelSize: Theme.type.label
         }
     }
     Row {
@@ -49,5 +49,4 @@ Item {
         anchors.right: parent.right; anchors.rightMargin: 6; anchors.verticalCenter: parent.verticalCenter
         spacing: 6
     }
-    Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
 }

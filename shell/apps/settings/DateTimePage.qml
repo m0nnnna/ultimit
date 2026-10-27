@@ -101,7 +101,7 @@ Page {
     Text {
         Layout.fillWidth: true
         text: "Changing the time zone asks for authentication."
-        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+        color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
     }
 
     SectionLabel { text: "Region" }
@@ -110,6 +110,6 @@ Page {
     Text {
         Layout.fillWidth: true
         text: "Locale is read-only for now; change it with localectl."
-        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+        color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
     }
 }

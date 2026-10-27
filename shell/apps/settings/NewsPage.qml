@@ -34,7 +34,7 @@ Page {
         visible: Feeds.urls.length === 0
         Layout.fillWidth: true
         text: "No feeds. The ticker shows the built-in headlines."
-        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+        color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
     }
     Repeater {
         model: Feeds.urls
@@ -75,7 +75,7 @@ Page {
         visible: pg.formError !== ""
         Layout.fillWidth: true
         text: pg.formError; color: Theme.bad
-        font.family: Theme.ui; font.pixelSize: 12
+        font.family: Theme.ui; font.pixelSize: Theme.type.label
     }
 
     SectionLabel { text: "Status" }

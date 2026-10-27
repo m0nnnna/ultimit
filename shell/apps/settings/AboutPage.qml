@@ -71,7 +71,7 @@ Page {
             Layout.fillWidth: true; wrapMode: Text.WordWrap
             text: pg.report !== "" ? "Saved: " + pg.report
                 : "Saves the logs, monitor setup, graphics driver and recent crashes in one file you can send to whoever helps you. No passwords or personal files go in it."
-            color: pg.report !== "" ? Theme.ok : Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+            color: pg.report !== "" ? Theme.ok : Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
         }
         ChamferButton {
             text: pg.reporting ? "Saving…" : pg.report !== "" ? "Show file" : "Save a report"
@@ -88,7 +88,7 @@ Page {
         Text {
             Layout.fillWidth: true; wrapMode: Text.WordWrap
             text: "Or ask Claude: CLAUDE gets a summary of this PC, can read the logs, and asks before it changes anything."
-            color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+            color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
         }
         ChamferButton {
             text: "Troubleshoot with Claude"

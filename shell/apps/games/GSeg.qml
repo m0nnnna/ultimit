@@ -24,9 +24,7 @@ Item {
                 readonly property bool off: modelData.disabled === true
                 width: lbl.implicitWidth + 24
                 height: root.height
-                color: on ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14) : (m.containsMouse && !off ? Theme.panel2 : "transparent")
-                border.color: on ? Theme.accent : Theme.line
-                border.width: 1
+                color: on ? Theme.selection : (m.containsMouse && !off ? Theme.hover : Theme.field)
                 opacity: off ? 0.45 : 1
                 z: on ? 1 : 0
                 Behavior on color { ColorAnimation { duration: Config.dur(120) } }
@@ -36,7 +34,7 @@ Item {
                     text: seg.modelData.label
                     color: seg.on ? Theme.accent : Theme.fg
                     font.family: Theme.mono
-                    font.pixelSize: 10
+                    font.pixelSize: Theme.type.label
                     font.letterSpacing: 1.4
                     font.capitalization: Font.AllUppercase
                 }

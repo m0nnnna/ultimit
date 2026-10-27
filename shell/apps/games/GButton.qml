@@ -36,7 +36,7 @@ Item {
         color: root.primary ? Theme.onAccent : Theme.fg
         font.family: Theme.ui
         font.weight: Font.DemiBold
-        font.pixelSize: 11
+        font.pixelSize: Theme.type.label
         font.letterSpacing: 1.76
     }
     MouseArea {

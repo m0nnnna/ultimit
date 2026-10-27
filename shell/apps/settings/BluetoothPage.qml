@@ -37,7 +37,7 @@ Page {
     SectionLabel { text: "Adapter" }
     Text {
         visible: !SysState.btAvailable
-        text: "No Bluetooth adapter found."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
+        text: "No Bluetooth adapter found."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.body
     }
     ToggleRow {
         visible: SysState.btAvailable
@@ -56,7 +56,7 @@ Page {
         Text {
             visible: pg.ad && pg.ad.discovering
             text: "SCANNING…"; color: Theme.warn
-            font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.8
+            font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.8
         }
         ChamferButton {
             text: pg.ad && pg.ad.discovering ? "Stop scan" : "Scan"
@@ -98,7 +98,7 @@ Page {
         Text {
             visible: pg.devices.length === 0
             text: "No devices yet. Press Scan to look for nearby devices."
-            color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
+            color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.body
         }
     }
 }

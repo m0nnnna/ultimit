@@ -88,7 +88,7 @@ Item {
                 elide: Text.ElideRight
                 text: seg.free ? "Unallocated" : (seg.p.label !== "" ? seg.p.label : seg.p.fs_name || seg.p.type || ("Partition " + seg.p.number))
                 color: Theme.fg
-                font.family: Theme.ui; font.pixelSize: 11; font.weight: Font.DemiBold
+                font.family: Theme.ui; font.pixelSize: Theme.type.label; font.weight: Font.DemiBold
             }
             Text {
                 visible: seg.width > 60
@@ -96,7 +96,7 @@ Item {
                 elide: Text.ElideRight
                 text: Disks.fmt(seg.p.size)
                 color: Theme.dim
-                font.family: Theme.mono; font.pixelSize: 10
+                font.family: Theme.mono; font.pixelSize: Theme.type.label
             }
             MouseArea {
                 anchors.fill: parent

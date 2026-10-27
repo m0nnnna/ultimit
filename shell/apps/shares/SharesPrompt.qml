@@ -23,8 +23,6 @@ Item {
         width: Math.min(440, parent.width - 32)
         height: col.implicitHeight + 40
         color: Theme.bg1
-        border.color: Theme.lineStrong
-        border.width: 1
         MouseArea { anchors.fill: parent }
         Rectangle { anchors.fill: parent; color: Theme.panel }
         Brackets { color: Theme.accent; size: 12 }
@@ -41,7 +39,7 @@ Item {
                 width: parent.width
                 text: root.message
                 color: Theme.fg; wrapMode: Text.Wrap
-                font.family: Theme.ui; font.pixelSize: 13
+                font.family: Theme.ui; font.pixelSize: Theme.type.body
             }
             Row {
                 spacing: 10

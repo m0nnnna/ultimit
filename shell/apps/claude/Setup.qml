@@ -34,7 +34,7 @@ Column {
         text: root.step === "install"
             ? "CLAUDE runs on Claude Code, Anthropic's own command-line Claude. It isn't installed for you yet. Installing it puts it in ~/.local/bin (no password needed) and it keeps itself up to date."
             : "Add the account Claude should use. Each account keeps its own sign-in, settings and history, so a work and a personal account never mix. You pick the account per project."
-        color: Theme.fg; font.family: Theme.ui; font.pixelSize: 14
+        color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.body
     }
     Row {
         spacing: 10
@@ -57,7 +57,7 @@ Column {
         width: parent.width; wrapMode: Text.Wrap
         visible: root.step === "account" && !Claude.defaultUsed
         text: "\"Use my Claude Code sign-in\" uses the login Claude Code already has in ~/.claude. A new account starts signed out, in its own folder."
-        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+        color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
     }
     Text {
         width: parent.width; elide: Text.ElideRight
@@ -65,6 +65,6 @@ Column {
         text: root.err !== "" ? root.err : root.log
         color: root.err !== "" ? Theme.bad : Theme.dim
         wrapMode: root.err !== "" ? Text.Wrap : Text.NoWrap
-        font.family: Theme.mono; font.pixelSize: 11
+        font.family: Theme.mono; font.pixelSize: Theme.type.label
     }
 }

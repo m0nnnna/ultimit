@@ -334,7 +334,7 @@ Item {
                 Text {
                     anchors { bottom: parent.bottom; bottomMargin: 14; horizontalCenter: parent.horizontalCenter }
                     text: (idw.o && idw.o.primary ? "MAIN  ·  " : "") + idw.modelData.name
-                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.6
+                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.6
                 }
             }
         }
@@ -348,7 +348,7 @@ Item {
         Text {
             visible: pg.status !== ""
             Layout.fillWidth: true
-            text: pg.status; color: Theme.warn; font.family: Theme.ui; font.pixelSize: 13; wrapMode: Text.WordWrap
+            text: pg.status; color: Theme.warn; font.family: Theme.ui; font.pixelSize: Theme.type.body; wrapMode: Text.WordWrap
         }
 
         // ---- arrangement canvas: drag a display to move it; click to pick it ----
@@ -369,7 +369,7 @@ Item {
             Text {
                 anchors { right: parent.right; bottom: parent.bottom; margins: 8 }
                 text: pg.duplicate ? "DUPLICATED" : (pg.enabledOuts.length > 1 ? "DRAG TO ARRANGE  ·  HOLD SHIFT: NO SNAPPING" : "")
-                color: Theme.dim; font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1.6
+                color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.6
             }
             Repeater {
                 model: pg.outs.length
@@ -395,7 +395,7 @@ Item {
                         anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 4 }
                         width: parent.width - 8; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight
                         text: (mon.o.primary ? "MAIN · " : "") + mon.o.name
-                        color: Theme.dim; font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1
+                        color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1
                     }
                     MouseArea {
                         anchors.fill: parent
@@ -441,7 +441,7 @@ Item {
             Text {
                 Layout.fillWidth: true
                 text: "Changes aren't applied yet."; color: Theme.warn
-                font.family: Theme.ui; font.pixelSize: 12
+                font.family: Theme.ui; font.pixelSize: Theme.type.label
             }
             ChamferButton {
                 text: "Reset"
@@ -468,7 +468,7 @@ Item {
             }
             Text {
                 text: "RAIL ON"; color: Theme.dim
-                font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.8
+                font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.8
             }
             Chips {   // takes effect at once (no countdown: nothing about the screens changes)
                 Layout.fillWidth: true
@@ -488,7 +488,7 @@ Item {
             SectionLabel { text: od.o ? "Display " + od.o.num + "  ·  " + od.o.name : "" }
             Text {
                 Layout.fillWidth: true
-                text: od.o ? od.o.desc : ""; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; elide: Text.ElideRight
+                text: od.o ? od.o.desc : ""; color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; elide: Text.ElideRight
             }
             RowLayout {
                 Layout.fillWidth: true
@@ -501,7 +501,7 @@ Item {
                 Text {
                     visible: !!od.o && od.o.primary
                     text: "■ MAIN DISPLAY  ·  launcher, notifications and new windows open here"
-                    color: Theme.accent; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.2
+                    color: Theme.accent; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.2
                 }
             }
             ToggleRow {
@@ -531,18 +531,18 @@ Item {
                 Text {
                     visible: pg.enabledOuts.length > 1 && !pg.duplicate
                     text: "POSITION  (TOP-LEFT CORNER, LOGICAL PIXELS)"; color: Theme.dim
-                    font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.8
+                    font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.8
                 }
                 RowLayout {   // exact placement; Enter moves it (it stays touching a neighbour)
                     visible: pg.enabledOuts.length > 1 && !pg.duplicate
                     spacing: 8
-                    Text { text: "X"; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 12 }
+                    Text { text: "X"; color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label }
                     TextEntry {
                         id: posX; implicitWidth: 90
                         text: od.o ? String(od.o.x) : ""
                         onAccepted: pg.place(pg.sel, parseInt(text), parseInt(posY.text))
                     }
-                    Text { text: "Y"; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 12 }
+                    Text { text: "Y"; color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label }
                     TextEntry {
                         id: posY; implicitWidth: 90
                         text: od.o ? String(od.o.y) : ""
@@ -563,7 +563,7 @@ Item {
                 }
                 Text {
                     text: "SCALE"; color: Theme.dim
-                    font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.8
+                    font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.8
                 }
                 Chips {
                     Layout.fillWidth: true
@@ -573,7 +573,7 @@ Item {
                 }
                 Text {
                     text: "ROTATION"; color: Theme.dim
-                    font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.8
+                    font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.8
                 }
                 Chips {
                     Layout.fillWidth: true
@@ -594,7 +594,7 @@ Item {
         Text {
             visible: SetSys.dryRun
             text: "Dry run: changes are logged, not applied."
-            color: Theme.warn; font.family: Theme.mono; font.pixelSize: 10
+            color: Theme.warn; font.family: Theme.mono; font.pixelSize: Theme.type.label
         }
     }
 
@@ -620,11 +620,11 @@ Item {
                 Text {
                     Layout.fillWidth: true
                     text: "The display configuration will revert in " + pg.countdown + " s if you do nothing."
-                    color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13; wrapMode: Text.WordWrap
+                    color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.body; wrapMode: Text.WordWrap
                 }
                 Rectangle {
-                    Layout.fillWidth: true; height: 4; color: Theme.panel2
-                    border.width: 1; border.color: Theme.line
+                    Layout.fillWidth: true; height: 4; color: Theme.selection
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                     Rectangle { height: parent.height; width: parent.width * pg.countdown / 15; color: pg.countdown <= 5 ? Theme.warn : Theme.accent }
                 }
                 RowLayout {

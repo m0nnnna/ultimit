@@ -44,7 +44,6 @@ Rectangle {
                 width: col.width
                 height: Math.max(54, textCol.implicitHeight + 16)
 
-                Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Theme.line }
 
                 Text {
                     id: num
@@ -52,7 +51,7 @@ Rectangle {
                     width: 22
                     text: stepRow.index + 1
                     color: stepRow.modelData.state === "done" ? Theme.ok : Theme.dim
-                    font.family: Theme.mono; font.pixelSize: 14
+                    font.family: Theme.mono; font.pixelSize: Theme.type.body
                 }
                 Column {
                     id: textCol
@@ -64,7 +63,7 @@ Rectangle {
                             anchors.verticalCenter: parent.verticalCenter
                             text: stepRow.modelData.label
                             color: stepRow.modelData.state === "blocked" ? Theme.dim : Theme.fg
-                            font.family: Theme.ui; font.pixelSize: 14; font.weight: Font.DemiBold
+                            font.family: Theme.ui; font.pixelSize: Theme.type.body; font.weight: Font.DemiBold
                         }
                         GChip { anchors.verticalCenter: parent.verticalCenter; text: root.stateText(stepRow.modelData.state); tone: root.stateTone(stepRow.modelData.state) }
                     }
@@ -73,7 +72,7 @@ Rectangle {
                         wrapMode: Text.WordWrap
                         text: stepRow.modelData.desc
                         color: Theme.dim
-                        font.family: Theme.ui; font.pixelSize: 12
+                        font.family: Theme.ui; font.pixelSize: Theme.type.label
                     }
                 }
                 Row {

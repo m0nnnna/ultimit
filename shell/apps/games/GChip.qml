@@ -17,7 +17,7 @@ Rectangle {
         text: root.text.toUpperCase()
         color: root.tone
         font.family: Theme.mono
-        font.pixelSize: 10
+        font.pixelSize: Theme.type.label
         font.letterSpacing: 1.2
     }
 }

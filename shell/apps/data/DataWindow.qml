@@ -280,17 +280,17 @@ FloatingWindow {
         property bool active: false
         property bool on: true
         signal clicked()
-        width: 30; height: 28
+        width: 32; height: 32
         opacity: on ? 1 : 0.35
         Rectangle {
             anchors.fill: parent
-            color: tm.containsMouse && tb.on ? Theme.panel2 : (tb.active ? Theme.panel2 : "transparent")
-            border.width: 1; border.color: tb.active ? Theme.accent : Theme.line
+            color: tb.active ? Theme.selection : (tm.pressed && tb.on ? Theme.press : (tm.containsMouse && tb.on ? Theme.hover : Theme.field))
+            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         }
         Text {
             anchors.centerIn: parent; text: tb.glyph
             color: tb.active ? Theme.accent : Theme.fg
-            font.family: Theme.mono; font.pixelSize: 13
+            font.family: Theme.mono; font.pixelSize: Theme.type.body
         }
         MouseArea { id: tm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (tb.on) tb.clicked() }
     }
@@ -302,12 +302,12 @@ FloatingWindow {
         Text {
             anchors.left: lsq.right; anchors.leftMargin: 8; anchors.verticalCenter: parent.verticalCenter
             text: parent.text; color: Theme.dim
-            font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 2.2
+            font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 2.2
         }
         Text {
             anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
             text: parent.rtext; color: Theme.dim
-            font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1
+            font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1
         }
     }
     // Sidebar row. drop = path accepting dropped files ("" = none).
@@ -325,31 +325,31 @@ FloatingWindow {
         signal ejectClicked()
         signal menuRequested(real x, real y)
         signal middleClicked()
-        width: parent ? parent.width : 100; height: sr.stacked ? 40 : 30
+        width: parent ? parent.width : 100; height: sr.stacked ? 48 : 36
         Rectangle {
             anchors.fill: parent
-            color: sr.current || sm.containsMouse || sdrop.containsDrag ? Theme.panel2 : "transparent"
+            color: sr.current ? Theme.selection : (sm.containsMouse || sdrop.containsDrag ? Theme.hover : Theme.clear(Theme.hover))
             border.width: sdrop.containsDrag ? 1 : 0; border.color: Theme.accent
-            Rectangle { width: 2; height: parent.height; color: Theme.accent; visible: sr.current }
+            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         }
         Image {
-            x: 14; anchors.verticalCenter: parent.verticalCenter; width: 18; height: 18
-            sourceSize: Qt.size(36, 36); source: sr.icon
+            x: 12; anchors.verticalCenter: parent.verticalCenter; width: Theme.icon.md; height: Theme.icon.md
+            sourceSize: Qt.size(40, 40); source: sr.icon
         }
         Text {
-            x: 40; y: sr.stacked ? 6 : (parent.height - height) / 2
-            width: parent.width - 40 - (sr.eject ? 34 : 10) - (subT.visible && !sr.stacked ? subT.implicitWidth + 4 : 0)
-            text: sr.label.toUpperCase(); elide: Text.ElideRight
+            x: 44; y: sr.stacked ? 6 : (parent.height - height) / 2
+            width: parent.width - 44 - (sr.eject ? 34 : 12) - (subT.visible && !sr.stacked ? subT.implicitWidth + 8 : 0)
+            text: sr.label; elide: Text.ElideRight
             color: sr.current ? Theme.accent : Theme.fg
-            font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.4
+            font.family: Theme.ui; font.pixelSize: Theme.type.body
         }
         Text {
             id: subT
             visible: sr.sub !== ""
-            x: sr.stacked ? 40 : parent.width - width - (sr.eject ? 34 : 10)
-            y: sr.stacked ? 23 : (parent.height - height) / 2
+            x: sr.stacked ? 44 : parent.width - width - (sr.eject ? 34 : 12)
+            y: sr.stacked ? 26 : (parent.height - height) / 2
             text: sr.sub; color: Theme.dim
-            font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1
+            font.family: Theme.mono; font.pixelSize: Theme.type.label
         }
         MouseArea {
             id: sm
@@ -367,7 +367,8 @@ FloatingWindow {
             Text {
                 anchors.centerIn: parent; text: "⏏"
                 color: em.containsMouse ? Theme.accent : Theme.dim
-                font.family: Theme.mono; font.pixelSize: 14
+                font.family: Theme.mono; font.pixelSize: Theme.type.body
+                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             }
             MouseArea { id: em; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: sr.ejectClicked() }
         }
@@ -477,8 +478,7 @@ FloatingWindow {
         Rectangle {
             id: side
             x: 0; y: 0; width: win.sideW; height: parent.height
-            color: Qt.rgba(0, 0, 0, 0.18)
-            Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Theme.line }
+            color: Theme.field
 
             Flickable {
                 anchors { left: parent.left; right: parent.right; top: parent.top; bottom: meterBox.top }
@@ -488,7 +488,7 @@ FloatingWindow {
                 Column {
                     id: sideCol
                     x: 0; y: 14; width: parent.width; spacing: 2
-                    Lbl { x: 14; width: parent.width - 28; text: "PLACES" }
+                    Lbl { x: 16; width: parent.width - 32; text: "PLACES" }
                     Item { width: 1; height: 6 }
                     Repeater {
                         model: Data.places
@@ -510,7 +510,7 @@ FloatingWindow {
                         onMenuRequested: (x, y) => win.openPlaceMenu(Data.trashUri, x, y)
                     }
                     Item { width: 1; height: 10 }
-                    Lbl { x: 14; width: parent.width - 28; text: "DRIVES"; rtext: Data.drives.length || Data.phones.length ? "" : "NONE" }
+                    Lbl { x: 16; width: parent.width - 32; text: "DRIVES"; rtext: Data.drives.length || Data.phones.length ? "" : "NONE" }
                     Item { width: 1; height: 6 }
                     Repeater {
                         model: Data.drives
@@ -543,7 +543,7 @@ FloatingWindow {
                         }
                     }
                     Item { width: 1; height: 10 }
-                    Lbl { x: 14; width: parent.width - 28; text: "NETWORK" }
+                    Lbl { x: 16; width: parent.width - 32; text: "NETWORK" }
                     Item { width: 1; height: 6 }
                     Repeater {
                         model: Data.networks
@@ -567,7 +567,7 @@ FloatingWindow {
                         onClicked: Quickshell.execDetached([Quickshell.shellPath("bin/ultimit-shares"), "--connect-tab"])
                     }
                     Item { width: 1; height: 10 }
-                    Lbl { x: 14; width: parent.width - 28; text: "OTHER LOCATIONS" }
+                    Lbl { x: 16; width: parent.width - 32; text: "OTHER LOCATIONS" }
                     Item { width: 1; height: 6 }
                     SideRow {
                         label: "File System"; icon: Data.placeIcon("root")
@@ -584,18 +584,17 @@ FloatingWindow {
             Item {
                 id: meterBox
                 anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-                height: 62
-                Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Theme.line }
+                height: 76
                 Text {
-                    x: 14; y: 12; width: parent.width - 28
-                    text: "DISK · " + (Data.disk.total > 0 ? Data.fmtSize(Data.disk.used).toUpperCase() + " OF " + Data.fmtSize(Data.disk.total).toUpperCase() + " USED" : "—")
-                    color: Theme.dim; elide: Text.ElideRight
-                    font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.2
+                    x: 16; y: 8; width: parent.width - 32
+                    text: Data.disk.total > 0 ? Data.fmtSize(Data.disk.used) + " of " + Data.fmtSize(Data.disk.total) + " used" : "Disk"
+                    color: Theme.fg; elide: Text.ElideRight
+                    font.family: Theme.ui; font.pixelSize: Theme.type.label
                 }
                 Rectangle {   // .meter
                     id: meter
-                    x: 14; y: 30; width: parent.width - 28; height: 6
-                    color: Theme.panel2; border.width: 1; border.color: Theme.line
+                    x: 16; y: 30; width: parent.width - 32; height: 6
+                    color: Theme.press
                     Rectangle {
                         x: 0; y: 0; height: parent.height
                         width: Data.disk.total > 0 ? parent.width * Math.min(1, Data.disk.used / Data.disk.total) : 0
@@ -604,10 +603,10 @@ FloatingWindow {
                     }
                 }
                 Text {
-                    x: 14; y: 42; width: parent.width - 28
-                    text: Data.disk.total > 0 ? Data.fmtSize(Data.disk.avail).toUpperCase() + " FREE · " + Data.disk.mount : ""
+                    x: 16; y: 44; width: parent.width - 32
+                    text: Data.disk.total > 0 ? Data.fmtSize(Data.disk.avail) + " free · " + Data.disk.mount : ""
                     color: Theme.dim; elide: Text.ElideMiddle
-                    font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1
+                    font.family: Theme.ui; font.pixelSize: Theme.type.label
                 }
             }
         }
@@ -625,8 +624,7 @@ FloatingWindow {
                 x: 0; y: 0; width: parent.width; height: win.tabBarH
                 readonly property int plusW: 34
                 readonly property real tabW: Math.max(96, Math.min(200, (width - plusW - 8) / Math.max(1, Data.tabs.length)))
-                Rectangle { anchors.fill: parent; color: Qt.rgba(0, 0, 0, 0.18) }
-                Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
+                Rectangle { anchors.fill: parent; color: Theme.field }
                 MouseArea {   // empty space
                     anchors.fill: parent
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
@@ -669,12 +667,11 @@ FloatingWindow {
                                 width: tabStrip.tabW; height: tabStrip.height
                                 Rectangle {
                                     anchors.fill: parent
-                                    anchors.bottomMargin: tabItem.active ? 0 : 1
-                                    color: tabItem.active ? Theme.panel : (tabMa.containsMouse || tabDrop.containsDrag ? Theme.panel2 : "transparent")
+                                    anchors.bottomMargin: 0
+                                    color: tabItem.active ? Theme.panel : (tabMa.containsMouse || tabDrop.containsDrag ? Theme.hover : Theme.clear(Theme.hover))
                                     border.width: tabDrop.containsDrag ? 1 : 0; border.color: Theme.accent
+                                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                                     Rectangle { visible: tabItem.active; width: parent.width; height: 2; color: Theme.accent }
-                                    Rectangle { visible: tabItem.active || tabItem.index === 0; width: 1; height: parent.height; color: Theme.line }
-                                    Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Theme.line }
                                 }
                                 Image {
                                     id: tabIcon
@@ -687,10 +684,11 @@ FloatingWindow {
                                 }
                                 Text {
                                     anchors { left: tabIcon.right; leftMargin: 8; right: closeBtn.left; rightMargin: 4; verticalCenter: parent.verticalCenter }
-                                    text: Data.titleOf(tabItem.tpath).toUpperCase()
+                                    text: Data.titleOf(tabItem.tpath)
                                     elide: Text.ElideRight
                                     color: tabItem.active ? Theme.accent : (tabMa.containsMouse ? Theme.fg : Theme.dim)
-                                    font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.4
+                                    font.family: Theme.ui; font.pixelSize: Theme.type.body
+                                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                                 }
                                 MouseArea {
                                     id: tabMa
@@ -721,11 +719,11 @@ FloatingWindow {
                                     visible: tabItem.active || tabMa.containsMouse || closeMa.containsMouse
                                     anchors { right: parent.right; rightMargin: 4; verticalCenter: parent.verticalCenter }
                                     width: visible ? 20 : 0; height: 20
-                                    Rectangle { anchors.fill: parent; color: closeMa.containsMouse ? Theme.panel2 : "transparent" }
+                                    Rectangle { anchors.fill: parent; color: closeMa.containsMouse ? Theme.press : Theme.clear(Theme.press); Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } } }
                                     Text {
                                         anchors.centerIn: parent; text: "×"
                                         color: closeMa.containsMouse ? Theme.accent : Theme.dim
-                                        font.family: Theme.mono; font.pixelSize: 14
+                                        font.family: Theme.mono; font.pixelSize: Theme.type.body
                                     }
                                     MouseArea { id: closeMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Data.closeTab(tabItem.index) }
                                 }
@@ -741,11 +739,11 @@ FloatingWindow {
                 }
                 Item {   // new tab
                     x: tabFlick.width + 4; width: tabStrip.plusW - 4; height: parent.height - 1
-                    Rectangle { anchors.centerIn: parent; width: 24; height: 24; color: plusMa.containsMouse ? Theme.panel2 : "transparent"; border.width: plusMa.containsMouse ? 1 : 0; border.color: Theme.line }
+                    Rectangle { anchors.centerIn: parent; width: 28; height: 28; color: plusMa.containsMouse ? Theme.hover : Theme.clear(Theme.hover); Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } } }
                     Text {
                         anchors.centerIn: parent; text: "+"
                         color: plusMa.containsMouse ? Theme.accent : Theme.dim
-                        font.family: Theme.mono; font.pixelSize: 15
+                        font.family: Theme.mono; font.pixelSize: Theme.type.body
                     }
                     MouseArea { id: plusMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Data.newTab("", false) }
                 }
@@ -754,7 +752,7 @@ FloatingWindow {
             // ---- toolbar
             Item {
                 id: bar
-                x: 12; y: win.tabBarH + 10; width: parent.width - 24; height: 28
+                x: 12; y: win.tabBarH + 8; width: parent.width - 24; height: 32
 
                 Row {
                     id: navBtns
@@ -774,14 +772,14 @@ FloatingWindow {
                     TBtn { glyph: "⇅"; onClicked: { win.openSortMenu(); } }
                     TBtn { glyph: "."; active: Data.showHidden; onClicked: Data.showHidden = !Data.showHidden }
                     Rectangle {   // filter field
-                        width: 150; height: 28
-                        color: "transparent"; border.width: 1
-                        border.color: filterInput.activeFocus || Data.filter !== "" ? Theme.accent : Theme.line
+                        width: 160; height: 32
+                        color: Theme.field; border.width: filterInput.activeFocus ? 1 : 0
+                        border.color: Theme.accent
                         Text {
                             x: 8; anchors.verticalCenter: parent.verticalCenter
                             visible: Data.filter === "" && !filterInput.activeFocus
-                            text: "FILTER"; color: Theme.dim
-                            font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.6
+                            text: "Filter"; color: Theme.dim
+                            font.family: Theme.ui; font.pixelSize: Theme.type.body
                         }
                         TextInput {
                             id: filterInput
@@ -789,7 +787,7 @@ FloatingWindow {
                             text: Data.filter
                             onTextEdited: Data.filter = text
                             color: Theme.fg; selectionColor: Theme.accent; selectedTextColor: Theme.onAccent
-                            font.family: Theme.mono; font.pixelSize: 12; clip: true
+                            font.family: Theme.mono; font.pixelSize: Theme.type.label; clip: true
                             Keys.onPressed: event => {
                                 if (event.key === Qt.Key_Escape) { Data.filter = ""; ui.forceActiveFocus(); event.accepted = true; }
                                 else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Down) {
@@ -804,7 +802,7 @@ FloatingWindow {
                 Item {
                     id: crumb
                     anchors { left: navBtns.right; leftMargin: 10; right: rightBtns.left; rightMargin: 10; verticalCenter: parent.verticalCenter }
-                    height: 28
+                    height: 32
                     property bool editing: false
                     readonly property var segs: {
                         const out = [];
@@ -891,7 +889,7 @@ FloatingWindow {
                         function onArcInnerChanged() { if (crumb.editing) crumb.endEdit(); }
                     }
 
-                    Rectangle { anchors.fill: parent; color: "transparent"; border.width: 1; border.color: crumb.editing ? Theme.accent : Theme.line }
+                    Rectangle { anchors.fill: parent; color: Theme.field; border.width: crumb.editing ? 1 : 0; border.color: Theme.accent }
                     // Explorer-style: click the bar to edit (all selected), right-click for
                     // copy/paste; segments still navigate. The right end always stays free.
                     MouseArea {
@@ -907,7 +905,8 @@ FloatingWindow {
                         visible: !crumb.editing
                         anchors { right: parent.right; rightMargin: 8; verticalCenter: parent.verticalCenter }
                         text: "⧉"; color: copyMa.containsMouse ? Theme.accent : Theme.dim
-                        font.pixelSize: 14
+                        font.pixelSize: Theme.type.body
+                        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                         MouseArea { id: copyMa; anchors.fill: parent; anchors.margins: -6; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Data.copyAddress() }
                     }
 
@@ -926,7 +925,7 @@ FloatingWindow {
                                 Text {
                                     id: rootT; anchors.verticalCenter: parent.verticalCenter
                                     text: Data.isArc ? Data.basename(Data.arcFile) + " /" : "/"; color: rootMa.containsMouse || rootDrop.containsDrag ? Theme.accent : (crumb.segs.length === 0 ? Theme.fg : Theme.dim)
-                                    font.family: Theme.mono; font.pixelSize: 12
+                                    font.family: Theme.mono; font.pixelSize: Theme.type.label
                                 }
                                 MouseArea { id: rootMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Data.goTo(Data.isArc ? Data.arcLoc(Data.arcFile, "") : "/") }
                                 DropArea { id: rootDrop; anchors.fill: parent; keys: ["data-file"]; enabled: !Data.isTrash && !Data.isArc
@@ -942,7 +941,7 @@ FloatingWindow {
                                         visible: index > 0 || true
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: index > 0 ? "/" : ""; color: Theme.dim
-                                        font.family: Theme.mono; font.pixelSize: 12
+                                        font.family: Theme.mono; font.pixelSize: Theme.type.label
                                     }
                                     Item {
                                         width: segT.implicitWidth + 4; height: parent.height
@@ -950,7 +949,7 @@ FloatingWindow {
                                             id: segT; anchors.verticalCenter: parent.verticalCenter
                                             text: modelData.label
                                             color: segMa.containsMouse || segDrop.containsDrag ? Theme.accent : (index === crumb.segs.length - 1 ? Theme.fg : Theme.dim)
-                                            font.family: Theme.mono; font.pixelSize: 12; font.letterSpacing: 0.7
+                                            font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 0.7
                                         }
                                         MouseArea { id: segMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; acceptedButtons: Qt.LeftButton | Qt.MiddleButton
                                             onClicked: mouse => { if (mouse.button === Qt.MiddleButton) Data.newTab(modelData.path, true); else Data.goTo(modelData.path); } }
@@ -967,7 +966,7 @@ FloatingWindow {
                         anchors { fill: parent; leftMargin: 10; rightMargin: 10 }
                         verticalAlignment: TextInput.AlignVCenter
                         color: Theme.fg; selectionColor: Theme.accent; selectedTextColor: Theme.onAccent
-                        font.family: Theme.mono; font.pixelSize: 12; clip: true
+                        font.family: Theme.mono; font.pixelSize: Theme.type.label; clip: true
                         onAccepted: { const t = text; crumb.endEdit(); Data.goAddress(t); }
                         onTextEdited: crumb.updateComps()
                         onActiveFocusChanged: if (!activeFocus && crumb.editing) { crumb.editing = false; crumb.comps = []; }
@@ -1003,20 +1002,18 @@ FloatingWindow {
                     text: !Data.arcListing ? "ARCHIVE · READING…"
                         : "ARCHIVE · " + Data.arcListing.type.toUpperCase() + " · " + Data.arcListing.count + (Data.arcListing.count === 1 ? " ENTRY" : " ENTRIES")
                           + " · " + Data.fmtSize(Data.arcListing.size).toUpperCase() + (Data.arcListing.enc ? " · ENCRYPTED" : "") + " · READ-ONLY"
-                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.4
+                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1
                 }
-                Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line; visible: false }
             }
 
             // ---- column header (list mode)
             Item {
                 id: header
                 visible: !win.grid
-                x: 12; y: win.tabBarH + 48 + win.arcBarH; width: parent.width - 24; height: 24
+                x: 12; y: win.tabBarH + 48 + win.arcBarH; width: parent.width - 24; height: 28
                 readonly property int sizeW: 84
                 readonly property int modW: 128
                 readonly property int typeW: width > 620 ? 150 : 0
-                Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
                 Repeater {
                     model: [
                         { k: "name", t: "NAME", x: 0, w: header.width - header.sizeW - header.modW - header.typeW - 8, al: Text.AlignLeft },
@@ -1033,7 +1030,8 @@ FloatingWindow {
                             horizontalAlignment: modelData.al
                             text: modelData.t + (Data.sortKey === modelData.k ? (Data.sortDesc ? " ▾" : " ▴") : "")
                             color: hma.containsMouse || Data.sortKey === modelData.k ? Theme.accent : Theme.dim
-                            font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.6
+                            font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.4
+                            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                         }
                         MouseArea { id: hma; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Data.setSort(modelData.k) }
                     }
@@ -1043,7 +1041,7 @@ FloatingWindow {
             // ---- listing area
             Item {
                 id: area
-                x: 12; y: win.tabBarH + (win.grid ? 48 : 73) + win.arcBarH
+                x: 12; y: win.tabBarH + (win.grid ? 48 : 78) + win.arcBarH
                 width: parent.width - 24
                 height: parent.height - y - statusBar.height - (progress.visible ? progress.height : 0)
                 clip: true
@@ -1062,17 +1060,16 @@ FloatingWindow {
                         id: row
                         required property var modelData
                         required property int index
-                        width: ListView.view.width; height: 32
+                        width: ListView.view.width; height: 36
                         readonly property bool sel: Data.selected[modelData.p] === true
                         readonly property bool isCur: Data.cur === index
                         readonly property bool renaming: Data.renamePath === modelData.p
 
                         Rectangle {
                             anchors.fill: parent
-                            color: row.sel ? Theme.panel2 : (rowMa.containsMouse || rowDrop.containsDrag ? Qt.rgba(Theme.panel2.r, Theme.panel2.g, Theme.panel2.b, Theme.panel2.a * 0.6) : "transparent")
+                            color: row.sel ? Theme.selection : (rowMa.containsMouse || rowDrop.containsDrag ? Theme.hover : Theme.clear(Theme.hover))
                             border.width: rowDrop.containsDrag ? 1 : 0; border.color: Theme.accent
-                            Rectangle { width: 2; height: parent.height; color: Theme.accent; visible: row.sel }
-                            Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line; opacity: 0.6 }
+                            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                             Rectangle { anchors.fill: parent; color: "transparent"; border.width: 1; border.color: Theme.lineStrong; visible: row.isCur && ui.activeFocus && !row.sel }
                         }
                         EntryMouse { id: rowMa; anchors.fill: parent; host: win; entry: row.modelData; idx: row.index }
@@ -1104,7 +1101,7 @@ FloatingWindow {
                             text: row.modelData.n; elide: Text.ElideMiddle
                             color: row.modelData.d ? Theme.accent : Theme.fg
                             opacity: row.modelData.h ? 0.6 : 1
-                            font.family: Theme.ui; font.pixelSize: 13
+                            font.family: Theme.ui; font.pixelSize: Theme.type.body
                         }
                         Loader {
                             active: row.renaming
@@ -1119,14 +1116,14 @@ FloatingWindow {
                             anchors.verticalCenter: parent.verticalCenter
                             horizontalAlignment: Text.AlignRight
                             text: row.modelData.d ? "—" : Data.fmtSize(row.modelData.s)
-                            color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11
+                            color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
                         }
                         Text {
                             x: header.width - header.modW - header.typeW; width: header.modW - 14
                             anchors.verticalCenter: parent.verticalCenter
                             horizontalAlignment: Text.AlignRight
                             text: Data.fmtDate(row.modelData.m)
-                            color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11
+                            color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
                         }
                         Text {
                             visible: header.typeW > 0
@@ -1134,7 +1131,7 @@ FloatingWindow {
                             anchors.verticalCenter: parent.verticalCenter
                             text: Data.isTrash ? Data.dirname(row.modelData.o || "") : (row.modelData.d ? "folder" : row.modelData.t)
                             elide: Text.ElideMiddle
-                            color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10
+                            color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
                         }
                     }
                 }
@@ -1160,9 +1157,10 @@ FloatingWindow {
 
                         Rectangle {
                             anchors.fill: parent; anchors.margins: 3
-                            color: cell.sel ? Theme.panel2 : (cellMa.containsMouse || cellDrop.containsDrag ? Qt.rgba(Theme.panel2.r, Theme.panel2.g, Theme.panel2.b, Theme.panel2.a * 0.6) : "transparent")
-                            border.width: cellDrop.containsDrag || cell.sel || (cell.isCur && ui.activeFocus) ? 1 : 0
-                            border.color: cellDrop.containsDrag || cell.sel ? Theme.accent : Theme.lineStrong
+                            color: cell.sel ? Theme.selection : (cellMa.containsMouse || cellDrop.containsDrag ? Theme.hover : Theme.clear(Theme.hover))
+                            border.width: cellDrop.containsDrag || (cell.isCur && ui.activeFocus && !cell.sel) ? 1 : 0
+                            border.color: cellDrop.containsDrag ? Theme.accent : Theme.lineStrong
+                            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                         }
                         EntryMouse { id: cellMa; anchors.fill: parent; host: win; entry: cell.modelData; idx: cell.index }
                         DropArea {
@@ -1193,7 +1191,7 @@ FloatingWindow {
                             text: cell.modelData.n; wrapMode: Text.WrapAnywhere; elide: Text.ElideRight; maximumLineCount: 2
                             color: cell.modelData.d ? Theme.accent : Theme.fg
                             opacity: cell.modelData.h ? 0.6 : 1
-                            font.family: Theme.ui; font.pixelSize: 12
+                            font.family: Theme.ui; font.pixelSize: Theme.type.label
                         }
                         Loader {
                             active: cell.renaming
@@ -1227,15 +1225,15 @@ FloatingWindow {
                     spacing: 6
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        text: Data.error !== "" ? Data.error.toUpperCase() : (Data.filter !== "" ? "NO MATCHES" : (Data.isTrash ? "TRASH IS EMPTY" : "EMPTY FOLDER"))
+                        text: Data.error !== "" ? Data.error : (Data.filter !== "" ? "No matches" : (Data.isTrash ? "Trash is empty" : "This folder is empty"))
                         color: Data.error !== "" ? Theme.bad : Theme.dim
-                        font.family: Theme.mono; font.pixelSize: 12; font.letterSpacing: 2.4
+                        font.family: Theme.ui; font.pixelSize: Theme.type.body
                     }
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
                         visible: Data.filter !== "" || (Data.entries.length > 0 && !Data.showHidden)
-                        text: Data.filter !== "" ? "ESC CLEARS THE FILTER" : "CTRL+H SHOWS HIDDEN FILES"
-                        color: Theme.dim; font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1.6
+                        text: Data.filter !== "" ? "Esc clears the filter" : "Ctrl+H shows hidden files"
+                        color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                     }
                 }
             }
@@ -1245,24 +1243,25 @@ FloatingWindow {
                 id: progress
                 visible: Data.jobActive
                 anchors { left: parent.left; right: parent.right; bottom: statusBar.top }
-                height: 34
-                Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Theme.line }
+                height: 40
+                Rectangle { anchors.fill: parent; color: Theme.field }
                 Text {
-                    x: 14; y: 5; width: parent.width - 120
-                    text: Data.jobTitle.toUpperCase() + "  ·  " + Data.jobIndex + "/" + Data.jobCount + (Data.jobName !== "" ? "  ·  " + Data.jobName : "") + (Data.jobQueue.length ? "  ·  +" + Data.jobQueue.length + " QUEUED" : "")
+                    x: 16; y: 5; width: parent.width - 120
+                    text: Data.jobTitle + "  ·  " + Data.jobIndex + "/" + Data.jobCount + (Data.jobName !== "" ? "  ·  " + Data.jobName : "") + (Data.jobQueue.length ? "  ·  +" + Data.jobQueue.length + " queued" : "")
                     elide: Text.ElideMiddle; color: Theme.fg
-                    font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.2
+                    font.family: Theme.ui; font.pixelSize: Theme.type.label
                 }
                 Rectangle {
-                    x: 14; y: 22; width: parent.width - 120; height: 6
-                    color: Theme.panel2; border.width: 1; border.color: Theme.line
+                    x: 16; y: 26; width: parent.width - 120; height: 6
+                    color: Theme.press
                     Rectangle { height: parent.height; width: parent.width * Data.jobFrac; color: Theme.accent
                         Behavior on width { NumberAnimation { duration: Config.dur(120) } } }
                 }
                 Text {
-                    anchors.right: parent.right; anchors.rightMargin: 14; anchors.verticalCenter: parent.verticalCenter
-                    text: "CANCEL"; color: pcm.containsMouse ? Theme.accent : Theme.dim
-                    font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.8
+                    anchors.right: parent.right; anchors.rightMargin: 16; anchors.verticalCenter: parent.verticalCenter
+                    text: "Cancel"; color: pcm.containsMouse ? Theme.accent : Theme.dim
+                    font.family: Theme.ui; font.pixelSize: Theme.type.body
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                     MouseArea { id: pcm; anchors.fill: parent; anchors.margins: -6; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Data.cancelJob() }
                 }
             }
@@ -1271,12 +1270,12 @@ FloatingWindow {
             Item {
                 id: statusBar
                 anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-                height: 28
-                Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Theme.line }
+                height: 32
+                Rectangle { anchors.fill: parent; color: Theme.field }
                 Text {
-                    x: 14; anchors.verticalCenter: parent.verticalCenter
+                    x: 16; anchors.verticalCenter: parent.verticalCenter
                     text: Data.statusText()
-                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.6
+                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1
                 }
                 Row {
                     anchors.right: parent.right; anchors.rightMargin: 12; anchors.verticalCenter: parent.verticalCenter
@@ -1286,12 +1285,12 @@ FloatingWindow {
                     GChip { visible: Data.isTrash; text: "trash"; tone: Theme.warn }
                     GButton {
                         visible: Data.isTrash
-                        height: 22; text: "Empty"
+                        height: 24; text: "Empty"
                         onClicked: Data.emptyTrash()
                     }
                     GButton {
                         visible: Data.isTrash && Data.selCount > 0
-                        height: 22; primary: true; text: "Restore"
+                        height: 24; primary: true; text: "Restore"
                         onClicked: Data.restoreSel()
                     }
                 }
@@ -1318,8 +1317,8 @@ FloatingWindow {
             x: { crumb.width; win.width; return crumb.mapToItem(ui, 0, 0).x; }
             y: { crumb.height; win.height; return crumb.mapToItem(ui, 0, crumb.height).y + 2; }
             width: crumb.width
-            height: Math.min(crumb.comps.length, 10) * 26 + 2
-            color: Theme.bg1; border.width: 1; border.color: Theme.accent
+            height: Math.min(crumb.comps.length, 10) * 28 + 2
+            color: Theme.bg1; border.width: 1; border.color: Theme.lineStrong
             ListView {
                 id: compList
                 anchors { fill: parent; margins: 1 }
@@ -1332,13 +1331,14 @@ FloatingWindow {
                     id: compRow
                     required property var modelData
                     required property int index
-                    width: compList.width; height: 26
-                    color: index === crumb.compIdx || compMa.containsMouse ? Theme.panel2 : "transparent"
+                    width: compList.width; height: 28
+                    color: index === crumb.compIdx ? Theme.selection : (compMa.containsMouse ? Theme.hover : Theme.clear(Theme.hover))
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                     Text {
                         anchors { left: parent.left; leftMargin: 10; right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
                         text: compRow.modelData.n + (compRow.modelData.d ? "/" : ""); elide: Text.ElideRight
                         color: compRow.index === crumb.compIdx ? Theme.accent : (compRow.modelData.d ? Theme.fg : Theme.dim)
-                        font.family: Theme.mono; font.pixelSize: 12
+                        font.family: Theme.mono; font.pixelSize: Theme.type.label
                     }
                     MouseArea {   // a folder opens in the bar (its contents listed); a file goes
                         id: compMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
@@ -1366,12 +1366,12 @@ FloatingWindow {
             Rectangle {
                 id: ghostCard
                 visible: ghost.Drag.active
-                x: 12; y: 10; width: gl.implicitWidth + 24; height: 24
+                x: 12; y: 10; width: gl.implicitWidth + 24; height: 28
                 color: Theme.bg1; border.width: 1; border.color: Theme.accent; opacity: 0.92
                 Text {
                     id: gl; anchors.centerIn: parent
-                    text: (ghost.paths.length > 1 ? ghost.paths.length + " ITEMS" : ghost.label.toUpperCase())
-                    color: Theme.accent; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.4
+                    text: (ghost.paths.length > 1 ? ghost.paths.length + " items" : ghost.label)
+                    color: Theme.accent; font.family: Theme.ui; font.pixelSize: Theme.type.body
                 }
             }
         }
@@ -1402,7 +1402,7 @@ FloatingWindow {
                 verticalAlignment: TextInput.AlignVCenter
                 text: initial; clip: true
                 color: Theme.fg; selectionColor: Theme.accent; selectedTextColor: Theme.onAccent
-                font.family: Theme.ui; font.pixelSize: 13
+                font.family: Theme.ui; font.pixelSize: Theme.type.body
                 property bool had: false
                 Component.onCompleted: Qt.callLater(() => {
                     forceActiveFocus();

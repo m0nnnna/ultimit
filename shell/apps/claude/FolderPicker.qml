@@ -49,7 +49,7 @@ Item {
         }
         Rectangle {
             Layout.fillWidth: true; Layout.fillHeight: true
-            color: "transparent"; border.width: 1; border.color: Theme.line
+            color: Theme.field
             clip: true
             ListView {
                 id: list
@@ -59,18 +59,19 @@ Item {
                 ScrollBar.vertical: ScrollBar { }
                 delegate: Rectangle {
                     required property var modelData
-                    width: list.width; height: 30
-                    color: m.containsMouse ? Theme.panel2 : "transparent"
+                    width: list.width; height: 32
+                    color: m.containsMouse ? Theme.hover : Theme.clear(Theme.hover)
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                     Text {
                         x: 12; anchors.verticalCenter: parent.verticalCenter
                         text: modelData.up ? "↑" : "▸"
-                        color: Theme.accent; font.family: Theme.mono; font.pixelSize: 13
+                        color: Theme.accent; font.family: Theme.mono; font.pixelSize: Theme.type.body
                     }
                     Text {
                         x: 32; width: parent.width - 44; anchors.verticalCenter: parent.verticalCenter
                         text: modelData.up ? ".." : modelData.n + "/"
                         color: modelData.h ? Theme.dim : Theme.fg; elide: Text.ElideRight
-                        font.family: Theme.mono; font.pixelSize: 13
+                        font.family: Theme.mono; font.pixelSize: Theme.type.body
                     }
                     MouseArea { id: m; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.open(modelData) }
                 }
@@ -79,7 +80,7 @@ Item {
                     visible: root.err !== "" || root.shown.length === (root.parentDir !== "" ? 1 : 0)
                     text: root.err !== "" ? root.err : "No folders in here"
                     color: root.err !== "" ? Theme.bad : Theme.dim
-                    font.family: Theme.mono; font.pixelSize: 12
+                    font.family: Theme.mono; font.pixelSize: Theme.type.label
                 }
             }
         }

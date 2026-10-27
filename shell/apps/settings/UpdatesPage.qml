@@ -191,7 +191,7 @@ Page {
             Text {
                 Layout.fillWidth: true
                 wrapMode: Text.WordWrap
-                color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 0.6
+                color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 0.6
                 text: "Last checked " + pg.ago(st.checkedAt)
                     + (st.auto ? "  ·  automatic updates ran " + st.auto.time.slice(0, 16) + (st.auto.text ? ": " + st.auto.text : "") : "")
                     + (st.reboot && st.rebootPkgs && st.rebootPkgs.length ? "  ·  restart needed for " + st.rebootPkgs.join(", ") : "")
@@ -211,14 +211,14 @@ Page {
                 }
                 Text {
                     Layout.fillWidth: true; elide: Text.ElideRight
-                    text: pg.msg || "Working…"; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10
+                    text: pg.msg || "Working…"; color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
                 }
                 Timer { id: ind; property real t: 0; interval: 30; repeat: true; running: pg.busy !== "" && pg.pct < 0; onTriggered: t += 0.06 }
             }
             Text {
                 visible: pg.result !== "" && pg.busy === ""
                 Layout.fillWidth: true; wrapMode: Text.WordWrap
-                text: pg.result; color: pg.resultColor; font.family: Theme.ui; font.pixelSize: 12
+                text: pg.result; color: pg.resultColor; font.family: Theme.ui; font.pixelSize: Theme.type.label
             }
         }
     }
@@ -228,7 +228,7 @@ Page {
         visible: st.helper === false
         Layout.fillWidth: true
         implicitHeight: setupCol.implicitHeight + 28
-        color: Theme.panel2; border.color: Theme.warn
+        color: Theme.field; border.color: Theme.warn
         ColumnLayout {
             id: setupCol
             x: 16; y: 14; width: parent.width - 32
@@ -238,7 +238,7 @@ Page {
                 Text {
                     Layout.fillWidth: true; wrapMode: Text.WordWrap
                     text: "One-time setup: installing system updates needs a small helper installed in the system. Every install still asks for your password."
-                    color: Theme.fg; font.family: Theme.ui; font.pixelSize: 12
+                    color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.label
                 }
                 ChamferButton {
                     primary: true
@@ -250,7 +250,7 @@ Page {
             Text {
                 Layout.fillWidth: true; wrapMode: Text.WrapAnywhere
                 text: pg.setupCmd ? pg.setupCmd.display : ""
-                color: Theme.dim; font.family: Theme.mono; font.pixelSize: 9
+                color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
             }
         }
     }
@@ -274,7 +274,7 @@ Page {
     }
     Text {
         Layout.fillWidth: true; wrapMode: Text.WordWrap
-        color: ul.newer ? Theme.fg : Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+        color: ul.newer ? Theme.fg : Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
         text: {
             const inst = ul.installed ? "Installed: " + ul.installed : "";
             if (pg.ulLoading && ul.installed === undefined) return "Asking GitHub…";
@@ -295,12 +295,12 @@ Page {
         maximumLineCount: 10; elide: Text.ElideRight
         textFormat: Text.MarkdownText
         text: ul.latest ? ul.latest.notes : ""
-        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+        color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
     }
     Text {
         visible: !!ul.latest && ul.newer === true
         text: "Release notes on GitHub"
-        color: Theme.accent; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.2
+        color: Theme.accent; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.2
         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Qt.openUrlExternally(pg.ul.latest.url) }
     }
 
@@ -319,11 +319,11 @@ Page {
     Text {
         visible: !!st.aptError
         Layout.fillWidth: true; wrapMode: Text.WordWrap
-        text: st.aptError || ""; color: Theme.bad; font.family: Theme.ui; font.pixelSize: 12
+        text: st.aptError || ""; color: Theme.bad; font.family: Theme.ui; font.pixelSize: Theme.type.label
     }
     Text {
         visible: st.apt !== undefined && pg.apt.length === 0 && !st.aptError
-        text: "No system updates."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+        text: "No system updates."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
     }
     ColumnLayout {
         Layout.fillWidth: true
@@ -343,14 +343,14 @@ Page {
     Text {
         visible: pg.apt.length > 8
         text: pg.showAll ? "Show fewer" : "Show all " + pg.apt.length
-        color: Theme.accent; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.2
+        color: Theme.accent; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.2
         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: pg.showAll = !pg.showAll }
     }
     Text {
         visible: (st.held || []).length > 0
         Layout.fillWidth: true; wrapMode: Text.WordWrap
         text: (st.held || []).length + " more held back by Ubuntu for now (rolled out to everyone gradually): " + (st.held || []).join(", ")
-        color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10
+        color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
     }
 
     // ================= apps =================
@@ -369,7 +369,7 @@ Page {
         visible: pg.fpList.length === 0
         Layout.fillWidth: true; wrapMode: Text.WordWrap
         text: pg.fpLoading ? "Asking Flathub…" : (fp.flatpakError || "No app updates.")
-        color: fp.flatpakError ? Theme.bad : Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+        color: fp.flatpakError ? Theme.bad : Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
     }
     ColumnLayout {
         Layout.fillWidth: true
@@ -401,7 +401,7 @@ Page {
         visible: pg.fwList.length > 0
         Layout.fillWidth: true; wrapMode: Text.WordWrap
         text: "Firmware updates are applied by your PC's firmware on the next restart. Keep it plugged in."
-        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+        color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
     }
     ColumnLayout {
         Layout.fillWidth: true

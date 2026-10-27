@@ -87,6 +87,6 @@ Page {
     Text {
         Layout.fillWidth: true
         text: "Candidates are the installed apps that declare support for the type. The terminal choice is saved to ~/.config/xdg-terminals.list."
-        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12; wrapMode: Text.WordWrap
+        color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label; wrapMode: Text.WordWrap
     }
 }

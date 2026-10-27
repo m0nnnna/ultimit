@@ -14,7 +14,7 @@ ColumnLayout {
     Text {
         Layout.fillWidth: true; wrapMode: Text.WordWrap
         text: "Glow along panel edges, text that decodes in, and the wallpaper reacting. Paused while a fullscreen window is up or Animations is off."
-        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+        color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
     }
     Chips {
         Layout.fillWidth: true

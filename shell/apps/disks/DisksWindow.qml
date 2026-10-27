@@ -69,7 +69,7 @@ FloatingWindow {
             elide: Text.ElideRight
             text: Disks.note
             color: Disks.noteKind === "error" ? Theme.bad : Theme.dim
-            font.family: Theme.ui; font.pixelSize: 12
+            font.family: Theme.ui; font.pixelSize: Theme.type.label
             visible: Disks.note !== ""
         }
         // progress of an action started outside a dialog (mount, eject, ...); dialogs show their own
@@ -144,13 +144,13 @@ FloatingWindow {
                                 Text {
                                     id: sub
                                     text: win.d ? Disks.fmt(win.d.size) + " (" + Disks.fmtIec(win.d.size) + ") · " + Disks.busText(win.d) + " · " + win.d.device : ""
-                                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11
+                                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
                                 }
                                 Text {
                                     visible: !!(win.d && win.d.serial !== "")
                                     text: win.showSerial ? "serial " + (win.d ? win.d.serial : "") : "show serial"
                                     color: sm.containsMouse ? Theme.accent : Theme.dim
-                                    font.family: Theme.mono; font.pixelSize: 11; font.underline: !win.showSerial
+                                    font.family: Theme.mono; font.pixelSize: Theme.type.label; font.underline: !win.showSerial
                                     MouseArea { id: sm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                                         onClicked: win.showSerial = !win.showSerial }
                                 }
@@ -173,7 +173,7 @@ FloatingWindow {
                                     id: hl; anchors.centerIn: parent
                                     text: (Disks.healthBusy !== "" && win.d && Disks.healthBusy === win.d.id ? "Checking…" : win.health ? win.health.title : "Check health").toUpperCase()
                                     color: hchip.tone
-                                    font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.2
+                                    font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.2
                                 }
                                 MouseArea { id: hm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                                     onClicked: if (win.d) Disks.toggleHealth(win.d) }
@@ -211,14 +211,14 @@ FloatingWindow {
                                     width: hcol.width; wrapMode: Text.WordWrap
                                     text: modelData.text
                                     color: modelData.tone === "ok" ? Theme.ok : modelData.tone === "warn" ? Theme.warn : modelData.tone === "bad" ? Theme.bad : Theme.dim
-                                    font.family: Theme.ui; font.pixelSize: 13
+                                    font.family: Theme.ui; font.pixelSize: Theme.type.body
                                 }
                             }
                             Text {
                                 visible: !!(win.health && win.health.attributes && win.health.attributes.length > 0)
                                 width: hcol.width; wrapMode: Text.WordWrap
                                 text: win.health && win.health.attributes ? win.health.attributes.map(a => a.name + " " + a.raw).join(" · ") : ""
-                                color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10
+                                color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
                             }
                         }
                     }
@@ -236,7 +236,7 @@ FloatingWindow {
                             visible: !!(win.d && win.d.table_why === "")
                             text: "NEW PARTITION TABLE…"
                             color: nm.containsMouse ? Disks.danger : Theme.dim
-                            font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.4
+                            font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.4
                             MouseArea { id: nm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                                 enabled: Disks.busy === ""; onClicked: Disks.overlay = "table" }
                         }
@@ -253,12 +253,12 @@ FloatingWindow {
                     Text {
                         visible: !!(win.d && win.d.partitions.length === 0)
                         text: "No partitions on this drive."
-                        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
+                        color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.body
                     }
                     Text {
                         visible: !!(win.d && win.d.partitions.length > 0 && !win.v && !Disks.freeSeg)
                         text: "Click a partition to see what is on it."
-                        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+                        color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                     }
 
                     // ---- free space ----
@@ -279,7 +279,7 @@ FloatingWindow {
                             Text {
                                 width: parent.width; wrapMode: Text.WordWrap
                                 text: Disks.freeSeg ? Disks.fmt(Disks.freeSeg.size) + " that no partition uses." + (Disks.freeSeg.create && !Disks.freeSeg.create.ok ? " " + Disks.freeSeg.create.why : "") : ""
-                                color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
+                                color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.body
                             }
                             GButton {
                                 visible: !!(Disks.freeSeg && Disks.freeSeg.create && Disks.freeSeg.create.ok)
@@ -329,7 +329,7 @@ FloatingWindow {
                                 }
                                 Text {
                                     text: win.v && win.v.used !== null ? Disks.fmt(win.v.used) + " used · " + Disks.fmt(win.v.free) + " free · " + Disks.fmt(win.v.size) + " total" : ""
-                                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11
+                                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
                                 }
                             }
 
@@ -347,7 +347,7 @@ FloatingWindow {
                                     Text {
                                         width: vcol.width - 102; elide: Text.ElideMiddle
                                         text: modelData[1]
-                                        color: Theme.fg; font.family: Theme.mono; font.pixelSize: 12
+                                        color: Theme.fg; font.family: Theme.mono; font.pixelSize: Theme.type.label
                                     }
                                 }
                             }
@@ -363,20 +363,20 @@ FloatingWindow {
                                     id: sysTxt
                                     x: 12; y: 10; width: parent.width - 24; wrapMode: Text.WordWrap
                                     text: "In use by the system. " + (win.v ? win.v.system_reason : "") + ". It is protected, so it cannot be unmounted or formatted here."
-                                    color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+                                    color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                                 }
                             }
                             Text {
                                 visible: !!(win.v && !win.v.is_system && win.v.manage && !win.v.manage.resize.ok && win.v.manage.resize.why !== "")
                                 width: parent.width; wrapMode: Text.WordWrap
                                 text: win.v ? "Resize: " + win.v.manage.resize.why : ""
-                                color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+                                color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                             }
                             Text {
                                 visible: !!(win.v && !win.v.is_system && !win.v.can_format && !win.v.mountable)
                                 width: parent.width; wrapMode: Text.WordWrap
                                 text: "This volume has no filesystem DISKS can mount."
-                                color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+                                color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                             }
 
                             // actions
@@ -438,7 +438,7 @@ FloatingWindow {
                 anchors.centerIn: pane
                 visible: Disks.drives.length === 0
                 text: "No drives found."
-                color: Theme.dim; font.family: Theme.ui; font.pixelSize: 14
+                color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.body
             }
         }
 

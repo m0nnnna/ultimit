@@ -14,7 +14,6 @@ Rectangle {
 
     implicitHeight: col.implicitHeight + 40
     color: Theme.bg1
-    border.width: 1; border.color: Theme.lineStrong
     Keys.onEscapePressed: if (!login) host.overlay = ""
 
     // ---- signing in ----
@@ -61,7 +60,7 @@ Rectangle {
             Layout.fillWidth: true; wrapMode: Text.Wrap
             text: "Each account is its own Claude Code folder with its own sign-in, settings and history. "
                 + (root.host.proj ? "\"" + root.host.proj.name + "\" uses the one marked USED HERE; its older chats keep the account they started with." : "")
-            color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+            color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
         }
 
         ScrollView {
@@ -81,8 +80,7 @@ Rectangle {
                         readonly property bool here: root.host.proj && Claude.accountFor(root.host.proj) === modelData.id
                         Layout.fillWidth: true
                         implicitHeight: accInner.implicitHeight + 20
-                        color: Theme.panel
-                        border.width: 1; border.color: here ? Theme.accent : Theme.line
+                        color: here ? Theme.selection : Theme.field
                         ColumnLayout {
                             id: accInner
                             x: 12; y: 10; width: parent.width - 24
@@ -98,14 +96,14 @@ Rectangle {
                                     Text {
                                         width: parent.width; elide: Text.ElideRight
                                         text: acc.modelData.name + (acc.here ? "   ·   USED HERE" : "")
-                                        color: Theme.fg; font.family: Theme.ui; font.pixelSize: 14; font.weight: Font.DemiBold
+                                        color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.body; font.weight: Font.DemiBold
                                     }
                                     Text {
                                         width: parent.width; elide: Text.ElideMiddle
                                         text: (acc.st.checking ? "checking…" : acc.st.loggedIn
                                                ? "signed in" + (acc.st.email ? " as " + acc.st.email : "") + (acc.st.method ? " (" + acc.st.method + ")" : "")
                                                : "not signed in") + "   ·   " + root.host.tilde(acc.modelData.dir || "~/.claude")
-                                        color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10
+                                        color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
                                     }
                                 }
                             }
@@ -129,7 +127,7 @@ Rectangle {
                                     text: acc.modelData.dir
                                         ? "Remove this account and delete its folder (its sign-in, settings and Claude Code history)?"
                                         : "Stop using ~/.claude here? Nothing is deleted; Claude Code itself keeps working as before."
-                                    color: Theme.fg; font.family: Theme.ui; font.pixelSize: 13
+                                    color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.body
                                 }
                                 Row {
                                     spacing: 8
@@ -149,13 +147,13 @@ Rectangle {
                                     Layout.fillWidth: true; wrapMode: Text.Wrap
                                     text: root.loginErr !== "" ? root.loginErr : root.loginMsg
                                     color: root.loginErr !== "" ? Theme.bad : Theme.fg
-                                    font.family: Theme.ui; font.pixelSize: 13
+                                    font.family: Theme.ui; font.pixelSize: Theme.type.body
                                 }
                                 Text {
                                     visible: root.askCode
                                     Layout.fillWidth: true; wrapMode: Text.Wrap
                                     text: "If the page shows a code after you sign in, paste it here:"
-                                    color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+                                    color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                                 }
                                 RowLayout {
                                     visible: root.askCode
@@ -219,14 +217,14 @@ Rectangle {
             Text {
                 Layout.fillWidth: true; wrapMode: Text.Wrap
                 text: "Already signed in to Claude Code? Use that sign-in (~/.claude) as an account."
-                color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+                color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
             }
             ChamferButton { implicitHeight: 30; text: "Use it"; onClicked: Claude.run(["account-default"], () => Claude.reload()) }
         }
         Text {
             Layout.fillWidth: true; wrapMode: Text.Wrap
             text: "\"Sign in\" is for a Claude Pro, Max, Team or Enterprise plan; \"Sign in with Console\" bills an Anthropic Console organization instead."
-            color: Theme.dim; font.family: Theme.ui; font.pixelSize: 11
+            color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
         }
     }
 }

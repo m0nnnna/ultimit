@@ -11,9 +11,7 @@ Rectangle {
     readonly property string unc: Shares.uncPath(share.name)
 
     implicitHeight: 92
-    color: Theme.panel2
-    border.color: Theme.line
-    border.width: 1
+    color: Theme.field
 
     Rectangle { width: 2; height: parent.height; color: root.share.guest ? Theme.warn : Theme.accent }
 
@@ -26,7 +24,7 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.share.name
                 color: Theme.fg
-                font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: 16
+                font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: Theme.type.title
             }
             GChip { anchors.verticalCenter: parent.verticalCenter; text: root.share.writable ? "Writable" : "Read-only"; tone: root.share.writable ? Theme.accent : Theme.dim }
             GChip { anchors.verticalCenter: parent.verticalCenter; text: root.share.guest ? "Guests: yes" : "Guests: no"; tone: root.share.guest ? Theme.warn : Theme.dim }
@@ -36,7 +34,7 @@ Rectangle {
             elide: Text.ElideMiddle
             text: root.share.path + (root.share.comment !== "" ? "   ·   " + root.share.comment : "")
             color: Theme.dim
-            font.family: Theme.mono; font.pixelSize: 12
+            font.family: Theme.mono; font.pixelSize: Theme.type.label
         }
         Row {
             spacing: 10
@@ -44,7 +42,7 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.unc
                 color: Theme.fg
-                font.family: Theme.mono; font.pixelSize: 13
+                font.family: Theme.mono; font.pixelSize: Theme.type.body
             }
             GLabel {
                 anchors.verticalCenter: parent.verticalCenter

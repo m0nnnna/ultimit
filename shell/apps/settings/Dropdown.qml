@@ -35,24 +35,24 @@ Item {
         Text {
             text: root.label.toUpperCase()
             color: Theme.dim
-            font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.8
+            font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.8
         }
         Rectangle {
             y: 16; width: parent.width; height: 30
-            color: m.containsMouse ? Theme.panel2 : "transparent"
-            border.width: 1; border.color: root.open || root.activeFocus ? Theme.accent : Theme.lineStrong
+            color: m.containsMouse ? Theme.hover : Theme.field
+            border.width: root.open || root.activeFocus ? 1 : 0; border.color: Theme.accent
             Text {
                 anchors.left: parent.left; anchors.leftMargin: 10; anchors.verticalCenter: parent.verticalCenter
                 width: parent.width - 36
                 elide: Text.ElideRight
                 text: root.currentLabel
                 color: Theme.fg
-                font.family: Theme.ui; font.pixelSize: 13
+                font.family: Theme.ui; font.pixelSize: Theme.type.body
             }
             Text {
                 anchors.right: parent.right; anchors.rightMargin: 10; anchors.verticalCenter: parent.verticalCenter
                 text: root.open ? "▲" : "▼"
-                color: Theme.dim; font.pixelSize: 9
+                color: Theme.dim; font.pixelSize: Theme.type.label
             }
             MouseArea {
                 id: m
@@ -66,12 +66,12 @@ Item {
         id: filterBox
         visible: root.open && root.filterable
         y: head.height; width: parent.width; height: 30
-        color: "transparent"; border.width: 1; border.color: Theme.line
+        color: Theme.field
         TextInput {
             id: fi
             anchors.fill: parent; anchors.margins: 6
             color: Theme.fg; selectionColor: Theme.accent; selectedTextColor: Theme.onAccent
-            font.family: Theme.ui; font.pixelSize: 13
+            font.family: Theme.ui; font.pixelSize: Theme.type.body
             clip: true
             onTextChanged: root.query = text
             Text { visible: fi.text === ""; text: "Filter…"; color: Theme.dim; font: fi.font }
@@ -98,7 +98,7 @@ Item {
                 width: parent.width - 24; elide: Text.ElideRight
                 text: String(row.modelData.label)
                 color: row.sel ? Theme.accent : Theme.fg
-                font.family: Theme.ui; font.pixelSize: 13
+                font.family: Theme.ui; font.pixelSize: Theme.type.body
             }
             MouseArea {
                 id: rm

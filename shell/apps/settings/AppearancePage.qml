@@ -62,7 +62,7 @@ Page {
     Text {
         Layout.fillWidth: true; wrapMode: Text.WordWrap
         text: "The colour that marks what's focused, selected or on, on every skin."
-        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+        color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
     }
     Flow {
         Layout.fillWidth: true
@@ -106,7 +106,7 @@ Page {
         readonly property var shown: pg.accentHover
             || Theme.accentPresets.find(p => p.c === Theme.accentOverride) || { n: "", c: Theme.accentOverride }
         text: shown.c === "" ? "SKIN'S OWN" : (shown.n ? shown.n.toUpperCase() + " · " : "") + shown.c
-        color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 2.2
+        color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 2.2
     }
     // the most vivid colour of the current wallpaper picture (off for the generative shards)
     RowLayout {
@@ -122,7 +122,7 @@ Page {
         Text {
             Layout.fillWidth: true; elide: Text.ElideRight
             text: parent.note !== "" ? parent.note : (Config.wallpaper === "" ? "NEEDS A PICTURE WALLPAPER" : "")
-            color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 2.2
+            color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 2.2
         }
         WallpaperAccent {
             id: wpAccent
@@ -191,7 +191,7 @@ Page {
         visible: (Config.wallpaper !== "" || pg.pictureMode) && pg.pictures.length === 0
         Layout.fillWidth: true; wrapMode: Text.WordWrap
         text: "No pictures found in Pictures or Pictures/Wallpapers. Use Browse… or right-click an image in DATA › Set as wallpaper."
-        color: Theme.dim; font.family: Theme.ui; font.pixelSize: 12
+        color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
     }
     RowLayout {
         visible: Config.wallpaper !== "" || pg.pictureMode
@@ -208,7 +208,7 @@ Page {
     Text {
         visible: Config.wallpaper !== "" && pg.pictures.indexOf(Config.wallpaper) < 0
         Layout.fillWidth: true; elide: Text.ElideMiddle
-        text: Config.wallpaper; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10
+        text: Config.wallpaper; color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
     }
 
     SectionLabel { text: "Rail icons" }
@@ -262,7 +262,7 @@ Page {
         Layout.maximumWidth: 62 * 7
         text: "Ultimit design mockup. The look is a tribute to Altimit OS from the .hack games by CyberConnect2. The name is a fan homage; the emblem and art are original."
         color: Theme.dim
-        font.family: Theme.ui; font.pixelSize: 12
+        font.family: Theme.ui; font.pixelSize: Theme.type.label
         lineHeight: 1.6
         wrapMode: Text.WordWrap
     }

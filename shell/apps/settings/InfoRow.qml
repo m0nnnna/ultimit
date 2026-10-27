@@ -13,7 +13,7 @@ Item {
         anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
         text: root.label.toUpperCase()
         color: Theme.dim
-        font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.8
+        font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.8
     }
     Text {
         id: val
@@ -22,8 +22,7 @@ Item {
         horizontalAlignment: Text.AlignRight
         text: root.value
         color: root.valueColor
-        font.family: Theme.ui; font.pixelSize: 13
+        font.family: Theme.ui; font.pixelSize: Theme.type.body
         wrapMode: Text.WordWrap
     }
-    Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
 }

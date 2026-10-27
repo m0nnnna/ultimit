@@ -37,7 +37,7 @@ Item {
         width: userT.width + 28
         height: userT.implicitHeight + 20
         color: Theme.panel2
-        border.width: 1; border.color: Theme.line
+
         Rectangle { anchors.right: parent.right; width: 2; height: parent.height; color: Theme.accent }
         TextEdit {
             id: userT
@@ -111,7 +111,7 @@ Item {
             visible: root.open && root.out !== ""
             x: 14; width: parent.width - 14
             height: Math.min(outT.implicitHeight + 16, 260)
-            color: Theme.panel; border.width: 1; border.color: Theme.line
+            color: Theme.field
             Flickable {
                 anchors.fill: parent; anchors.margins: 8
                 contentHeight: outT.implicitHeight; clip: true

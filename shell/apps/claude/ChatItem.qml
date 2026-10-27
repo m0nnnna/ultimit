@@ -44,8 +44,7 @@ Item {
         width: Math.max(userT.visible ? userT.width : 0, thumbs.visible ? thumbs.width : 0) + 28
         height: (thumbs.visible ? thumbs.height + (userT.visible ? 8 : 0) : 0) + (userT.visible ? userT.implicitHeight : 0)
                 + 20 + (root.sysinfo ? 16 : 0)
-        color: Theme.panel2
-        border.width: 1; border.color: Theme.line
+        color: Theme.field
         Rectangle { anchors.right: parent.right; width: 2; height: parent.height; color: Theme.accent }
         Flow {
             id: thumbs
@@ -58,7 +57,7 @@ Item {
                 Rectangle {
                     required property string modelData
                     width: 160; height: 110
-                    color: Theme.bg1; border.width: 1; border.color: Theme.line
+                    color: Theme.press
                     Image {
                         anchors.fill: parent; anchors.margins: 1
                         source: "file://" + parent.modelData
@@ -80,14 +79,14 @@ Item {
             readOnly: true; selectByMouse: true; wrapMode: TextEdit.Wrap
             text: root.k === "user" ? root.text : ""
             color: Theme.fg; selectionColor: Theme.accent; selectedTextColor: Theme.onAccent
-            font.family: Theme.ui; font.pixelSize: 14
+            font.family: Theme.ui; font.pixelSize: Theme.type.body
         }
         Text { id: measure; visible: false; text: userT.text; font: userT.font }
         Text {
             visible: root.sysinfo
             x: 12; anchors.bottom: parent.bottom; anchors.bottomMargin: 6
             text: "+ SYSTEM SUMMARY"
-            color: Theme.dim; font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1.4
+            color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.4
         }
     }
 
@@ -100,7 +99,7 @@ Item {
         textFormat: root.streaming ? TextEdit.PlainText : TextEdit.MarkdownText
         text: root.k === "claude" ? root.text : ""
         color: Theme.fg; selectionColor: Theme.accent; selectedTextColor: Theme.onAccent
-        font.family: Theme.ui; font.pixelSize: 14
+        font.family: Theme.ui; font.pixelSize: Theme.type.body
         onLinkActivated: link => Qt.openUrlExternally(link)
         HoverHandler { cursorShape: reply.hoveredLink !== "" ? Qt.PointingHandCursor : Qt.IBeamCursor }
     }
@@ -122,14 +121,14 @@ Item {
                 x: 14; anchors.verticalCenter: parent.verticalCenter
                 text: root.name.toUpperCase()
                 color: root.status === "error" ? Theme.bad : Theme.accent
-                font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.4
+                font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.4
             }
             Text {
                 x: toolName.x + toolName.implicitWidth + 10; anchors.verticalCenter: parent.verticalCenter
                 width: parent.width - x - 10
                 elide: Text.ElideMiddle
                 text: root.summary.replace(/\n/g, " ⏎ ")
-                color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11
+                color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
             }
             MouseArea {
                 anchors.fill: parent
@@ -142,7 +141,7 @@ Item {
             visible: root.open && root.out !== ""
             x: 14; width: parent.width - 14
             height: Math.min(outT.implicitHeight + 16, 260)
-            color: Theme.panel; border.width: 1; border.color: Theme.line
+            color: Theme.field
             Flickable {
                 anchors.fill: parent; anchors.margins: 8
                 contentHeight: outT.implicitHeight; clip: true
@@ -153,7 +152,7 @@ Item {
                     text: root.open ? root.out : ""
                     color: root.status === "error" ? Theme.bad : Theme.fg
                     selectionColor: Theme.accent; selectedTextColor: Theme.onAccent
-                    font.family: Theme.mono; font.pixelSize: 11
+                    font.family: Theme.mono; font.pixelSize: Theme.type.label
                 }
             }
         }
@@ -166,6 +165,6 @@ Item {
         width: parent.width; wrapMode: Text.Wrap
         text: root.k === "note" ? (root.kind === "error" ? "⚠ " : "") + root.text : ""
         color: root.kind === "error" ? Theme.bad : Theme.dim
-        font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 0.6
+        font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 0.6
     }
 }

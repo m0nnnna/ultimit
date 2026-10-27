@@ -76,20 +76,18 @@ PanelWindow {
     Rectangle {
         anchors.fill: parent
         color: Theme.panel
-        border.width: 1; border.color: Theme.lineStrong
 
         // ---- header: CLAUDE · project, new chat, expand, close ----
         Rectangle {
             id: head
             width: parent.width; height: 40
             color: "transparent"
-            Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
-            Rectangle { width: 3; height: parent.height; color: Theme.accent }
+                        Rectangle { width: 3; height: parent.height; color: Theme.accent }
             Text {
                 id: title
                 x: 14; anchors.verticalCenter: parent.verticalCenter
                 text: "CLAUDE"
-                color: Theme.accent; font.family: Theme.mono; font.pixelSize: 12; font.letterSpacing: 2
+                color: Theme.accent; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 2
             }
             SmallLink {
                 anchors.left: title.right; anchors.leftMargin: 10; anchors.verticalCenter: parent.verticalCenter
@@ -144,7 +142,7 @@ PanelWindow {
                         visible: !!win.chat && win.chat.busy && win.chat.liveText === ""
                         text: !win.chat ? "" : (win.chat.thinking ? "THINKING" : win.chat.statusText !== "" ? win.chat.statusText.toUpperCase() : "WORKING") + dots.s
                         width: parent.width; elide: Text.ElideRight
-                        color: Theme.accent; font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.6
+                        color: Theme.accent; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.6
                         Timer {
                             id: dots
                             property string s: ""
@@ -163,14 +161,14 @@ PanelWindow {
                 Text {
                     width: parent.width; horizontalAlignment: Text.AlignHCenter
                     text: !win.ready ? "CLAUDE ISN'T SET UP YET" : win.projectId === "system" ? "WHAT'S UP WITH THIS PC?" : "NEW CHAT"
-                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: 12; font.letterSpacing: 2
+                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 2
                 }
                 Text {
                     width: parent.width; horizontalAlignment: Text.AlignHCenter; wrapMode: Text.Wrap
                     text: !win.ready ? "Open the full window (EXPAND) to install Claude Code and sign in."
                         : win.projectId === "system" ? "Ask anything about this PC. EXPAND opens this chat in the full window."
                         : "Claude works in " + (win.proj ? win.proj.dir : "") + ". EXPAND opens this chat in the full window."
-                    color: Theme.fg; font.family: Theme.ui; font.pixelSize: 13
+                    color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.body
                 }
             }
         }
@@ -182,7 +180,7 @@ PanelWindow {
             height: win.chat && win.chat.ask ? askCol.implicitHeight + 20 : 0
             visible: height > 0
             color: Theme.panel
-            Rectangle { width: parent.width; height: 1; color: Theme.lineStrong }
+            
             Rectangle { width: 3; height: parent.height; color: Theme.warn }
             Column {
                 id: askCol
@@ -194,7 +192,7 @@ PanelWindow {
                     text: askCol.isQuestion ? "CLAUDE HAS A QUESTION" + (win.chat.askQueue.length ? "   (+" + win.chat.askQueue.length + " MORE)" : "")
                           : win.chat && win.chat.ask ? ("Claude wants to use " + win.chat.ask.tool).toUpperCase()
                           + (win.chat.askQueue.length ? "   (+" + win.chat.askQueue.length + " MORE)" : "") : ""
-                    color: Theme.warn; font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.6
+                    color: Theme.warn; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.6
                 }
                 QuestionPanel {
                     visible: askCol.isQuestion
@@ -207,7 +205,7 @@ PanelWindow {
                     visible: !askCol.isQuestion
                     width: parent.width; wrapMode: Text.WrapAnywhere; maximumLineCount: 4; elide: Text.ElideRight
                     text: win.chat && win.chat.ask ? win.chat.ask.summary : ""
-                    color: Theme.fg; font.family: Theme.mono; font.pixelSize: 12
+                    color: Theme.fg; font.family: Theme.mono; font.pixelSize: Theme.type.label
                 }
                 Row {
                     visible: !askCol.isQuestion
@@ -225,11 +223,10 @@ PanelWindow {
             anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
             height: Math.min(Math.max(input.contentHeight + 22, 44), 160) + 40
             color: "transparent"
-            Rectangle { width: parent.width; height: 1; color: Theme.line }
-            Rectangle {
+                        Rectangle {
                 x: 12; y: 10; width: parent.width - 24; height: parent.height - 50
-                color: "transparent"
-                border.width: 1; border.color: input.activeFocus ? Theme.accent : Theme.lineStrong
+                color: Theme.field
+                border.width: input.activeFocus ? 1 : 0; border.color: Theme.accent
                 ScrollView {
                     anchors.fill: parent; anchors.margins: 1
                     TextArea {
@@ -240,7 +237,7 @@ PanelWindow {
                         color: Theme.fg; selectionColor: Theme.accent; selectedTextColor: Theme.onAccent
                         placeholderText: win.projectId === "system" ? "Ask about this PC…" : "Ask Claude about " + (win.proj ? win.proj.name : "this project") + "…"
                         placeholderTextColor: Theme.dim
-                        font.family: Theme.ui; font.pixelSize: 13
+                        font.family: Theme.ui; font.pixelSize: Theme.type.body
                         enabled: win.ready
                         Keys.onPressed: e => {
                             if ((e.key === Qt.Key_Return || e.key === Qt.Key_Enter) && !(e.modifiers & Qt.ShiftModifier)) {
@@ -254,7 +251,7 @@ PanelWindow {
                 x: 12; anchors.bottom: parent.bottom; anchors.bottomMargin: 12
                 width: parent.width - 150; elide: Text.ElideRight
                 text: win.chat ? [win.chat.info, win.chat.limit].filter(s => s !== "").join("  ·  ").toUpperCase() : ""
-                color: Theme.dim; font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1.2
+                color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.2
             }
             Row {
                 anchors.right: parent.right; anchors.rightMargin: 12
@@ -271,7 +268,7 @@ PanelWindow {
             visible: false
             x: 60; y: head.height - 2
             width: 240; height: Math.min(projCol.implicitHeight + 8, 300)
-            color: Theme.bg1; border.width: 1; border.color: Theme.lineStrong
+            color: Theme.bg1
             Flickable {
                 anchors.fill: parent; anchors.margins: 4
                 contentHeight: projCol.implicitHeight; clip: true
@@ -283,14 +280,15 @@ PanelWindow {
                         model: Claude.projects
                         Rectangle {
                             required property var modelData
-                            width: projCol.width; height: 28
-                            color: pHover.hovered ? Theme.accent : "transparent"
+                            width: projCol.width; height: 32
+                            color: pHover.hovered ? Theme.accent : Theme.clear(Theme.accent)
+                            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                             Text {
                                 x: 10; anchors.verticalCenter: parent.verticalCenter
                                 width: parent.width - 20; elide: Text.ElideRight
                                 text: (modelData.id === win.projectId ? "✓ " : "") + modelData.name
                                 color: pHover.hovered ? Theme.onAccent : Theme.fg
-                                font.family: Theme.ui; font.pixelSize: 13
+                                font.family: Theme.ui; font.pixelSize: Theme.type.body
                             }
                             HoverHandler { id: pHover; cursorShape: Qt.PointingHandCursor }
                             TapHandler { onTapped: { projMenu.visible = false; win.pickProject(modelData.id); } }

@@ -58,7 +58,7 @@ Column {
             Text {
                 visible: qcol.modelData.header !== ""
                 text: qcol.modelData.header.toUpperCase() + (qcol.modelData.multi ? "   · PICK ANY" : "")
-                color: Theme.warn; font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.6
+                color: Theme.warn; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.6
             }
             Text {
                 width: parent.width; wrapMode: Text.Wrap
@@ -76,21 +76,21 @@ Column {
                         readonly property bool picked: (root.picks[qcol.index] || []).indexOf(modelData.label) >= 0
                         width: Math.min(optCol.implicitWidth + 20, qcol.width)
                         height: optCol.implicitHeight + 12
-                        color: picked ? Theme.accent : (optMouse.containsMouse ? Theme.bg1 : "transparent")
-                        border.width: 1; border.color: picked ? Theme.accent : Theme.lineStrong
+                        color: picked ? Theme.accent : (optMouse.containsMouse ? Theme.press : Theme.field)
+                        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                         Column {
                             id: optCol
                             x: 10; y: 6; width: opt.width - 20
                             Text {
                                 width: parent.width; wrapMode: Text.Wrap
                                 text: opt.modelData.label
-                                color: opt.picked ? Theme.onAccent : Theme.fg; font.family: Theme.ui; font.pixelSize: 13
+                                color: opt.picked ? Theme.onAccent : Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.body
                             }
                             Text {
                                 visible: !root.compact && opt.modelData.description !== ""
                                 width: Math.min(implicitWidth, qcol.width - 20); wrapMode: Text.Wrap
                                 text: opt.modelData.description
-                                color: opt.picked ? Theme.onAccent : Theme.dim; font.family: Theme.ui; font.pixelSize: 11
+                                color: opt.picked ? Theme.onAccent : Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.label
                             }
                         }
                         MouseArea {

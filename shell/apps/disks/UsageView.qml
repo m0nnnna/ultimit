@@ -50,13 +50,12 @@ Item {
                     required property var modelData
                     readonly property bool on: Disks.usageRoot === modelData.path
                     width: pl.implicitWidth + 20; height: 28
-                    color: on ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14) : (pm.containsMouse ? Theme.panel2 : "transparent")
-                    border.color: on ? Theme.accent : Theme.line
+                    color: on ? Theme.selection : (pm.containsMouse ? Theme.hover : Theme.field)
                     Text {
                         id: pl; anchors.centerIn: parent
                         text: modelData.label.toUpperCase()
                         color: parent.on ? Theme.accent : Theme.fg
-                        font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.2
+                        font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.2
                     }
                     MouseArea { id: pm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; enabled: !Disks.scanning
                         onClicked: Disks.choose(modelData.path) }
@@ -102,13 +101,13 @@ Item {
                 spacing: 4
                 Text {
                     visible: index > 0
-                    text: "›"; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 12
+                    text: "›"; color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
                 }
                 Text {
                     readonly property bool last: index === root.crumbs.length - 1
                     text: modelData.label
                     color: last ? Theme.fg : (cm.containsMouse ? Theme.accent : Theme.dim)
-                    font.family: Theme.mono; font.pixelSize: 12; font.underline: cm.containsMouse && !last
+                    font.family: Theme.mono; font.pixelSize: Theme.type.label; font.underline: cm.containsMouse && !last
                     MouseArea { id: cm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                         onClicked: if (!parent.last) Disks.browse(modelData.path) }
                 }
@@ -133,7 +132,7 @@ Item {
             Text {
                 anchors.baseline: parent.children[0].baseline
                 text: root.lst ? Disks.count(root.lst.items) + " items · scanned " + Disks.ago(root.lst.scanned) : ""
-                color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11
+                color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
             }
         }
         Row {
@@ -188,7 +187,7 @@ Item {
         visible: root.lst !== null && !Disks.scanning && (root.lst.errors > 0 || root.lst.other_fs > 0)
         height: visible ? implicitHeight : 0
         color: Theme.warn
-        font.family: Theme.ui; font.pixelSize: 12
+        font.family: Theme.ui; font.pixelSize: Theme.type.label
         text: root.lst ? (root.lst.errors > 0 ? "Some folders could not be read (" + root.lst.errors + "), so the real total is a little higher. " : "")
                      + (root.lst.other_fs > 0 ? "Other drives mounted inside were left out." : "") : ""
     }
@@ -227,14 +226,14 @@ Item {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: Disks.count(Disks.progress.files) + " files · " + Disks.fmt(Disks.progress.bytes)
-            color: Theme.accent; font.family: Theme.mono; font.pixelSize: 13
+            color: Theme.accent; font.family: Theme.mono; font.pixelSize: Theme.type.body
         }
         Text {
             width: parent.width
             elide: Text.ElideMiddle
             horizontalAlignment: Text.AlignHCenter
             text: Disks.progress.path
-            color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11
+            color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
         }
     }
     Column {
@@ -253,7 +252,7 @@ Item {
             wrapMode: Text.WordWrap
             text: Disks.noCache ? "Press Scan to measure " + Disks.usageRoot + ". Nothing is changed or deleted."
                                 : "Pick Home or a drive above, or type a folder, then press Scan."
-            color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
+            color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.body
         }
     }
 }
