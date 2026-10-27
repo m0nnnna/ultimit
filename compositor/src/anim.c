@@ -572,8 +572,7 @@ void anim_close(struct ul_view *view) {
 }
 
 static bool target_box(struct ul_view *view, struct wlr_box *out) {
-	if (view->has_rail_rect) {
-		*out = view->rail_rect;
+	if (view_rail_target(view, out)) {
 		return true;
 	}
 	/* No rail entry known: toward the rail (the strip the shell reserves on the left

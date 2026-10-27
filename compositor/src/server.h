@@ -358,6 +358,8 @@ enum ul_titlebar_hit {
 struct ul_ghost;
 struct ul_capture_source;
 
+#define UL_RAIL_SLOTS 4
+
 struct ul_view {
 	struct wl_list link;
 	struct ul_server *server;
@@ -389,7 +391,11 @@ struct ul_view {
 	struct ul_ghost *closing;  /* snapshot taken when the client dropped its buffer */
 	struct wl_listener client_commit;
 	bool has_rail_rect;        /* the shell told us where our rail entry is */
-	struct wlr_box rail_rect;  /* layout coords */
+	struct wlr_box rail_rect;  /* layout coords: the latest one told */
+	/* One rail per monitor each says where this window's entry is: keep one box per
+	 * output, so the minimize animation flies to the rail on the window's own monitor. */
+	struct { struct wlr_output *output; struct wlr_box box; } rail_slots[UL_RAIL_SLOTS];
+	int n_rail_slots;
 
 	struct wlr_xdg_toplevel_decoration_v1 *xdg_decoration;
 	struct wl_listener decoration_request_mode;
@@ -476,6 +482,7 @@ void server_spawn(const char *cmd);
 void output_init(struct ul_server *server);
 void output_finish(struct ul_server *server);
 struct ul_output *output_at(struct ul_server *server, double lx, double ly);
+bool view_rail_target(struct ul_view *view, struct wlr_box *out);
 struct ul_output *output_for_view(struct ul_view *view);
 void output_arrange(struct ul_output *output);
 void output_refresh_blur(struct ul_output *output, bool now);

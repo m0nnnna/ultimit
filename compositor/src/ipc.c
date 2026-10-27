@@ -99,8 +99,9 @@ static void write_state(struct ul_server *server, struct out *o) {
 		put(o, ",\"tree\":{\"x\":%d,\"y\":%d}", view->tree->node.x, view->tree->node.y);
 		/* Where the shell's rail shows this window (null until the shell said). */
 		put(o, ",\"rail\":");
-		if (view->has_rail_rect) {
-			put_box(o, view->rail_rect);
+		struct wlr_box rail_box;
+		if (view_rail_target(view, &rail_box)) {
+			put_box(o, rail_box);
 		} else {
 			put(o, "null");
 		}

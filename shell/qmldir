@@ -21,3 +21,4 @@ singleton AudioLevel 1.0 AudioLevel.qml
 singleton UiSounds 1.0 UiSounds.qml
 singleton GameMode 1.0 GameMode.qml
 singleton SysStats 1.0 SysStats.qml
+singleton RailWindows 1.0 RailWindows.qml

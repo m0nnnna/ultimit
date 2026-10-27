@@ -1,4 +1,4 @@
-// RailMenu.qml - right-click menu for a rail button (Pins.openMenu): Unpin, Move up/down, Rail settings...
+// RailMenu.qml - right-click menu for a rail button (Pins.openMenu): its windows, New window, Unpin, Move up/down, Rail settings...
 // Full-screen overlay like WindowPopups' window menu: click-outside / Escape closes, arrows + Enter work.
 import QtQuick
 import Quickshell
@@ -22,9 +22,17 @@ Scope {
         WlrLayershell.keyboardFocus: visible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
         readonly property int idx: Pins.indexOf(Pins.menuPinId)
+        readonly property var pin: { for (const p of Pins.list) if (p.id === Pins.menuPinId) return p; return null; }
+        // Open windows of the button (pick one: restore + focus), then New window, then the rail edits.
+        readonly property var wins: { RailWindows.tick; return Pins.menuOpen && pin ? RailWindows.windowsFor(pin.id) : []; }
         readonly property var items: {
             const out = [];
             if (idx < 0) return out;
+            for (let i = 0; i < wins.length; i++) {
+                const t = wins[i].title || wins[i].appId || "Untitled";
+                out.push({ id: "win:" + i, label: (wins[i].minimized ? "· " : "") + (t.length > 22 ? t.slice(0, 21) + "…" : t) });
+            }
+            if (pin && RailWindows.canOpenNew(pin)) out.push({ id: "new", label: wins.length > 0 ? "New window" : "Open" });
             if (!Pins.isLocked(Pins.menuPinId)) out.push({ id: "unpin", label: "Unpin" });
             if (idx > 0) out.push({ id: "up", label: "Move up" });
             if (idx < Pins.specs.length - 1) out.push({ id: "down", label: "Move down" });
@@ -35,9 +43,15 @@ Scope {
         function close() { Pins.closeMenu(); }
         function activate(it) {
             if (!it) return;
-            const id = Pins.menuPinId;
+            const id = Pins.menuPinId, p = pin;
+            const w = it.id.startsWith("win:") ? wins[parseInt(it.id.slice(4))] : null;
             close();
+            if (it.id.startsWith("win:")) {
+                if (w) { Config.closeLauncher(); RailWindows.focusWindow(w); }
+                return;
+            }
             switch (it.id) {
+            case "new": Config.closeLauncher(); if (p) RailWindows.launch(p); break;
             case "unpin": Pins.unpin(id); break;
             case "up": Pins.move(id, -1); break;
             case "down": Pins.move(id, 1); break;

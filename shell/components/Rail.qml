@@ -1,12 +1,10 @@
 // Rail.qml - left icon rail (layer: top, exclusive zone = rail width).
-// Launches Config.apps commands; shows "on" and focuses the window when a toplevel
-// whose app_id matches is already open (wlr-foreign-toplevel via ToplevelManager).
+// Pinned buttons own their windows (RailWindows.qml): launch when none, else minimize / restore /
+// cycle, with open / focused / minimized / count shown on the button.
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import ".."
-import "../apps/games"
-import "../apps/data"
 
 PanelWindow {
     id: win
@@ -22,96 +20,17 @@ PanelWindow {
     WlrLayershell.namespace: "ultimit-rail"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand   // Tab / Enter on rail buttons
 
-    // Returns the first open toplevel whose appId is in `ids`, or null.
-    // Depends on toplevels.values so bindings re-evaluate as windows come and go.
-    // Accessory and Games are our own FloatingWindows (app_id org.quickshell),
-    // matched by title. GAMES also lights up for running launchers like Steam.
-    function findToplevel(ids, app) {
-        const list = ToplevelManager.toplevels.values;
-        for (let i = 0; i < list.length; i++) {
-            const own = list[i].appId === "org.quickshell";
-            if (app && app.id === "accessory") {
-                if (own && list[i].title === Config.accessoryTitle) return list[i];
-                continue;
-            }
-            if (app && app.id === "data" && own && list[i].title === "DATA") return list[i];
-            if (app && app.id === "games" && own && list[i].title === Config.gamesTitle) return list[i];
-            const id = (list[i].appId || "").toLowerCase();
-            if (ids.indexOf(id) >= 0) return list[i];
-        }
-        return null;
-    }
-    // Bumped when any toplevel changes, to refresh "on" state (appId can arrive late).
-    property int tick: 0
-    Connections {
-        target: ToplevelManager.toplevels
-        function onValuesChanged() { win.tick++; }
-    }
-    Instantiator {
-        model: ToplevelManager.toplevels
-        delegate: QtObject {
-            id: watcher
-            required property var modelData
-            property var c: Connections {
-                target: watcher.modelData
-                function onAppIdChanged() { win.tick++; }
-                function onTitleChanged() { win.tick++; }
-                function onActivatedChanged() { win.tick++; }
-            }
-        }
-    }
-
     // Room for the pin area: everything but the emblem block and a floor kept for WINDOWS + version.
     readonly property real pinsMaxH: Math.max(3 * 68, height - 14 - 40 - 14 - 150)
 
-    function pinToplevel(pin) {
-        return pin.builtin ? findToplevel(pin.app.appIds, pin.app) : Pins.matchToplevel(pin);
-    }
+    // Click: windows decide (RailWindows: minimize / restore / cycle); no window launches the app.
     function activatePin(pin) {
-        Config.closeLauncher();   // the rail sits above the launcher while it is open
-        if (pin.builtin) { activate(pin.app); return; }
-        const tl = Pins.matchToplevel(pin);
-        if (tl) { tl.minimized = false; tl.activate(); }
-        else Pins.launch(pin);
+        RailWindows.activate(pin);
     }
-
-    function activate(app) {
-        if (app.id === "news" && Feeds.homeUrl !== "") {   // a feed has loaded: open its site
-            Feeds.open(Feeds.homeUrl);
-            return;
-        }
-        if (app.id === "accessory") {
-            // Own window: open it, or raise it if already mapped.
-            const w = findToplevel(app.appIds, app);
-            if (w) { w.minimized = false; w.activate(); }
-            else Config.openSettings("");
-            return;
-        }
-        if (app.id === "data") {
-            const w = findToplevel(app.appIds, app);
-            if (w) { w.minimized = false; w.activate(); }
-            else Data.show("");
-            return;
-        }
-        if (app.id === "games") {
-            // Ultimit's own library window; Steam is launched from inside it.
-            if (Games.open) {
-                for (const t of ToplevelManager.toplevels.values) {
-                    if (t.appId === "org.quickshell" && t.title === Config.gamesTitle) {
-                        t.minimized = false; t.activate(); return;
-                    }
-                }
-            }
-            Games.show();
-            return;
-        }
-        const tl = findToplevel(app.appIds, app);
-        if (tl) {
-            tl.minimized = false;
-            tl.activate();
-        } else {
-            Config.launchApp(app);
-        }
+    function newWindow(pin) {
+        Config.closeLauncher();
+        if (RailWindows.canOpenNew(pin)) RailWindows.launch(pin);
+        else if (!RailWindows.click(pin.id)) RailWindows.launch(pin);
     }
 
     // The button whose window is active; the sliding marker follows it (kept after focus leaves the
@@ -192,11 +111,32 @@ PanelWindow {
                             letter: modelData.builtin ? "" : ((modelData.name || modelData.label || "?").charAt(0).toUpperCase())
                             missing: modelData.builtin ? !Config.available(modelData.app) : !modelData.found
                             badge: modelData.builtin && modelData.id === "mailer" ? Config.mailUnread : 0
-                            on: { win.tick; return win.pinToplevel(modelData) !== null; }
-                            focused: { win.tick; const t = win.pinToplevel(modelData); return t !== null && t.activated; }
+                            readonly property var st: { RailWindows.tick; return RailWindows.stateFor(modelData.id); }
+                            on: st.open
+                            focused: st.focused
+                            minimized: st.minimized
+                            count: st.count
                             onFocusedChanged: if (focused) win.focusBtn = pb
                             Component.onCompleted: if (focused) win.focusBtn = pb
                             onClicked: win.activatePin(modelData)
+                            onMiddleClicked: win.newWindow(modelData)
+                            onHoveredChanged: {
+                                if (hovered && count > 1) tipTimer.restart();
+                                else { tipTimer.stop(); WindowUi.hideTip(); }
+                            }
+                            Timer {
+                                id: tipTimer; interval: 350
+                                onTriggered: {   // window picker tooltip: titles of the open windows
+                                    const t = RailWindows.windowsFor(pb.modelData.id).map(w => (w.title || w.appId || "Untitled"));
+                                    WindowUi.showTip(t.join("\n"), pb.mapToGlobal(0, pb.height / 2).y, win.screen ? win.screen.name : "");
+                                }
+                            }
+                            // Minimize animation flies into this button: report where it is.
+                            Timer { id: rectTimer; interval: 120; onTriggered: RailWindows.pushRects(pb.modelData.id, pb, win) }
+                            onYChanged: rectTimer.restart()
+                            onCountChanged: rectTimer.restart()
+                            Connections { target: pinsView; function onContentYChanged() { rectTimer.restart(); } }
+                            Connections { target: RailWindows; function onMapTickChanged() { rectTimer.restart(); } }
                             onRightClicked: gy => { Config.closeLauncher(); Pins.openMenu(modelData.id, gy, win.screen ? win.screen.name : ""); }
                         }
                     }

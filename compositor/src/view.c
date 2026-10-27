@@ -663,11 +663,28 @@ static void foreign_minimize(struct wl_listener *listener, void *data) {
 /* The shell's rail tells us where this window's WINDOWS entry is, for the
  * minimize/restore animation. The rectangle is relative to the rail's
  * layer surface. */
+/* The rail entry to minimize into: the one on the monitor the window is on, else the
+ * latest one told (a window on a monitor without a rail flies to the other rail). */
+bool view_rail_target(struct ul_view *view, struct wlr_box *out) {
+	if (!view->has_rail_rect) return false;
+	struct ul_output *at = output_at(view->server,
+		view->x + view->width / 2.0, view->y + view->height / 2.0);
+	for (int i = 0; at && i < view->n_rail_slots; i++) {
+		if (view->rail_slots[i].output == at->wlr_output) {
+			*out = view->rail_slots[i].box;
+			return true;
+		}
+	}
+	*out = view->rail_rect;
+	return true;
+}
+
 static void foreign_set_rectangle(struct wl_listener *listener, void *data) {
 	struct ul_view *view = wl_container_of(listener, view, foreign_set_rectangle);
 	struct wlr_foreign_toplevel_handle_v1_set_rectangle_event *event = data;
-	view->has_rail_rect = false;
 	if (!event->surface || event->width <= 0 || event->height <= 0) {
+		view->has_rail_rect = false;
+		view->n_rail_slots = 0;
 		return;
 	}
 	struct ul_output *output;
@@ -678,9 +695,16 @@ static void foreign_set_rectangle(struct wl_listener *listener, void *data) {
 				if (l->layer_surface->surface != event->surface) continue;
 				int lx, ly;
 				if (!wlr_scene_node_coords(&l->scene->tree->node, &lx, &ly)) return;
-				view->rail_rect = (struct wlr_box){ lx + event->x, ly + event->y,
+				struct wlr_box box = { lx + event->x, ly + event->y,
 					event->width, event->height };
+				view->rail_rect = box;
 				view->has_rail_rect = true;
+				int s = 0;
+				while (s < view->n_rail_slots && view->rail_slots[s].output != output->wlr_output) s++;
+				if (s == UL_RAIL_SLOTS) s = UL_RAIL_SLOTS - 1;
+				if (s == view->n_rail_slots) view->n_rail_slots++;
+				view->rail_slots[s].output = output->wlr_output;
+				view->rail_slots[s].box = box;
 				return;
 			}
 		}

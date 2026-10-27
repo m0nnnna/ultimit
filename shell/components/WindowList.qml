@@ -1,5 +1,5 @@
-// WindowList.qml - "WINDOWS" section of the rail: one 44px entry per open toplevel
-// (wlr-foreign-toplevel via ToplevelManager). Left click toggles minimize/activate,
+// WindowList.qml - "WINDOWS" section of the rail: one entry per open toplevel that no pinned button
+// owns (RailWindows.qml; wlr-foreign-toplevel via ToplevelManager). Left click toggles minimize/activate,
 // middle click closes, right click opens the window menu (WindowPopups), hover shows a tooltip.
 import QtQuick
 import QtQuick.Shapes
@@ -13,7 +13,7 @@ Item {
     // The rail window: entries report their place in it so the compositor's
     // minimize/restore animation flies to and from them.
     property var panel: null
-    visible: list.count > 0
+    visible: RailWindows.unownedCount > 0   // windows owned by a pinned button live on that button
 
     Rectangle { id: divider; x: 12; width: parent.width - 24; height: 1; color: Theme.divider }   // between the pins and the windows
     Text {
@@ -54,16 +54,20 @@ Item {
         delegate: Item {
             id: ent
             required property var modelData
-            width: list.width; height: 40
+            // Owned by a pinned rail button (RailWindows): no entry here.
+            readonly property bool owned: { RailWindows.tick; return RailWindows.ownerOf(modelData) !== ""; }
+            width: list.width; height: owned ? 0 : 40
+            visible: !owned
 
             function pushRect() {
-                if (!root.panel || !modelData) return;
+                if (!root.panel || !modelData || ent.owned) return;
                 const p = ent.mapToItem(null, 0, 0);
                 modelData.setRectangle(root.panel, Qt.rect(Math.round(p.x), Math.round(p.y), ent.width, ent.height));
             }
             Timer { id: rectTimer; interval: 250; onTriggered: ent.pushRect() }   // after add/displace transitions
             Component.onCompleted: rectTimer.restart()
             onYChanged: rectTimer.restart()
+            onOwnedChanged: rectTimer.restart()
             Connections { target: list; function onContentYChanged() { rectTimer.restart(); } }
 
             property string appId: modelData.appId || ""

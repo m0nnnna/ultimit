@@ -11,6 +11,9 @@ Item {
     property string label: "GAMES"
     property bool on: false
     property bool focused: false   // its window is the active one: the rail's sliding marker sits here instead of the bar
+    property bool minimized: false // every window of it is minimized: the bar is dimmed
+    property int count: 0          // windows it owns; a pip shows from 2
+    readonly property bool hovered: mouse.containsMouse
     property bool missing: false   // no candidate app installed
     property int badge: 0          // unread-style count tag on the icon (MAILER); hidden at 0
     // Pinned desktop apps: themed icon (URL from Icons.path) drawn inside an IconBadge (hex or chamfer, like the launcher and Alt-Tab);
@@ -45,6 +48,7 @@ Item {
         }
     }
     signal clicked()
+    signal middleClicked()             // new window
     signal rightClicked(real globalY)   // right click / Menu key; y is the button centre in rail coordinates
 
     width: 76
@@ -77,10 +81,11 @@ Item {
         x: -6
         anchors.verticalCenter: parent.verticalCenter
         width: 3
-        height: root.on && !root.focused ? parent.height - 24 : 0
-        color: Theme.accent
+        height: root.on && !root.focused ? parent.height - (root.minimized ? 36 : 24) : 0
+        color: root.minimized ? Theme.dim : Theme.accent
         visible: height > 0
         Behavior on height { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
+        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
     }
     // keyboard focus outline
     Rectangle {
@@ -98,7 +103,8 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.space(1)
-        opacity: root.missing ? 0.45 : 1
+        opacity: root.missing ? 0.45 : (root.minimized ? 0.6 : 1)
+        Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         scale: root.pressed ? 0.94 : 1
         Behavior on scale { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         Icon {
@@ -180,15 +186,32 @@ Item {
             font.letterSpacing: 0.4
         }
     }
+    // Window count pip (2+ windows): top-right corner, mono label in an accent outline.
+    Rectangle {
+        visible: root.count > 1
+        x: root.width - width - 4
+        y: 4
+        width: Math.max(14, pipText.implicitWidth + 6); height: 14
+        color: Theme.light ? Qt.rgba(1, 1, 1, 0.94) : Qt.rgba(0.02, 0.025, 0.03, 0.94)
+        border.width: 1; border.color: root.minimized ? Theme.dim : Theme.accent
+        Text {
+            id: pipText
+            anchors.centerIn: parent
+            text: root.count > 9 ? "9+" : String(root.count)
+            color: root.minimized ? Theme.dim : Theme.accent
+            font.family: Theme.mono; font.pixelSize: Theme.type.label
+        }
+    }
     MouseArea {
         id: mouse
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
         onPressed: { root.focusReason = Qt.MouseFocusReason; root.forceActiveFocus(Qt.MouseFocusReason); }
         onClicked: mouseEvent => {
             if (mouseEvent.button === Qt.RightButton) root.rightClicked(root.mapToGlobal(0, root.height / 2).y);
+            else if (mouseEvent.button === Qt.MiddleButton) root.middleClicked();
             else root.clicked();
         }
     }

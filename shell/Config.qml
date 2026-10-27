@@ -225,6 +225,7 @@ Singleton {
     //  appIds   - Wayland app_ids that count as "this app is open"
     //             (compared case-insensitively)
     //  own      - opens one of Ultimit's own windows (no external command needed)
+//  ownTitles - titles of that window (app_id org.quickshell): what the rail matches it by
     readonly property var apps: [
         { id: "www",       label: "WWW",
           tryCmds: [
@@ -238,9 +239,14 @@ Singleton {
               { bin: "brave-browser", cmd: "brave-browser" }
           ],
           hint: { what: "No web browser installed", store: "web browser" },
-          appIds: ["firefox", "org.mozilla.firefox", "google-chrome", "chromium", "brave-browser", "librewolf", "io.gitlab.librewolf-community", "zen"] },
-        { id: "games",     label: "GAMES",     own: true,
-          appIds: ["steam", "lutris", "heroic", "com.heroicgameslauncher.hgl", "net.lutris.lutris"] },
+          appIds: ["firefox", "org.mozilla.firefox", "firefox-esr", "librewolf", "io.gitlab.librewolf-community", "zen", "zen-browser", "floorp",
+                   "google-chrome", "google-chrome-stable", "com.google.chrome", "chromium", "chromium-browser", "org.chromium.chromium",
+                   "io.github.ungoogled_software.ungoogled_chromium", "brave-browser", "com.brave.browser", "vivaldi-stable", "microsoft-edge",
+                   "org.gnome.epiphany", "epiphany", "org.kde.falkon", "falkon"] },   // + the default browser's desktop id (RailWindows.qml)
+        // GAMES owns only Ultimit's own library window. Steam / Lutris / Heroic are separate apps (Steam
+        // idles minimized in the tray for hours, which used to light GAMES up forever): their windows
+        // are listed under WINDOWS like any other.
+        { id: "games",     label: "GAMES",     own: true, ownTitles: ["GAMES"], appIds: [] },
         { id: "mailer",    label: "MAILER",
           tryCmds: [
               // NekoMail (Ultimit's own mail app, /opt/ultimit/nekomail, scripts/build-nekomail.sh): the `nekomail`
@@ -261,7 +267,8 @@ Singleton {
         { id: "news",      label: "NEWS",
           tryCmds: [ { bin: "xdg-open", cmd: "xdg-open https://news.ycombinator.com" } ],
           hint: { what: "No web browser installed", store: "web browser" },
-          appIds: ["firefox", "org.mozilla.firefox", "google-chrome", "chromium", "brave-browser"] },
+          // Opens a site in the browser: the windows belong to WWW (a window has one owner on the rail).
+          appIds: [] },
         { id: "audio",     label: "AUDIO",
           tryCmds: [
               // NekoPlayer (Ultimit's own music player, /opt/ultimit/nekoplayer,
@@ -281,7 +288,7 @@ Singleton {
           ],
           hint: { what: "No music app installed", store: "music player" },
           appIds: ["nekoplayer", "rhythmbox", "org.gnome.rhythmbox3", "spotify", "lollypop", "io.bassi.amberol", "org.gnome.music"] },
-        { id: "data",      label: "DATA", own: true, appIds: [] },   // apps/data
+        { id: "data",      label: "DATA", own: true, ownTitles: ["DATA"], appIds: [] },   // apps/data
         { id: "term",      label: "CONSOLE",
           tryCmds: [
               { bin: "foot", cmd: "foot" }, { bin: "kitty", cmd: "kitty" }, { bin: "ptyxis", cmd: "ptyxis" },
@@ -289,7 +296,7 @@ Singleton {
           ],
           hint: { what: "No terminal installed", store: "terminal" },
           appIds: ["foot", "kitty", "org.gnome.ptyxis", "ptyxis", "org.gnome.terminal", "gnome-terminal-server", "xterm"] },
-        { id: "accessory", label: "ACCESSORY", own: true,
+        { id: "accessory", label: "ACCESSORY", own: true, ownTitles: ["SETTINGS"],
           appIds: ["gnome-control-center", "org.gnome.settings"] }
     ]
 
