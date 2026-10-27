@@ -1,21 +1,20 @@
-// PopupMenu.qml - small context-menu panel in the WindowPopups / ContextMenu style: panel fill,
-// 1px strong line, corner brackets, mono caps rows with an accent hover bar.
+// PopupMenu.qml - small context-menu panel in the WindowPopups / ContextMenu style: an L1
+// Surface (panel fill, top highlight, shadow), corner brackets, mono caps rows with an accent hover bar.
 // The host owns the open/close and key handling:  items: [{ id, label }]  cur: highlighted row.
 import QtQuick
 import ".."
 
-Rectangle {
+Surface {
     id: menu
+    brackets: true; bracketSize: 8
+    elevation: 2   // sits inside the launcher panel, so no halo
     property var items: []
     property int cur: -1
-    property int rowH: 30
+    property int rowH: Theme.space(8)
     signal activated(var item)
 
-    width: 190; height: items.length * rowH + 12
-    color: Theme.panel
-    border.width: 1; border.color: Theme.lineStrong
+    width: 192; height: items.length * rowH + Theme.space(4)
     MouseArea { anchors.fill: parent; acceptedButtons: Qt.LeftButton | Qt.RightButton }
-    Brackets { size: 8 }
 
     Repeater {
         model: menu.items
@@ -24,18 +23,24 @@ Rectangle {
             required property var modelData
             required property int index
             readonly property bool hot: menu.cur === index
-            y: 6 + index * menu.rowH
+            y: Theme.space(2) + index * menu.rowH
             width: menu.width; height: menu.rowH
             Rectangle {
-                anchors.fill: parent; anchors.leftMargin: 1; anchors.rightMargin: 1
-                color: row.hot ? Theme.panel2 : "transparent"
-                Rectangle { width: 2; height: parent.height; color: Theme.accent; visible: row.hot }
+                anchors.fill: parent; anchors.leftMargin: Theme.space(1); anchors.rightMargin: Theme.space(1)
+                color: row.hot ? Theme.hover : Theme.clear(Theme.hover)
+                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
+                Rectangle {
+                    width: 2; height: parent.height; color: Theme.accent
+                    opacity: row.hot ? 1 : 0
+                    Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
+                }
             }
             Text {
-                x: 14; anchors.verticalCenter: parent.verticalCenter
+                x: Theme.space(4); anchors.verticalCenter: parent.verticalCenter
                 text: row.modelData.label.toUpperCase()
                 color: row.hot ? Theme.accent : Theme.fg
-                font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.6
+                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
+                font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.6
             }
             MouseArea {
                 anchors.fill: parent

@@ -14,8 +14,8 @@ Item {
 
     // Tighter padding and lettering where a row of them must fit one line (the launcher's power row).
     property bool compact: false
-    implicitWidth: lbl.implicitWidth + (compact ? 12 : 24)
-    implicitHeight: 28
+    implicitWidth: lbl.implicitWidth + (compact ? 16 : 24)
+    implicitHeight: Theme.space(8)
     opacity: enabled ? 1 : 0.4
     readonly property real c: 6
 
@@ -35,7 +35,8 @@ Item {
         ShapePath {
             strokeWidth: 1
             strokeColor: root.armed ? Theme.warn : (root.activeFocus ? Theme.accent : Theme.lineStrong)
-            fillColor: mouse.containsMouse && root.enabled ? Theme.panel2 : "transparent"
+            fillColor: mouse.containsMouse && root.enabled ? Theme.hover : Theme.clear(Theme.hover)
+            Behavior on fillColor { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             startX: root.c + .5; startY: .5
             PathLine { x: root.width - .5; y: .5 }
             PathLine { x: root.width - .5; y: root.height - root.c - .5 }
@@ -48,10 +49,10 @@ Item {
     Text {
         id: lbl
         anchors.centerIn: parent
-        text: (root.armed ? "Sure?" : root.text).toUpperCase()
+        text: root.compact ? (root.armed ? "Sure?" : root.text) : (root.armed ? "Sure?" : root.text).toUpperCase()
         color: root.armed ? Theme.warn : Theme.fg
-        font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: 10
-        font.letterSpacing: root.compact ? 0.6 : 1.6
+        font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: Theme.type.label
+        font.letterSpacing: root.compact ? 0 : 1.6
     }
     activeFocusOnTab: false
     MouseArea {

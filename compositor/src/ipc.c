@@ -262,7 +262,7 @@ static void run_command(struct ul_server *server, char *line, struct out *o) {
 		return;
 	}
 	if (strcmp(cmd, "skin") == 0) {
-		/* skin PANEL FG DIM LINE LINE_STRONG ACCENT BAD [FAMILY]: window chrome colors + title font,
+		/* skin PANEL FG DIM LINE LINE_STRONG ACCENT BAD [HL] [FAMILY]: window chrome colors + title font,
 		 * sent by the shell at startup and on a skin change. */
 		if (!skin_parse(&server->skin, line + strlen("skin"))) {
 			put(o, "{\"error\":\"usage: skin PANEL FG DIM LINE LINE_STRONG ACCENT BAD (#rrggbb[aa])\"}");

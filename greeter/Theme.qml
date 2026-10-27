@@ -24,7 +24,7 @@ Singleton {
     readonly property var skins: ({
         mine: {
             bg1: "#050607", bg2: "#1c2026",
-            panel: [13, 15, 18, .80], panel2: [255, 255, 255, .05], rail: [7, 8, 10, .86],
+            panel: [13, 15, 18, .62], panel2: [255, 255, 255, .05], rail: [7, 8, 10, .72],
             fg: "#eef1f4", dim: "#8d949e",
             line: [235, 240, 245, .16], lineStrong: [235, 240, 245, .48],
             accent: "#d4ebff", onAccent: "#07090b",
@@ -34,7 +34,7 @@ Singleton {
         },
         amber: {
             bg1: "#b84d05", bg2: "#f8cf96",
-            panel: [34, 17, 5, .78], panel2: [255, 220, 180, .07], rail: [28, 13, 3, .86],
+            panel: [34, 17, 5, .60], panel2: [255, 220, 180, .07], rail: [28, 13, 3, .72],
             fg: "#fff4e6", dim: "#dcb48c",
             line: [255, 226, 196, .2], lineStrong: [255, 226, 196, .55],
             accent: "#ffb04a", onAccent: "#2a1404",
@@ -44,7 +44,7 @@ Singleton {
         },
         silver: {
             bg1: "#f6f7f9", bg2: "#aeb5bf",
-            panel: [248, 249, 251, .82], panel2: [20, 30, 45, .05], rail: [232, 235, 239, .9],
+            panel: [248, 249, 251, .66], panel2: [20, 30, 45, .05], rail: [232, 235, 239, .76],
             fg: "#14171b", dim: "#5a626d",
             line: [20, 24, 30, .16], lineStrong: [20, 24, 30, .5],
             accent: "#2c5b88", onAccent: "#ffffff",
@@ -54,7 +54,7 @@ Singleton {
         },
         verdant: {
             bg1: "#062a0c", bg2: "#79d24f",
-            panel: [5, 20, 8, .78], panel2: [200, 255, 180, .06], rail: [3, 14, 5, .86],
+            panel: [5, 20, 8, .60], panel2: [200, 255, 180, .06], rail: [3, 14, 5, .72],
             fg: "#effbe9", dim: "#a3cc95",
             line: [220, 255, 205, .18], lineStrong: [220, 255, 205, .5],
             accent: "#b9ff8c", onAccent: "#082008",
@@ -64,7 +64,7 @@ Singleton {
         },
         sakura: {
             bg1: "#14040d", bg2: "#8c2a5c",
-            panel: [30, 9, 21, 0.78], panel2: [255, 190, 220, .06], rail: [21, 6, 14, 0.86],
+            panel: [30, 9, 21, 0.6], panel2: [255, 190, 220, .06], rail: [21, 6, 14, 0.72],
             fg: "#fff0f6", dim: "#d29bb6",
             line: [255, 205, 228, .18], lineStrong: [255, 205, 228, .5],
             accent: "#ff5fa2", onAccent: "#2a0715",
@@ -74,7 +74,7 @@ Singleton {
         },
         paper: {
             bg1: "#fbf8f1", bg2: "#d6cdb6",
-            panel: [251, 248, 241, 0.84], panel2: [60, 45, 20, .05], rail: [238, 233, 220, 0.9],
+            panel: [251, 248, 241, 0.7], panel2: [60, 45, 20, .05], rail: [238, 233, 220, 0.78],
             fg: "#1e1b15", dim: "#675f4e",
             line: [40, 32, 16, .16], lineStrong: [40, 32, 16, .5],
             accent: "#0e7c70", onAccent: "#ffffff",
@@ -84,7 +84,7 @@ Singleton {
         },
         void: {
             bg1: "#000000", bg2: "#06080e",
-            panel: [0, 0, 0, 0.88], panel2: [255, 255, 255, .04], rail: [0, 0, 0, 0.92],
+            panel: [0, 0, 0, 0.72], panel2: [255, 255, 255, .04], rail: [0, 0, 0, 0.82],
             fg: "#e8ecf2", dim: "#7c8596",
             line: [160, 185, 225, .14], lineStrong: [160, 185, 225, .42],
             accent: "#4f9dff", onAccent: "#00101f",
@@ -126,6 +126,38 @@ Singleton {
     readonly property string display: "Oxanium"
     readonly property string ui: "Saira"
     readonly property string mono: "JetBrains Mono"
+
+
+    // ---- polish tokens (docs/design/polish.md) ----
+    // Surface fills: field = L2 inset (inputs, tiles), hover/press = fg tints, selection = accent
+    // tint, divider = the one hairline between list rows, scrim = what dims the screen behind
+    // a modal. hl = the 1px top highlight of every L1 surface (skin edge colour; dark skins .14,
+    // light skins .55).
+    function _csv(s) { const p = s.split(","); return [parseInt(p[0]), parseInt(p[1]), parseInt(p[2])]; }
+    function _fgA(a) { const c = Qt.color(cur.fg); return Qt.rgba(c.r, c.g, c.b, a); }
+    readonly property color field: cur.light ? Qt.rgba(0.08, 0.1, 0.14, 0.05) : Qt.rgba(0, 0, 0, 0.20)
+    readonly property color hover: _fgA(0.06)
+    readonly property color press: _fgA(0.10)
+    readonly property color selection: Qt.rgba(accent.r, accent.g, accent.b, 0.18)
+    readonly property color divider: _fgA(0.08)
+    readonly property color scrim: { const c = _csv(cur.shade); return Qt.rgba(c[0] / 255, c[1] / 255, c[2] / 255, 0.55); }
+    readonly property real hlAlpha: cur.light ? 0.55 : 0.14
+    readonly property color hl: { const c = _csv(cur.edge); return Qt.rgba(c[0] / 255, c[1] / 255, c[2] / 255, hlAlpha); }
+
+    // Type scale: label = uppercase tracked mono, body = everything readable, title = card
+    // titles, head = page headings, hero = clocks and wordmarks (display font, so it scales).
+    readonly property var type: ({ label: 12, body: 14, title: 17, head: 24, hero: 64 })
+    // Icon sizes: tray and rail use md, launcher rows lg.
+    readonly property var icon: ({ sm: 16, md: 20, lg: 24, xl: 32 })
+    // Motion: durations in ms (wrap in Config.dur() so reduced motion is honoured) and easings.
+    readonly property var motion: ({ fast: 100, base: 180, slow: 280 })
+    readonly property int easeFast: Easing.OutCubic
+    readonly property int easeBase: Easing.OutCubic
+    readonly property int easeSlow: Easing.OutQuint
+    // Elevation: drop shadows (blur radius px, y offset px, colour).
+    readonly property var elev1: ({ blur: 16, y: 2, color: Qt.rgba(0, 0, 0, 0.30) })
+    readonly property var elev2: ({ blur: 32, y: 8, color: Qt.rgba(0, 0, 0, 0.45) })
+    function space(n) { return n * 4; }
 
     // Display name used in captions, e.g. "MINE"
     readonly property string skinLabel: skin.toUpperCase()

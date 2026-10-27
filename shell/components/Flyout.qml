@@ -18,9 +18,9 @@ PanelWindow {
 
     readonly property bool shown: FlyoutState.open && FlyoutState.screen === screenName
     property real reveal: shown ? 1 : 0
-    ShowBehavior on reveal { ms: 180 }
+    ShowBehavior on reveal { ms: Theme.motion.base }
     property real swap: 1          // quick re-fade when switching icons while open
-    NumberAnimation { id: swapAnim; target: win; property: "swap"; from: 0; to: 1; duration: Config.dur(140); easing.type: Easing.OutCubic }
+    NumberAnimation { id: swapAnim; target: win; property: "swap"; from: 0; to: 1; duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase }
     Connections {
         target: FlyoutState
         function onKindChanged() { if (win.shown && win.reveal > 0.5 && Config.motion) swapAnim.restart(); }
@@ -57,11 +57,12 @@ PanelWindow {
     readonly property real panelW: FlyoutState.kind === "clock" ? 380 : 372
     readonly property real iconX: FlyoutState.anchors[FlyoutState.kind] !== undefined ? FlyoutState.anchors[FlyoutState.kind] : win.width - 40
 
-    Rectangle {
+    Surface {
         id: panel
+        glow: true; brackets: true
         width: win.panelW
         readonly property real maxH: win.height - Config.tickerHeight - 6 - 12
-        height: Math.min((ld.item ? ld.item.implicitHeight : 60) + 28, maxH)
+        height: Math.min((ld.item ? ld.item.implicitHeight : 60) + Theme.space(8), maxH)
         // centred over the icon, clamped inside the output
         x: Math.max(8, Math.min(win.iconX - width / 2, win.width - width - 8))
         y: win.height - Config.tickerHeight - 6 - height
@@ -73,12 +74,7 @@ PanelWindow {
             xScale: 0.9 + 0.1 * win.reveal
             yScale: 0.55 + 0.45 * win.reveal
         }
-        color: Theme.panel
-        border.width: 1
-        border.color: Theme.lineStrong
         MouseArea { anchors.fill: parent; acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton }   // swallow clicks
-        GlowFrame { anchors.fill: parent }
-        Brackets {}
 
         Rectangle {   // tick pointing at the icon
             x: Math.max(10, Math.min(win.iconX - panel.x - width / 2, panel.width - width - 10))
@@ -99,7 +95,7 @@ PanelWindow {
             Flickable {
                 id: flick
                 anchors.fill: parent
-                anchors.margins: 14
+                anchors.margins: Theme.space(4)
                 contentWidth: width
                 contentHeight: ld.item ? ld.item.implicitHeight : 0
                 clip: true

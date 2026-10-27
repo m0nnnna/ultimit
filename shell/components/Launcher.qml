@@ -1,6 +1,6 @@
 // Launcher.qml - app launcher opened from the rail emblem (or `qs ipc call launcher toggle`).
 // Overlay-layer, full-screen transparent window (so clicks outside close it) with exclusive
-// keyboard focus; the glass panel sits beside the rail, top-left, with mockup corner brackets.
+// keyboard focus; the L1 Surface sits beside the rail, top-left, with mockup corner brackets.
 // Apps come from Quickshell's DesktopEntries (NoDisplay entries skipped).
 import QtQuick
 import QtQuick.Layouts
@@ -90,58 +90,55 @@ PanelWindow {
         onClicked: Config.closeLauncher()
     }
 
-    Rectangle {
+    Surface {
         id: panel
-        x: Config.railWidth + 10
-        y: 10
+        glow: true; brackets: true
+        x: Config.railWidth + 12
+        y: 12
         width: 420
-        height: Math.min(win.height - 20, 600)
-        color: Theme.panel
-        border.width: 1
-        border.color: Theme.lineStrong
+        height: Math.min(win.height - 24, 600)
         // swallow clicks
         MouseArea { anchors.fill: parent }
-        GlowFrame { anchors.fill: parent }
-        Brackets {}
 
         opacity: win.shown ? 1 : 0
-        ShowBehavior on opacity { ms: 180 }
+        ShowBehavior on opacity { ms: Theme.motion.base }
         // Slides out of / back into the rail.
         transform: Translate {
             x: win.shown ? 0 : -14
-            ShowBehavior on x { ms: 180; hidden: -14 }
+            ShowBehavior on x { ms: Theme.motion.base; hidden: -14 }
         }
 
         Column {
             anchors.fill: parent
-            anchors.margins: 14
-            spacing: 10
+            anchors.margins: Theme.space(4)
+            spacing: Theme.space(3)
 
             DecodeText {
                 text: "APPLICATIONS"
                 color: Theme.dim
-                font.family: Theme.mono; font.pixelSize: Theme.size.sm; font.letterSpacing: 2.4
+                font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 2.4
             }
 
             // search field
             Rectangle {
-                width: parent.width; height: 34
-                color: Theme.panel2
+                width: parent.width; height: Theme.space(9)
+                color: Theme.field
                 border.width: 1
                 border.color: search.activeFocus ? Theme.accent : Theme.line
+                Behavior on border.color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 Text {
-                    x: 10; anchors.verticalCenter: parent.verticalCenter
+                    x: Theme.space(3); anchors.verticalCenter: parent.verticalCenter
                     text: "›"; color: Theme.accent
-                    font.family: Theme.mono; font.pixelSize: 16
+                    font.family: Theme.mono; font.pixelSize: Theme.type.title
                 }
                 TextInput {
                     id: search
                     anchors.fill: parent
-                    anchors.leftMargin: 28; anchors.rightMargin: 10
+                    anchors.leftMargin: Theme.space(8); anchors.rightMargin: Theme.space(3)
                     verticalAlignment: TextInput.AlignVCenter
                     color: Theme.fg
                     selectionColor: Theme.accent; selectedTextColor: Theme.onAccent
-                    font.family: Theme.ui; font.pixelSize: 14
+                    font.family: Theme.ui; font.pixelSize: Theme.type.body
                     clip: true
                     focus: true
                     onTextChanged: win.query = text
@@ -178,7 +175,7 @@ PanelWindow {
             ListView {
                 id: list
                 width: parent.width
-                height: parent.height - y - powerRow.height - 10 - 4
+                height: parent.height - y - powerRow.height - Theme.space(3)
                 clip: true
                 model: win.results
                 currentIndex: 0
@@ -193,54 +190,62 @@ PanelWindow {
                     required property int index
                     readonly property bool cur: ListView.isCurrentItem
                     width: list.width
-                    height: 44
-                    color: (cur || rowMouse.containsMouse) ? Theme.panel2 : "transparent"
-                    Rectangle { x: 0; width: 2; height: parent.height; color: Theme.accent; visible: row.cur }
-                    Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line; opacity: .5 }
+                    height: Theme.space(11)
+                    color: cur ? Theme.selection : (rowMouse.containsMouse ? Theme.hover : Theme.clear(Theme.selection))
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
+                    Rectangle {
+                        x: 0; width: 2; height: parent.height; color: Theme.accent
+                        opacity: row.cur ? 1 : 0
+                        Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
+                    }
 
                     readonly property string iconSrc: modelData.icon ? Icons.app(modelData.icon) : ""
                     Item {
                         id: ico
-                        x: 12; anchors.verticalCenter: parent.verticalCenter
-                        width: 28; height: 28
+                        x: Theme.space(3); anchors.verticalCenter: parent.verticalCenter
+                        width: Theme.icon.lg; height: Theme.icon.lg
                         Image {
                             anchors.fill: parent
                             visible: row.iconSrc !== "" && status === Image.Ready
                             source: row.iconSrc
-                            sourceSize: Qt.size(56, 56)
+                            sourceSize: Qt.size(Theme.icon.lg * 2, Theme.icon.lg * 2)
                             fillMode: Image.PreserveAspectFit
                             asynchronous: true
                         }
                         IconBadge {   // letter badge (other apps' icons, Config.appIcons)
                             anchors.fill: parent
                             visible: row.iconSrc === ""
-                            size: 28
+                            size: Theme.icon.lg
                             letter: (row.modelData.name || "?").charAt(0).toUpperCase()
                         }
                     }
                     Column {
-                        anchors.left: ico.right; anchors.leftMargin: 12
-                        anchors.right: parent.right; anchors.rightMargin: 12
+                        anchors.left: ico.right; anchors.leftMargin: Theme.space(3)
+                        anchors.right: parent.right; anchors.rightMargin: Theme.space(3)
                         anchors.verticalCenter: parent.verticalCenter
                         Text {
                             width: parent.width; elide: Text.ElideRight
                             text: row.modelData.name
                             color: Theme.fg
-                            font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: 13
+                            font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: Theme.type.body
                         }
                         Text {
                             width: parent.width; elide: Text.ElideRight
                             visible: text !== ""
-                            text: row.modelData.genericName || row.modelData.comment || ""
+                            text: {
+                                const t = row.modelData.genericName || row.modelData.comment || "";
+                                const h = AppSearch.hint(row.modelData);
+                                return h === "" ? t : (t === "" ? h : t + " · " + h);
+                            }
                             color: Theme.dim
-                            font.family: Theme.mono; font.pixelSize: 10
+                            font.family: Theme.mono; font.pixelSize: Theme.type.label
                         }
                     }
                     Rectangle {   // pinned marker
                         visible: { Pins.specs; return Pins.hasDesktop(row.modelData.id); }
-                        anchors.right: parent.right; anchors.rightMargin: 8
+                        anchors.right: parent.right; anchors.rightMargin: Theme.space(3)
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 5; height: 5; color: Theme.accent
+                        width: 6; height: 6; color: Theme.accent
                     }
                     MouseArea {
                         id: rowMouse
@@ -263,7 +268,7 @@ PanelWindow {
                     visible: list.count === 0
                     text: "NO MATCHES"
                     color: Theme.dim
-                    font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 2
+                    font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 2
                 }
             }
         }
@@ -292,15 +297,14 @@ PanelWindow {
         Item {
             id: powerRow
             anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
-            anchors.margins: 14
+            anchors.margins: Theme.space(4)
             height: pflow.height
             function disarmAll() { lockB.disarm(); outB.disarm(); hibB.disarm(); rebB.disarm(); offB.disarm(); }
-            Rectangle { x: 0; y: -8; width: parent.width; height: 1; color: Theme.line }
             // One line: compact buttons, stretched to share the width.
             RowLayout {
                 id: pflow
                 width: parent.width
-                spacing: 4
+                spacing: Theme.space(1)
                 PowerButton { id: lockB; compact: true; Layout.fillWidth: true; text: "Lock"; onActivated: { Config.closeLauncher(); Config.lock(); } }
                 PowerButton {
                     id: outB; compact: true; Layout.fillWidth: true

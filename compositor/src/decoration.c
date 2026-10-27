@@ -34,7 +34,7 @@ void skin_init(struct ul_skin *skin) {
 		.fg = UL_COLOR_FG, .dim = UL_COLOR_DIM,
 		.line = UL_COLOR_LINE, .line_strong = UL_COLOR_LINE_STRONG,
 		.accent = UL_COLOR_ACCENT, .accent_dim = UL_COLOR_ACCENT_DIM,
-		.bad = UL_COLOR_BAD,
+		.bad = UL_COLOR_BAD, .hl = UL_COLOR_HL,
 		.title_font = "",
 	};
 }
@@ -59,7 +59,7 @@ static bool parse_color(const char *s, float out[4]) {
 	return true;
 }
 
-/* args: PANEL FG DIM LINE LINE_STRONG ACCENT BAD, as hex colors. The unfocused
+/* args: PANEL FG DIM LINE LINE_STRONG ACCENT BAD [HL], as hex colors. The unfocused
  * panel and the dim accent are derived. Leaves *skin alone on bad input. */
 bool skin_parse(struct ul_skin *skin, const char *args) {
 	char tok[7][16] = {{0}};
@@ -73,6 +73,17 @@ bool skin_parse(struct ul_skin *skin, const char *args) {
 	for (int i = 0; i < 7; i++) {
 		if (!parse_color(tok[i], dst[i])) {
 			return false;
+		}
+	}
+	/* Optional 8th color: the top highlight. Anything else there is the font family. */
+	memcpy(k.hl, skin->hl, sizeof(k.hl));
+	{
+		const char *p = args + used;
+		while (*p == ' ' || *p == '\t') p++;
+		char hl[16];
+		int hn = 0;
+		if (sscanf(p, "%15s%n", hl, &hn) == 1 && parse_color(hl, k.hl)) {
+			used += (int)(p - (args + used)) + hn;
 		}
 	}
 	memcpy(k.panel_dim, k.panel, sizeof(k.panel_dim));
@@ -234,6 +245,30 @@ struct wlr_buffer *decoration_titlebar_buffer(struct ul_view *view) {
 	set_source(cr, focused ? k->panel : k->panel_dim);
 	cairo_paint(cr);
 	cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
+
+	/* Light from above (docs/design/polish.md): a soft sheen, the fill 4% darker toward the
+	 * bottom, and a 1px highlight just inside the outline, fading out over the outer 15% of
+	 * the width at each end. Drawn into the cached buffer, so idle windows pay nothing. */
+	{
+		cairo_pattern_t *sheen = cairo_pattern_create_linear(0, 0, 0, height);
+		cairo_pattern_add_color_stop_rgba(sheen, 0, 0, 0, 0, 0);
+		cairo_pattern_add_color_stop_rgba(sheen, 1, 0, 0, 0, UL_SHEEN);
+		cairo_set_source(cr, sheen);
+		cairo_paint(cr);
+		cairo_pattern_destroy(sheen);
+
+		const float *h = k->hl;
+		float ha = h[3] * (focused ? 1.0f : 0.6f);
+		cairo_pattern_t *hl = cairo_pattern_create_linear(0, 0, width, 0);
+		cairo_pattern_add_color_stop_rgba(hl, 0, h[0], h[1], h[2], 0);
+		cairo_pattern_add_color_stop_rgba(hl, UL_HL_FADE, h[0], h[1], h[2], ha);
+		cairo_pattern_add_color_stop_rgba(hl, 1 - UL_HL_FADE, h[0], h[1], h[2], ha);
+		cairo_pattern_add_color_stop_rgba(hl, 1, h[0], h[1], h[2], 0);
+		cairo_set_source(cr, hl);
+		cairo_rectangle(cr, 0, 1, width, 1);
+		cairo_fill(cr);
+		cairo_pattern_destroy(hl);
+	}
 
 	/* Buttons, laid out from the right edge: minimize, maximize (restore when
 	 * maximized), close as small drawn icons. Each hit cell is the titlebar's

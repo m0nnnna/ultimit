@@ -1,12 +1,12 @@
-// NotifCard.qml - one popup in the toast stack (mockup .toast): panel fill, 1px strong line,
-// 3px accent left bar, mono caps app label, title, body, chamfered action buttons, close x.
+// NotifCard.qml - one popup in the toast stack (mockup .toast): an L1 Surface (top highlight,
+// shadow), 3px accent left bar, mono caps app label, title, body, chamfered action buttons, close x.
 // Used for both D-Bus notifications and Toasts.show(). Hover pauses the expiry timer.
 import QtQuick
 import Quickshell
 import ".."
 import "../apps/accessory"
 
-Rectangle {
+Surface {
     id: card
 
     required property int nid
@@ -31,17 +31,17 @@ Rectangle {
     readonly property color accentColor: urgency === 2 ? Theme.bad : (urgency === 0 ? Theme.dim : Theme.accent)
     readonly property string pic: image !== "" ? image : icon
 
-    implicitHeight: content.implicitHeight + 22
+    implicitHeight: content.implicitHeight + Theme.space(6)
     height: implicitHeight
-    color: Theme.panel
-    border.width: 1
-    border.color: urgency === 2 ? Theme.bad : Theme.lineStrong
-    GlowFrame { anchors.fill: parent; color: card.accentColor; travel: !card.inHistory && card.urgency !== 0; strength: card.urgency === 2 ? 1.2 : 0.8 }
+    glow: true
+    glowColor: card.accentColor
+    glowTravel: !card.inHistory && card.urgency !== 0
+    glowStrength: card.urgency === 2 ? 1.2 : 0.8
     Rectangle { x: -1; y: -1; width: 3; height: parent.height + 2; color: card.accentColor }
 
     opacity: 0
     Component.onCompleted: opacity = 1
-    Behavior on opacity { NumberAnimation { duration: Config.dur(350); easing.type: Easing.OutCubic } }
+    Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.slow); easing.type: Theme.easeSlow } }
     transform: Translate { y: card.opacity < 1 ? (1 - card.opacity) * -8 : 0 }
 
     // ---- expiry (pauses while hovered) ----
@@ -76,14 +76,14 @@ Rectangle {
 
     Row {
         id: content
-        x: 14; y: 11
-        width: parent.width - 28 - 16
-        spacing: 10
+        x: Theme.space(4); y: Theme.space(3)
+        width: parent.width - Theme.space(8) - Theme.space(4)
+        spacing: Theme.space(3)
 
         Item {   // image / app icon
             id: pic
             visible: card.pic !== "" && img.status === Image.Ready
-            width: visible ? 40 : 0; height: 40
+            width: visible ? Theme.icon.xl + 8 : 0; height: Theme.icon.xl + 8
             Image {
                 id: img
                 anchors.fill: parent
@@ -92,12 +92,11 @@ Rectangle {
                 fillMode: Image.PreserveAspectFit
                 asynchronous: true
             }
-            Rectangle { anchors.fill: parent; color: "transparent"; border.width: 1; border.color: Theme.line }
         }
 
         Column {
             width: content.width - (pic.visible ? pic.width + content.spacing : 0)
-            spacing: 3
+            spacing: Theme.space(1)
 
             DecodeText {
                 width: parent.width
@@ -106,7 +105,7 @@ Rectangle {
                 decode: !card.inHistory
                 elide: Text.ElideRight
                 color: Theme.dim
-                font.family: Theme.mono; font.pixelSize: Theme.size.sm; font.letterSpacing: 2
+                font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 2
             }
             Text {
                 width: parent.width
@@ -117,7 +116,7 @@ Rectangle {
                 maximumLineCount: 2
                 elide: Text.ElideRight
                 color: Theme.fg
-                font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: 13
+                font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: Theme.type.body
             }
             Text {
                 width: parent.width
@@ -129,7 +128,7 @@ Rectangle {
                 elide: Text.ElideRight
                 color: card.title !== "" ? Theme.dim : Theme.fg
                 linkColor: Theme.accent
-                font.family: Theme.ui; font.pixelSize: 12
+                font.family: Theme.ui; font.pixelSize: Theme.type.body
                 lineHeight: 1.3
                 onLinkActivated: link => { if (/^https?:\/\//.test(link)) Qt.openUrlExternally(link); }
                 HoverHandler { cursorShape: parent.hoveredLink !== "" ? Qt.PointingHandCursor : Qt.ArrowCursor }
@@ -137,13 +136,12 @@ Rectangle {
             Rectangle {   // selectable command (install hints)
                 visible: card.command !== ""
                 width: parent.width
-                height: visible ? cmdEdit.implicitHeight + 12 : 0
-                color: Theme.panel2
-                border.width: 1; border.color: Theme.line
+                height: visible ? cmdEdit.implicitHeight + Theme.space(3) : 0
+                color: Theme.field
                 TextEdit {
                     id: cmdEdit
-                    x: 8; y: 6
-                    width: parent.width - 16
+                    x: Theme.space(2); y: Theme.space(3) / 2
+                    width: parent.width - Theme.space(4)
                     readOnly: true
                     selectByMouse: true
                     text: card.command
@@ -151,14 +149,14 @@ Rectangle {
                     color: Theme.fg
                     selectionColor: Theme.accent
                     selectedTextColor: Theme.onAccent
-                    font.family: Theme.mono; font.pixelSize: 11
+                    font.family: Theme.mono; font.pixelSize: Theme.type.label
                 }
             }
             Flow {
                 visible: card.actionList.length > 0 && !card.inHistory
                 width: parent.width
-                spacing: 6
-                topPadding: 4
+                spacing: Theme.space(2)
+                topPadding: Theme.space(1)
                 Repeater {
                     model: card.actionList
                     delegate: ChamferButton {
@@ -178,10 +176,11 @@ Rectangle {
     // dismiss
     Text {
         anchors.top: parent.top; anchors.right: parent.right
-        anchors.topMargin: 6; anchors.rightMargin: 8
+        anchors.topMargin: Theme.space(2); anchors.rightMargin: Theme.space(3)
         text: "×"
         color: xMouse.containsMouse ? Theme.fg : Theme.dim
-        font.family: Theme.mono; font.pixelSize: 14
+        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
+        font.family: Theme.mono; font.pixelSize: Theme.type.body
         MouseArea {
             id: xMouse
             anchors.fill: parent; anchors.margins: -4

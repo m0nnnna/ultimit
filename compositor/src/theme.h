@@ -35,6 +35,9 @@
 #define UL_COLOR_ACCENT_DIM    UL_RGBA(212, 235, 255, 0.22f)
 #define UL_COLOR_BAD           UL_RGBA(255, 138, 138, 1.0f)
 #define UL_COLOR_SHADOW        UL_RGBA(0, 0, 0, 0.45f)
+#define UL_COLOR_HL            UL_RGBA(255, 255, 255, 0.14f) /* top highlight (docs/design/polish.md) */
+#define UL_SHEEN               0.04f /* titlebar fill is this much darker at the bottom */
+#define UL_HL_FADE             0.15f /* highlight fades to 0 over this share of the width, each end */
 
 /* Fonts (installed from Google Fonts; fontconfig falls back if missing). */
 #define UL_FONT_TITLE   "Michroma 11.5"

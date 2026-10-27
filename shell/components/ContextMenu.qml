@@ -3,7 +3,7 @@
 // keyboard focus for arrow-key navigation. The panel opens at the cursor and is clamped
 // on screen; "Skin" opens a side panel (flips left when there is no room on the right).
 // Opened on a photo frame (Config.menuFrame) it lists that frame's items instead.
-// Styled like the mockup popups: panel fill, 1px line, accent hover row, small mono labels.
+// Styled like the mockup popups: an L1 Surface, accent hover row, small mono labels.
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
@@ -24,7 +24,7 @@ PanelWindow {
     WlrLayershell.namespace: "ultimit-menu"
     WlrLayershell.keyboardFocus: visible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
-    readonly property int rowH: 30
+    readonly property int rowH: Theme.space(8)
     readonly property int menuW: 232
     readonly property int subW: 168
 
@@ -60,8 +60,8 @@ PanelWindow {
         return false;
     }
     readonly property int menuH: {
-        let h = 12;
-        for (const it of items) h += it.kind === "sep" ? 9 : rowH;
+        let h = Theme.space(4);
+        for (const it of items) h += it.kind === "sep" ? 8 : rowH;
         return h;
     }
 
@@ -98,8 +98,8 @@ PanelWindow {
         }
     }
     function rowY(idx) {
-        let y = 6;
-        for (let i = 0; i < idx; i++) y += items[i].kind === "sep" ? 9 : rowH;
+        let y = Theme.space(2);
+        for (let i = 0; i < idx; i++) y += items[i].kind === "sep" ? 8 : rowH;
         return y;
     }
 
@@ -133,15 +133,13 @@ PanelWindow {
         }
     }
 
-    Rectangle {
+    Surface {
         id: menu
+        brackets: true; bracketSize: 8
         x: Math.max(8, Math.min(Config.menuX, win.width - width - 8))
         y: Math.max(8, Math.min(Config.menuY, win.height - height - 8))
         width: win.menuW; height: win.menuH
-        color: Theme.panel
-        border.width: 1; border.color: Theme.lineStrong
         MouseArea { anchors.fill: parent; acceptedButtons: Qt.LeftButton | Qt.RightButton }
-        Brackets { size: 8 }
 
         Repeater {
             model: win.items
@@ -151,35 +149,41 @@ PanelWindow {
                 required property int index
                 readonly property bool sep: modelData.kind === "sep"
                 x: 0; y: win.rowY(index)
-                width: menu.width; height: sep ? 9 : win.rowH
+                width: menu.width; height: sep ? 8 : win.rowH
                 readonly property bool hot: win.cur === index
 
                 Rectangle {   // separator
                     visible: row.sep
-                    x: 10; anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width - 20; height: 1; color: Theme.line
+                    x: Theme.space(3); anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width - Theme.space(6); height: 1; color: Theme.divider
                 }
                 Rectangle {   // hover row
                     visible: !row.sep
-                    anchors.fill: parent; anchors.leftMargin: 1; anchors.rightMargin: 1
-                    color: row.hot ? Theme.panel2 : "transparent"
-                    Rectangle { width: 2; height: parent.height; color: Theme.accent; visible: row.hot }
+                    anchors.fill: parent; anchors.leftMargin: Theme.space(1); anchors.rightMargin: Theme.space(1)
+                    color: row.hot ? Theme.hover : Theme.clear(Theme.hover)
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
+                    Rectangle {
+                        width: 2; height: parent.height; color: Theme.accent
+                        opacity: row.hot ? 1 : 0
+                        Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
+                    }
                 }
                 Text {
                     visible: !row.sep
-                    x: 14; anchors.verticalCenter: parent.verticalCenter
+                    x: Theme.space(4); anchors.verticalCenter: parent.verticalCenter
                     text: row.modelData.label ? row.modelData.label.toUpperCase() : ""
                     color: row.hot ? Theme.accent : Theme.fg
-                    font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.6
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
+                    font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.6
                 }
                 Text {   // check mark / submenu arrow
                     visible: !row.sep
-                    anchors.right: parent.right; anchors.rightMargin: 14
+                    anchors.right: parent.right; anchors.rightMargin: Theme.space(4)
                     anchors.verticalCenter: parent.verticalCenter
                     readonly property bool on: !!row.modelData.check && win.checked(row.modelData)
                     text: row.modelData.sub ? "▸" : (on ? "■" : (row.modelData.check ? "□" : ""))
                     color: on ? Theme.accent : Theme.dim
-                    font.family: Theme.mono; font.pixelSize: 11
+                    font.family: Theme.mono; font.pixelSize: Theme.type.label
                 }
                 MouseArea {
                     enabled: !row.sep
@@ -198,18 +202,16 @@ PanelWindow {
     }
 
     // Skin submenu
-    Rectangle {
+    Surface {
         id: sub
+        brackets: true; bracketSize: 8
         visible: win.subOpen
         readonly property real skinRowY: menu.y + win.rowY(Math.max(0, win.skinIndex))
         readonly property bool flip: menu.x + menu.width + width + 4 > win.width
         x: flip ? menu.x - width - 2 : menu.x + menu.width + 2
-        y: Math.max(8, Math.min(skinRowY - 6, win.height - height - 8))
-        width: win.subW; height: win.skinList.length * win.rowH + 12
-        color: Theme.panel
-        border.width: 1; border.color: Theme.lineStrong
+        y: Math.max(8, Math.min(skinRowY - Theme.space(2), win.height - height - 8))
+        width: win.subW; height: win.skinList.length * win.rowH + Theme.space(4)
         MouseArea { anchors.fill: parent; acceptedButtons: Qt.LeftButton | Qt.RightButton }
-        Brackets { size: 8 }
 
         Repeater {
             model: win.skinList
@@ -217,26 +219,32 @@ PanelWindow {
                 id: srow
                 required property var modelData
                 required property int index
-                x: 0; y: 6 + index * win.rowH
+                x: 0; y: Theme.space(2) + index * win.rowH
                 width: sub.width; height: win.rowH
                 readonly property bool hot: win.subCur === index
                 Rectangle {
                     anchors.fill: parent; anchors.leftMargin: 1; anchors.rightMargin: 1
-                    color: srow.hot ? Theme.panel2 : "transparent"
-                    Rectangle { width: 2; height: parent.height; color: Theme.accent; visible: srow.hot }
+                    color: srow.hot ? Theme.hover : Theme.clear(Theme.hover)
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
+                    Rectangle {
+                        width: 2; height: parent.height; color: Theme.accent
+                        opacity: srow.hot ? 1 : 0
+                        Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
+                    }
                 }
                 Text {
-                    x: 14; anchors.verticalCenter: parent.verticalCenter
+                    x: Theme.space(4); anchors.verticalCenter: parent.verticalCenter
                     text: srow.modelData.n.toUpperCase()
                     color: srow.hot ? Theme.accent : Theme.fg
-                    font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.6
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
+                    font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.6
                 }
                 Text {
-                    anchors.right: parent.right; anchors.rightMargin: 14
+                    anchors.right: parent.right; anchors.rightMargin: Theme.space(4)
                     anchors.verticalCenter: parent.verticalCenter
                     visible: Theme.skin === srow.modelData.id
                     text: "■"; color: Theme.accent
-                    font.family: Theme.mono; font.pixelSize: 11
+                    font.family: Theme.mono; font.pixelSize: Theme.type.label
                 }
                 MouseArea {
                     anchors.fill: parent

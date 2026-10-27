@@ -207,19 +207,57 @@ Singleton {
     readonly property string mono: fontSets[fontSet].mono
 
     // Window-chrome colors for the compositor ("ultimitctl skin ..."), as
-    // #rrggbbaa: panel fg dim line lineStrong accent bad.
-    readonly property var chromeArgs: [cur.panel, cur.fg, cur.dim, cur.line, cur.lineStrong, eff.accent, eff.bad].map(_hex)
+    // #rrggbbaa: panel fg dim line lineStrong accent bad hl.
+    // The 8th is the top highlight (hl).
+    readonly property var chromeArgs: [cur.panel, cur.fg, cur.dim, cur.line, cur.lineStrong, eff.accent, eff.bad, hlHex].map(_hex)
     function _hex(v) {
         if (typeof v === "string") return v;
         return "#" + [v[0], v[1], v[2], Math.round(v[3] * 255)].map(n => n.toString(16).padStart(2, "0")).join("");
     }
+
+
+    // ---- polish tokens (docs/design/polish.md) ----
+    // Surface fills: field = L2 inset (inputs, tiles), hover/press = fg tints, selection = accent
+    // tint, divider = the one hairline between list rows, scrim = what dims the screen behind
+    // a modal. hl = the 1px top highlight of every L1 surface (skin edge colour; dark skins .14,
+    // light skins .55).
+    function _csv(s) { const p = s.split(","); return [parseInt(p[0]), parseInt(p[1]), parseInt(p[2])]; }
+    function _fgA(a) { const c = Qt.color(cur.fg); return Qt.rgba(c.r, c.g, c.b, a); }
+    readonly property color field: cur.light ? Qt.rgba(0.08, 0.1, 0.14, 0.05) : Qt.rgba(0, 0, 0, 0.20)
+    readonly property color hover: _fgA(0.06)
+    readonly property color press: _fgA(0.10)
+    readonly property color selection: Qt.rgba(accent.r, accent.g, accent.b, 0.18)
+    readonly property color divider: _fgA(0.08)
+    readonly property color scrim: { const c = _csv(cur.shade); return Qt.rgba(c[0] / 255, c[1] / 255, c[2] / 255, 0.55); }
+    readonly property real hlAlpha: cur.light ? 0.55 : 0.14
+    readonly property color hl: { const c = _csv(cur.edge); return Qt.rgba(c[0] / 255, c[1] / 255, c[2] / 255, hlAlpha); }
+    // Window-chrome highlight for the compositor, #rrggbbaa.
+    readonly property string hlHex: _hex([_csv(cur.edge)[0], _csv(cur.edge)[1], _csv(cur.edge)[2], hlAlpha])
+
+    // The same colour fully transparent, so a hover fade does not pass through grey.
+    function clear(c) { return Qt.rgba(c.r, c.g, c.b, 0); }
+
+    // Type scale: label = uppercase tracked mono, body = everything readable, title = card
+    // titles, head = page headings, hero = clocks and wordmarks (display font, so it scales).
+    readonly property var type: ({ label: 12, body: 14, title: 17, head: 24, hero: ds(64) })
+    // Icon sizes: tray and rail use md, launcher rows lg.
+    readonly property var icon: ({ sm: 16, md: 20, lg: 24, xl: 32 })
+    // Motion: durations in ms (wrap in Config.dur() so reduced motion is honoured) and easings.
+    readonly property var motion: ({ fast: 100, base: 180, slow: 280 })
+    readonly property int easeFast: Easing.OutCubic
+    readonly property int easeBase: Easing.OutCubic
+    readonly property int easeSlow: Easing.OutQuint
+    // Elevation: drop shadows (blur radius px, y offset px, colour).
+    readonly property var elev1: ({ blur: 16, y: 2, color: Qt.rgba(0, 0, 0, 0.30) })
+    readonly property var elev2: ({ blur: 32, y: 8, color: Qt.rgba(0, 0, 0, 0.45) })
 
     // ---- spacing and type scale ----
     // Components read these instead of bare numbers: space(n) is n steps of a 4 px grid
     // (space(2) = 8), size.* the pixel sizes of text. Changing numbers (clocks, rates, counters)
     // use tabular digits, `font.features: Theme.tnum`, so they don't jitter as the digits change.
     function space(n) { return n * 4; }
-    readonly property var size: ({ xs: 9, sm: 10, md: 12, lg: 13, xl: 26 })
+    // Old names, kept for existing users and mapped onto the scale (nothing under 12).
+    readonly property var size: ({ xs: 12, sm: 12, md: 12, lg: 14, xl: 26 })
     readonly property var tnum: ({ "tnum": 1 })
 
     // Display name used in captions, e.g. "MINE"
