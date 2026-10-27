@@ -272,6 +272,23 @@ static void run_command(struct ul_server *server, char *line, struct out *o) {
 		put(o, "{\"ok\":true}");
 		return;
 	}
+	if (strcmp(cmd, "panel-shadow") == 0) {
+		/* panel-shadow NAMESPACE OUTPUT|- ID X Y W H ELEV ALPHA MS: the shell reports where a
+		 * panel sits inside its layer surface; the compositor draws the soft shadow behind it
+		 * (ELEV 1 or 2; 0 removes it) and fades it to ALPHA (0..1) over MS. */
+		char ns[64] = {0}, out[64] = {0}, sid[48] = {0};
+		struct wlr_box r = {0};
+		int elev = 0, ms = 0;
+		float alpha = 0;
+		if (sscanf(line, "%*s %63s %63s %47s %d %d %d %d %d %f %d", ns, out, sid,
+				&r.x, &r.y, &r.width, &r.height, &elev, &alpha, &ms) < 9) {
+			put(o, "{\"error\":\"usage: panel-shadow NS OUTPUT ID X Y W H ELEV ALPHA [MS]\"}");
+			return;
+		}
+		put(o, layer_panel_shadow(server, ns, out, sid, r, elev, alpha, ms) ?
+			"{\"ok\":true}" : "{\"error\":\"no such surface\"}");
+		return;
+	}
 	if (strcmp(cmd, "release-keys") == 0) {
 		/* the shell sends this after a resume: drop keys whose release got lost */
 		input_release_keys(server);

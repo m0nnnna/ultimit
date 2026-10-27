@@ -47,8 +47,8 @@ Item {
     signal clicked()
     signal rightClicked(real globalY)   // right click / Menu key; y is the button centre in rail coordinates
 
-    width: 72
-    height: 62
+    width: 76
+    height: 64
 
     activeFocusOnTab: true
     Accessible.role: Accessible.Button
@@ -65,19 +65,11 @@ Item {
 
     readonly property bool pressed: mouse.pressed
 
-    // hover wash
+    // hover / press wash (tokens: hover, press), faded in and out
     Rectangle {
         anchors.fill: parent
-        color: Theme.panel2
-        opacity: mouse.containsMouse ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: Config.dur(150); easing.type: Easing.OutCubic } }
-    }
-    // press: a second wash layer so pressed reads stronger than hover (washes stack)
-    Rectangle {
-        anchors.fill: parent
-        color: Theme.panel2
-        opacity: root.pressed ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: Config.dur(90); easing.type: Easing.OutCubic } }
+        color: root.pressed ? Theme.press : (mouse.containsMouse ? Theme.hover : Theme.clear(Theme.hover))
+        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
     }
     // Accent bar: the mockup draws it 6px outside the button, i.e. flush to the rail edge.
     // Grows from the vertical center when `on`.
@@ -88,7 +80,7 @@ Item {
         height: root.on && !root.focused ? parent.height - 24 : 0
         color: Theme.accent
         visible: height > 0
-        Behavior on height { NumberAnimation { duration: Config.dur(220); easing.type: Easing.OutCubic } }
+        Behavior on height { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
     }
     // keyboard focus outline
     Rectangle {
@@ -105,15 +97,16 @@ Item {
         id: content
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 6
+        spacing: Theme.space(1)
         opacity: root.missing ? 0.45 : 1
         scale: root.pressed ? 0.94 : 1
-        Behavior on scale { NumberAnimation { duration: Config.dur(120); easing.type: Easing.OutCubic } }
+        Behavior on scale { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         Icon {
             id: coreIcon
             visible: !root.framed
             anchors.horizontalCenter: parent.horizontalCenter
             name: root.appId
+            size: Theme.icon.md
             color: Theme.fg
             transform: Rotation {
                 axis { x: 0; y: 1; z: 0 }
@@ -125,10 +118,10 @@ Item {
             id: frame
             visible: root.framed
             anchors.horizontalCenter: parent.horizontalCenter
-            width: 30; height: 30
+            width: 28; height: 28
             IconBadge {
                 anchors.fill: parent
-                size: 30
+                size: 28
                 letter: root.letter
                 iconSrc: root.iconSrc
                 active: root.on
@@ -137,28 +130,29 @@ Item {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: root.label
-            color: Theme.fg
+            color: root.on ? Theme.accent : Theme.fg
+            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             font.family: Theme.ui
             font.weight: Font.DemiBold
-            font.pixelSize: 9
-            font.letterSpacing: 1.62   // .18em
+            font.pixelSize: Theme.type.label
+            font.letterSpacing: 1.0
         }
         Text {   // tiny "not installed" state
             visible: root.missing
             anchors.horizontalCenter: parent.horizontalCenter
-            text: "NOT INSTALLED"
+            text: "MISSING"
             color: Theme.dim
-            font.family: Theme.mono; font.pixelSize: 6; font.letterSpacing: 0.6
+            font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 0.4
         }
     }
     // Count tag: tiny chamfered accent tag at the icon's top-right (hidden at 0).
     Item {
         id: tag
         visible: root.badge > 0 && !root.framed
-        x: content.x + coreIcon.x + coreIcon.width - 6
+        x: content.x + coreIcon.x + coreIcon.width - 8
         y: content.y + coreIcon.y - 7
-        width: Math.max(15, tagText.implicitWidth + 8)
-        height: 14
+        width: Math.max(16, tagText.implicitWidth + 8)
+        height: 16
         Shape {
             anchors.fill: parent
             preferredRendererType: Shape.CurveRenderer
@@ -182,7 +176,7 @@ Item {
             text: root.badge > 99 ? "99+" : String(root.badge)
             color: Theme.accent
             font.family: Theme.mono
-            font.pixelSize: 9
+            font.pixelSize: Theme.type.label
             font.letterSpacing: 0.4
         }
     }

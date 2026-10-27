@@ -7,13 +7,13 @@ import "../../apps/accessory"
 
 Column {
     id: root
-    spacing: 8
+    spacing: Theme.space(3)
 
     FlyHead { text: "Bluetooth"; detail: SysState.btAdapter ? SysState.btAdapter.name : ""; }
 
     Text {
         visible: !SysState.btAvailable
-        text: "No Bluetooth adapter found."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
+        text: "No Bluetooth adapter found."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.body
     }
     ToggleRow {
         width: parent.width
@@ -51,7 +51,7 @@ Column {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "BAT " + Math.round(dr.modelData.battery * 100) + "%"
                         color: dr.modelData.battery < 0.2 ? Theme.warn : Theme.dim
-                        font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.2
+                        font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.2
                     }
                     FlyBtn {
                         primary: !dr.modelData.connected
@@ -63,7 +63,7 @@ Column {
             Text {
                 visible: SysState.btShown.length === 0
                 height: visible ? 36 : 0; verticalAlignment: Text.AlignVCenter
-                text: "No paired devices."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
+                text: "No paired devices."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.body
             }
         }
     }

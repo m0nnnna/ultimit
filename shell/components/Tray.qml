@@ -30,7 +30,7 @@ Row {
             required property var modelData
             readonly property bool vis: modelData.status !== Status.Passive
             visible: vis
-            width: vis ? 26 : 0; height: root.height
+            width: vis ? 28 : 0; height: root.height
             readonly property string tip: modelData.tooltipTitle || modelData.title || modelData.id
             function centerX() { return Config.railWidth + ent.mapToItem(null, ent.width / 2, 0).x; }
 
@@ -59,9 +59,8 @@ Row {
 
             Rectangle {
                 anchors.fill: parent
-                color: Theme.panel2
-                opacity: mouse.pressed ? 1 : (mouse.containsMouse ? 0.7 : 0)
-                Behavior on opacity { NumberAnimation { duration: Config.dur(120); easing.type: Easing.OutCubic } }
+                color: mouse.pressed ? Theme.press : (mouse.containsMouse ? Theme.hover : Theme.clear(Theme.hover))
+                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             }
             Rectangle {   // keyboard focus ring
                 anchors.fill: parent; anchors.margins: 1
@@ -71,13 +70,13 @@ Row {
             Image {
                 id: img
                 anchors.centerIn: parent
-                width: 18; height: 18
+                width: Theme.icon.md; height: Theme.icon.md
                 source: ent.modelData.icon
-                sourceSize: Qt.size(36, 36)
+                sourceSize: Qt.size(Theme.icon.md * 2, Theme.icon.md * 2)
                 fillMode: Image.PreserveAspectFit
                 asynchronous: true
                 scale: mouse.pressed ? 0.92 : 1
-                Behavior on scale { NumberAnimation { duration: Config.dur(120); easing.type: Easing.OutCubic } }
+                Behavior on scale { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 visible: status === Image.Ready && !ent.tintDark
                 onStatusChanged: if (status === Image.Ready && Theme.light) probe.loadImage(ent.modelData.icon)
             }
@@ -86,7 +85,7 @@ Row {
             property bool tintDark: false
             Canvas {
                 id: probe
-                width: 18; height: 18; visible: false
+                width: Theme.icon.md; height: Theme.icon.md; visible: false
                 onImageLoaded: requestPaint()
                 onPaint: {
                     const src = ent.modelData.icon;
@@ -108,7 +107,7 @@ Row {
             Connections { target: Theme; function onLightChanged() { if (Theme.light && img.status === Image.Ready) probe.loadImage(ent.modelData.icon); else ent.tintDark = false; } }
             MultiEffect {
                 anchors.centerIn: parent
-                width: 18; height: 18
+                width: Theme.icon.md; height: Theme.icon.md
                 source: img
                 visible: ent.tintDark
                 colorization: 1.0
@@ -117,13 +116,13 @@ Row {
             }
             Rectangle {   // fallback when the icon cannot be resolved
                 anchors.centerIn: parent
-                width: 16; height: 16
+                width: Theme.icon.md; height: Theme.icon.md
                 visible: !img.visible
-                color: "transparent"; border.width: 1; border.color: Theme.lineStrong
+                color: Theme.field
                 Text {
                     anchors.centerIn: parent
                     text: (ent.tip || "?").charAt(0).toUpperCase()
-                    color: Theme.fg; font.family: Theme.display; font.pixelSize: Theme.ds(8)
+                    color: Theme.fg; font.family: Theme.display; font.pixelSize: Theme.type.label
                 }
             }
             Rectangle {   // needs-attention marker

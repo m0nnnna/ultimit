@@ -17,7 +17,7 @@ Item {
     signal moved(int value)
     signal muteClicked()
 
-    implicitHeight: big ? 44 : 34
+    implicitHeight: big ? 44 : 36
     activeFocusOnTab: true
 
     readonly property real frac: (Math.max(from, Math.min(to, value)) - from) / (to - from)
@@ -36,17 +36,18 @@ Item {
 
     Item {   // glyph button
         id: btn
-        width: root.big ? 40 : 30; height: width
+        width: root.big ? 40 : 32; height: width
         anchors.verticalCenter: parent.verticalCenter
         Rectangle {
             anchors.fill: parent
-            color: bm.containsMouse && root.muteable ? Theme.panel2 : "transparent"
-            border.width: 1; border.color: root.activeFocus ? Theme.accent : (bm.containsMouse && root.muteable ? Theme.lineStrong : Theme.line)
+            color: bm.containsMouse && root.muteable ? Theme.press : Theme.field
+            border.width: root.activeFocus ? 1 : 0; border.color: Theme.accent
+            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         }
         StatusIcon {
             anchors.centerIn: parent
             kind: root.icon
-            size: root.big ? 22 : 18
+            size: root.big ? Theme.icon.lg : Theme.icon.md
             level: root.level
             muted: root.muted
         }
@@ -55,13 +56,12 @@ Item {
     }
     Item {
         id: track
-        anchors { left: btn.right; leftMargin: 10; right: valueText.left; rightMargin: 8; verticalCenter: parent.verticalCenter }
+        anchors { left: btn.right; leftMargin: 12; right: valueText.left; rightMargin: 8; verticalCenter: parent.verticalCenter }
         height: 24
         Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             width: parent.width; height: root.big ? 6 : 4
-            color: Theme.panel2
-            border.width: 1; border.color: Theme.line
+            color: Theme.field
             Rectangle { height: parent.height; width: root.frac * parent.width; color: root.muted ? Theme.dim : Theme.accent }
         }
         Rectangle {
@@ -70,7 +70,7 @@ Item {
             width: drag.pressed ? 12 : 10; height: root.big ? 20 : 16
             color: root.muted ? Theme.dim : Theme.accent
             border.width: root.activeFocus ? 1 : 0; border.color: Theme.fg
-            Behavior on width { NumberAnimation { duration: Config.dur(100); easing.type: Easing.OutCubic } }
+            Behavior on width { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         }
         MouseArea {
             id: drag
@@ -84,9 +84,9 @@ Item {
     Text {
         id: valueText
         anchors { right: parent.right; verticalCenter: parent.verticalCenter }
-        width: 34; horizontalAlignment: Text.AlignRight
+        width: 40; horizontalAlignment: Text.AlignRight
         text: root.value + "%"
         color: root.muted ? Theme.dim : Theme.fg
-        font.family: Theme.mono; font.pixelSize: root.big ? 13 : 11
+        font.family: Theme.mono; font.pixelSize: Theme.type.label; font.features: Theme.tnum
     }
 }

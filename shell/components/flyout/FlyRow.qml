@@ -1,5 +1,6 @@
-// FlyRow.qml - flyout list row: hover wash, accent left bar when `selected`, title + dim mono subtitle
-// on the left, trailing children (buttons) on the right. `mark` draws a ■ / □ radio square.
+// FlyRow.qml - flyout list row (36, 44 with a subtitle): hover wash, selection fill + accent text when
+// `selected`, title + dim mono subtitle on the left, trailing children (buttons) on the right.
+// No hairlines: the fills and the spacing separate rows. `radio` draws a ■ / □ square.
 import QtQuick
 import "../.."
 import ".."
@@ -19,54 +20,57 @@ Item {
     signal clicked()
 
     width: parent ? parent.width : 300
-    implicitHeight: subtitle !== "" ? 44 : 36
+    implicitHeight: subtitle !== "" ? Theme.space(11) : Theme.space(9)
     height: implicitHeight
 
-    Rectangle { anchors.fill: parent; color: Theme.panel2; opacity: m.containsMouse && root.hoverable ? 1 : 0 }
-    Rectangle { x: -14; width: 2; height: parent.height; color: Theme.accent; visible: root.selected }
+    Rectangle {
+        anchors.fill: parent
+        color: root.selected ? Theme.selection : (m.containsMouse && root.hoverable ? Theme.hover : Theme.clear(Theme.hover))
+        Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
+    }
     MouseArea { id: m; anchors.fill: parent; hoverEnabled: true; cursorShape: root.hoverable ? Qt.PointingHandCursor : Qt.ArrowCursor; onClicked: root.clicked() }
     Row {
         id: lead
-        anchors { left: parent.left; leftMargin: 2; verticalCenter: parent.verticalCenter }
-        spacing: 8
+        anchors { left: parent.left; leftMargin: Theme.space(2); verticalCenter: parent.verticalCenter }
+        spacing: Theme.space(2)
         Text {
             visible: root.radio
             anchors.verticalCenter: parent.verticalCenter
             text: root.selected ? "■" : "□"
             color: root.selected ? Theme.accent : Theme.dim
-            font.family: Theme.mono; font.pixelSize: 10
+            font.family: Theme.mono; font.pixelSize: Theme.type.label
         }
     }
     Column {
-        anchors { left: lead.right; leftMargin: lead.width > 0 ? 8 : 2; right: tr.left; rightMargin: 8; verticalCenter: parent.verticalCenter }
+        anchors { left: lead.right; leftMargin: lead.width > 0 ? Theme.space(2) : Theme.space(2); right: tr.left; rightMargin: Theme.space(2); verticalCenter: parent.verticalCenter }
         spacing: 2
         Row {
-            spacing: 8
+            spacing: Theme.space(2)
             width: parent.width
             Text {
                 width: Math.min(implicitWidth, parent.width - (badgeT.visible ? badgeT.implicitWidth + 8 : 0))
                 text: root.title; color: root.titleColor; elide: Text.ElideRight
-                font.family: Theme.ui; font.pixelSize: 13
+                font.family: Theme.ui; font.pixelSize: Theme.type.body
+                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             }
             Text {
                 id: badgeT
                 visible: root.badge !== ""
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.badge.toUpperCase(); color: root.badgeColor
-                font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1.6
+                font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1
             }
         }
         Text {
             visible: root.subtitle !== ""
             width: parent.width; elide: Text.ElideRight
             text: root.subtitle; color: Theme.dim
-            font.family: Theme.mono; font.pixelSize: 10
+            font.family: Theme.mono; font.pixelSize: Theme.type.label
         }
     }
     Row {
         id: tr
-        anchors { right: parent.right; rightMargin: 2; verticalCenter: parent.verticalCenter }
-        spacing: 6
+        anchors { right: parent.right; rightMargin: Theme.space(2); verticalCenter: parent.verticalCenter }
+        spacing: Theme.space(2)
     }
-    Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
 }

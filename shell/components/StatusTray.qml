@@ -1,6 +1,6 @@
 // StatusTray.qml - the always-visible system tray at the right end of the bottom bar (Ticker.qml):
 //   [ app tray icons (SNI) | network  bluetooth  volume  battery  bell | clock ]
-// A thin left divider and a slightly darker panel set it apart from the ticker. Every status
+// A slightly darker panel sets it apart from the ticker. Every status
 // element opens its own flyout (Flyout.qml / FlyoutState.qml: network, sound, Bluetooth, battery,
 // clock + bell = notification centre); each has Accessible.name, keyboard focus (Tab / Enter) and a
 // 500 ms hover tooltip drawn by WindowPopups.qml (WindowUi.showBarTip). Quick Settings is now
@@ -89,9 +89,8 @@ Item {
         function centerX() { return Config.railWidth + sb.mapToItem(null, sb.width / 2, 0).x; }
         Rectangle {
             anchors.fill: parent
-            color: Theme.panel2
-            opacity: m.pressed ? 1 : ((m.containsMouse || sb.lit) ? 0.8 : 0)
-            Behavior on opacity { NumberAnimation { duration: Config.dur(120); easing.type: Easing.OutCubic } }
+            color: m.pressed ? Theme.press : ((m.containsMouse || sb.lit) ? Theme.hover : Theme.clear(Theme.hover))
+            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         }
         Rectangle {
             anchors.fill: parent; anchors.margins: 1
@@ -118,12 +117,11 @@ Item {
         onTipChanged: if (m.containsMouse && WindowUi.tipText !== "") WindowUi.showBarTip(sb.tip, sb.centerX(), root.screenName)
     }
 
-    Rectangle {   // slightly darker panel + left divider
+    Rectangle {   // slightly darker panel
         id: panel
         height: parent.height
         width: row.width
-        color: Theme.light ? Qt.rgba(0, 0, 0, 0.06) : Qt.rgba(0, 0, 0, 0.28)
-        Rectangle { x: 0; y: 0; width: 1; height: parent.height; color: Theme.lineStrong }
+        color: Theme.light ? Qt.rgba(0, 0, 0, 0.06) : Qt.rgba(0, 0, 0, 0.24)
 
         Row {
             id: row
@@ -138,7 +136,7 @@ Item {
             Item {   // separator between app icons and status icons
                 visible: appTray.visible
                 width: 9; height: root.height
-                Rectangle { anchors.centerIn: parent; width: 1; height: 14; color: Theme.line }
+                Rectangle { anchors.centerIn: parent; width: 1; height: 16; color: Theme.divider }
             }
 
             // ---- privacy: what is using the mic, camera or screen; a running recording ----
@@ -163,7 +161,7 @@ Item {
                     Rectangle {
                         id: chip
                         anchors.centerIn: parent
-                        width: lbl.implicitWidth + 16; height: 18
+                        width: lbl.implicitWidth + 20; height: 20
                         color: "transparent"; border.color: pb.modelData.tone
                         Rectangle {   // the dot blinks while recording
                             id: dot
@@ -180,7 +178,7 @@ Item {
                             id: lbl
                             anchors { left: dot.right; leftMargin: 4; verticalCenter: parent.verticalCenter }
                             text: pb.modelData.label; color: pb.modelData.tone
-                            font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1.2
+                            font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.2
                         }
                     }
                 }
@@ -192,11 +190,12 @@ Item {
                 name: "Network: " + (SysState.netKind === "wifi" ? "Wi-Fi " + SysState.netName : (SysState.netKind === "eth" ? "Ethernet" : (root.airplane ? "Airplane mode" : "Offline")))
                 tip: root.netTip
                 fly: "network"
-                width: 28
+                width: 32
                 onClicked: root.openFly("network")
                 StatusIcon {
                     anchors.centerIn: parent
                     kind: SysState.netKind === "eth" ? "eth" : (root.airplane ? "airplane" : "wifi")
+                    size: Theme.icon.md
                     on: SysState.netKind !== "off"
                     level: root.wifiLevel
                     tone: SysState.netKind === "off" ? Theme.dim : Theme.fg
@@ -209,11 +208,12 @@ Item {
                 name: "Bluetooth: " + (!SysState.btOn ? "off" : (SysState.btConnectedCount > 0 ? SysState.btConnectedCount + " connected" : "on"))
                 tip: root.btTip
                 fly: "bluetooth"
-                width: visible ? 28 : 0
+                width: visible ? 32 : 0
                 onClicked: root.openFly("bluetooth")
                 StatusIcon {
                     anchors.centerIn: parent
                     kind: "bt"
+                    size: Theme.icon.md
                     state: !SysState.btOn ? "off" : (SysState.btConnectedCount > 0 ? "connected" : "on")
                 }
             }
@@ -224,7 +224,7 @@ Item {
                 name: "Volume: " + (SysState.sinkMuted ? "muted" : SysState.sinkVol + " percent")
                 tip: root.volTip
                 fly: "sound"
-                width: visible ? 28 : 0
+                width: visible ? 32 : 0
                 property real acc: 0
                 onClicked: button => {
                     if (button === Qt.MiddleButton) {
@@ -245,6 +245,7 @@ Item {
                 StatusIcon {
                     anchors.centerIn: parent
                     kind: "volume"
+                    size: Theme.icon.md
                     level: root.volLevel
                     muted: SysState.sinkMuted
                 }
@@ -255,17 +256,18 @@ Item {
                 visible: SysState.hasBattery
                 name: "Battery: " + SysState.battPct + " percent" + (SysState.charging ? ", charging" : "")
                 tip: root.battTip
-                width: visible ? batt.width + 14 : 0
+                width: visible ? batt.width + 16 : 0
                 fly: "battery"
                 onHovered: SysState.refreshProfiles()
                 onClicked: root.openFly("battery")
                 Row {
                     id: batt
                     anchors.centerIn: parent
-                    spacing: 3
+                    spacing: 4
                     StatusIcon {
                         anchors.verticalCenter: parent.verticalCenter
                         kind: "battery"
+                        size: Theme.icon.md
                         pct: SysState.battPct
                         tone: root.battTone
                     }
@@ -273,14 +275,14 @@ Item {
                         visible: SysState.charging
                         anchors.verticalCenter: parent.verticalCenter
                         kind: "bolt"
-                        size: 14
+                        size: Theme.icon.sm
                         tone: Theme.ok
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: SysState.battPct + "%"
                         color: root.battTone
-                        font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 0.6
+                        font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 0.6
                     }
                 }
             }
@@ -291,25 +293,25 @@ Item {
                 name: (Notifs.dnd ? "Do not disturb on, " : "Notifications, ") + root.unread + " in history"
                 tip: root.bellTip
                 fly: "clock"
-                width: visible ? 28 : 0
+                width: visible ? 32 : 0
                 onClicked: button => { if (button === Qt.LeftButton) root.openFly("clock"); else if (button === Qt.RightButton) Notifs.toggleDnd(); }
                 StatusIcon {
                     anchors.centerIn: parent
                     kind: "bell"
                     muted: Notifs.dnd
-                    size: 16
+                    size: Theme.icon.md
                 }
                 Rectangle {   // unread count badge
                     visible: root.unread > 0
-                    x: parent.width / 2 + 2; y: 4
-                    width: Math.max(10, bt.implicitWidth + 4); height: 10
+                    x: parent.width / 2 + 2; y: 2
+                    width: Math.max(16, bt.implicitWidth + 6); height: 16
                     color: Theme.accent
                     Text {
                         id: bt
                         anchors.centerIn: parent
                         text: root.unread > 9 ? "9+" : String(root.unread)
                         color: Theme.onAccent
-                        font.family: Theme.mono; font.pixelSize: 8
+                        font.family: Theme.mono; font.pixelSize: Theme.type.label
                     }
                 }
             }
@@ -318,14 +320,14 @@ Item {
             StatusButton {
                 name: "Claude"
                 tip: "CLAUDE\nCLICK: CHAT HERE  RIGHT-CLICK: FULL WINDOW"
-                width: 28
+                width: 32
                 onClicked: button => Quickshell.execDetached(button === Qt.LeftButton
                     ? [Quickshell.shellPath("bin/ultimit-claude"), "--mini", root.screenName]
                     : [Quickshell.shellPath("bin/ultimit-claude")])
                 Image {
                     anchors.centerIn: parent
-                    width: 16; height: 16
-                    sourceSize: Qt.size(32, 32)
+                    width: Theme.icon.md; height: Theme.icon.md
+                    sourceSize: Qt.size(Theme.icon.md * 2, Theme.icon.md * 2)
                     source: Icons.app("ultimit-claude")
                     smooth: true
                 }
@@ -333,7 +335,7 @@ Item {
 
             Item {   // separator before the clock
                 width: 9; height: root.height
-                Rectangle { anchors.centerIn: parent; width: 1; height: 14; color: Theme.line }
+                Rectangle { anchors.centerIn: parent; width: 1; height: 16; color: Theme.divider }
             }
 
             // ---- clock ----
@@ -341,14 +343,14 @@ Item {
                 name: "Clock: " + root.timeText + ", " + root.dateText
                 tip: root.dateText
                 fly: "clock"
-                width: clockText.implicitWidth + 20
+                width: clockText.implicitWidth + 24
                 onClicked: root.openFly("clock")
                 Text {
                     id: clockText
                     anchors.centerIn: parent
                     text: root.timeText
                     color: Theme.fg
-                    font.family: Theme.mono; font.pixelSize: 12; font.letterSpacing: 0.8
+                    font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 0.8
                     font.features: { "tnum": 1 }
                 }
             }

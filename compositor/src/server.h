@@ -302,6 +302,7 @@ struct ul_layer_surface {
 	struct wlr_layer_surface_v1 *layer_surface;
 	struct wlr_scene_layer_surface_v1 *scene;
 	struct wlr_scene_tree *popups; /* above windows, follows the surface */
+	struct wl_list shadows; /* ul_panel_shadow.link: soft shadows of the panels inside it */
 	bool mapped;
 
 	struct wl_listener map;
@@ -485,6 +486,8 @@ void layer_init(struct ul_server *server);
 void layer_arrange(struct ul_output *output);
 void layer_update_output_blur(struct ul_output *output);
 void layer_update_all_blur(struct ul_server *server);
+bool layer_panel_shadow(struct ul_server *server, const char *ns, const char *output,
+		const char *id, struct wlr_box rect, int elev, float alpha, int ms);
 struct wlr_scene_tree *layer_popup_parent(struct wlr_layer_surface_v1 *layer_surface,
 	int *out_x, int *out_y, struct ul_output **out_output);
 

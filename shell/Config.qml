@@ -10,7 +10,16 @@ import Quickshell.Wayland
 
 Singleton {
     id: root
-    readonly property string version: "0.1"
+    // The real version, the way About and ultimit-update know it: /opt/ultimit/VERSION when installed
+    // (a release tag or tag-N-gHASH), else `git describe` in a checkout. "" until read (or if neither exists).
+    property string version: ""
+    // v1.0.0-26-gcf8dd64 -> v1.0.0-26 (the commit hash is for About)
+    readonly property string versionShort: version.replace(/-g[0-9a-f]+/, "").replace(/-dirty$/, "")
+    Process {
+        running: true
+        command: ["sh", "-c", "cat \"$1/../VERSION\" 2>/dev/null || git -C \"$1\" describe --tags --always --dirty 2>/dev/null", "sh", Quickshell.shellDir]
+        stdout: StdioCollector { onStreamFinished: root.version = text.trim() }
+    }
 
     // Wallpaper animation. When false the wallpaper is drawn once (zero idle cost).
     // Set ULTIMIT_MOTION=0 in the environment to start with motion off.
@@ -383,11 +392,12 @@ Singleton {
         return s;
     }
 
-    // Static sample headlines for the ticker: { t: time label, h: headline }
+    // Built-in ticker items, shown only when no feed is set or none has loaded yet: true and
+    // stable (no fake news). { t: label, h: headline }
     readonly property var headlines: [
-        { t: "10:04", h: "Ultimit 0.1 “Mine” enters development" },
-        { t: "09:20", h: "Fullscreen games skip the compositor" },
-        { t: "YDAY",  h: "Desktop cat learns to sit on windows" },
-        { t: "OCT 07", h: "Four skins ship in the first build" }
+        { t: "TIP", h: "Right-click the desktop for the menu, skins and wallpaper" },
+        { t: "TIP", h: "The tray icons open flyouts for network, sound, Bluetooth, battery and the clock" },
+        { t: "TIP", h: "Settings > News sets the feeds shown here" },
+        { t: "TIP", h: "Seven skins, switchable at any time or by time of day" }
     ]
 }

@@ -8,7 +8,7 @@ import "../../apps/accessory"
 
 Column {
     id: root
-    spacing: 10
+    spacing: Theme.space(3)
 
     SystemClock { id: clock; precision: SystemClock.Minutes }
     readonly property date today: clock.date
@@ -32,7 +32,7 @@ Column {
 
     // ---- header: time / date + DND ----
     Item {
-        width: parent.width; height: 52
+        width: parent.width; height: 56
         Column {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 2
@@ -42,24 +42,24 @@ Column {
             }
             Text {
                 text: root.days[root.today.getDay()] + "  " + root.today.getFullYear() + "." + root.p2(root.today.getMonth() + 1) + "." + root.p2(root.today.getDate())
-                color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.6
+                color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.6
             }
         }
     }
 
     // ---- calendar ----
     Item {
-        width: parent.width; height: 26
+        width: parent.width; height: 28
         Text {
             anchors.verticalCenter: parent.verticalCenter
             text: root.months[root.viewM] + " " + root.viewY
-            color: Theme.fg; font.family: Theme.mono; font.pixelSize: 12; font.letterSpacing: 2
+            color: Theme.fg; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 2
         }
         Row {
-            anchors.right: parent.right; spacing: 6
+            anchors.right: parent.right; spacing: 8
             FlyBtn { text: "Today"; visible: !root.isThisMonth; onClicked: root.goToday() }
-            FlyBtn { text: "‹"; width: 30; onClicked: root.shift(-1) }
-            FlyBtn { text: "›"; width: 30; onClicked: root.shift(1) }
+            FlyBtn { text: "‹"; width: 32; onClicked: root.shift(-1) }
+            FlyBtn { text: "›"; width: 32; onClicked: root.shift(1) }
         }
     }
     Grid {
@@ -71,8 +71,8 @@ Column {
             model: root.dows
             delegate: Item {
                 required property string modelData
-                width: cal.cw; height: 20
-                Text { anchors.centerIn: parent; text: modelData; color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.4 }
+                width: cal.cw; height: 24
+                Text { anchors.centerIn: parent; text: modelData; color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.4 }
             }
         }
         Repeater {
@@ -86,24 +86,23 @@ Column {
                 width: cal.cw; height: 28
                 visible: index < 35 || root.lead + root.dim > 35
                 Rectangle {
-                    anchors.centerIn: parent; width: 26; height: 24
-                    color: cell.isToday ? Theme.accent : "transparent"
-                    border.width: cell.isToday ? 0 : (cm.containsMouse && cell.inMonth ? 1 : 0)
-                    border.color: Theme.lineStrong
+                    anchors.centerIn: parent; width: 28; height: 24
+                    color: cell.isToday ? Theme.accent : (cm.containsMouse && cell.inMonth ? Theme.hover : Theme.clear(Theme.hover))
+                    Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 }
                 Text {
                     anchors.centerIn: parent
                     visible: cell.inMonth
                     text: cell.dayNum
                     color: cell.isToday ? Theme.onAccent : (cell.index % 7 === 0 || cell.index % 7 === 6 ? Theme.dim : Theme.fg)
-                    font.family: Theme.mono; font.pixelSize: 12; font.weight: cell.isToday ? Font.Bold : Font.Normal
+                    font.family: Theme.mono; font.pixelSize: Theme.type.label; font.weight: cell.isToday ? Font.Bold : Font.Normal
                 }
                 MouseArea { id: cm; anchors.fill: parent; hoverEnabled: true }
             }
         }
     }
 
-    Rectangle { width: parent.width; height: 1; color: Theme.line }
+    Rectangle { width: parent.width; height: 1; color: Theme.divider }   // between the calendar and the notifications
 
     // ---- notification centre ----
     Item {
@@ -111,11 +110,11 @@ Column {
         SectionLabel { anchors.verticalCenter: parent.verticalCenter; text: "Notifications" }
         Row {
             anchors { right: parent.right; verticalCenter: parent.verticalCenter }
-            spacing: 6
+            spacing: 8
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: Notifs.count; color: Theme.dim
-                font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.4
+                font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.4
             }
             FlyBtn { text: "Clear all"; visible: Notifs.count > 0; onClicked: Notifs.clear() }
         }
@@ -131,17 +130,17 @@ Column {
         width: parent.width
         height: Notifs.count === 0 ? 40 : Math.min(contentHeight, 260)
         clip: true
-        spacing: 6
+        spacing: 8
         boundsBehavior: Flickable.StopAtBounds
         model: Notifs.list
         delegate: NotifCard { width: nl.width; inHistory: true }
-        remove: Transition { NumberAnimation { property: "opacity"; to: 0; duration: Config.dur(140) } }
-        displaced: Transition { NumberAnimation { properties: "y"; duration: Config.dur(160); easing.type: Easing.OutCubic } }
+        remove: Transition { NumberAnimation { property: "opacity"; to: 0; duration: Config.dur(Theme.motion.fast) } }
+        displaced: Transition { NumberAnimation { properties: "y"; duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
         Text {
             visible: Notifs.count === 0
             anchors.centerIn: parent
             text: "NO NOTIFICATIONS"; color: Theme.dim
-            font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 2
+            font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 2
         }
     }
 }

@@ -29,7 +29,6 @@ PanelWindow {
     Rectangle {
         anchors.fill: parent
         color: Theme.rail
-        Rectangle { width: parent.width; height: 1; color: Theme.line }   // top border
 
         Item {
             id: viewport
@@ -67,20 +66,20 @@ PanelWindow {
                             text: item.modelData.t
                             textFormat: Text.PlainText
                             color: Theme.fg
-                            font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 0.88
+                            font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 0.6
                         }
                         Text {
                             text: "\u00a0\u00a0" + item.modelData.h
                             textFormat: Text.PlainText
                             color: item.hot ? Theme.accent : Theme.dim
-                            font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 0.88
+                            font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 0.6
                             font.underline: item.hot
                         }
                         Text {
                             text: "\u00a0\u00a0\u00a0\u25c6\u00a0\u00a0\u00a0"
                             visible: item.index < win.entries.length - 1
                             color: Theme.dim
-                            font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 0.88
+                            font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 0.6
                         }
                     }
                 }
@@ -112,7 +111,7 @@ PanelWindow {
             id: tray
             visible: Config.isTrayScreen(win.screen ? win.screen.name : "")
             screenName: win.screen ? win.screen.name : ""
-            anchors { right: parent.right; top: parent.top; topMargin: 1; bottom: parent.bottom }
+            anchors { right: parent.right; top: parent.top; bottom: parent.bottom }
             height: undefined
         }
 
@@ -126,7 +125,7 @@ PanelWindow {
                 anchors.centerIn: parent
                 text: "NEWS"
                 color: Theme.onAccent
-                font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 2.2
+                font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 2.2
             }
         }
     }

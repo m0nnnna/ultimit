@@ -33,6 +33,9 @@ Surface {
 
     implicitHeight: content.implicitHeight + Theme.space(6)
     height: implicitHeight
+    elevation: inHistory ? 0 : 2
+    shadowNs: inHistory ? "" : "ultimit-toasts"
+    shadowId: "n" + nid
     glow: true
     glowColor: card.accentColor
     glowTravel: !card.inHistory && card.urgency !== 0

@@ -136,6 +136,7 @@ PanelWindow {
     Surface {
         id: menu
         brackets: true; bracketSize: 8
+        elevation: 2; shadowNs: "ultimit-menu"; shadowWanted: win.visible
         x: Math.max(8, Math.min(Config.menuX, win.width - width - 8))
         y: Math.max(8, Math.min(Config.menuY, win.height - height - 8))
         width: win.menuW; height: win.menuH
@@ -205,6 +206,7 @@ PanelWindow {
     Surface {
         id: sub
         brackets: true; bracketSize: 8
+        elevation: 2; shadowNs: "ultimit-menu"; shadowId: "sub"; shadowWanted: win.visible && win.subOpen
         visible: win.subOpen
         readonly property real skinRowY: menu.y + win.rowY(Math.max(0, win.skinIndex))
         readonly property bool flip: menu.x + menu.width + width + 4 > win.width

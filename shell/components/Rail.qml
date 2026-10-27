@@ -62,7 +62,7 @@ PanelWindow {
     }
 
     // Room for the pin area: everything but the emblem block and a floor kept for WINDOWS + version.
-    readonly property real pinsMaxH: Math.max(3 * 66, height - 14 - 40 - 14 - 150)
+    readonly property real pinsMaxH: Math.max(3 * 68, height - 14 - 40 - 14 - 150)
 
     function pinToplevel(pin) {
         return pin.builtin ? findToplevel(pin.app.appIds, pin.app) : Pins.matchToplevel(pin);
@@ -122,14 +122,12 @@ PanelWindow {
         id: railBg
         anchors.fill: parent
         color: Theme.rail
-        // right border
-        Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Theme.line }
         GlowFrame { anchors.fill: parent; edges: "right"; travel: false }
 
         Column {
             id: btnCol
             anchors.top: parent.top
-            anchors.topMargin: 14
+            anchors.topMargin: 16
             anchors.horizontalCenter: parent.horizontalCenter
             spacing: 4
 
@@ -148,7 +146,7 @@ PanelWindow {
                     size: 40
                     color: Theme.fg
                     scale: embMouse.pressed ? 0.92 : (embMouse.containsMouse ? 1.06 : 1)
-                    Behavior on scale { NumberAnimation { duration: Config.dur(150); easing.type: Easing.OutCubic } }
+                    Behavior on scale { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 }
                 Rectangle {
                     anchors.fill: parent; anchors.margins: -2
@@ -178,7 +176,7 @@ PanelWindow {
 
                 Column {
                     id: pinCol
-                    x: (Config.railWidth - 72) / 2
+                    x: (Config.railWidth - 76) / 2
                     spacing: 4
                     Repeater {
                         model: Pins.list
@@ -208,13 +206,13 @@ PanelWindow {
                     x: pinCol.x - 6
                     z: 2
                     width: 3
-                    height: 38
+                    height: 40
                     color: Theme.accent
                     readonly property bool shown: win.focusBtn !== null && win.focusBtn.focused
                     y: win.focusBtn ? win.focusBtn.y + 12 : 0
                     opacity: shown ? 1 : 0
-                    Behavior on y { NumberAnimation { duration: Config.dur(200); easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: Config.dur(160); easing.type: Easing.OutCubic } }
+                    Behavior on y { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
+                    Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
                 }
                 Rectangle {   // scroll indicator, only when the pins overflow
                     visible: pinsView.contentHeight > pinsView.height
@@ -251,7 +249,7 @@ PanelWindow {
             id: verItem
             visible: parent.height - btnCol.y - btnCol.height - height > 140
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: 14
+            anchors.bottomMargin: 16
             anchors.horizontalCenter: parent.horizontalCenter
             width: verText.implicitHeight
             height: verText.implicitWidth
@@ -259,10 +257,10 @@ PanelWindow {
                 id: verText
                 anchors.centerIn: parent
                 rotation: -90
-                text: "Ultimit " + Config.version + " · " + Theme.skinLabel
+                text: "Ultimit " + (Config.versionShort !== "" ? Config.versionShort + " · " : "") + Theme.skinLabel
                 color: Theme.dim
                 font.family: Theme.mono
-                font.pixelSize: 9
+                font.pixelSize: Theme.type.label
                 font.letterSpacing: 0.9
             }
         }

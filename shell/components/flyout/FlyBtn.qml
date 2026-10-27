@@ -3,6 +3,6 @@ import QtQuick
 import "../../apps/accessory"
 
 ChamferButton {
-    implicitHeight: 26
-    height: 26
+    implicitHeight: 28
+    height: 28
 }

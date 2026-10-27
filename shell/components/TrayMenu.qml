@@ -48,6 +48,7 @@ PanelWindow {
     Surface {
         id: menu
         brackets: true; bracketSize: 8
+        elevation: 2; shadowNs: "ultimit-traymenu"; shadowWanted: win.visible
         readonly property bool fromBar: TrayUi.x >= 0
         x: fromBar ? Math.max(8, Math.min(TrayUi.x - width / 2, win.width - width - 8)) : Config.railWidth + 4
         y: fromBar ? win.height - Config.tickerHeight - 6 - height

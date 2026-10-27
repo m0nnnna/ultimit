@@ -60,6 +60,7 @@ PanelWindow {
     Surface {
         id: panel
         glow: true; brackets: true
+        elevation: 2; shadowNs: "ultimit-flyout"; shadowWanted: win.shown
         width: win.panelW
         readonly property real maxH: win.height - Config.tickerHeight - 6 - 12
         height: Math.min((ld.item ? ld.item.implicitHeight : 60) + Theme.space(8), maxH)

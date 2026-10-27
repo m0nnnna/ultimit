@@ -7,12 +7,13 @@
 // Children go inside it like any Item. The shadow is a few stacked rings (an even-odd Shape with
 // the panel punched out, so a glass panel is not darkened from behind): no offscreen buffer,
 // and nothing is redrawn while the surface sits still.
-// It is OFF by default (elevation 0): the compositor blurs the backdrop under every non-transparent
-// pixel of an ultimit-* layer surface, so a shadow drawn in the same surface as the panel gets a
-// hard-edged blurred halo. Turn it on only for a Surface nested inside another one (PopupMenu).
-// The real fix is a compositor-side shadow for layer panels (like the window shadow).
+// Elevation: set `shadowNs` (the layer surface's namespace) and the compositor draws the shadow
+// (PanelShadow.qml reports this panel's rect; a QML shadow in the same surface would be
+// backdrop-blurred into a hard halo). Without shadowNs the QML rings are used, only good for a
+// Surface nested inside another panel (PopupMenu).
 import QtQuick
 import QtQuick.Shapes
+import Quickshell
 import ".."
 
 Item {
@@ -20,6 +21,9 @@ Item {
 
     property color fill: Theme.panel
     property int elevation: 0           // 0 none, 1 = Theme.elev1, 2 = Theme.elev2
+    property string shadowNs: ""        // namespace of the layer surface this sits in: compositor shadow
+    property string shadowId: ""        // distinguishes several panels in one surface (toasts)
+    property bool shadowWanted: visible && opacity > 0.02   // set it to the open state when the panel fades itself        // distinguishes several panels in one surface (toasts)
     property bool brackets: false
     property int bracketSize: 14
     property color bracketColor: Theme.accent
@@ -30,7 +34,40 @@ Item {
 
     readonly property var elev: elevation === 1 ? Theme.elev1 : Theme.elev2
     readonly property int shadowStep: 4
-    readonly property int shadowRings: elevation > 0 ? Math.round(elev.blur / shadowStep) : 0
+    readonly property int shadowRings: (elevation > 0 && shadowNs === "") ? Math.round(elev.blur / shadowStep) : 0
+
+    // compositor shadow: report the rect when it changes (settled), fade with visibility
+    readonly property bool shadowShown: elevation > 0 && shadowNs !== "" && shadowWanted && width > 0 && height > 0
+    function _origin() {
+        let x = 0, y = 0;
+        for (let i = root; i && i.parent; i = i.parent) { x += i.x; y += i.y; }
+        return Qt.point(x, y);
+    }
+    property bool _reported: false
+    function _report() {
+        if (elevation <= 0 || shadowNs === "") return;
+        const o = _origin();
+        const id = shadowId !== "" ? shadowId : "p";
+        const scr = QsWindow.window && QsWindow.window.screen ? QsWindow.window.screen.name : "-";
+        if (shadowShown) {
+            PanelShadow.report(shadowNs, scr, id, o.x, o.y, width, height, elevation, 1, Theme.motion.base);
+            _reported = true;
+        } else if (_reported) {
+            PanelShadow.report(shadowNs, scr, id, o.x, o.y, width, height, elevation, 0, Math.round(Theme.motion.base * 0.7));
+            _reported = false;
+        }
+    }
+    Timer { id: settle; interval: 40; onTriggered: root._report() }
+    onShadowShownChanged: settle.restart()
+    onXChanged: if (shadowShown) settle.restart()
+    onYChanged: if (shadowShown) settle.restart()
+    onWidthChanged: if (shadowShown) settle.restart()
+    onHeightChanged: if (shadowShown) settle.restart()
+    Component.onDestruction: {
+        if (shadowNs !== "" && elevation > 0 && _reported)
+            PanelShadow.report(shadowNs, QsWindow.window && QsWindow.window.screen ? QsWindow.window.screen.name : "-",
+                               shadowId !== "" ? shadowId : "p", 0, 0, 1, 1, 0, 0, 0);
+    }
 
     // shadow
     Repeater {

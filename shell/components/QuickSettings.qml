@@ -60,24 +60,25 @@ PanelWindow {
         property string detail: ""
         property bool open: false
         signal clicked()
-        width: parent.width; height: 28
-        Rectangle { anchors.fill: parent; color: Theme.panel2; opacity: exm.containsMouse ? 1 : 0 }
+        width: parent.width; height: 32
+        Rectangle { anchors.fill: parent; color: exm.containsMouse ? Theme.hover : Theme.clear(Theme.hover); Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } } }
         Text {
+            id: exl
             x: 0; anchors.verticalCenter: parent.verticalCenter
             text: ex.text.toUpperCase(); color: Theme.dim
-            font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.8
+            font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.8
         }
         Text {
             anchors.right: chev.left; anchors.rightMargin: 8; anchors.verticalCenter: parent.verticalCenter
-            width: Math.min(implicitWidth, 190); horizontalAlignment: Text.AlignRight; elide: Text.ElideRight
+            width: Math.max(0, Math.min(implicitWidth, ex.width - exl.implicitWidth - chev.implicitWidth - 24)); horizontalAlignment: Text.AlignRight; elide: Text.ElideRight
             text: ex.detail; color: Theme.fg
-            font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.2
+            font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.2
         }
         Text {
             id: chev
             anchors.right: parent.right; anchors.rightMargin: 2; anchors.verticalCenter: parent.verticalCenter
             text: ex.open ? "−" : "+"; color: Theme.accent
-            font.family: Theme.mono; font.pixelSize: 14
+            font.family: Theme.mono; font.pixelSize: Theme.type.body
         }
         MouseArea { id: exm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: ex.clicked() }
     }
@@ -101,11 +102,11 @@ PanelWindow {
         Text {
             id: sl; anchors.centerIn: parent
             text: sg.text.toUpperCase(); color: sg.on ? Theme.onAccent : Theme.fg
-            font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.4
+            font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.4
         }
         MouseArea { id: sm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: sg.clicked() }
     }
-    component Rule: Rectangle { width: parent.width; height: 1; color: Theme.line }
+    component Rule: Rectangle { width: parent.width; height: 1; color: Theme.divider }
 
     // click outside closes
     MouseArea {
@@ -114,8 +115,10 @@ PanelWindow {
         onClicked: SysState.closeQs()
     }
 
-    Rectangle {
+    Surface {
         id: panel
+        glow: true; brackets: true
+        elevation: 2; shadowNs: "ultimit-quicksettings"; shadowWanted: SysState.qsOpen
         // "top": under the desktop clock (top right). "bottom": above the tray cluster (bottom right).
         readonly property bool atBottom: SysState.qsAnchor === "bottom"
         readonly property real topY: 100
@@ -127,11 +130,7 @@ PanelWindow {
         y: atBottom ? win.height - Config.tickerHeight - 6 - height + (1 - win.reveal) * 10
                     : topY - (1 - win.reveal) * 10
         opacity: win.reveal
-        color: Theme.panel
-        border.width: 1
-        border.color: Theme.lineStrong
         MouseArea { anchors.fill: parent }   // swallow clicks
-        Brackets {}
 
         FocusScope {
             id: keys
@@ -143,7 +142,7 @@ PanelWindow {
         Flickable {
             id: flick
             anchors.fill: parent
-            anchors.margins: 14
+            anchors.margins: 16
             contentWidth: width
             contentHeight: col.height
             clip: true
@@ -157,7 +156,7 @@ PanelWindow {
                 Text {
                     text: "QUICK SETTINGS"
                     color: Theme.dim
-                    font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 2.4
+                    font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 2.4
                 }
 
                 // ================= Wi-Fi =================
@@ -191,7 +190,7 @@ PanelWindow {
                                 width: parent.width
                                 Item {
                                     width: parent.width; height: 30
-                                    Rectangle { anchors.fill: parent; color: Theme.panel2; opacity: nm.containsMouse ? 1 : 0 }
+                                    Rectangle { anchors.fill: parent; color: nm.containsMouse ? Theme.hover : Theme.clear(Theme.hover); Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } } }
                                     Rectangle { x: -14; width: 2; height: parent.height; color: Theme.accent; visible: nrow.connected }
                                     SignalBars {
                                         x: 2; anchors.verticalCenter: parent.verticalCenter
@@ -204,7 +203,7 @@ PanelWindow {
                                         elide: Text.ElideRight
                                         text: nrow.modelData.name
                                         color: nrow.connected ? Theme.accent : Theme.fg
-                                        font.family: Theme.ui; font.pixelSize: 13
+                                        font.family: Theme.ui; font.pixelSize: Theme.type.body
                                     }
                                     Row {
                                         id: rightSide
@@ -215,7 +214,7 @@ PanelWindow {
                                             anchors.verticalCenter: parent.verticalCenter
                                             text: nrow.busy ? "CONNECTING" : (nrow.connected ? "CONNECTED" : "SAVED")
                                             color: nrow.busy ? Theme.warn : (nrow.connected ? Theme.ok : Theme.dim)
-                                            font.family: Theme.mono; font.pixelSize: 9; font.letterSpacing: 1.2
+                                            font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.2
                                         }
                                         LockGlyph { visible: nrow.secured; anchors.verticalCenter: parent.verticalCenter }
                                     }
@@ -240,13 +239,13 @@ PanelWindow {
                                         border.width: 1; border.color: pw.activeFocus ? Theme.accent : Theme.line
                                         TextInput {
                                             id: pw
-                                            anchors.fill: parent; anchors.leftMargin: 10; anchors.rightMargin: 56
+                                            anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 56
                                             verticalAlignment: TextInput.AlignVCenter
                                             echoMode: TextInput.Password
                                             passwordCharacter: "•"
                                             color: Theme.fg
                                             selectionColor: Theme.accent; selectedTextColor: Theme.onAccent
-                                            font.family: Theme.ui; font.pixelSize: 13
+                                            font.family: Theme.ui; font.pixelSize: Theme.type.body
                                             clip: true
                                             Keys.onEscapePressed: win.pwFor = ""
                                             Keys.onReturnPressed: pwGo.go()
@@ -259,9 +258,9 @@ PanelWindow {
                                         }
                                         Text {
                                             id: pwGo
-                                            anchors.right: parent.right; anchors.rightMargin: 10; anchors.verticalCenter: parent.verticalCenter
+                                            anchors.right: parent.right; anchors.rightMargin: 12; anchors.verticalCenter: parent.verticalCenter
                                             text: "JOIN ›"; color: pw.text.length >= 8 ? Theme.accent : Theme.dim
-                                            font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.4
+                                            font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.4
                                             function go() {
                                                 if (pw.text === "") return;
                                                 const p = pw.text; pw.text = ""; win.pwFor = "";
@@ -276,7 +275,7 @@ PanelWindow {
                         Text {
                             visible: win.wifiOpen && SysState.netList.length === 0
                             text: "SCANNING…"; color: Theme.dim
-                            font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.8
+                            font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.8
                             height: 28; verticalAlignment: Text.AlignVCenter
                         }
                     }
@@ -314,13 +313,13 @@ PanelWindow {
                                     elide: Text.ElideRight
                                     text: brow.modelData.name || brow.modelData.address
                                     color: brow.modelData.connected ? Theme.accent : Theme.fg
-                                    font.family: Theme.ui; font.pixelSize: 13
+                                    font.family: Theme.ui; font.pixelSize: Theme.type.body
                                 }
                                 Text {
                                     visible: brow.modelData.batteryAvailable
                                     anchors.right: btBtn.left; anchors.rightMargin: 8; anchors.verticalCenter: parent.verticalCenter
                                     text: Math.round(brow.modelData.battery * (brow.modelData.battery <= 1 ? 100 : 1)) + "%"
-                                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10
+                                    color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
                                 }
                                 PowerButton {
                                     id: btBtn
@@ -333,7 +332,7 @@ PanelWindow {
                         Text {
                             visible: win.btOpen && SysState.btPaired.length === 0
                             text: "NO PAIRED DEVICES"; color: Theme.dim
-                            font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.8
+                            font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.8
                             height: 28; verticalAlignment: Text.AlignVCenter
                         }
                     }
@@ -346,7 +345,7 @@ PanelWindow {
                     spacing: 4
                     visible: SysState.sinkReady || SysState.srcReady
                     Row {
-                        width: parent.width; spacing: 10
+                        width: parent.width; spacing: 8
                         visible: SysState.sinkReady
                         SliderField {
                             width: parent.width - outMute.width - 10
@@ -379,14 +378,14 @@ PanelWindow {
                                 required property var modelData
                                 readonly property bool cur: SysState.sink !== null && modelData.id === SysState.sink.id
                                 width: parent.width; height: 28
-                                Rectangle { anchors.fill: parent; color: Theme.panel2; opacity: dm.containsMouse ? 1 : 0 }
+                                Rectangle { anchors.fill: parent; color: dm.containsMouse ? Theme.hover : Theme.clear(Theme.hover); Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } } }
                                 Rectangle { x: -14; width: 2; height: parent.height; color: Theme.accent; visible: drow.cur }
                                 Text {
                                     anchors.verticalCenter: parent.verticalCenter
                                     width: parent.width; elide: Text.ElideRight
                                     text: SysState.nodeLabel(drow.modelData)
                                     color: drow.cur ? Theme.accent : Theme.fg
-                                    font.family: Theme.ui; font.pixelSize: 13
+                                    font.family: Theme.ui; font.pixelSize: Theme.type.body
                                 }
                                 MouseArea { id: dm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                                     onClicked: SysState.setDefaultSink(drow.modelData) }
@@ -394,7 +393,7 @@ PanelWindow {
                         }
                     }
                     Row {
-                        width: parent.width; spacing: 10
+                        width: parent.width; spacing: 8
                         visible: SysState.srcReady
                         SliderField {
                             width: parent.width - micMute.width - 10
@@ -436,21 +435,21 @@ PanelWindow {
                             id: bigPct
                             text: SysState.battPct + "%"
                             color: SysState.charging ? Theme.ok : (SysState.battPct <= 15 ? Theme.bad : (SysState.battPct <= 30 ? Theme.warn : Theme.fg))
-                            font.family: Theme.mono; font.pixelSize: 24; font.letterSpacing: 1
+                            font.family: Theme.mono; font.pixelSize: Theme.type.head; font.letterSpacing: 1
                         }
                         Column {
                             anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
                             Text {
                                 anchors.right: parent.right
                                 text: SysState.battState; color: Theme.fg
-                                font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.8
+                                font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.8
                             }
                             Text {
                                 anchors.right: parent.right
                                 visible: text !== ""
                                 text: SysState.battTime !== "" ? SysState.battTime + (SysState.charging ? " TO FULL" : " REMAINING") : ""
                                 color: Theme.dim
-                                font.family: Theme.mono; font.pixelSize: 10; font.letterSpacing: 1.2
+                                font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.2
                             }
                         }
                     }
@@ -461,7 +460,7 @@ PanelWindow {
                         Rectangle { height: parent.height; width: parent.width * SysState.battPct / 100; color: Theme.accent }
                     }
                     Row {
-                        spacing: 6
+                        spacing: 8
                         visible: SysState.profilesAvailable
                         Repeater {
                             model: SysState.profileList
@@ -481,23 +480,23 @@ PanelWindow {
                     width: parent.width; height: 44
                     visible: SysState.player !== null
                     Column {
-                        anchors.left: parent.left; anchors.right: mediaBtns.left; anchors.rightMargin: 10
+                        anchors.left: parent.left; anchors.right: mediaBtns.left; anchors.rightMargin: 12
                         anchors.verticalCenter: parent.verticalCenter
                         Text {
                             width: parent.width; elide: Text.ElideRight
                             text: SysState.player ? (SysState.player.trackTitle || "Unknown title") : ""
-                            color: Theme.fg; font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: 13
+                            color: Theme.fg; font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: Theme.type.body
                         }
                         Text {
                             width: parent.width; elide: Text.ElideRight
                             text: SysState.player ? (SysState.player.trackArtist || SysState.player.identity) : ""
-                            color: Theme.dim; font.family: Theme.mono; font.pixelSize: 10
+                            color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
                         }
                     }
                     Row {
                         id: mediaBtns
                         anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
-                        spacing: 6
+                        spacing: 8
                         PowerButton {
                             text: "Prev"; enabled: SysState.player !== null && SysState.player.canGoPrevious
                             onActivated: SysState.player.previous()

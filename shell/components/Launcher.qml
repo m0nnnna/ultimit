@@ -93,6 +93,7 @@ PanelWindow {
     Surface {
         id: panel
         glow: true; brackets: true
+        elevation: 2; shadowNs: "ultimit-launcher"; shadowWanted: win.shown
         x: Config.railWidth + 12
         y: 12
         width: 420

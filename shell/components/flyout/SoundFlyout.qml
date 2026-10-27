@@ -8,7 +8,7 @@ import "../../apps/accessory"
 
 Column {
     id: root
-    spacing: 8
+    spacing: Theme.space(3)
 
     readonly property var nodes: Pipewire.nodes.values
     PwObjectTracker { objects: root.nodes }
@@ -40,8 +40,8 @@ Column {
         }
         Text {
             visible: SysState.sinks.length === 0
-            height: visible ? 30 : 0; verticalAlignment: Text.AlignVCenter
-            text: "No output devices."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
+            height: visible ? 36 : 0; verticalAlignment: Text.AlignVCenter
+            text: "No output devices."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.body
         }
     }
 
@@ -70,26 +70,25 @@ Column {
         }
         Text {
             visible: SysState.sources.length === 0
-            height: visible ? 30 : 0; verticalAlignment: Text.AlignVCenter
-            text: "No input devices."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
+            height: visible ? 36 : 0; verticalAlignment: Text.AlignVCenter
+            text: "No input devices."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.body
         }
     }
 
     FlyHead { text: "Applications"; detail: SysState.streams.length > 0 ? SysState.streams.length + " playing" : "" }
     Column {
         width: parent.width
-        spacing: 2
+        spacing: Theme.space(1)
         Repeater {
             model: SysState.streams
             delegate: Item {
                 id: sr
                 required property var modelData
                 readonly property string icon: SysState.streamIcon(modelData)
-                width: parent.width; height: 56
-                Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
+                width: parent.width; height: 60
                 Item {   // app icon
                     id: ic
-                    x: 2; y: 22; width: 24; height: 24
+                    x: 2; y: 26; width: Theme.icon.lg; height: Theme.icon.lg
                     Image {
                         id: img
                         anchors.fill: parent
@@ -99,21 +98,21 @@ Column {
                     }
                     Rectangle {
                         anchors.fill: parent; visible: !img.visible
-                        color: "transparent"; border.width: 1; border.color: Theme.lineStrong
+                        color: Theme.field
                         Text {
                             anchors.centerIn: parent
                             text: SysState.streamApp(sr.modelData).charAt(0).toUpperCase()
-                            color: Theme.dim; font.family: Theme.mono; font.pixelSize: 12
+                            color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label
                         }
                     }
                 }
                 Text {
-                    x: 2; y: 2; width: parent.width - 2
+                    x: 2; y: 4; width: parent.width - 2
                     text: SysState.streamName(sr.modelData); elide: Text.ElideRight
-                    color: Theme.fg; font.family: Theme.ui; font.pixelSize: 12
+                    color: Theme.fg; font.family: Theme.ui; font.pixelSize: Theme.type.label
                 }
                 FlySlider {
-                    x: 32; y: 18; width: parent.width - 32; height: 34
+                    x: 36; y: 22; width: parent.width - 36; height: 36
                     icon: "volume"
                     value: sr.modelData.audio ? Math.round(sr.modelData.audio.volume * 100) : 0
                     muted: sr.modelData.audio ? sr.modelData.audio.muted : false
@@ -124,8 +123,8 @@ Column {
         }
         Text {
             visible: SysState.streams.length === 0
-            height: visible ? 30 : 0; verticalAlignment: Text.AlignVCenter
-            text: "No applications are playing audio."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
+            height: visible ? 36 : 0; verticalAlignment: Text.AlignVCenter
+            text: "No applications are playing audio."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.body
         }
     }
 

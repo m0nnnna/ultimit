@@ -11,7 +11,7 @@ Item {
     signal clicked()
 
     implicitWidth: label.implicitWidth + 32
-    implicitHeight: 34
+    implicitHeight: 36
     activeFocusOnTab: true
     Keys.onPressed: event => {
         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
@@ -24,12 +24,12 @@ Item {
         anchors.fill: parent
         preferredRendererType: Shape.CurveRenderer
         scale: mouse.pressed ? 0.97 : 1
-        Behavior on scale { NumberAnimation { duration: Config.dur(100); easing.type: Easing.OutCubic } }
+        Behavior on scale { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
         ShapePath {
             strokeColor: root.primary ? Theme.accent : (root.activeFocus ? Theme.accent : Theme.lineStrong)
             strokeWidth: 1
-            fillColor: root.primary ? Theme.accent : (mouse.containsMouse ? Theme.panel2 : "transparent")
-            Behavior on fillColor { ColorAnimation { duration: Config.dur(150) } }
+            fillColor: root.primary ? Theme.accent : (mouse.pressed ? Theme.press : (mouse.containsMouse ? Theme.hover : Theme.clear(Theme.hover)))
+            Behavior on fillColor { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             startX: root.c + .5; startY: .5
             PathLine { x: root.width - .5; y: .5 }
             PathLine { x: root.width - .5; y: root.height - root.c - .5 }
@@ -44,7 +44,7 @@ Item {
         anchors.centerIn: parent
         text: root.text.toUpperCase()
         color: root.primary ? Theme.onAccent : Theme.fg
-        font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: 11
+        font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: Theme.type.label
         font.letterSpacing: 1.76
     }
     MouseArea {

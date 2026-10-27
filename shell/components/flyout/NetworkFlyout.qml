@@ -11,7 +11,7 @@ import "../../apps/settings"
 
 Column {
     id: root
-    spacing: 8
+    spacing: Theme.space(3)
 
     property string pwFor: ""
     function handleEscape() {
@@ -45,16 +45,15 @@ Column {
     Rectangle {
         id: cur
         width: parent.width
-        height: curCol.implicitHeight + 20
-        color: Theme.panel2
-        border.width: 1; border.color: Theme.line
+        height: curCol.implicitHeight + Theme.space(6)
+        color: Theme.field
         Rectangle { width: 2; height: parent.height; color: SysState.netKind === "off" ? Theme.dim : Theme.ok }
         Column {
             id: curCol
-            x: 14; y: 10; width: parent.width - 28
-            spacing: 6
+            x: Theme.space(4); y: Theme.space(3); width: parent.width - Theme.space(8)
+            spacing: 8
             Row {
-                spacing: 10
+                spacing: 8
                 SignalBars {
                     visible: SysState.netKind === "wifi"
                     anchors.verticalCenter: parent.verticalCenter
@@ -65,7 +64,7 @@ Column {
                     text: SysState.netKind === "wifi" ? SysState.netName
                         : (SysState.netKind === "eth" ? "Ethernet" : (SysState.airplaneOn ? "Airplane mode" : "Not connected"))
                     color: SysState.netKind === "off" ? Theme.dim : Theme.fg
-                    font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: 15
+                    font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: Theme.type.body
                     width: Math.min(implicitWidth, curCol.width - 40); elide: Text.ElideRight
                 }
             }
@@ -74,7 +73,7 @@ Column {
                 text: (SysState.netKind === "wifi" ? "SIGNAL " + Math.round(SysState.netStrength * 100) + "%   " : "")
                       + "IP " + (SysState.netIp !== "" ? SysState.netIp : "—")
                 color: Theme.dim
-                font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.2
+                font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.2
             }
             Row {
                 visible: SysState.netKind === "wifi"
@@ -141,7 +140,7 @@ Column {
                     Row {   // inline password
                         visible: root.pwFor === nrow.modelData.name
                         width: parent.width; height: visible ? 44 : 0
-                        spacing: 6
+                        spacing: 8
                         onVisibleChanged: { if (visible) pw.focusEntry(); else pw.text = ""; }
                         TextEntry {
                             id: pw
@@ -161,7 +160,7 @@ Column {
                 height: visible ? 36 : 0
                 verticalAlignment: Text.AlignVCenter
                 text: SysState.netList.length === 0 ? "Scanning for networks…" : "No other networks in range."
-                color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
+                color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.body
             }
         }
     }
@@ -178,7 +177,7 @@ Column {
         subtitle: SysState.ethConnected ? "CONNECTED" + (SysState.ethName !== "" ? "  ·  " + SysState.ethName : "") : "CABLE UNPLUGGED"
         hoverable: false
         titleColor: SysState.ethConnected ? Theme.ok : Theme.dim
-        leading: [ StatusIcon { anchors.verticalCenter: parent.verticalCenter; kind: "eth"; size: 18; tone: SysState.ethConnected ? Theme.ok : Theme.dim } ]
+        leading: [ StatusIcon { anchors.verticalCenter: parent.verticalCenter; kind: "eth"; size: Theme.icon.md; tone: SysState.ethConnected ? Theme.ok : Theme.dim } ]
     }
 
     // ---- VPN ----

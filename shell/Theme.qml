@@ -230,9 +230,9 @@ Singleton {
     readonly property color divider: _fgA(0.08)
     readonly property color scrim: { const c = _csv(cur.shade); return Qt.rgba(c[0] / 255, c[1] / 255, c[2] / 255, 0.55); }
     readonly property real hlAlpha: cur.light ? 0.55 : 0.14
-    readonly property color hl: { const c = _csv(cur.edge); return Qt.rgba(c[0] / 255, c[1] / 255, c[2] / 255, hlAlpha); }
+    readonly property color hl: { if (light) return Qt.rgba(1, 1, 1, hlAlpha); const c = _csv(cur.edge); return Qt.rgba(c[0] / 255, c[1] / 255, c[2] / 255, hlAlpha); }
     // Window-chrome highlight for the compositor, #rrggbbaa.
-    readonly property string hlHex: _hex([_csv(cur.edge)[0], _csv(cur.edge)[1], _csv(cur.edge)[2], hlAlpha])
+    readonly property string hlHex: light ? _hex([255, 255, 255, hlAlpha]) : _hex([_csv(cur.edge)[0], _csv(cur.edge)[1], _csv(cur.edge)[2], hlAlpha])
 
     // The same colour fully transparent, so a hover fade does not pass through grey.
     function clear(c) { return Qt.rgba(c.r, c.g, c.b, 0); }

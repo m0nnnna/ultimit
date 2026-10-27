@@ -9,7 +9,7 @@ import "../../apps/settings"
 
 Column {
     id: root
-    spacing: 10
+    spacing: Theme.space(3)
 
     Component.onCompleted: { SysState.refreshProfiles(); SysState.refreshBrightness(); }
     Timer { interval: 2000; repeat: true; running: true; onTriggered: { SysState.refreshBrightness(); SysState.profGetTick(); } }
@@ -21,7 +21,7 @@ Column {
 
     Row {
         visible: SysState.hasBattery
-        spacing: 14
+        spacing: 16
         StatusIcon { anchors.verticalCenter: parent.verticalCenter; kind: "battery"; size: 40; pct: SysState.battPct; tone: root.tone }
         Column {
             anchors.verticalCenter: parent.verticalCenter
@@ -35,19 +35,19 @@ Column {
                 Text {
                     anchors.baseline: parent.children[0].baseline
                     text: "%"; color: root.tone
-                    font.family: Theme.mono; font.pixelSize: 16
+                    font.family: Theme.mono; font.pixelSize: Theme.type.title
                 }
-                StatusIcon { visible: SysState.charging; anchors.verticalCenter: parent.verticalCenter; kind: "bolt"; size: 18; tone: Theme.ok }
+                StatusIcon { visible: SysState.charging; anchors.verticalCenter: parent.verticalCenter; kind: "bolt"; size: Theme.icon.md; tone: Theme.ok }
             }
             Text {
                 text: SysState.battState + (SysState.battTime !== "" ? "  ·  " + SysState.battTime + (SysState.charging ? " TO FULL" : " TO EMPTY") : "")
-                color: Theme.dim; font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 1.4
+                color: Theme.dim; font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1.4
             }
         }
     }
     Text {
         visible: !SysState.hasBattery
-        text: "No battery detected."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: 13
+        text: "No battery detected."; color: Theme.dim; font.family: Theme.ui; font.pixelSize: Theme.type.body
     }
 
     FlyHead { visible: SysState.profileChoices.length > 0; text: "Power profile" }

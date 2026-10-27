@@ -15,19 +15,19 @@ Item {
     property var panel: null
     visible: list.count > 0
 
-    Rectangle { id: divider; x: 12; width: parent.width - 24; height: 1; color: Theme.line }
+    Rectangle { id: divider; x: 12; width: parent.width - 24; height: 1; color: Theme.divider }   // between the pins and the windows
     Text {
         id: head
-        anchors.top: divider.bottom; anchors.topMargin: 8
+        anchors.top: divider.bottom; anchors.topMargin: Theme.space(2)
         anchors.horizontalCenter: parent.horizontalCenter
         text: "WINDOWS"
         color: Theme.dim
-        font.family: Theme.mono; font.pixelSize: 8; font.letterSpacing: 1.4
+        font.family: Theme.mono; font.pixelSize: Theme.type.label; font.letterSpacing: 1
     }
 
     ListView {
         id: list
-        anchors.top: head.bottom; anchors.topMargin: 6
+        anchors.top: head.bottom; anchors.topMargin: Theme.space(2)
         anchors.bottom: parent.bottom
         anchors.left: parent.left; anchors.right: parent.right
         clip: true
@@ -37,24 +37,24 @@ Item {
 
         add: Transition {
             ParallelAnimation {
-                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Config.dur(200); easing.type: Easing.OutCubic }
-                NumberAnimation { property: "x"; from: -24; to: 0; duration: Config.dur(200); easing.type: Easing.OutCubic }
+                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase }
+                NumberAnimation { property: "x"; from: -24; to: 0; duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase }
             }
         }
         remove: Transition {
             ParallelAnimation {
-                NumberAnimation { property: "opacity"; to: 0; duration: Config.dur(150); easing.type: Easing.InCubic }
-                NumberAnimation { property: "x"; to: -24; duration: Config.dur(150); easing.type: Easing.InCubic }
+                NumberAnimation { property: "opacity"; to: 0; duration: Config.dur(Theme.motion.base); easing.type: Easing.InCubic }
+                NumberAnimation { property: "x"; to: -24; duration: Config.dur(Theme.motion.base); easing.type: Easing.InCubic }
             }
         }
         displaced: Transition {
-            NumberAnimation { properties: "y"; duration: Config.dur(180); easing.type: Easing.OutCubic }
+            NumberAnimation { properties: "y"; duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase }
         }
 
         delegate: Item {
             id: ent
             required property var modelData
-            width: list.width; height: 44
+            width: list.width; height: 40
 
             function pushRect() {
                 if (!root.panel || !modelData) return;
@@ -71,8 +71,9 @@ Item {
             readonly property var de: appId !== "" ? DesktopEntries.heuristicLookup(appId) : null
             readonly property string ownIcon: Icons.windowIcon(appId, title)
             readonly property string iconName: ownIcon !== "" ? ownIcon : (de && de.icon ? de.icon : appId)
-            // Skin-aware (Icons.qml): follows the current skin live, falls back to the startup icon theme.
-            readonly property string iconSrc: iconName !== "" ? Icons.app(iconName) : ""
+            // Real icon, not a letter: the desktop entry's Icon through the icon theme (Icons.path: the
+            // skin's own drawn glyph, the user's hicolor, then the system theme; follows the skin live).
+            readonly property string iconSrc: iconName !== "" ? Icons.path(iconName) : ""
             readonly property bool active: modelData.activated
             readonly property bool mini: modelData.minimized
 
@@ -91,9 +92,8 @@ Item {
 
             Rectangle {
                 anchors.fill: parent
-                color: Theme.panel2
-                opacity: mouse.pressed ? 1 : (mouse.containsMouse ? 0.7 : 0)
-                Behavior on opacity { NumberAnimation { duration: Config.dur(120); easing.type: Easing.OutCubic } }
+                color: mouse.pressed ? Theme.press : (ent.active ? Theme.selection : (mouse.containsMouse ? Theme.hover : Theme.clear(Theme.hover)))
+                Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             }
             Rectangle {   // accent bar, flush to rail edge like RailButton
                 x: 0
@@ -102,21 +102,32 @@ Item {
                 height: ent.active ? parent.height - 16 : 0
                 color: Theme.accent
                 visible: height > 0
-                Behavior on height { NumberAnimation { duration: Config.dur(220); easing.type: Easing.OutCubic } }
+                Behavior on height { NumberAnimation { duration: Config.dur(Theme.motion.base); easing.type: Theme.easeBase } }
             }
             Item {
                 id: ico
                 anchors.centerIn: parent
-                width: 36; height: 36
+                width: Theme.icon.xl; height: Theme.icon.xl
                 opacity: ent.mini ? 0.35 : 1
                 scale: mouse.pressed ? 0.92 : 1
-                Behavior on opacity { NumberAnimation { duration: Config.dur(150) } }
-                Behavior on scale { NumberAnimation { duration: Config.dur(120); easing.type: Easing.OutCubic } }
+                Behavior on opacity { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
+                Behavior on scale { NumberAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
 
-                IconBadge {   // frame + icon, or the letter badge when no icon resolves (hex in "letters" mode)
-                    anchors.fill: parent
-                    size: 36
-                    iconSrc: ent.iconSrc
+                Image {
+                    id: img
+                    anchors.centerIn: parent
+                    width: Theme.icon.lg; height: Theme.icon.lg
+                    visible: ent.iconSrc !== "" && status === Image.Ready
+                    source: ent.iconSrc
+                    sourceSize: Qt.size(Theme.icon.lg * 2, Theme.icon.lg * 2)
+                    fillMode: Image.PreserveAspectFit
+                    asynchronous: true
+                }
+                IconBadge {   // last resort, dimmed: no icon resolved (letter in the badge)
+                    anchors.centerIn: parent
+                    visible: !img.visible
+                    opacity: 0.6
+                    size: Theme.icon.lg
                     letter: ((ent.de && ent.de.name) || ent.title || ent.appId || "?").charAt(0).toUpperCase()
                     active: ent.active
                 }
@@ -124,7 +135,7 @@ Item {
             Rectangle {   // minimized marker
                 visible: ent.mini
                 anchors.horizontalCenter: parent.horizontalCenter
-                anchors.bottom: parent.bottom; anchors.bottomMargin: 3
+                anchors.bottom: parent.bottom; anchors.bottomMargin: 4
                 width: 8; height: 2; color: Theme.dim
             }
 

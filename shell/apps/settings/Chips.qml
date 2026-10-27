@@ -8,7 +8,7 @@ Flow {
     property var options: []
     property string current: ""
     signal picked(string id)
-    spacing: 6
+    spacing: 8
 
     Repeater {
         model: root.options
@@ -17,8 +17,8 @@ Flow {
             required property var modelData
             readonly property bool sel: root.current === String(modelData.id)
             width: t.implicitWidth + 24; height: 28
-            color: sel ? Theme.accent : (m.containsMouse ? Theme.panel2 : "transparent")
-            border.width: 1; border.color: sel ? Theme.accent : Theme.lineStrong
+            color: sel ? Theme.accent : (m.containsMouse ? Theme.press : Theme.field)
+            Behavior on color { ColorAnimation { duration: Config.dur(Theme.motion.fast); easing.type: Theme.easeFast } }
             activeFocusOnTab: true
             Keys.onPressed: e => { if (e.key === Qt.Key_Return || e.key === Qt.Key_Space) { root.picked(String(modelData.id)); e.accepted = true; } }
             Text {
@@ -26,7 +26,7 @@ Flow {
                 anchors.centerIn: parent
                 text: String(chip.modelData.label).toUpperCase()
                 color: chip.sel ? Theme.onAccent : Theme.fg
-                font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: 11
+                font.family: Theme.ui; font.weight: Font.DemiBold; font.pixelSize: Theme.type.label
                 font.letterSpacing: 1.4
             }
             MouseArea {
