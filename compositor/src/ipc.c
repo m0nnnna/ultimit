@@ -15,7 +15,10 @@
  *   subscribe              keep the connection open and receive events, one
  *                          JSON line each: {"event":"alttab","action":"show"|
  *                          "move"|"hide","index":N,"items":[...]} (alttab.c),
- *                          {"event":"dismiss","keep":NAME} (ipc_emit_dismiss)
+ *                          {"event":"dismiss","keep":NAME} (ipc_emit_dismiss),
+ *                          {"event":"edge","output":NAME,"on":true|false}: the pointer
+ *                          reached / left the top edge of an output (input.c); the shell
+ *                          reveals its bar over a fullscreen window with it
  *   drag ID X Y            test hook: start a titlebar drag of window ID and move
  *                          the pointer to layout X,Y, as if the button were held;
  *                          "drag-release" drops it (the real snap code runs)
@@ -417,6 +420,16 @@ void ipc_emit_dismiss(const char *keep) {
 	put(&o, "{\"event\":\"dismiss\",\"keep\":");
 	put_str(&o, keep ? keep : "");
 	put(&o, "}\n");
+	ipc_broadcast(o.data);
+	free(o.data);
+}
+
+/* input.c: the pointer reached (on) or left the top edge of `output`. */
+void ipc_emit_edge(const char *output, bool on) {
+	struct out o = {0};
+	put(&o, "{\"event\":\"edge\",\"output\":");
+	put_str(&o, output ? output : "");
+	put(&o, ",\"on\":%s}\n", on ? "true" : "false");
 	ipc_broadcast(o.data);
 	free(o.data);
 }

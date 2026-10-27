@@ -33,7 +33,7 @@ PY
 
 scenario_no_crash() {
 	assert_eq "$(kill -0 "$(cat "$DEVBOX_STATE/pid")" 2>/dev/null && echo alive || echo dead)" alive "compositor alive"
-	assert_json "layer('ultimit-rail') and layer('ultimit-ticker')" "shell layers still present"
+	assert_json "layer('ultimit-rail') and layer('ultimit-topbar')" "shell layers still present"
 	local log="$RUNDIR/log.txt" bad xcb
 	sed 's/\x1b\[[0-9;]*m//g' "$DEVBOX_STATE/log" >"$log"
 	cp "$log" "$OUTDIR/devbox.log"

@@ -5,10 +5,10 @@ pragma Singleton
 // the desktop menu and the tray-item menu close it, and it closes them.
 //   kind    "network" | "sound" | "bluetooth" | "battery" | "clock" (stays set while the panel fades out)
 //   open    true while the flyout should be up
-//   screen  output the flyout is on (the tray's output)
-//   anchors kind -> screen-global x of that icon's centre, published by StatusTray.qml
-//   trayX/trayW  screen-global span of the tray cluster; clicks there pass through the click-catcher
-//           so another icon switches flyouts and the same icon toggles it closed.
+//   screen  output the flyout is on (the main output, where the top bar is)
+//   anchors kind -> screen-global x of that icon's centre, published by the top bar's BarButton.qml
+//           (the bar band is punched out of the click-catcher, so another icon switches flyouts and
+//           the same icon toggles it closed).
 // IPC: qs ipc call flyout open network|sound|bluetooth|battery|clock | close | toggle <kind>
 import QtQuick
 import Quickshell
@@ -23,8 +23,6 @@ Singleton {
     property bool open: false
     property string screen: ""
     property var anchors: ({})
-    property real trayX: 0
-    property real trayW: 0
 
     function setAnchor(k, x) {
         if (anchors[k] === x) return;
@@ -47,7 +45,7 @@ Singleton {
     }
     function primaryScreen() {
         const s = Quickshell.screens;
-        for (let i = 0; i < s.length; i++) if (Config.isTrayScreen(s[i].name)) return s[i].name;
+        for (let i = 0; i < s.length; i++) if (Config.isMainScreen(s[i].name)) return s[i].name;
         return s.length ? s[0].name : "";
     }
 

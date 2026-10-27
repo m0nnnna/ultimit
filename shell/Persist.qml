@@ -55,7 +55,7 @@ Scope {
         root.applyRailNews();
     }
 
-    // ---- effects block: edge glow, decode text, wallpaper reaction, status block, UI sounds ----
+    // ---- effects block: edge glow, decode text, wallpaper reaction, top bar ticker, UI sounds ----
     // (self-contained; the fields are the adapter's "effects" properties below)
     function applyFx(a) {
         Config.edgeGlow = ["off", "still", "travel"].indexOf(a.edgeGlow) >= 0 ? a.edgeGlow : "travel";
@@ -64,8 +64,8 @@ Scope {
         Config.reactPointer = r.pointer !== false;
         Config.reactAudio = r.audio !== false;
         Config.reactWorkspace = r.workspace !== false;
-        Config.statusStyle = a.statusStyle === "graph" ? "graph" : "classic";
-        Config.clockRing = a.clockRing === true;
+        Config.tickerOn = a.tickerOn !== false;
+        Config.tickerNotifs = a.tickerNotifs !== false;
         Config.uiSounds = a.uiSounds === true;
         Config.uiSoundVolume = Math.max(0, Math.min(100, Math.round(a.uiSoundVolume)));
         Config.gameModeEnabled = a.gameModeEnabled !== false;
@@ -78,8 +78,8 @@ Scope {
         if (a.edgeGlow !== Config.edgeGlow) { a.edgeGlow = Config.edgeGlow; changed = true; }
         if (a.decodeText !== Config.decodeText) { a.decodeText = Config.decodeText; changed = true; }
         if (JSON.stringify(a.wallpaperReact) !== JSON.stringify(r)) { a.wallpaperReact = r; changed = true; }
-        if (a.statusStyle !== Config.statusStyle) { a.statusStyle = Config.statusStyle; changed = true; }
-        if (a.clockRing !== Config.clockRing) { a.clockRing = Config.clockRing; changed = true; }
+        if (a.tickerOn !== Config.tickerOn) { a.tickerOn = Config.tickerOn; changed = true; }
+        if (a.tickerNotifs !== Config.tickerNotifs) { a.tickerNotifs = Config.tickerNotifs; changed = true; }
         if (a.uiSounds !== Config.uiSounds) { a.uiSounds = Config.uiSounds; changed = true; }
         if (a.uiSoundVolume !== Config.uiSoundVolume) { a.uiSoundVolume = Config.uiSoundVolume; changed = true; }
         if (a.gameModeEnabled !== Config.gameModeEnabled) { a.gameModeEnabled = Config.gameModeEnabled; changed = true; }
@@ -255,8 +255,8 @@ Scope {
         function onReactPointerChanged() { root.push(); }
         function onReactAudioChanged() { root.push(); }
         function onReactWorkspaceChanged() { root.push(); }
-        function onStatusStyleChanged() { root.push(); }
-        function onClockRingChanged() { root.push(); }
+        function onTickerOnChanged() { root.push(); }
+        function onTickerNotifsChanged() { root.push(); }
         function onUiSoundsChanged() { root.push(); }
         function onUiSoundVolumeChanged() { root.push(); }
         function onGameModeEnabledChanged() { root.push(); }
@@ -325,8 +325,8 @@ Scope {
             property string edgeGlow: "travel"   // off | still | travel
             property bool decodeText: true
             property var wallpaperReact: ({ pointer: true, audio: true, workspace: true })
-            property string statusStyle: "classic"   // classic | graph
-            property bool clockRing: false
+            property bool tickerOn: true          // news ticker in the top bar
+            property bool tickerNotifs: true      // notifications crawl in it
             property bool uiSounds: false
             property int uiSoundVolume: 40
             property bool gameModeEnabled: true   // Game Mode (GameMode.qml)

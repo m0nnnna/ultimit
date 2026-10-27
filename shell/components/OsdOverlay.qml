@@ -12,7 +12,7 @@ PanelWindow {
     property string screenName: ""
 
     anchors { bottom: true }
-    margins { bottom: Config.tickerHeight + 36 }
+    margins { bottom: 48 }
     implicitWidth: 340
     implicitHeight: 44
     visible: (Osd.shown || box.opacity > 0.01) && Config.isUiScreen(screenName)

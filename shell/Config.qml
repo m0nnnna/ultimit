@@ -62,12 +62,6 @@ Singleton {
     property bool reactPointer: true
     property bool reactAudio: true
     property bool reactWorkspace: true
-    // Height of the desktop clock block (StatusBlock.qml writes it); the toasts start below it.
-    property real clockHeight: 56
-    // The desktop status block: "classic" (clock and date) | "graph" (adds CPU, GPU, RAM and network graphs).
-    property string statusStyle: "classic"
-    // A segmented seconds ring beside the clock.
-    property bool clockRing: false
     // Short synthesized blips (assets/sounds); never while a fullscreen window is up.
     property bool uiSounds: false
     property int uiSoundVolume: 40
@@ -159,7 +153,19 @@ Singleton {
 
     // Layout metrics (px)
     readonly property int railWidth: 84
-    readonly property int tickerHeight: 30   // bottom bar (ticker + tray cluster)
+    readonly property int barHeight: 32   // the top bar (TopBar.qml): app menu, news ticker, status, tray, time
+    // Right side of the top bar, left to right. Each name is a component file
+    // components/bar/<Name>Item.qml (the "plugin" slot sits before the first one: TopBar.qml pluginSlot).
+    // Add an item: drop a file in components/bar/ and list its name here.
+    property var barItems: ["Privacy", "Network", "Bluetooth", "Sound", "Battery", "Bell", "Claude", "Tray", "Clock"]
+    // News ticker inside the top bar (Settings > News).
+    property bool tickerOn: true
+    // Desktop notifications also crawl in the ticker, newest first, until read or this old.
+    property bool tickerNotifs: true
+    property int tickerNotifMinutes: 10
+    // How long the pointer must rest on the top edge before the bar slides over a fullscreen window
+    // while Game Mode is on (a plain flick is enough otherwise).
+    readonly property int revealDwellGame: 400
 
     // ---- launcher / context menu state (see components/Launcher.qml, ContextMenu.qml) ----
     property bool launcherOpen: false
@@ -205,17 +211,10 @@ Singleton {
     }
     Connections { target: Quickshell; function onScreensChanged() { primaryDelay.restart(); } }
     Timer { id: primaryDelay; interval: 500; onTriggered: root.refreshPrimary() }   // after the compositor settles
-    // Rail on every display ("all", like Windows' taskbar) or on the main one only. The news
-    // ticker (bottom bar) is always on the main display only.
+    // Rail on every display ("all", like Windows' taskbar) or on the main one only. The top bar
+    // (menu, ticker, status, tray, time) is always on the main display only.
     property string barsOn: "all"
     function showsBars(name) { return barsOn === "all" || isMainScreen(name); }
-
-    // The screen that carries the bottom-bar tray cluster. Deliberately NOT isUiScreen(): that one
-    // follows the launcher/menu (uiScreen), so the tray would hop screens whenever the launcher
-    // opens elsewhere. The tray stays on the first (primary) screen, like the OSD default.
-    function isTrayScreen(name) {
-        return isMainScreen(name);
-    }
 
     // Rail buttons, in display order.
     //  id       - key used for icons

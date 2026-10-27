@@ -1,0 +1,11 @@
+BarButton 1.0 BarButton.qml
+PrivacyItem 1.0 PrivacyItem.qml
+NetworkItem 1.0 NetworkItem.qml
+BluetoothItem 1.0 BluetoothItem.qml
+SoundItem 1.0 SoundItem.qml
+BatteryItem 1.0 BatteryItem.qml
+BellItem 1.0 BellItem.qml
+ClaudeItem 1.0 ClaudeItem.qml
+TrayItem 1.0 TrayItem.qml
+ClockItem 1.0 ClockItem.qml
+AppMenuButton 1.0 AppMenuButton.qml

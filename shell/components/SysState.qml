@@ -22,23 +22,18 @@ Singleton {
 
     // ---------------- panel state ----------------
     property bool qsOpen: false
-    property string qsScreen: ""
-    // Where the panel sits: "top" (under the desktop clock, top right) or "bottom" (above the tray, bottom right).
-    property string qsAnchor: "top"
-    function openQs(screenName, anchor) { Config.closeLauncher(); Config.closeMenu(); qsScreen = screenName || ""; qsAnchor = anchor || "top"; qsOpen = true; }
+    // The one clock + quick settings panel, top right under the top bar (TopBar.qml, a click on the
+    // time; QuickSettings.qml). It always lives on the main output, where the bar is.
+    function openQs() { Config.closeLauncher(); Config.closeMenu(); qsOpen = true; }
     function closeQs() { qsOpen = false; }
-    function toggleQs(screenName, anchor) { if (qsOpen) closeQs(); else openQs(screenName, anchor); }
-    function isQsScreen(name) {
-        if (qsScreen !== "") return qsScreen === name;
-        const s = Quickshell.screens;
-        return s.length > 0 && s[0].name === name;
-    }
+    function toggleQs() { if (qsOpen) closeQs(); else openQs(); }
+    function isQsScreen(name) { return Config.isMainScreen(name); }
 
     IpcHandler {
         target: "quicksettings"
-        function toggle(): void { root.toggleQs(""); }
-        function toggleBottom(): void { root.toggleQs("", "bottom"); }
-        function open(): void { root.openQs(""); }
+        function toggle(): void { root.toggleQs(); }
+        function open(): void { root.openQs(); }
+        function state(): string { return root.qsOpen ? "open" : "closed"; }
         function close(): void { root.closeQs(); }
     }
 

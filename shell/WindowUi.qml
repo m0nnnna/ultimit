@@ -9,7 +9,7 @@ Singleton {
     property string tipText: ""
     property real tipY: 0          // vertical center of the hovered entry
     property string tipScreen: ""
-    // Bottom-bar tooltips (tray cluster): tipX >= 0 puts the tip above the bar, centred on tipX
+    // Top-bar tooltips: tipX >= 0 puts the tip below the bar, centred on tipX
     // (screen-global px); -1 = the rail's side tooltip.
     property real tipX: -1
 

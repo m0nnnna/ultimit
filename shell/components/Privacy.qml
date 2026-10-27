@@ -1,7 +1,7 @@
 pragma Singleton
 
 // Privacy.qml - what is using the microphone, the camera or the screen right now, and the screen
-// recording ultimit-screenshot runs; StatusTray shows a marker for each (click REC to stop it).
+// recording ultimit-screenshot runs; the top bar (bar/PrivacyItem) shows a marker for each (click REC to stop it).
 //   mic     PipeWire audio capture streams (level meters that only peek are skipped)
 //   screen  the screen-cast stream xdg-desktop-portal-wlr creates when an app shares the screen
 //   camera  processes of this user holding a /dev/video* device open (apps use V4L2 directly, so

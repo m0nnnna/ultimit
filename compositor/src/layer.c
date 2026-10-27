@@ -60,15 +60,25 @@ void layer_arrange(struct ul_output *output) {
 		ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY, ZWLR_LAYER_SHELL_V1_LAYER_TOP,
 		ZWLR_LAYER_SHELL_V1_LAYER_BOTTOM, ZWLR_LAYER_SHELL_V1_LAYER_BACKGROUND,
 	};
+	/* Within a layer, surfaces anchored to both the left and right edge (the shell's top bar)
+	 * claim their exclusive zone first, so the bar always spans the full width and the rail
+	 * sits under it, whatever order the shell created them in (the list is newest-first). */
+	const uint32_t wide = ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT | ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT;
 	for (size_t i = 0; i < 4; i++) {
-		struct ul_layer_surface *l;
-		wl_list_for_each(l, &output->layer_surfaces[order[i]], link) {
-			if (!l->layer_surface->initialized) {
-				continue;
+		for (int pass = 0; pass < 2; pass++) {
+			struct ul_layer_surface *l;
+			wl_list_for_each(l, &output->layer_surfaces[order[i]], link) {
+				if (!l->layer_surface->initialized) {
+					continue;
+				}
+				bool is_wide = (l->layer_surface->current.anchor & wide) == wide;
+				if (is_wide != (pass == 0)) {
+					continue;
+				}
+				wlr_scene_layer_surface_v1_configure(l->scene, &full, &usable);
+				wlr_scene_node_set_position(&l->popups->node,
+					l->scene->tree->node.x, l->scene->tree->node.y);
 			}
-			wlr_scene_layer_surface_v1_configure(l->scene, &full, &usable);
-			wlr_scene_node_set_position(&l->popups->node,
-				l->scene->tree->node.x, l->scene->tree->node.y);
 		}
 	}
 

@@ -6,7 +6,7 @@
 // motion is on and no fullscreen window is up); with Config.edgeGlow "still" or reduced motion
 // the frame simply glows. Config.edgeGlow "off" draws nothing.
 //   cut    chamfer at the top-left and bottom-right corners (0: square, like the glass panels)
-//   edges  "frame" all round | "right" the right edge only (the rail)
+//   edges  "frame" all round | "right" the right edge only (the rail) | "bottom" the bottom edge only (the top bar)
 //   travel false: never moves (the rail, lists of cards)
 import QtQuick
 import QtQuick.Shapes
@@ -31,6 +31,7 @@ Item {
     readonly property var pts: {
         const w = root.width - 0.5, h = root.height - 0.5, i = 0.5, c = root.cut;
         if (root.edges === "right") return [root.pt(w, 0), root.pt(w, root.height)];
+        if (root.edges === "bottom") return [root.pt(0, h), root.pt(root.width, h)];
         if (c > 0) return [root.pt(i + c, i), root.pt(w, i), root.pt(w, h - c), root.pt(w - c, h), root.pt(i, h), root.pt(i, i + c), root.pt(i + c, i)];
         return [root.pt(i, i), root.pt(w, i), root.pt(w, h), root.pt(i, h), root.pt(i, i)];
     }

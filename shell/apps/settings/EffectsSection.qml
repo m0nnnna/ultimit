@@ -49,20 +49,6 @@ ColumnLayout {
         onToggled: value => Config.reactWorkspace = value
     }
 
-    SectionLabel { text: "Status block" }
-    Chips {
-        Layout.fillWidth: true
-        options: [{ id: "classic", label: "Classic (clock and date)" }, { id: "graph", label: "Graph (CPU, GPU, RAM, NET)" }]
-        current: Config.statusStyle
-        onPicked: id => Config.statusStyle = id
-    }
-    ToggleRow {
-        Layout.fillWidth: true
-        text: "Seconds ring around the clock"
-        checked: Config.clockRing
-        onToggled: value => Config.clockRing = value
-    }
-
     SectionLabel { text: "Interface sounds" }
     ToggleRow {   // short synthesized blips; never while a fullscreen window is focused
         Layout.fillWidth: true

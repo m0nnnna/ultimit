@@ -1,6 +1,6 @@
-// Tray.qml - StatusNotifierItem tray for the bottom bar (the app-icon half of StatusTray.qml).
+// Tray.qml - StatusNotifierItem tray for the top bar (TrayItem.qml).
 // Left click = activate, middle = secondary activate, right click = the item's DBusMenu
-// (TrayMenu overlay, opened above the bar). Hover tooltip (500 ms) reuses the WindowUi tip.
+// (TrayMenu overlay, opened below the bar). Hover tooltip (500 ms) reuses the WindowUi tip.
 // Collapses to zero width when empty. Icons are shown as provided by the app (not tinted:
 // full-colour app icons turn into blobs when forced monochrome).
 import QtQuick
@@ -12,7 +12,6 @@ import ".."
 Row {
     id: root
     property string screenName: ""
-    property real barX: 0       // x of this item inside the bar window; the bar sits at Config.railWidth
     readonly property int shown: {
         let n = 0;
         const v = SystemTray.items.values;
@@ -20,7 +19,7 @@ Row {
         return n;
     }
     visible: shown > 0
-    height: parent ? parent.height : Config.tickerHeight
+    height: parent ? parent.height : Config.barHeight
     spacing: 0
 
     Repeater {
@@ -32,7 +31,7 @@ Row {
             visible: vis
             width: vis ? 28 : 0; height: root.height
             readonly property string tip: modelData.tooltipTitle || modelData.title || modelData.id
-            function centerX() { return Config.railWidth + ent.mapToItem(null, ent.width / 2, 0).x; }
+            function centerX() { return ent.mapToItem(null, ent.width / 2, 0).x; }
 
             activeFocusOnTab: true
             Accessible.role: Accessible.Button

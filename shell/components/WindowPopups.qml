@@ -16,11 +16,10 @@ Scope {
         screen: root.screen
         visible: WindowUi.tipText !== "" && WindowUi.tipScreen === root.screenName && !WindowUi.menuOpen
         readonly property bool bar: WindowUi.tipX >= 0
-        anchors { left: true; top: !bar; bottom: bar }
+        anchors { left: true; top: true }
         margins.left: bar ? Math.max(4, Math.min(WindowUi.tipX - width / 2, (screen ? screen.width : 4000) - width - 4))
             : Config.railWidth + 6
-        margins.top: Math.max(4, WindowUi.tipY - height / 2)
-        margins.bottom: Config.tickerHeight + 6
+        margins.top: bar ? Config.barHeight + 6 : Math.max(4, WindowUi.tipY - height / 2)
         implicitWidth: tipBox.width
         implicitHeight: tipBox.height
         exclusionMode: ExclusionMode.Ignore

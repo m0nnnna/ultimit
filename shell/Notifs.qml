@@ -10,7 +10,11 @@ pragma Singleton
 // icon, image, urgency (0 low, 1 normal, 2 critical), timeout (ms, 0 = sticky), actions (JSON
 // [{id,text}] without "default"), hasDefault, command, time (epoch ms), rev.
 // Toasts.show() feeds the same popups (kind "toast", negative nid, not kept in history).
-// IPC: qs ipc call notifs toggleDnd|dnd <bool>|clear|count
+// Notifs.tickerItems  notifications crawling in the top bar's ticker, newest first: { nid, app, icon,
+//                 title, body (plain text), urgency, hasDefault, expires }. Added with a popup (so not
+//                 while do-not-disturb or a Game Mode hold, unless critical), gone when clicked, closed,
+//                 dismissed, or Config.tickerNotifMinutes old.
+// IPC: qs ipc call notifs toggleDnd|dnd <bool>|clear|count|ticker
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -38,6 +42,60 @@ Singleton {
     property var watchers: ({})  // nid -> Connections holder
     property int _toastSeq: 0
     property var _toastClicks: ({})   // toast nid -> function run when the card is clicked
+
+    // ---------- the ticker's notification items ----------
+    property var tickerItems: []
+    signal tickerAdded()
+    function plain(s) {   // sanitized StyledText -> one line of plain text
+        return String(s || "").replace(/<br>/g, " ").replace(/<[^>]*>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+            .replace(/&quot;/g, "\"").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
+    }
+    function tickerItem(e) {
+        return { nid: e.nid, app: e.app, icon: e.icon, title: e.title, body: plain(e.body), urgency: e.urgency,
+                 hasDefault: e.hasDefault, expires: Date.now() + Math.max(1, Config.tickerNotifMinutes) * 60000 };
+    }
+    function tickerAdd(e) {
+        tickerItems = [tickerItem(e)].concat(tickerItems.filter(t => t.nid !== e.nid)).slice(0, 12);
+        tickerSweep.reschedule();
+        tickerAdded();
+    }
+    function tickerUpdate(e) {
+        const i = tickerItems.findIndex(t => t.nid === e.nid);
+        if (i < 0) return;
+        const t = tickerItem(e);
+        t.expires = tickerItems[i].expires;
+        const a = tickerItems.slice(); a[i] = t; tickerItems = a;
+    }
+    function tickerRemove(nid) {
+        if (tickerItems.some(t => t.nid === nid)) tickerItems = tickerItems.filter(t => t.nid !== nid);
+    }
+    // One single-shot timer, aimed at the next expiry; nothing runs while the ticker has no items.
+    Timer {
+        id: tickerSweep
+        repeat: false
+        function reschedule() {
+            const t = root.tickerItems;
+            if (t.length === 0) { stop(); return; }
+            interval = Math.max(1000, Math.min.apply(null, t.map(x => x.expires)) - Date.now());
+            restart();
+        }
+        onTriggered: {
+            const now = Date.now();
+            root.tickerItems = root.tickerItems.filter(t => t.expires > now);
+            reschedule();
+        }
+    }
+    onTickerItemsChanged: tickerSweep.reschedule()
+    // Click on a ticker item: the sender's default action while its notification is live.
+    function invokeDefault(nid) {
+        const n = live[nid];
+        tickerRemove(nid);
+        if (!n) return false;
+        const a = n.actions || [];
+        for (let i = 0; i < a.length; i++)
+            if (a[i].identifier === "default") { a[i].invoke(); release(nid, true); return true; }
+        return false;
+    }
 
     // ---------- helpers ----------
     function esc(s) {
@@ -135,6 +193,7 @@ Singleton {
         live[n.id] = n;
         watchers[n.id] = watcherComp.createObject(root, { target: n, nid: n.id });
         popupModel.append(e);
+        if (Config.tickerNotifs && !n.transient) tickerAdd(e);
         while (popupModel.count > maxPopups) release(popupModel.get(0).nid, false);
     }
 
@@ -144,6 +203,7 @@ Singleton {
         const prevP = i >= 0 ? popupModel.get(i) : null;
         const e = entryFrom(n, prevP ? { time: prevP.time, rev: prevP.rev } : null);
         if (i >= 0) popupModel.set(i, e);
+        tickerUpdate(e);
         const h = indexOfNid(historyModel, n.id);
         if (h >= 0) {
             const old = historyModel.get(h);
@@ -160,6 +220,7 @@ Singleton {
     }
     function closedByApp(nid) {              // CloseNotification from the sender
         forget(nid);
+        tickerRemove(nid);
         const i = indexOfNid(popupModel, nid);
         if (i >= 0) popupModel.remove(i);
     }
@@ -176,9 +237,10 @@ Singleton {
         }
     }
     function expirePopup(nid) { release(nid, false); }
-    function closePopup(nid) { release(nid, true); }
+    function closePopup(nid) { tickerRemove(nid); release(nid, true); }
 
     function invoke(nid, actionId) {
+        tickerRemove(nid);
         const f = _toastClicks[nid];
         if (f) { release(nid, true); f(); return; }
         const n = live[nid];
@@ -192,12 +254,14 @@ Singleton {
 
     // ---------- public API ----------
     function dismiss(id) {
+        tickerRemove(id);
         release(id, true);
         const h = indexOfNid(historyModel, id);
         if (h >= 0) historyModel.remove(h);
     }
     function clear() {
         while (popupModel.count > 0) release(popupModel.get(0).nid, true);
+        tickerItems = [];
         historyModel.clear();
     }
     function toggleDnd() { dnd = !dnd; }
@@ -226,5 +290,15 @@ Singleton {
         function dnd(on: bool): void { root.dnd = on; }
         function clear(): void { root.clear(); }
         function count(): int { return root.count; }
+        // Test hook: a notification as the D-Bus server would hand it over (toast card + ticker item),
+        // honouring do-not-disturb and the game hold. The devbox shares the live session bus, so the
+        // real org.freedesktop.Notifications name is not ours there and notify-send can't be used.
+        function inject(app: string, title: string, body: string): string {
+            if (root.dnd || root.gameHold) return "held";
+            const nid = root.toast(title, body, "", 6000, 1, null);
+            if (Config.tickerNotifs) root.tickerAdd({ nid: nid, app: app, icon: "", title: title, body: body, urgency: 1, hasDefault: false });
+            return String(nid);
+        }
+        function ticker(): string { return JSON.stringify(root.tickerItems.map(t => ({ nid: t.nid, app: t.app, title: t.title, body: t.body }))); }
     }
 }

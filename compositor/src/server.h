@@ -231,6 +231,10 @@ struct ul_server {
 	struct wlr_scene_tree *snap_preview; /* translucent accent rectangle for the zone */
 	struct wlr_scene_rect *snap_preview_rects[5]; /* fill + 4 edges */
 
+	/* Top-edge reveal for the shell's bar (input.c process_motion): name of the output whose
+	 * top edge the pointer is on ("" = none), so only changes are sent to subscribers. */
+	char edge_output[64];
+
 	/* Alt+Tab switcher (alttab.c) */
 	struct {
 		bool active;
@@ -472,6 +476,7 @@ void alttab_view_gone(struct ul_server *server, unsigned id);
 void ipc_broadcast(const char *line);
 void ipc_emit_alttab(struct ul_server *server, const char *action);
 void ipc_emit_dismiss(const char *keep);
+void ipc_emit_edge(const char *output, bool on);
 void ipc_init(struct ul_server *server, const char *wayland_socket);
 void ipc_finish(struct ul_server *server);
 

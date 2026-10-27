@@ -19,6 +19,10 @@ Singleton {
     // The same socket also carries {"event":"dismiss","keep":NAME}: a shortcut ran, or a click
     // landed on another screen, while a menu or flyout held the keyboard (shell.qml closes them).
     signal dismiss(string keep)
+    // {"event":"edge","output":NAME,"on":true|false}: the pointer touched / left the top edge of
+    // an output (a few px). TopBar.qml reveals itself over a fullscreen window with it; event-driven,
+    // nothing polls.
+    signal edge(string output, bool on)
 
     property bool shown: false
     property var items: []
@@ -36,6 +40,7 @@ Singleton {
         let ev;
         try { ev = JSON.parse(line); } catch (e) { return; }
         if (ev.event === "dismiss") { root.dismiss(ev.keep || ""); return; }
+        if (ev.event === "edge") { root.edge(ev.output || "", !!ev.on); return; }
         if (ev.event !== "alttab") return;
         if (ev.action === "show") {
             root.items = ev.items || [];

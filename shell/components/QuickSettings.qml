@@ -1,7 +1,9 @@
-// QuickSettings.qml - status-block popover: Wi-Fi, Bluetooth, sound, brightness, battery /
-// power profile, now playing and the power row. Overlay-layer, full-screen transparent window
-// (click outside / Escape closes) with the glass panel under the status block (SysState.qsAnchor "top") or above the bottom-bar tray ("bottom").
-// Open with a click on the status block or `qs ipc call quicksettings toggle|open|close`.
+// QuickSettings.qml - the clock + quick settings panel: a big clock (time with seconds, date) on
+// top, then Wi-Fi, Bluetooth, sound, brightness, battery / power profile, now playing and the power
+// row. Overlay-layer, full-screen transparent window (click outside / Escape closes) with the glass
+// panel at the top right, under the top bar's time. The window's input mask leaves the bar band
+// free, so a click on the time (or any bar item) still reaches the bar.
+// Open with a click on the time in the top bar or `qs ipc call quicksettings toggle|open|close`.
 // State and side effects live in SysState.qml (ULTIMIT_DRY_RUN=1 logs instead of acting).
 import QtQuick
 import Quickshell
@@ -25,6 +27,7 @@ PanelWindow {
     anchors { left: true; right: true; top: true; bottom: true }
     exclusionMode: ExclusionMode.Ignore
     color: "transparent"
+    mask: Region { x: 0; y: Config.barHeight; width: win.width; height: Math.max(0, win.height - Config.barHeight) }
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "ultimit-quicksettings"
     WlrLayershell.keyboardFocus: (visible && SysState.qsOpen) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
@@ -267,19 +270,15 @@ PanelWindow {
         id: panel
         glow: true; brackets: true
         elevation: 2; shadowNs: "ultimit-quicksettings"; shadowWanted: SysState.qsOpen
-        // "top": under the desktop clock (top right). "bottom": above the tray cluster (bottom right).
-        readonly property bool atBottom: SysState.qsAnchor === "bottom"
-        readonly property real topY: 100
-        readonly property real maxH: atBottom ? win.height - Config.tickerHeight - 6 - 12
-                                              : win.height - topY - Config.tickerHeight - 6
+        readonly property real topY: Config.barHeight + 6
+        readonly property real maxH: win.height - topY - 12
         width: 360
-        x: win.width - (atBottom ? 8 : 24) - width
+        x: win.width - 8 - width
         height: Math.min(flick.contentHeight + win.pad * 2, maxH)
-        y: atBottom ? win.height - Config.tickerHeight - 6 - height + (1 - win.reveal) * Theme.showOffset
-                    : topY - (1 - win.reveal) * Theme.showOffset
+        y: topY - (1 - win.reveal) * Theme.showOffset
         opacity: win.reveal
         transform: Scale {
-            origin.x: panel.width; origin.y: panel.atBottom ? panel.height : 0
+            origin.x: panel.width; origin.y: 0
             xScale: Theme.showScale + (1 - Theme.showScale) * win.reveal
             yScale: xScale
         }
@@ -306,7 +305,33 @@ PanelWindow {
                 width: flick.width
                 spacing: win.gap
 
-                SectionLabel { text: "Quick settings" }
+                // ================= clock header =================
+                Item {
+                    id: clockHead
+                    width: parent.width; height: bigTime.implicitHeight + dateLine.implicitHeight + Theme.space(2)
+                    readonly property var days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+                    readonly property var months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+                    function p2(n) { return String(n).padStart(2, "0"); }
+                    // Seconds only while the panel is up and nothing (fullscreen, game, idle) pauses the desktop.
+                    SystemClock { id: qsClock; enabled: SysState.qsOpen; precision: Config.desktopPaused ? SystemClock.Minutes : SystemClock.Seconds }
+                    readonly property date now: qsClock.date
+                    Text {
+                        id: bigTime
+                        anchors { left: parent.left; right: parent.right; top: parent.top }
+                        fontSizeMode: Text.HorizontalFit; minimumPixelSize: Theme.type.head
+                        text: clockHead.p2(clockHead.now.getHours()) + ":" + clockHead.p2(clockHead.now.getMinutes())
+                            + (Config.desktopPaused ? "" : ":" + clockHead.p2(clockHead.now.getSeconds()))
+                        color: Theme.fg
+                        font.family: Theme.display; font.pixelSize: Theme.type.hero; font.features: Theme.tnum
+                    }
+                    Text {
+                        id: dateLine
+                        anchors { left: parent.left; top: bigTime.bottom; topMargin: Theme.space(1) }
+                        text: clockHead.days[clockHead.now.getDay()] + ", " + clockHead.months[clockHead.now.getMonth()] + " " + clockHead.now.getDate() + ", " + clockHead.now.getFullYear()
+                        color: Theme.dim
+                        font.family: Theme.ui; font.pixelSize: Theme.type.body
+                    }
+                }
 
                 // ================= toggle tiles =================
                 Grid {

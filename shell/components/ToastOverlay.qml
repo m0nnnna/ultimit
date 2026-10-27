@@ -1,4 +1,4 @@
-// ToastOverlay.qml - renders Notifs.popups (D-Bus notifications + Toasts.show) top-right, under the clock block
+// ToastOverlay.qml - renders Notifs.popups (D-Bus notifications + Toasts.show) top-right, under the top bar
 // (mockup .toast: panel, strong 1px line, 3px accent left bar, mono caps title).
 // Overlay layer; the window is only mapped while toasts exist and is sized to them.
 import QtQuick
@@ -13,12 +13,11 @@ PanelWindow {
     property string screenName: ""
 
     anchors { top: true; right: true }
-    // Starts 8px under the desktop clock block (StatusBlock.qml: 16px from the top; every output
-    // shows the clock, Config.clockHeight is its current height, so the graph style pushes the toasts down).
-    margins { top: 16 + Config.clockHeight + 8; right: 20 }
+    // Drops from under the top bar, at the right.
+    margins { top: Config.barHeight + 8; right: 20 }
     implicitWidth: 340
     implicitHeight: Math.max(1, col.implicitHeight)
-    visible: Notifs.popupCount > 0 && Config.isUiScreen(screenName)
+    visible: Notifs.popupCount > 0 && Config.isMainScreen(screenName)
     exclusionMode: ExclusionMode.Ignore
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Overlay

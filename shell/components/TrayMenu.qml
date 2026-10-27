@@ -51,7 +51,7 @@ PanelWindow {
         elevation: 2; shadowNs: "ultimit-traymenu"; shadowWanted: win.visible
         readonly property bool fromBar: TrayUi.x >= 0
         x: fromBar ? Math.max(8, Math.min(TrayUi.x - width / 2, win.width - width - 8)) : Config.railWidth + 4
-        y: fromBar ? win.height - Config.tickerHeight - 6 - height
+        y: fromBar ? Config.barHeight + 6
             : Math.max(8, Math.min(TrayUi.y - 20, win.height - height - 8))
         width: win.menuW
         height: col.implicitHeight + Theme.space(4)

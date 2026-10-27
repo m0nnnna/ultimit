@@ -76,7 +76,7 @@ xdisplay() {
 }
 
 wait_shell() { # until the shell's layers are mapped and the boot splash has come and gone
-	wait_json "layer('ultimit-rail') and layer('ultimit-ticker') and layer('ultimit-status') and layer('ultimit-wallpaper')" "${1:-60}" || return 1
+	wait_json "layer('ultimit-rail') and layer('ultimit-topbar') and layer('ultimit-wallpaper')" "${1:-60}" || return 1
 	sleep 1.5 # the boot splash layer is created slightly after the rest
 	wait_json "not layer('ultimit-boot')" 30
 }

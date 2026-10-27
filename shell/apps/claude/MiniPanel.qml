@@ -1,5 +1,5 @@
 // MiniPanel.qml - CLAUDE in the bottom-right corner: a small chat above the bottom bar, opened from the
-// Claude button in the tray cluster (StatusTray.qml -> ultimit-claude --mini). It talks to one project
+// Claude button in the tray cluster (top bar, components/bar -> ultimit-claude --mini). It talks to one project
 // ("This PC" unless a project is picked from its header menu); EXPAND carries the chat, still running,
 // into the full window (Claude.expand -> ClaudeWindow.adopt). Hiding it leaves a working chat running.
 // A layer-shell panel, so it sits above windows without a frame or a taskbar entry. Created by ClaudeApp.qml.
@@ -15,7 +15,7 @@ PanelWindow {
 
     screen: Quickshell.screens.find(s => s.name === Claude.miniScreen) || Quickshell.screens[0] || null
     anchors { right: true; bottom: true }
-    margins { right: 12; bottom: 30 + 12 }   // above the bottom bar (Config.tickerHeight in the desktop shell)
+    margins { right: 12; bottom: 12 }
     exclusionMode: ExclusionMode.Ignore
     implicitWidth: 440
     implicitHeight: 620

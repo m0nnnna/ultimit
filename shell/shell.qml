@@ -34,7 +34,7 @@ ShellRoot {
     Connections {
         target: AltTabState
         function onDismiss(keep) {
-            FlyoutState.close(); SysState.closeQs(); TrayUi.close();
+            FlyoutState.close(); SysState.closeQs(); TrayUi.close(); BarUi.closeAppMenu();
             Config.closeMenu(); Pins.closeMenu(); WindowUi.closeMenu();
             if (keep !== "launcher") Config.closeLauncher();
             if (keep !== "clipboard") Clipboard.open = false;
@@ -133,6 +133,12 @@ ShellRoot {
         function list(): string { return JSON.stringify(Pins.specs.map(p => p.id)); }
     }
 
+    IpcHandler {   // top bar: qs ipc call bar refresh (re-read the main display after `ultimitctl primary`) | state
+        target: "bar"
+        function refresh(): void { Config.refreshPrimary(); }
+        function state(): string { return JSON.stringify({ primary: Config.primaryScreen, screens: Quickshell.screens.map(s => s.name), covered: Config.coveredScreens, revealed: BarUi.revealed, slide: BarUi.slide }); }
+    }
+
     IpcHandler {   // news ticker: qs ipc call feeds refresh | list
         target: "feeds"
         function refresh(): void { Feeds.refresh(); }
@@ -148,16 +154,18 @@ ShellRoot {
             required property var modelData
 
             Wallpaper   { screen: scope.modelData }   // background layer (+ wordmark)
-            StatusBlock { screen: scope.modelData }   // bottom layer, top-right
             // rail: every display, or the main one only (Config.barsOn)
             Rail        { screen: scope.modelData; visible: Config.showsBars(scope.modelData.name) }   // top layer, left, exclusive zone
-            // news ticker: the main display only, so its scroll animation runs once, not per screen
-            Ticker      { screen: scope.modelData; visible: Config.isMainScreen(scope.modelData.name) }   // top layer, bottom, exclusive zone
+            // top bar (app menu, news ticker, status, tray, time): the main display only, so the ticker
+            // crawl runs once. Created after the rail on purpose: the compositor lays out the newest
+            // layer surface first, so the bar spans the full width and the rail sits under it.
+            TopBar      { screen: scope.modelData }   // top layer, top, exclusive zone
             Launcher    { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, app launcher (rail emblem)
             ContextMenu { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, desktop right-click menu
             RailMenu    { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, rail button right-click menu
             WindowPopups { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, rail window tooltip + menu
             OsdOverlay  { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, volume/brightness OSD
+            AppMenu     { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, top bar app-name menu
             TrayMenu    { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, tray item menu
             ToastOverlay { screen: scope.modelData; screenName: scope.modelData.name }  // overlay, top-right toasts
             Flyout      { screen: scope.modelData; screenName: scope.modelData.name }   // overlay, tray icon flyouts

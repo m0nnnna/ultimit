@@ -4,6 +4,7 @@
  * constraints (locking or confining the cursor to the game window).
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -464,6 +465,25 @@ static void process_resize(struct ul_server *server) {
 	update_resize_zone(server);
 }
 
+/* Top-edge reveal: tell the shell when the pointer touches or leaves the top edge of an output
+ * (within UL_EDGE_PX), so its bar can slide over a fullscreen window. Only transitions are sent,
+ * from pointer motion itself: nothing polls, and no surface sits over the fullscreen window. */
+#define UL_EDGE_PX 2
+static void edge_check(struct ul_server *server) {
+	const char *now = "";
+	struct wlr_output *out = wlr_output_layout_output_at(server->output_layout,
+		server->cursor->x, server->cursor->y);
+	if (out) {
+		struct wlr_box box;
+		wlr_output_layout_get_box(server->output_layout, out, &box);
+		if (server->cursor->y - box.y < UL_EDGE_PX) now = out->name;
+	}
+	if (strcmp(now, server->edge_output) == 0) return;
+	if (server->edge_output[0]) ipc_emit_edge(server->edge_output, false);
+	snprintf(server->edge_output, sizeof server->edge_output, "%s", now);
+	if (now[0]) ipc_emit_edge(now, true);
+}
+
 static void process_motion(struct ul_server *server, uint32_t time_msec) {
 	if (server->cursor_mode == UL_CURSOR_MOVE) {
 		process_move(server);
@@ -474,6 +494,7 @@ static void process_motion(struct ul_server *server, uint32_t time_msec) {
 		return;
 	}
 	input_update_pointer_focus(server, time_msec);
+	edge_check(server);
 }
 
 static void handle_motion(struct ul_server *server, struct wlr_input_device *device,

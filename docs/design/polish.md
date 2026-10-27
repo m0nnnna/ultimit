@@ -18,7 +18,7 @@ Every value below lives in `shell/Theme.qml` (mirrored in `greeter/Theme.qml` an
 
 | Level | What | Fill | Edge | Shadow |
 |---|---|---|---|---|
-| L0 chrome | rail, ticker, tray | `rail` | none | `elev1` onto the desktop |
+| L0 chrome | rail, top bar (ticker, status, tray) | `rail` | none | `elev1` onto the desktop |
 | L1 floating | windows, flyouts, launcher, menus, notifications, dialogs | `panel` (one alpha, shared with compositor + greeter) | top highlight; brackets on windows/dialogs only | `elev2` |
 | L2 inset | inner cards, rows, inputs, tiles | `field` | none, or `line` on inputs only | none |
 
@@ -75,7 +75,7 @@ window shadow, `UL_SHADOW_SIGMA`).
 2. Shared L1 recipe component (`Surface.qml`: fill + sheen + highlight + shadow + optional
    brackets) and move Flyout, Launcher, PopupMenu, ContextMenu, TrayMenu, NotifCard onto it.
 3. Compositor frame: top highlight + sheen in the titlebar, keep brackets, glow and outline.
-4. Rail, WindowList, StatusTray, Tray, QuickSettings: type scale, icon sizes, real icons.
+4. Rail, WindowList, TopBar (+ bar/ items), Tray, QuickSettings: type scale, icon sizes, real icons.
 5. Apps, by audit impact: DATA, CLAUDE, EMBER, Settings, MEMO, GAMES, SHARES, DISKS.
 6. Rough spots: version strings, duplicate launcher entries, letter icons.
 

@@ -4,8 +4,9 @@ Rail 1.0 Rail.qml
 RailButton 1.0 RailButton.qml
 Icon 1.0 Icon.qml
 Emblem 1.0 Emblem.qml
-StatusBlock 1.0 StatusBlock.qml
 Ticker 1.0 Ticker.qml
+TopBar 1.0 TopBar.qml
+AppMenu 1.0 AppMenu.qml
 Brackets 1.0 Brackets.qml
 Surface 1.0 Surface.qml
 PowerButton 1.0 PowerButton.qml
@@ -20,7 +21,6 @@ QuickSettings 1.0 QuickSettings.qml
 NotifCard 1.0 NotifCard.qml
 OsdOverlay 1.0 OsdOverlay.qml
 Tray 1.0 Tray.qml
-StatusTray 1.0 StatusTray.qml
 StatusIcon 1.0 StatusIcon.qml
 TrayMenu 1.0 TrayMenu.qml
 WallpaperArt 1.0 WallpaperArt.qml
@@ -29,6 +29,7 @@ LockSurface 1.0 LockSurface.qml
 PopupMenu 1.0 PopupMenu.qml
 RailMenu 1.0 RailMenu.qml
 singleton FlyoutState 1.0 FlyoutState.qml
+singleton BarUi 1.0 BarUi.qml
 singleton Privacy 1.0 Privacy.qml
 Flyout 1.0 Flyout.qml
 BatteryWatch 1.0 BatteryWatch.qml

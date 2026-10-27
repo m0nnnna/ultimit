@@ -1,7 +1,7 @@
-// Flyout.qml - Windows-11-style tray flyouts: one glass panel per tray icon, anchored just above
-// that icon at the bottom right (state: FlyoutState.qml; content: flyout/<Kind>Flyout.qml).
+// Flyout.qml - Windows-11-style bar flyouts: one glass panel per status icon, anchored just below
+// that icon in the top bar (state: FlyoutState.qml; content: flyout/<Kind>Flyout.qml).
 // Overlay-layer, full-screen transparent window like Launcher.qml, so a click outside closes it,
-// but the tray cluster is punched out of its input region: the same icon toggles the flyout
+// but the top bar band is punched out of its input region: the same icon toggles the flyout
 // closed and another icon switches to its flyout. It holds the keyboard (Escape closes) only
 // while shown and stays mapped until the fade-out ends. Unfolds from the icon (scale) plus fade, Config.dur().
 import QtQuick
@@ -41,8 +41,8 @@ PanelWindow {
         x: 0; y: 0; width: win.width; height: win.height
         Region {
             intersection: Intersection.Subtract
-            x: FlyoutState.trayX; y: win.height - Config.tickerHeight
-            width: FlyoutState.trayW; height: Config.tickerHeight
+            x: 0; y: 0
+            width: win.width; height: Config.barHeight
         }
     }
 
@@ -62,24 +62,24 @@ PanelWindow {
         glow: true; brackets: true
         elevation: 2; shadowNs: "ultimit-flyout"; shadowWanted: win.shown
         width: win.panelW
-        readonly property real maxH: win.height - Config.tickerHeight - 6 - 12
+        readonly property real maxH: win.height - Config.barHeight - 6 - 12
         height: Math.min((ld.item ? ld.item.implicitHeight : 60) + Theme.space(8), maxH)
         // centred over the icon, clamped inside the output
         x: Math.max(8, Math.min(win.iconX - width / 2, win.width - width - 8))
-        y: win.height - Config.tickerHeight - 6 - height
+        y: Config.barHeight + 6
         opacity: win.reveal * win.swap
-        // scales out of the tray icon (the shared panel recipe): grows from the tick at its bottom edge (reveal is 0/1 without motion)
+        // scales out of the bar icon (the shared panel recipe): grows from the tick at its top edge (reveal is 0/1 without motion)
         transform: Scale {
             origin.x: Math.max(0, Math.min(win.iconX - panel.x, panel.width))
-            origin.y: panel.height
+            origin.y: 0
             xScale: Theme.showScale + (1 - Theme.showScale) * win.reveal
             yScale: Theme.showScale + (1 - Theme.showScale) * win.reveal
         }
         MouseArea { anchors.fill: parent; acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton }   // swallow clicks
 
-        Rectangle {   // tick pointing at the icon
+        Rectangle {   // tick pointing up at the icon
             x: Math.max(10, Math.min(win.iconX - panel.x - width / 2, panel.width - width - 10))
-            y: parent.height - 1
+            y: 0
             width: 14; height: 3
             color: Theme.accent
         }

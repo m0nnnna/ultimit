@@ -1,4 +1,4 @@
-// News: the feeds behind the bottom ticker (Feeds.qml, saved in shell.json "feeds").
+// News: the feeds behind the ticker in the top bar (Feeds.qml, saved in shell.json "feeds").
 // RSS 2.0 and Atom; http/https only. With no feeds the ticker shows the built-in headlines.
 import QtQuick
 import QtQuick.Layouts
@@ -8,7 +8,7 @@ import "../accessory"
 Page {
     id: pg
     title: "News"
-    subtitle: "Feeds for the bottom ticker. Headlines refresh every 15 minutes; the last good result is cached for offline use. With no feeds the ticker shows the built-in headlines."
+    subtitle: "Feeds for the ticker in the top bar. Headlines refresh every 15 minutes; the last good result is cached for offline use. With no feeds the ticker shows the built-in headlines."
 
     property string formError: ""
     function when(ms) {
@@ -27,6 +27,21 @@ Page {
         formError = "";
         Feeds.urls = Feeds.urls.concat([u]);
         entry.text = "";
+    }
+
+    SectionLabel { text: "Ticker" }
+    ToggleRow {
+        Layout.fillWidth: true
+        text: "Show the news ticker in the top bar"
+        checked: Config.tickerOn
+        onToggled: value => Config.tickerOn = value
+    }
+    ToggleRow {
+        Layout.fillWidth: true
+        text: "Show notifications in the ticker"
+        checked: Config.tickerNotifs
+        enabled: Config.tickerOn
+        onToggled: value => Config.tickerNotifs = value
     }
 
     SectionLabel { text: "Feeds" }
