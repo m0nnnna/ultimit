@@ -1,6 +1,6 @@
-# Rail: pinned buttons own their windows (shell/RailWindows.qml). Driven through `qs ipc call rail ...`
+# Rail: pinned buttons own their windows (shell/RailWindows.qml). Driven through `qs ipc call railwin ...`
 # (a click on the button runs the same code). Needs foot (CONSOLE button).
-rl() { qs -p "$ROOT/shell" ipc call rail "$@" 2>/dev/null; }
+rl() { qs -p "$ROOT/shell" ipc call railwin "$@" 2>/dev/null; }
 # rail_is PIN STATE MSG: the button reaches STATE ("count=1 open=true focused=true minimized=false") within a few seconds
 rail_is() {
 	local i st

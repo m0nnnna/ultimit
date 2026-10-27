@@ -138,9 +138,9 @@ Singleton {
         if (!click(pin.id)) launch(pin);
     }
 
-    // qs ipc call rail click <pin id> | newwindow <pin id> | state <pin id> | unowned   (tests, scripting)
+    // qs ipc call railwin click <pin id> | newwindow <pin id> | state <pin id> | unowned   (tests, scripting)
     IpcHandler {
-        target: "rail"
+        target: "railwin"
         function click(id: string): string {
             const p = root.pinById(id);
             if (!p) return "error: no such pin";
