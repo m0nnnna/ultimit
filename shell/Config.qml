@@ -60,6 +60,11 @@ Singleton {
     // Short synthesized blips (assets/sounds); never while a fullscreen window is up.
     property bool uiSounds: false
     property int uiSoundVolume: 40
+    // Game Mode (GameMode.qml; Settings > Power > Game Mode): the desktop goes quiet while a game is in front.
+    property bool gameModeEnabled: true
+    property bool gameModePower: true      // switch power-profiles-daemon to "performance" meanwhile
+    property bool gameModeHold: true       // hold notification toasts (critical ones still show)
+    property bool gameModeActive: false    // set by GameMode.qml
     // A fullscreen window covers some screen: effects that cost frames stand down.
     readonly property bool fullscreenActive: coveredScreens.length > 0
 
@@ -107,7 +112,7 @@ Singleton {
     // (wallpaper shards and hex flicker, news ticker, rail spin, the clock's seconds), so they
     // take nothing from the GPU while it plays. Window animations are not affected.
     // Locked or dimmed (LockScreen.qml sets desktopIdle): nobody is watching, so the same pause.
-    readonly property bool desktopPaused: coveredScreens.length > 0 || desktopIdle
+    readonly property bool desktopPaused: coveredScreens.length > 0 || desktopIdle || gameModeActive
     property bool desktopIdle: false
     // Rail icon turntables share one 30 Hz clock (Rail icons step together: one repaint per
     // step instead of one per icon). RailButton counts itself in railSpinners while it turns.

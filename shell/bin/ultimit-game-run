@@ -94,6 +94,16 @@ def main(argv):
                     say("DXVK: installed " + f)
         except Exception as e:
             say("%s step failed: %s" % (st["step"], e))
+    try:   # Game Mode: this pid (kept by exec) is a running game until it exits
+        spec = importlib.util.spec_from_file_location("ultimit_gamemode", os.path.join(HERE, "..", "apps", "gamemode", "gamemode.py"))
+        gm = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(gm)
+        gm.mark(p.get("id") or gid)
+        # tell the running shell (best effort; it also looks at the marker on its own at startup)
+        subprocess.run(["qs", "ipc", "call", "gamemode", "launched", p.get("id") or gid or ""], timeout=3,
+                       stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception as e:
+        say("could not mark the game for Game Mode: %s" % e)
     if p["cwd"] and os.path.isdir(p["cwd"]):
         os.chdir(p["cwd"])
     try:

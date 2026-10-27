@@ -113,8 +113,8 @@ Singleton {
     }
 
     Timer { id: debounce; interval: 400; onTriggered: { root.gotNet = false; root.loadCached(); root.refresh(); } }
-    Timer { interval: 15 * 60 * 1000; repeat: true; running: root.started; onTriggered: root.refresh() }
-    Timer { interval: 5 * 60 * 1000; repeat: true; running: root.started; onTriggered: root.rebuild() }   // YDAY rollover
+    Timer { interval: 15 * 60 * 1000; repeat: true; running: root.started && !Config.gameModeActive; onTriggered: root.refresh() }
+    Timer { interval: 5 * 60 * 1000; repeat: true; running: root.started && !Config.gameModeActive; onTriggered: root.rebuild() }   // YDAY rollover
 
     Process {
         id: cached

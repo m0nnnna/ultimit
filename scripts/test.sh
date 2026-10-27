@@ -58,6 +58,9 @@ cleanup() {
 trap cleanup EXIT
 trap 'echo; echo "interrupted"; exit 130' INT TERM
 
+# Game Mode (scripts/test/70_gamemode.sh): a fake power-profiles-daemon, never the real one.
+export ULTIMIT_FAKE_PPD="$RUNDIR/ppd" ULTIMIT_STATE_DIR="$RUNDIR/state"
+echo balanced >"$ULTIMIT_FAKE_PPD"
 echo "== starting devbox"
 "$ROOT/scripts/devbox.sh" start || exit 2
 STARTED=1

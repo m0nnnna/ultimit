@@ -68,6 +68,9 @@ Scope {
         Config.clockRing = a.clockRing === true;
         Config.uiSounds = a.uiSounds === true;
         Config.uiSoundVolume = Math.max(0, Math.min(100, Math.round(a.uiSoundVolume)));
+        Config.gameModeEnabled = a.gameModeEnabled !== false;
+        Config.gameModePower = a.gameModePower !== false;
+        Config.gameModeHold = a.gameModeHold !== false;
     }
     function pushFx(a) {
         let changed = false;
@@ -79,6 +82,9 @@ Scope {
         if (a.clockRing !== Config.clockRing) { a.clockRing = Config.clockRing; changed = true; }
         if (a.uiSounds !== Config.uiSounds) { a.uiSounds = Config.uiSounds; changed = true; }
         if (a.uiSoundVolume !== Config.uiSoundVolume) { a.uiSoundVolume = Config.uiSoundVolume; changed = true; }
+        if (a.gameModeEnabled !== Config.gameModeEnabled) { a.gameModeEnabled = Config.gameModeEnabled; changed = true; }
+        if (a.gameModePower !== Config.gameModePower) { a.gameModePower = Config.gameModePower; changed = true; }
+        if (a.gameModeHold !== Config.gameModeHold) { a.gameModeHold = Config.gameModeHold; changed = true; }
         return changed;
     }
     function applyRailNews() {
@@ -253,6 +259,9 @@ Scope {
         function onClockRingChanged() { root.push(); }
         function onUiSoundsChanged() { root.push(); }
         function onUiSoundVolumeChanged() { root.push(); }
+        function onGameModeEnabledChanged() { root.push(); }
+        function onGameModePowerChanged() { root.push(); }
+        function onGameModeHoldChanged() { root.push(); }
     }
     Connections {
         target: Pins
@@ -320,6 +329,9 @@ Scope {
             property bool clockRing: false
             property bool uiSounds: false
             property int uiSoundVolume: 40
+            property bool gameModeEnabled: true   // Game Mode (GameMode.qml)
+            property bool gameModePower: true
+            property bool gameModeHold: true
         }
     }
 }

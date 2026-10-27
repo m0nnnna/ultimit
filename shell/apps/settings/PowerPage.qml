@@ -62,6 +62,8 @@ Page {
         onPicked: id => SysState.setProfile(id)
     }
 
+    GameModeSection { Layout.fillWidth: true }
+
     SectionLabel { text: "Idle" }
     Text {
         Layout.fillWidth: true

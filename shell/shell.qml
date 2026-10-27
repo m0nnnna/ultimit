@@ -14,6 +14,7 @@ import "apps/agents"
 import "apps/clipboard"
 
 ShellRoot {
+    Component.onCompleted: GameMode.init()               // Game Mode watcher + its IPC (qs ipc call gamemode ...)
     Persist { id: persist }                              // ~/.config/ultimit/shell.json
     Boot { settingsReady: persist.ready }                // boot overlay (startup + on demand)
     SettingsWindow {}                                    // Settings window (replaces Accessory; rail ACCESSORY button)

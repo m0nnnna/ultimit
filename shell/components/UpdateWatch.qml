@@ -19,7 +19,7 @@ Scope {
 
     Timer {
         // Not in a devbox (scripts/devbox.sh), unless it is testing this with fake data
-        running: !Quickshell.env("ULTIMIT_DEVBOX") || !!Quickshell.env("UPDATES_FAKE_DIR")
+        running: (!Quickshell.env("ULTIMIT_DEVBOX") || !!Quickshell.env("UPDATES_FAKE_DIR")) && !Config.gameModeActive
         interval: Quickshell.env("UPDATES_FAKE_DIR") ? 5000 : 3 * 60 * 1000
         repeat: true
         onTriggered: {

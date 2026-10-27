@@ -12,7 +12,7 @@ import Quickshell
 Singleton {
     id: root
 
-    readonly property bool allowed: Config.uiSounds && Config.uiSoundVolume > 0 && !Config.fullscreenActive
+    readonly property bool allowed: Config.uiSounds && Config.uiSoundVolume > 0 && !Config.fullscreenActive && !Config.gameModeActive
     property var last: ({})
     property int seen: 0
 

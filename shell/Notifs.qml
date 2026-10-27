@@ -20,6 +20,9 @@ Singleton {
     id: root
 
     property bool dnd: false
+    // Game Mode (GameMode.qml): popups are held while a game is in front, critical ones still show.
+    property bool gameHold: false
+    property int gameHeld: 0
     readonly property int maxHistory: 50
     readonly property int maxPopups: 5
     readonly property alias popups: popupModel
@@ -119,7 +122,9 @@ Singleton {
 
     function intake(n) {
         const critical = n.urgency === NotificationUrgency.Critical;
-        const show = !dnd || critical;
+        const held = gameHold && !critical && !dnd;   // dnd already hides it: nothing "missed" to report
+        if (held) gameHeld++;
+        const show = (!dnd && !gameHold) || critical;
         const e = entryFrom(n, null);
         if (!n.transient) {
             historyModel.insert(0, e);
@@ -201,6 +206,7 @@ Singleton {
     // urgency 2 = critical (red card). onClick: run when the card is clicked. Returns the toast's
     // nid, for release(nid).
     function toast(title, message, command, timeoutMs, urgency, onClick) {
+        if (gameHold && urgency !== 2) { gameHeld++; return 0; }   // held while a game is in front
         const nid = -(++_toastSeq);
         popupModel.append({
             nid: nid, kind: "toast", app: title || "", title: "",
