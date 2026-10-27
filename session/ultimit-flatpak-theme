@@ -4,7 +4,8 @@
 #
 # 1. Every Flatpak app may read ~/.themes, where install-gtk-theme.sh puts the
 #    Flatpak build of the Ultimit GTK themes, and gets GTK_THEME and the colour
-#    scheme of the current skin. Without this a sandboxed app cannot see the
+#    scheme of the current skin (except Chromium-based browsers, which follow
+#    the settings portal so they re-skin live). Without this a sandboxed app cannot see the
 #    themes in ~/.local/share/themes and falls back to Adwaita. Ungoogled
 #    Chromium also gets read-only access to the media folders (dragged-in files).
 # 2. Chromium-based Flatpak browsers: each profile is switched once to the GTK
@@ -33,6 +34,14 @@ flatpak override --user "$@"
 for app in io.github.ungoogled_software.ungoogled_chromium; do
 	flatpak info "$app" >/dev/null 2>&1 && flatpak override --user --filesystem=xdg-pictures:ro \
 		--filesystem=xdg-videos:ro --filesystem=xdg-music:ro --filesystem=xdg-documents:ro "$app"
+done
+
+# Chromium-based browsers take the theme from the settings portal instead (gsettings gtk-theme and
+# color-scheme, which the shell sets on a skin change), so an open browser re-skins live. GTK_THEME
+# pins the theme for the life of the process; libadwaita apps still need it, so only these drop it.
+for app in io.github.ungoogled_software.ungoogled_chromium org.chromium.Chromium com.google.Chrome com.brave.Browser; do
+	flatpak info "$app" >/dev/null 2>&1 && flatpak override --user --unset-env=GTK_THEME \
+		--unset-env=ADW_DEBUG_COLOR_SCHEME "$app"
 done
 
 fc_src="$HOME/.config/fontconfig/conf.d/60-ultimit.conf"

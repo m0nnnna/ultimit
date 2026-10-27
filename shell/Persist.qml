@@ -159,7 +159,11 @@ Scope {
         interval: 1500
         onTriggered: {
             const name = "UltimitCursor-" + Theme.skin.charAt(0).toUpperCase() + Theme.skin.slice(1);
-            Quickshell.execDetached(["sh", "-c", "\"$1\" >/dev/null 2>&1; \"$2\" && ultimitctl cursor-theme " + name + " >/dev/null", "sh",
+            const gtk = "Ultimit-" + Theme.skin.charAt(0).toUpperCase() + Theme.skin.slice(1);
+            // GTK only reloads a theme when its name changes: after the rebuild, flip it so apps
+            // following gsettings (the Flatpak browsers) pick up the new files.
+            Quickshell.execDetached(["sh", "-c", "\"$1\" >/dev/null 2>&1; gsettings set org.gnome.desktop.interface gtk-theme Adwaita; sleep 0.5; "
+                + "gsettings set org.gnome.desktop.interface gtk-theme " + gtk + "; \"$2\" && ultimitctl cursor-theme " + name + " >/dev/null", "sh",
                 Quickshell.shellPath("theme/install-gtk-theme.sh"), Quickshell.shellPath("theme/cursors/install-cursors.sh")]);
             fastfetchTimer.restart();
         }
@@ -205,8 +209,9 @@ Scope {
             const name = "UltimitCursor-" + Theme.skin.charAt(0).toUpperCase() + Theme.skin.slice(1);
             Quickshell.execDetached(["sh", "-c", "[ -e \"$HOME/.local/share/icons/" + name + "/cursors/default\" ] && ultimitctl cursor-theme " + name + " && gsettings set org.gnome.desktop.interface cursor-theme " + name
                 + " && { ! command -v flatpak >/dev/null || flatpak override --user --env=XCURSOR_THEME=" + name + "; }"]);
-            // GTK apps started from now on, and Flatpak apps (the browser), take the skin's GTK
-            // theme and colour scheme; already open ones keep theirs until restarted.
+            // GTK apps started from now on, and Flatpak apps, take the skin's GTK theme and colour
+            // scheme; already open ones keep theirs until restarted, except the Flatpak browsers,
+            // which follow gsettings through the portal (ultimit-flatpak-theme) and switch live.
             const gtk = "Ultimit-" + Theme.skin.charAt(0).toUpperCase() + Theme.skin.slice(1);
             const scheme = Theme.light ? "prefer-light" : "prefer-dark";
             Quickshell.execDetached(["sh", "-c", "gsettings set org.gnome.desktop.interface gtk-theme " + gtk
