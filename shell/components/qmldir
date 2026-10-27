@@ -40,3 +40,7 @@ DecodeText 1.0 DecodeText.qml
 IconBadge 1.0 IconBadge.qml
 Spark 1.0 Spark.qml
 SegBar 1.0 SegBar.qml
+singleton Anim 1.0 Anim.qml
+HouseCard 1.0 HouseCard.qml
+LockView 1.0 LockView.qml
+LockFx 1.0 LockFx.qml

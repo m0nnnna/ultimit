@@ -9,3 +9,5 @@ Wordmark 1.0 Wordmark.qml
 ChamferButton 1.0 ChamferButton.qml
 Selector 1.0 Selector.qml
 PowerRow 1.0 PowerRow.qml
+singleton Anim 1.0 Anim.qml
+HouseCard 1.0 HouseCard.qml

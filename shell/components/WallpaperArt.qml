@@ -25,6 +25,9 @@ Item {
     // Animate while true and `animate` is on; otherwise hold still (no timers run).
     property bool active: true
     property bool animate: Config.motion
+    // Step rates (the lock screen runs the shards slower than the desktop does).
+    property int fps: Config.wallpaperFps
+    property int spinFps: Config.wallpaperSpinFps
     // Horizontal inset for the left rail (the desktop wallpaper leaves room for it).
     property real railInset: Config.railWidth
     readonly property bool running: animate && active && visible && width > 1
@@ -72,8 +75,8 @@ Item {
     Timer {
         property real last: 0
         property real pending: 0
-        readonly property int step: Math.round(1000 / Math.max(1, Config.wallpaperFps))
-        interval: Math.round(1000 / Math.max(1, Config.wallpaperSpinFps, Config.wallpaperFps))
+        readonly property int step: Math.round(1000 / Math.max(1, art.fps))
+        interval: Math.round(1000 / Math.max(1, art.spinFps, art.fps))
         repeat: true
         running: art.running
         onRunningChanged: last = Date.now()

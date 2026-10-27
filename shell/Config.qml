@@ -136,7 +136,7 @@ Singleton {
     property string pamService: "ultimit-lock"
     property string pamFallback: "login"
     // Lock-screen wallpaper animation (off: painted once; saves power while locked).
-    property bool lockAnimated: false
+    property bool lockAnimated: true
     // Bumped to ask LockScreen.qml to lock (IPC `lock lock`, quick settings, launcher, Super+L).
     property int lockRequest: 0
     function lock() { lockRequest++; }

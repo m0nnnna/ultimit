@@ -10,6 +10,14 @@
 //  * logind: lock on PrepareForSleep(true) (suspend, lid close) holding a delay inhibitor until
 //    the lock is up, and on `loginctl lock-session`.
 //
+// Animations (see components/LockView.qml, LockFx.qml): lock = accent line sweeps across and the screen
+// darkens (LockFx overlay), then the lock engages and the shards, emblem and clock assemble; unlock =
+// everything collapses into the accent line, the session unlocks and the black halves wipe away from
+// the centre (LockFx). Logind-triggered locks (sleep, lid) and crash recovery engage at once.
+//
+// Preview (ULTIMIT_LOCK_PREVIEW=1): the lock view in a normal window, no ext-session-lock and no
+// PAM: lock() shows it, the password "demo" unlocks, anything else fails. IPC `lock lock` replays it.
+//
 // Test hook (inert unless ULTIMIT_DRY_RUN=1): `lock simulate "<logind line>"`
 // feeds a fake logind signal. There is deliberately no way to skip PAM.
 import QtQuick
@@ -25,7 +33,10 @@ Scope {
 
     readonly property bool dryRun: Quickshell.env("ULTIMIT_DRY_RUN") === "1"
 
-    readonly property bool locked: sessionLock.locked
+    readonly property bool preview: Quickshell.env("ULTIMIT_LOCK_PREVIEW") === "1"
+    property bool previewLocked: false
+    readonly property bool locked: preview ? previewLocked : sessionLock.locked
+    property bool unlocking: false        // password accepted, the unlock animation is playing
     onLockedChanged: UiSounds.play(locked ? "lock" : "unlock")
     // shared lock-screen state (rendered by every LockSurface)
     property string password: ""          // typed text (kept here so any output can take keystrokes)
@@ -38,22 +49,46 @@ Scope {
     property bool sleeping: false
 
     // ---------------- lock / unlock ----------------
-    function lock() {
-        if (sessionLock.locked) return;
+    // `instant`: engage at once (sleep, crash recovery); otherwise the desktop goes dark first.
+    function lock(instant) {
+        if (locked || fx.busy) return;
         password = ""; authState = "idle"; message = ""; pendingSecret = "";
         Config.closeLauncher(); Config.closeMenu(); SysState.closeQs();
-        sessionLock.locked = true;
+        if (instant === true || !Config.motion) engage();
+        else fx.playLock(root.engage);
     }
+    function engage() {
+        unlocking = false;
+        if (preview) previewLocked = true; else sessionLock.locked = true;
+        if (preview && fx.mode === "hold") releaseFx.restart();
+    }
+    // Password accepted: play the collapse under the lock, then release it and let LockFx wipe.
+    function beginUnlock() {
+        if (!locked || unlocking) return;
+        if (!Config.motion) { unlock(); return; }
+        unlocking = true;
+        fx.arm();
+        unlockTimer.restart();
+    }
+    Timer {
+        id: unlockTimer
+        interval: 650
+        onTriggered: { fx.playUnlock(); root.unlock(); }
+    }
+    // The lock surfaces are up: LockFx (black + line, under the cover) is no longer needed.
+    Timer { id: releaseFx; interval: 400; onTriggered: fx.release() }
     function unlock() {
-        password = ""; pendingSecret = ""; authState = "idle"; message = "";
-        sessionLock.locked = false;
+        password = ""; pendingSecret = ""; authState = "idle"; message = ""; unlocking = false;
+        if (preview) previewLocked = false; else sessionLock.locked = false;
     }
+    LockFx { id: fx }
     Connections {
         target: Config
         function onLockRequestChanged() { root.lock(); }
     }
     Component.onCompleted: {
-        if (Quickshell.env("ULTIMIT_START_LOCKED") === "1") { console.log("[lock] restarted after a crash: locking"); root.lock(); }
+        if (Quickshell.env("ULTIMIT_START_LOCKED") === "1") { console.log("[lock] restarted after a crash: locking"); root.lock(true); }
+        else if (preview) root.lock(true);
         else lockedProbe.running = true;
     }
     // The shell itself crashed while locked: the compositor kept the screen covered and is still
@@ -66,7 +101,7 @@ Scope {
                 try {
                     if (JSON.parse(text).locked === true && !root.locked) {
                         console.log("[lock] shell restarted while locked: locking");
-                        root.lock();
+                        root.lock(true);
                     }
                 } catch (e) {}
             }
@@ -82,6 +117,18 @@ Scope {
     WlSessionLock {
         id: sessionLock
         LockSurface { ctl: root }
+        onSecureChanged: if (secure && fx.mode === "hold") releaseFx.restart()
+    }
+
+    // Preview window (ULTIMIT_LOCK_PREVIEW=1): the same view, an ordinary toplevel.
+    LazyLoader {
+        active: root.preview && root.previewLocked
+        FloatingWindow {
+            title: "Ultimit lock preview"
+            implicitWidth: 1280; implicitHeight: 720
+            color: "#000000"
+            LockView { anchors.fill: parent; ctl: root; primary: true }
+        }
     }
 
     // ---------------- authentication (PAM) ----------------
@@ -110,8 +157,9 @@ Scope {
     }
 
     function submit() {
-        if (authState === "auth" || password.length === 0) return;
+        if (authState === "auth" || password.length === 0 || unlocking) return;
         authState = "auth"; message = "";
+        if (preview) { finish(password === "demo"); return; }   // preview: no PAM, nothing is locked
         pendingSecret = password;
         if (!pam.start()) { pendingSecret = ""; finish(false); }
     }
@@ -122,7 +170,7 @@ Scope {
         interval: 450
         onTriggered: {
             root.pendingSecret = "";
-            if (root.pendingOk) { console.log("[lock] unlocked"); root.unlock(); return; }
+            if (root.pendingOk) { console.log("[lock] unlocked"); root.beginUnlock(); return; }
             console.log("[lock] authentication failed");
             root.password = "";
             root.authState = "fail";
@@ -134,7 +182,7 @@ Scope {
     // Keystrokes from any lock surface.
     function onKey(e) {
         e.accepted = true;
-        if (authState === "auth") return;
+        if (authState === "auth" || unlocking) return;
         const mods = e.modifiers;
         if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) { submit(); return; }
         if (e.key === Qt.Key_CapsLock) { capsLock = !capsLock; return; }
@@ -221,7 +269,7 @@ Scope {
         if (m) {
             sleeping = m[1] === "true";
             console.log("[lock] PrepareForSleep " + m[1]);
-            if (sleeping) root.lock();
+            if (sleeping) root.lock(true);
             else releaseKeys.restart();
             return;
         }

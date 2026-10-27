@@ -1,15 +1,32 @@
-// GreeterSurface.qml - one full-screen greeter window (per output): wallpaper art dimmed, emblem,
-// big clock, [ ULTIMIT ] wordmark; the login panel is shown on the main display only (mainScreen,
-// else the first screen).
+// GreeterSurface.qml - one full-screen greeter window (per output). One continuous piece with the
+// boot splash (Plymouth) before it and the session boot overlay (shell/Boot.qml) after it:
+//
+//   hand-off frame  black, the emblem centred (84 px, stroke 1.2), "[ ULTIMIT ]" 18 px below it and a
+//                   240 px accent line below that - exactly what Plymouth leaves on screen.
+//   intro (tI, ms)   250-700 the line expands across the screen; 500-1400 the shard wallpaper fades
+//                   and settles in behind; 800-1600 emblem + wordmark glide into the login card's
+//                   header (other outputs: the emblem goes above the clock); 1200-1700 clock and
+//                   status come in; 1350-1740 the card opens (accent line from the centre, then the
+//                   content wipes down: the house motion).
+//   outro (O, ms)   on login success: 0-260 the card content collapses into its accent line, 260-520
+//                   the line contracts to the centre, 250-950 the shards fade to black, 450-1150 the
+//                   emblem + wordmark glide back to the centre, 900-1150 the 240 px line draws out:
+//                   the same frame Boot.qml starts on. If the launch falls through, it plays back.
+//   failed password the card tears sideways and its accent goes to the error colour (HouseCard.glitch).
+//
+// Each sequence is one linear clock; everything derives from it (Anim.seg + easings). Nothing keeps
+// running once a sequence ends: the wallpaper only paints while it is visible. Reduced motion
+// (ULTIMIT_MOTION=0) shows the end states with a short crossfade.
 import QtQuick
 import QtQuick.Shapes
+import QtQuick.Window
 import Quickshell
 import Quickshell.Wayland
 
 PanelWindow {
     id: win
     required property var ctl
-    color: Theme.bg1
+    color: "#000000"
 
     anchors { top: true; bottom: true; left: true; right: true }
     exclusionMode: ExclusionMode.Ignore
@@ -22,53 +39,122 @@ PanelWindow {
         && screen.name === (Quickshell.screens.some(s => s.name === mainScreen) ? mainScreen : Quickshell.screens[0].name)
     readonly property real u: Math.max(.7, Math.min(width, height) / 800)
 
-    SystemClock { id: clock; precision: SystemClock.Seconds }
+    SystemClock { id: clock; precision: SystemClock.Seconds; enabled: win.uiOp > .01 }
     readonly property var days: ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"]
     function p2(n) { return String(n).padStart(2, "0"); }
     readonly property date now: clock.date
 
     readonly property bool busy: ctl.phase === "auth" || ctl.phase === "launching" || ctl.phase === "starting" || ctl.phase === "loading"
 
+    // ---- sequences ----
+    readonly property int introEnd: 1800
+    readonly property int outroEnd: 1250
+    property real tI: 0
+    property real tO: 0
+    NumberAnimation {
+        id: introAnim; target: win; property: "tI"; from: 0; to: win.introEnd
+        duration: Config.motion ? win.introEnd : 1
+    }
+    NumberAnimation { id: outroAnim; target: win; property: "tO"; duration: Config.motion ? 1250 : 250 }
+    // The clock starts once the hand-off frame has been shown (the second swap: frame callbacks only
+    // come when the surface is on screen), not while shaders and fonts load.
+    property bool started: false
+    property int swaps: 0
+    Connections {
+        target: scope.Window.window
+        enabled: !win.started
+        function onFrameSwapped() { if (++win.swaps >= 2) { win.started = true; introAnim.start(); } }
+    }
+    readonly property bool leaving: ctl.phase === "launching"
+    onLeavingChanged: {
+        outroAnim.stop();
+        outroAnim.from = tO;
+        outroAnim.to = leaving ? outroEnd : 0;
+        outroAnim.duration = (Config.motion ? 1 : .2) * Math.abs(outroAnim.to - tO) * (leaving ? 1 : .6);
+        outroAnim.start();
+    }
+
+    // ---- derived progress ----
+    readonly property real glide: Anim.out3(Anim.seg(tI, 800, 1600)) * (1 - Anim.out3(Anim.seg(tO, 450, 1150)))
+    readonly property real wallOp: Anim.out3(Anim.seg(tI, 500, 1400)) * (1 - Anim.seg(tO, 250, 950))
+    readonly property real uiOp: Anim.out3(Anim.seg(tI, 1200, 1700)) * (1 - Anim.seg(tO, 0, 300))
+    readonly property real cardLine: tO > 0 ? 1 - Anim.out3(Anim.seg(tO, 260, 520)) : Anim.out3(Anim.seg(tI, 1350, 1350 + 140))
+    readonly property real cardWipe: tO > 0 ? 1 - Anim.out3(Anim.seg(tO, 0, 260)) : Anim.out3(Anim.seg(tI, 1420, 1420 + 320))
+    // the hero accent line: 240 px under the wordmark -> across the screen -> gone; back at the end
+    readonly property real heroLineW: tO > 0 ? 240 * Anim.out3(Anim.seg(tO, 900, 1150))
+                                            : Anim.mix(240, width, Anim.out3(Anim.seg(tI, 250, 700)))
+    readonly property real heroLineOp: tO > 0 ? Anim.seg(tO, 900, 1000) : 1 - Anim.seg(tI, 750, 1150)
+
+    // hand-off geometry: emblem centred on the screen, wordmark 18 px below, line 20 px below that
+    readonly property real ecx: width / 2
+    readonly property real ecy: height / 2
+    readonly property real slotSize: primary ? 36 : 54 * u
+    readonly property real slotCx: primary ? card.x + 18 + 18 : center.x + center.width / 2
+    readonly property real slotCy: primary ? card.y + 18 + 20 : center.y + 27 * u
+    readonly property real embSize: Anim.mix(84, slotSize, glide)
+
     FocusScope {
         id: scope
         anchors.fill: parent
         focus: true
+        opacity: Config.motion ? 1 : introFade.v
+        Rectangle { visible: !win.started; width: 1; height: 1; x: win.swaps % 2; opacity: .01 }   // keeps frames coming
+        QtObject { id: introFade; property real v: 0
+                   Behavior on v { NumberAnimation { duration: 250 } } Component.onCompleted: v = 1 }
 
-        WallpaperArt {
+        // the shard wallpaper, assembling in behind everything
+        Item {
             anchors.fill: parent
-            active: win.visible
-            animate: Config.motion
-        }
-        Rectangle { anchors.fill: parent; color: Theme.light ? "#40ffffff" : "#8c000000" }
-        Rectangle {
-            anchors.fill: parent
-            visible: !Theme.light
-            gradient: Gradient {
-                GradientStop { position: 0; color: "#66000000" }
-                GradientStop { position: .35; color: "transparent" }
-                GradientStop { position: .65; color: "transparent" }
-                GradientStop { position: 1; color: "#80000000" }
+            visible: win.wallOp > .005
+            opacity: win.wallOp
+            scale: Anim.mix(1.05, 1, Anim.out3(Anim.seg(win.tI, 500, 1500)))
+            WallpaperArt {
+                anchors.fill: parent
+                active: win.visible && win.wallOp > .005
+                animate: Config.motion
+            }
+            Rectangle { anchors.fill: parent; color: Theme.light ? "#40ffffff" : "#8c000000" }
+            Rectangle {
+                anchors.fill: parent
+                visible: !Theme.light
+                gradient: Gradient {
+                    GradientStop { position: 0; color: "#66000000" }
+                    GradientStop { position: .35; color: "transparent" }
+                    GradientStop { position: .65; color: "transparent" }
+                    GradientStop { position: 1; color: "#80000000" }
+                }
             }
         }
 
-        // top-left status tag
-        Row {
-            x: 30; y: 26; spacing: 10
-            Rectangle { width: 8; height: 8; anchors.verticalCenter: parent.verticalCenter; color: Theme.accent
-                        SequentialAnimation on opacity {
-                            loops: Animation.Infinite; running: Config.motion
-                            NumberAnimation { to: .25; duration: 900 } NumberAnimation { to: 1; duration: 900 } } }
-            Text { text: "AWAITING LOGIN" + (win.ctl.demo ? " · DEMO" : ""); color: Theme.dim
-                   font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 3.3 }
+        // status tag, clock, wordmark corner: come in with the card
+        Item {
+            anchors.fill: parent
+            opacity: win.uiOp
+            visible: opacity > .005
+            Row {
+                x: 30; y: 26; spacing: 10
+                Rectangle { width: 8; height: 8; anchors.verticalCenter: parent.verticalCenter; color: Theme.accent
+                            SequentialAnimation on opacity {
+                                loops: Animation.Infinite; running: Config.motion && win.uiOp > .01
+                                NumberAnimation { to: .25; duration: 900 } NumberAnimation { to: 1; duration: 900 } } }
+                Text { text: "AWAITING LOGIN" + (win.ctl.demo ? " \u00b7 DEMO" : ""); color: Theme.dim
+                       font.family: Theme.mono; font.pixelSize: 11; font.letterSpacing: 3.3 }
+            }
+            Wordmark {
+                anchors.right: parent.right; anchors.rightMargin: 30
+                anchors.bottom: parent.bottom; anchors.bottomMargin: 28
+            }
         }
 
         Column {
             id: center
             anchors.horizontalCenter: parent.horizontalCenter
-            y: win.primary ? Math.max(24, win.height * .5 - (height + 36 * win.u + 290) * .5)
-                           : Math.max(40, win.height * .5 - height * .5)
+            y: (win.primary ? Math.max(24, win.height * .5 - (height + 36 * win.u + card.height) * .5)
+                            : Math.max(40, win.height * .5 - height * .5)) + (1 - win.uiOp) * 14
+            opacity: win.uiOp
+            visible: opacity > .005
             spacing: 8 * win.u
-            Emblem { anchors.horizontalCenter: parent.horizontalCenter; size: 54 * win.u; color: Theme.fg }
+            Item { visible: !win.primary; width: 54 * win.u; height: 54 * win.u; anchors.horizontalCenter: parent.horizontalCenter }
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: ((win.now.getHours() % 12) || 12) + ":" + win.p2(win.now.getMinutes()) + (win.now.getHours() < 12 ? " AM" : " PM")
@@ -78,44 +164,30 @@ PanelWindow {
             }
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: win.days[win.now.getDay()] + " · " + win.now.getFullYear() + "." + win.p2(win.now.getMonth() + 1) + "." + win.p2(win.now.getDate())
+                text: win.days[win.now.getDay()] + " \u00b7 " + win.now.getFullYear() + "." + win.p2(win.now.getMonth() + 1) + "." + win.p2(win.now.getDate())
                 color: Theme.dim
                 font.family: Theme.mono; font.pixelSize: 15 * win.u; font.letterSpacing: 5
             }
         }
 
-        // ---- login panel (first screen only) ----
-        Item {
-            id: panel
+        // ---- login card (first screen only) ----
+        HouseCard {
+            id: card
             visible: win.primary
             width: 420 * win.u; height: panelCol.height + 36
-            anchors.horizontalCenter: parent.horizontalCenter
-            y: center.y + center.height + 36 * win.u
-            property real shakeX: 0
-            transform: Translate { x: panel.shakeX }
-
-            SequentialAnimation {
-                id: shake
-                NumberAnimation { target: panel; property: "shakeX"; to: -14; duration: Config.dur(55) }
-                NumberAnimation { target: panel; property: "shakeX"; to: 14; duration: Config.dur(80) }
-                NumberAnimation { target: panel; property: "shakeX"; to: -10; duration: Config.dur(80) }
-                NumberAnimation { target: panel; property: "shakeX"; to: 8; duration: Config.dur(70) }
-                NumberAnimation { target: panel; property: "shakeX"; to: 0; duration: Config.dur(60) }
-            }
-            Connections { target: win.ctl; function onShakeTickChanged() { shake.restart(); } }
-
-            Rectangle {
-                anchors.fill: parent
-                color: Theme.panel
-                border.width: 1
-                border.color: Theme.line
-                Brackets {}
-            }
+            x: (win.width - width) / 2
+            y: center.y + center.height + 36 * win.u - (1 - win.uiOp) * 14
+            lineP: win.cardLine
+            wipeP: win.cardWipe
+            Connections { target: win.ctl; function onShakeTickChanged() { card.glitch(); } }
 
             Column {
                 id: panelCol
                 x: 18; y: 18; width: parent.width - 36
                 spacing: 12
+
+                // header slot: the emblem + wordmark glide here (they live in the hero layer above)
+                Item { id: hdr; width: parent.width; height: 40 }
 
                 // user: avatar + selector
                 Row {
@@ -261,9 +333,40 @@ PanelWindow {
             }
         }
 
-        Wordmark {
-            anchors.right: parent.right; anchors.rightMargin: 30
-            anchors.bottom: parent.bottom; anchors.bottomMargin: 28
+        // ---- hero: the hand-off frame's emblem, wordmark and line ----
+        Rectangle {
+            width: win.heroLineW; height: 2
+            x: (win.width - width) / 2
+            y: wm.y0 + wm.implicitHeight + 20
+            color: Theme.accent
+            opacity: win.heroLineOp
+            visible: win.heroLineW > .5 && opacity > .005
+        }
+        Emblem {
+            x: Anim.mix(win.ecx, win.slotCx, win.glide) - size / 2
+            y: Anim.mix(win.ecy, win.slotCy, win.glide) - size / 2
+            size: win.embSize
+            strokeWidth: Anim.mix(1.2, 1.8, win.glide)
+            color: Theme.fg
+        }
+        Item {
+            id: wm
+            readonly property real y0: win.ecy + 42 + 18
+            readonly property real s: Anim.mix(1, .55, win.glide)
+            implicitWidth: wmText.implicitWidth; implicitHeight: wmText.implicitHeight
+            width: implicitWidth; height: implicitHeight
+            scale: win.primary ? s : 1
+            transformOrigin: Item.TopLeft
+            x: win.primary ? Anim.mix(win.ecx - width / 2, card.x + 18 + 36 + 12, win.glide) : win.ecx - width / 2
+            y: win.primary ? Anim.mix(y0, card.y + 18 + (40 - implicitHeight * .55) / 2, win.glide) : y0
+            opacity: win.primary ? 1 : 1 - Anim.seg(win.glide, 0, .5)
+            visible: opacity > .005
+            Text {
+                id: wmText
+                text: "[ ULTIMIT ]"
+                color: Theme.fg
+                font.family: Theme.display; font.pixelSize: 30; font.letterSpacing: 6
+            }
         }
     }
 }
