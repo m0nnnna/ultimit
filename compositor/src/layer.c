@@ -381,6 +381,8 @@ static void layer_update_blur(struct ul_layer_surface *l) {
 	struct layer_blur b = {
 		.enabled = server->config.panel_blur && !under_glass(l) &&
 			!(l->output && l->output->panel_blur_off) &&
+			/* scenefx places the backdrop blur wrongly on a rotated output (a stray grey box) */
+			!(l->output && l->output->wlr_output->transform != WL_OUTPUT_TRANSFORM_NORMAL) &&
 			ns && strncmp(ns, "ultimit-", 8) == 0 && !blur_excluded(server, ns),
 		.optimized = l->layer_surface->current.exclusive_zone > 0,
 	};
