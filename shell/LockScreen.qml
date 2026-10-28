@@ -35,7 +35,11 @@ Scope {
 
     readonly property bool preview: Quickshell.env("ULTIMIT_LOCK_PREVIEW") === "1"
     property bool previewLocked: false
-    readonly property bool locked: preview ? previewLocked : sessionLock.locked
+    // Our own copy of the lock state: Quickshell 0.3.2's WlSessionLock never emits a change when it
+    // unlocks, so a binding on sessionLock.locked stays true after the first unlock (the desktop's
+    // animations stay paused and lock() refuses to lock again).
+    property bool sessionLocked: false
+    readonly property bool locked: preview ? previewLocked : sessionLocked
     property bool unlocking: false        // password accepted, the unlock animation is playing
     onLockedChanged: UiSounds.play(locked ? "lock" : "unlock")
     // shared lock-screen state (rendered by every LockSurface)
@@ -59,7 +63,7 @@ Scope {
     }
     function engage() {
         unlocking = false;
-        if (preview) previewLocked = true; else sessionLock.locked = true;
+        if (preview) previewLocked = true; else { sessionLock.locked = true; sessionLocked = sessionLock.locked; }
         if (preview && fx.mode === "hold") releaseFx.restart();
     }
     // Password accepted: play the collapse under the lock, then release it and let LockFx wipe.
@@ -79,7 +83,7 @@ Scope {
     Timer { id: releaseFx; interval: 400; onTriggered: fx.release() }
     function unlock() {
         password = ""; pendingSecret = ""; authState = "idle"; message = ""; unlocking = false;
-        if (preview) previewLocked = false; else sessionLock.locked = false;
+        if (preview) previewLocked = false; else { sessionLock.locked = false; sessionLocked = false; }
     }
     LockFx { id: fx }
     Connections {
@@ -117,7 +121,12 @@ Scope {
     WlSessionLock {
         id: sessionLock
         LockSurface { ctl: root }
-        onSecureChanged: if (secure && fx.mode === "hold") releaseFx.restart()
+        onSecureChanged: {
+            if (secure && fx.mode === "hold") releaseFx.restart();
+            // Also fires when the compositor ends the lock itself: resync our copy once Quickshell has
+            // finished tearing the lock down (it emits this mid-teardown, while still "locked").
+            if (!secure) Qt.callLater(() => root.sessionLocked = sessionLock.locked);
+        }
     }
 
     // Preview window (ULTIMIT_LOCK_PREVIEW=1): the same view, an ordinary toplevel.
