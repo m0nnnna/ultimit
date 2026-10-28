@@ -134,7 +134,7 @@ PanelWindow {
                                 id: tipTimer; interval: 350
                                 onTriggered: {   // window picker tooltip: titles of the open windows
                                     const t = RailWindows.windowsFor(pb.modelData.id).map(w => (w.title || w.appId || "Untitled"));
-                                    WindowUi.showTip(t.join("\n"), pb.mapToGlobal(0, pb.height / 2).y, win.screen ? win.screen.name : "");
+                                    WindowUi.showTip(t.join("\n"), pb.mapToItem(null, 0, pb.height / 2).y + win.topY, win.screen ? win.screen.name : "");
                                 }
                             }
                             // Minimize animation flies into this button: report where it is.

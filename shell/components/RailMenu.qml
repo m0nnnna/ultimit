@@ -83,6 +83,8 @@ Scope {
         }
         PopupMenu {
             id: pm
+            // compositor shadow: QML shadow rings in this blurred surface would turn into a glass halo
+            shadowNs: "ultimit-railmenu"; shadowWanted: mwin.visible
             x: Config.railWidth + 6
             y: Math.max(8, Math.min(Pins.menuY - 22, mwin.height - height - 8))
             items: mwin.items
