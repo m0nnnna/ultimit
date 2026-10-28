@@ -165,10 +165,29 @@ FloatingWindow {
     function tokens(n) { return n >= 1000000 ? (n / 1000000).toFixed(1) + "M" : n >= 1000 ? Math.round(n / 1000) + "K" : String(n); }
     readonly property string usageText: {
         const parts = [], c = chat.context, u = chat.usage;
-        if (c && c.used) parts.push("Context " + tokens(c.used) + (c.window ? " / " + tokens(c.window) + " (" + Math.round(c.used / c.window * 100) + "%)" : ""));
+        const full = c ? c.compactAt || c.window : 0;   // compaction comes long before the model's window
+        if (c && c.used) parts.push("Context " + tokens(c.used) + (full ? " / " + tokens(full) + " (" + Math.round(c.used / full * 100) + "%)" : ""));
         if (u && u.cost) parts.push("$" + Number(u.cost).toFixed(u.cost < 0.1 ? 3 : 2) + " this chat");
         return parts.join("   ·   ");
     }
+
+    // ---- time for a new chat? ----
+    // Every message re-sends the whole chat, so a long one costs more per message the longer it gets, and
+    // once compacted Claude works from a summary. Warn from 2/3 of the compaction point, and after a compaction.
+    property string contextWarnDismissed: ""   // the chat (and level) the warning was closed for
+    readonly property string contextWarn: {
+        const c = chat.context;
+        if (chat.chatId === "") return "";
+        const at = c && c.compactAt ? c.compactAt : 120000;
+        if (chat.compactions > 0)
+            return "This chat was compacted" + (chat.compactions > 1 ? " " + chat.compactions + " times" : "")
+                   + ": Claude works from a summary of it now. For the next thing, a new chat is sharper and cheaper.";
+        if (c && c.used >= at * 2 / 3)
+            return "This chat is long (" + tokens(c.used) + " tokens): every message re-sends all of it, and it compacts at "
+                   + tokens(at) + ". Start a new chat for the next topic.";
+        return "";
+    }
+    readonly property string contextWarnKey: chat.chatId + ":" + (chat.compactions > 0 ? "c" + chat.compactions : "long")
 
     // ---- right-click menus (DataApp.DMenu); menuCtx says what the picked entry acts on ----
     property var menuCtx: null
@@ -682,6 +701,28 @@ FloatingWindow {
                                     onClicked: checked = !checked
                                 }
                             }
+                        }
+                    }
+
+                    // time for a new chat
+                    Rectangle {
+                        Layout.fillWidth: true
+                        visible: win.contextWarn !== "" && win.contextWarnDismissed !== win.contextWarnKey
+                        implicitHeight: warnRow.implicitHeight + 16
+                        color: Theme.panel
+                        border.width: 1; border.color: Theme.warn
+                        RowLayout {
+                            id: warnRow
+                            anchors.fill: parent; anchors.margins: 8; anchors.leftMargin: 14
+                            spacing: 10
+                            Text {
+                                Layout.fillWidth: true
+                                text: win.contextWarn
+                                wrapMode: Text.Wrap
+                                color: Theme.warn; font.family: Theme.ui; font.pixelSize: Theme.type.label
+                            }
+                            ChamferButton { implicitHeight: 28; text: "New chat"; onClicked: win.newChat() }
+                            ChamferButton { implicitHeight: 28; text: "Not now"; onClicked: win.contextWarnDismissed = win.contextWarnKey }
                         }
                     }
 

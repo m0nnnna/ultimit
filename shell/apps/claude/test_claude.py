@@ -248,6 +248,10 @@ class ClaudeHelper(unittest.TestCase):
         self.assertEqual(done[0]["pre"], 167000)
         notes = [i for i in self.j("chat", p["id"], ev[0]["chat"])["items"] if i["k"] == "note"]
         self.assertIn("167K tokens", notes[0]["text"])
+        meta = self.j("chat", p["id"], ev[0]["chat"])["meta"]
+        self.assertEqual(meta["compactions"], 1)          # the window warns that it's time for a new chat
+        self.assertEqual(done[0]["compactions"], 1)
+        self.assertEqual(meta["context"]["compactAt"], 120000)
 
     def test_scaling_subagents_and_effort(self):
         acc = self.add_logged_in()
@@ -277,7 +281,7 @@ class ClaudeHelper(unittest.TestCase):
         self.assertAlmostEqual(res[-1]["usage"]["cost"], 0.004)
         self.assertEqual(res[-1]["usage"]["output"], 60)
         self.assertEqual(res[-1]["usage"]["turns"], 2)
-        self.assertEqual(res[-1]["context"], {"used": 2 + 2000 + 500 + 30, "window": 200000})
+        self.assertEqual(res[-1]["context"], {"used": 2 + 2000 + 500 + 30, "window": 200000, "compactAt": 120000})
         meta = self.j("chat", p["id"], ev[0]["chat"])["meta"]
         self.assertEqual(meta["usage"]["turns"], 2)
         # a new Claude Code process (resuming the chat) starts its running total again

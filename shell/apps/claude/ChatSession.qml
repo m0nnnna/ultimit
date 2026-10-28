@@ -24,7 +24,8 @@ Item {
     property string info: ""            // after a turn: "2 turns · $0.01 · 4.1 s"
     property string limit: ""           // usage warning from Claude Code
     property var usage: null            // this chat's totals: { cost, input, output, cacheRead, cacheWrite, turns }
-    property var context: null          // { used, window }: how full the context was after the last turn
+    property var context: null          // { used, window, compactAt }: how full the context was after the last turn
+    property int compactions: 0         // how often Claude Code compacted this chat
     property string modelName: ""       // the model Claude Code reports
     property var proc: null
     property var pending: []            // messages typed before Claude Code was ready
@@ -59,7 +60,7 @@ Item {
         stopProc();
         projectId = pid; chatId = cid || ""; meta = ({}); itemModel.clear();
         liveText = ""; statusText = ""; info = ""; limit = ""; modelName = ""; ask = null; askQueue = [];
-        usage = null; context = null;
+        usage = null; context = null; compactions = 0;
         busy = false; thinking = false; sysinfoUsed = false; pending = [];
         if (chatId === "") return;
         loading = true;
@@ -71,6 +72,7 @@ Item {
             root.meta = o.meta;
             root.usage = o.meta.usage || null;
             root.context = o.meta.context || null;
+            root.compactions = o.meta.compactions || 0;
             for (const it of o.items) {
                 root.addItem(it);
                 if (it.sysinfo) root.sysinfoUsed = true;
@@ -186,6 +188,7 @@ Item {
         }
         case "compacted":
             addItem({ k: "note", kind: "compact", text: o.text });
+            compactions = o.compactions || compactions + 1;
             break;
         case "note":
             addItem({ k: "note", kind: "error", text: o.text });

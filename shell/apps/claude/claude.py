@@ -78,7 +78,9 @@ scale up to expert instead of looping on a hard problem. The chat itself runs at
 Usage: Claude Code reports the plan's limits with every turn (rate_limit_event); the last report per
 account is kept in <data>/usage/<account>.json: {windows{five_hour|seven_day...: {used 0-1, resets}},
 status, overage, t}. A chat's meta keeps its own totals: usage{cost, input, output, cacheRead, cacheWrite,
-turns} and context{used, window} (the last turn's prompt + reply, of the model's context window).
+turns}, context{used, window, compactAt} (the last turn's prompt + reply, of the model's context window;
+compactAt: COMPACT_WINDOW) and compactions (how often it was compacted). The window warns from these when
+it is time for a new chat.
 
 Environment: ULTIMIT_CLAUDE_HOME (data dir, default $XDG_DATA_HOME/ultimit/claude),
 ULTIMIT_CLAUDE_BIN (the claude binary), ULTIMIT_CLAUDE_FAKE_SYSINFO (text, for tests).
@@ -1183,7 +1185,10 @@ class Session:
                 text = ("Context compacted automatically" if cm.get("trigger") == "auto" else "Context compacted") + \
                        (" (it was %dK tokens); Claude carries on from a summary" % round(pre / 1000) if pre else "")
                 self.record({"k": "note", "text": text, "kind": "compact"})
-                self.emit({"ev": "compacted", "text": text, "trigger": cm.get("trigger", ""), "pre": pre})
+                self.meta["compactions"] = (self.meta.get("compactions") or 0) + 1
+                self.save_meta()
+                self.emit({"ev": "compacted", "text": text, "trigger": cm.get("trigger", ""), "pre": pre,
+                           "compactions": self.meta["compactions"]})
             elif st == "task_summary":
                 self.emit({"ev": "status", "text": m.get("detail") or ""})
             elif st == "api_retry":
@@ -1288,7 +1293,8 @@ class Session:
         window = max([n(x.get("contextWindow")) for x in (m.get("modelUsage") or {}).values()
                       if isinstance(x, dict)] or [0])
         if used:
-            self.meta["context"] = {"used": used, "window": window or (self.meta.get("context") or {}).get("window", 0)}
+            self.meta["context"] = {"used": used, "window": window or (self.meta.get("context") or {}).get("window", 0),
+                                    "compactAt": int(COMPACT_WINDOW)}
 
     def read_out(self):
         for line in self.child.stdout:
