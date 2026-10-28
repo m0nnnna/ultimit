@@ -10,6 +10,8 @@ PanelWindow {
     id: win
 
     anchors { left: true; top: true; bottom: true }
+    // Under the top bar (main display) the rail starts a little lower, so the two don't run together.
+    margins.top: Config.isMainScreen(screen ? screen.name : "") && !Config.isCovered(screen ? screen.name : "") ? 6 : 0
     implicitWidth: Config.railWidth
     exclusiveZone: Config.railWidth
     color: "transparent"
