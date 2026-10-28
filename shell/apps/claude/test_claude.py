@@ -213,6 +213,26 @@ class ClaudeHelper(unittest.TestCase):
         ev = self.session(p["id"], "new", {"op": "send", "text": "hi"}, account=home["id"])
         self.assertEqual(ev[0]["meta"]["account"], home["id"])
 
+    def test_chat_moves_to_another_project(self):
+        acc = self.add_logged_in()
+        other = os.path.join(self.tmp.name, "other")
+        os.makedirs(other)
+        a = self.j("project-save", stdin=json.dumps({"name": "Game", "dir": self.proj_dir, "account": acc["id"]}))["project"]
+        b = self.j("project-save", stdin=json.dumps({"name": "Site", "dir": other, "account": acc["id"]}))["project"]
+        ev = self.session(a["id"], "new", {"op": "send", "text": "hello"})
+        chat = ev[0]["chat"]
+        m = self.j("chat-move", a["id"], chat, b["id"])
+        self.assertTrue(m["ok"], m)
+        self.assertEqual(self.j("chats", a["id"])["chats"], [])
+        self.assertEqual([c["id"] for c in self.j("chats", b["id"])["chats"]], [chat])
+        self.assertEqual(len(self.j("chat", b["id"], chat)["items"]), 2)
+        # the same Claude Code session carries on, now from the other project's folder
+        ev = self.session(b["id"], chat, {"op": "send", "text": "again"})
+        self.assertEqual([e for e in ev if e["ev"] == "init"][0]["session"], m["meta"]["session"])
+        self.assertTrue([e for e in ev if e["ev"] == "text"][0]["text"].endswith("cwd=" + other))
+        self.assertFalse(self.j("chat-move", b["id"], chat, "nowhere")["ok"])
+        self.assertFalse(self.j("chat-move", b["id"], "nochat", a["id"])["ok"])
+
     def test_auto_compact(self):
         acc = self.add_logged_in()
         with open(os.path.join(acc["dir"], ".claude.json"), "w") as f:
@@ -222,7 +242,7 @@ class ClaudeHelper(unittest.TestCase):
         ev = self.session(p["id"], "new", {"op": "send", "text": "fill the context until it has to compact"})
         with open(os.path.join(acc["dir"], ".claude.json")) as f:
             self.assertEqual(json.load(f), {"autoCompactEnabled": True, "theme": "dark"})
-        self.assertTrue([e for e in ev if e["ev"] == "text"][0]["text"].endswith("window=200000 autocompact=on"))
+        self.assertTrue([e for e in ev if e["ev"] == "text"][0]["text"].endswith("window=120000 autocompact=on"))
         self.assertIn("Compacting the conversation", [e.get("text") for e in ev if e["ev"] == "status"])
         done = [e for e in ev if e["ev"] == "compacted"]
         self.assertEqual(done[0]["pre"], 167000)
@@ -236,7 +256,7 @@ class ClaudeHelper(unittest.TestCase):
                                                           "model": model, "effort": effort}))["project"]
             ev = self.session(p["id"], "new", {"op": "send", "text": "may you use a subagent?"})
             self.assertTrue([e for e in ev if e["ev"] == "text"][0]["text"].endswith(
-                "agents=expert,scout,worker effort=%s scaling=True" % want), model)
+                "agents=expert,scout,worker effort=%s scaling=True model=%s" % (want, model or "sonnet")), model)
         self.assertFalse(self.j("project-save", stdin=json.dumps({"name": "X", "dir": self.proj_dir, "effort": "huge"}))["ok"])
 
     def test_usage(self):

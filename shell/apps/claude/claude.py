@@ -15,7 +15,9 @@ with the Ultimit system summary attached to new chats.
 
 Chats: <data>/chats/<project>/<chat>.json (title, account, Claude Code session id, times) and
 <chat>.jsonl (what the window shows). A chat resumes its Claude Code session with the account it
-started with.
+started with. Claude only ever sees its own chat: nothing reads the other chats' histories. A chat can
+move to another project (chat-move); its Claude Code session is copied to where the new project's
+folder keeps it, since Claude Code files sessions by working directory.
 
   claude.py state                        JSON {ok, cli, accounts[], projects[], dataDir}
   claude.py cli                          JSON {ok, path, version}
@@ -34,6 +36,7 @@ started with.
   claude.py chat <project> <chat>        JSON {ok, meta, items[]}
   claude.py chat-rename <project> <chat> <title>   JSON {ok}
   claude.py chat-remove <project> <chat>           JSON {ok}
+  claude.py chat-move <project> <chat> <to>        JSON {ok, meta}  the chat goes to project <to>
   claude.py chat-account <project> <chat> <account> JSON {ok, meta}  carry on the chat with another account
                                          (its Claude Code session is copied into that account's folder)
   claude.py usage                        JSON {ok, accounts{id: usage}}  each account's plan limits as last
@@ -60,15 +63,17 @@ Context: Claude Code compacts a chat by itself when its context fills (autoCompa
 switched off). Every run drops DISABLE_AUTO_COMPACT / DISABLE_COMPACT from the environment and turns
 autoCompactEnabled back on in the account's .claude.json if it was switched off, so a long chat never
 stops at a full context; the chat shows a note when it happens. Chats compact at COMPACT_WINDOW tokens
-(CLAUDE_CODE_AUTO_COMPACT_WINDOW), not at the edge of the model's window (1M for Opus): every turn sends the
-whole context again, so a chat left to grow to several hundred thousand tokens spends the plan's limits
-several times faster. An account's settings.json "env" can set its own window.
+(CLAUDE_CODE_AUTO_COMPACT_WINDOW), not at the edge of the model's window (1M): every turn sends the whole
+context again, and those re-reads cost the same on Sonnet as on Opus, so a smaller context is the one
+saving no model choice gives. An account's settings.json "env" can set its own window.
 
-Scaling: every chat gets three subagents (--agents, SUBAGENTS): scout (Haiku, low effort, finds and reads),
-worker (Sonnet, medium effort, bulk mechanical work) and expert (Opus, high effort, the hard problems), and
-the system prompt tells Claude to scale down to them for grunt work, so file dumps stay out of the chat and
-run on cheaper models, and to scale up to expert instead of looping on a hard problem. The chat itself runs
-at the project's effort (--effort, DEFAULT_EFFORT unless the project picks one).
+Scaling: a chat runs on the project's model, DEFAULT_MODEL (Sonnet) unless it picks one: nearly every turn
+of the work is the chat's own, so that is where the model's price counts. Every chat gets three subagents
+(--agents, SUBAGENTS): scout (Haiku, low effort, finds and reads), worker (Haiku, medium effort, bulk
+mechanical work) and expert (Opus, high effort, the hard problems), and the system prompt tells Claude to
+scale down to them for grunt work, so file dumps stay out of the chat and run on the cheapest model, and to
+scale up to expert instead of looping on a hard problem. The chat itself runs at the project's effort
+(--effort, DEFAULT_EFFORT unless the project picks one).
 
 Usage: Claude Code reports the plan's limits with every turn (rate_limit_event); the last report per
 account is kept in <data>/usage/<account>.json: {windows{five_hour|seven_day...: {used 0-1, resets}},
@@ -99,11 +104,12 @@ STATE = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.join(HOME, ".lo
 
 # Nothing Claude Code reads from the environment comes from the desktop: credentials (ANTHROPIC_API_KEY,
 # CLAUDE_CODE_OAUTH_TOKEN, ...), endpoints and options all belong to the account, in its own settings.json "env".
-COMPACT_WINDOW = "200000"   # chats compact at this many tokens (a plain number: Claude Code reads "200k" as 100k)
+COMPACT_WINDOW = "120000"   # chats compact at this many tokens (a plain number: Claude Code reads "200k" as 100k)
 DROP_PREFIXES = ("ANTHROPIC_", "CLAUDE_", "CLAUDECODE", "DISABLE_AUTO_COMPACT", "DISABLE_COMPACT")
 PERM_MODES = ("default", "acceptEdits", "plan", "auto", "bypassPermissions")
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
 DEFAULT_EFFORT = "medium"   # the chat's own effort; subagents set theirs in SUBAGENTS
+DEFAULT_MODEL = "sonnet"    # the chat's own model when the project picks none; expert escalates to Opus
 SYSTEM_ID = "system"
 
 
@@ -622,6 +628,44 @@ def cmd_chat_account(pid, cid, aid):
     return {"ok": True, "meta": m}
 
 
+def cwd_key(d):
+    """The folder name Claude Code files a working directory's sessions under (/home/x -> -home-x)."""
+    return "".join(c if c.isalnum() else "-" for c in d)
+
+
+def cmd_chat_move(pid, cid, to):
+    m = load_json(chat_meta_path(pid, cid), None)
+    if m is None:
+        return {"ok": False, "err": "No such chat"}
+    src, dst = project(pid), project(to)
+    if not dst:
+        return {"ok": False, "err": "No such project"}
+    if safe_id(to) == safe_id(pid):
+        return {"ok": True, "meta": m}
+    a, sid = account(m.get("account", "")), m.get("session") or ""
+    if sid and a and src and src["dir"] != dst["dir"]:
+        if not re.fullmatch(r"[A-Za-z0-9-]{1,80}", sid):
+            return {"ok": False, "err": "bad session id"}
+        root = os.path.join(account_dir(a), "projects")
+        old, new = os.path.join(root, cwd_key(src["dir"])), os.path.join(root, cwd_key(dst["dir"]))
+        if not os.path.exists(os.path.join(old, sid + ".jsonl")) and not os.path.exists(os.path.join(new, sid + ".jsonl")):
+            return {"ok": False, "err": "Claude Code's record of this chat is gone, so it can't move to another project"}
+        os.makedirs(new, mode=0o700, exist_ok=True)
+        for name in (sid + ".jsonl", sid):
+            p = os.path.join(old, name)
+            if os.path.isdir(p):
+                shutil.copytree(p, os.path.join(new, name), dirs_exist_ok=True)
+            elif os.path.exists(p):
+                shutil.copy2(p, os.path.join(new, name))
+    m["project"] = to
+    os.makedirs(path("chats", safe_id(to)), exist_ok=True)
+    save_json(chat_meta_path(to, cid), m)
+    os.unlink(chat_meta_path(pid, cid))
+    if os.path.exists(chat_items_path(pid, cid)):
+        os.replace(chat_items_path(pid, cid), chat_items_path(to, cid))
+    return {"ok": True, "meta": m}
+
+
 def cmd_chat_remove(pid, cid):
     for p in chat_images(pid, cid):
         cmd_drop_image(p)
@@ -884,13 +928,13 @@ SUBAGENTS = {
                         "and answer in a few lines: the facts, paths and line numbers, short quotes of the lines that "
                         "matter. No file dumps, no advice unless asked.",
               "model": "haiku", "effort": "low", "tools": ["Read", "Grep", "Glob", "Bash"]},
-    "worker": {"description": "Mid-tier (Sonnet, medium effort). Bulk or mechanical work to a known pattern: edits "
+    "worker": {"description": "Cheap (Haiku, medium effort). Bulk or mechanical work to a known pattern: edits "
                               "across many files, reading many files to summarise them, running tests or builds and "
                               "reporting what failed.",
                "prompt": "You do a well-defined job for another Claude. Follow the brief exactly; if it turns out wrong "
                          "or unclear, stop and say so rather than guessing. Finish with a short report: what you "
                          "changed (paths), what you ran and the result, anything left undone. No file dumps.",
-               "model": "sonnet", "effort": "medium"},
+               "model": "haiku", "effort": "medium"},
     "expert": {"description": "Top tier (Opus, high effort), costly: only for a problem that has resisted a couple of "
                               "attempts, or needs deep reasoning across a lot of code (a subtle bug, a tricky design).",
                "prompt": "Another Claude hands you a hard problem with a brief. Work it out properly, check your "
@@ -903,7 +947,7 @@ SUBAGENT_PROMPT = """The person wants this chat to save their plan's limits and 
 it. Scale the effort to the job instead of running at one pace:
 - Scale down: hand grunt work to a subagent with the Agent tool, so the file dumps stay out of this chat and run on a \
 cheaper model. subagent_type "scout" (Haiku) for finding and reading: locating code, grepping, sweeping logs, \
-checking state. "worker" (Sonnet) for bulk mechanical edits to a known pattern, summarising many files, running \
+checking state. "worker" (Haiku) for bulk mechanical edits to a known pattern, summarising many files, running \
 tests or builds. Give a self-contained brief (a subagent knows nothing of this chat) and ask for a short answer: \
 facts, paths, line numbers. Don't re-read what a subagent already reported unless you need the exact lines to edit.
 - Stay inline for a quick lookup, a single file, or anything that needs this chat's reasoning: a subagent costs a \
@@ -1042,8 +1086,7 @@ class Session:
                 "--include-partial-messages", "--permission-prompt-tool", "stdio", "--permission-mode", perm,
                 "--append-system-prompt", system_prompt(self.proj),
                 "--effort", self.proj.get("effort") or DEFAULT_EFFORT, "--agents", json.dumps(SUBAGENTS)]
-        if self.proj.get("model"):
-            args += ["--model", self.proj["model"]]
+        args += ["--model", self.proj.get("model") or DEFAULT_MODEL]
         if self.meta.get("session"):
             args += ["--resume", self.meta["session"]]
         cwd = self.proj["dir"] if os.path.isdir(self.proj["dir"]) else HOME
@@ -1334,6 +1377,8 @@ def main(argv):
             out(cmd_chat_rename(a[0], a[1], a[2]))
         elif c == "chat-account":
             out(cmd_chat_account(a[0], a[1], a[2]))
+        elif c == "chat-move":
+            out(cmd_chat_move(a[0], a[1], a[2]))
         elif c == "chat-remove":
             out(cmd_chat_remove(a[0], a[1]))
         elif c == "dirs":

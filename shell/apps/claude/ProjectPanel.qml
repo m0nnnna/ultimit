@@ -93,7 +93,7 @@ Rectangle {
             Layout.fillWidth: true
             spacing: 6
             Repeater {
-                model: [{ id: "", label: "Default" }, { id: "fable", label: "Fable" }, { id: "opus", label: "Opus" },
+                model: [{ id: "", label: "Default (Sonnet)" }, { id: "fable", label: "Fable" }, { id: "opus", label: "Opus" },
                         { id: "sonnet", label: "Sonnet" }, { id: "haiku", label: "Haiku" }]
                 delegate: Chip {
                     required property var modelData

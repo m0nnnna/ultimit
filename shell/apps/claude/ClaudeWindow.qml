@@ -238,16 +238,31 @@ FloatingWindow {
                  { id: "copypath", label: "Copy folder path" }], row, x, y, { project: p });
     }
     function chatMenu(row, c, x, y) {
+        // a chat that is working can't move: its Claude Code runs from this project's folder
+        const busy = chatState(projectId, c.id) !== "" || (c.id === chat.chatId && chat.working);
+        const moves = Claude.projects.filter(p => p.id !== projectId)
+                          .map(p => ({ id: "move:" + p.id, label: "Move to " + p.name, disabled: busy }));
         popMenu([{ id: "chatopen", label: "Open", disabled: c.id === chat.chatId },
                  { id: "chatrename", label: "Rename" },
-                 { id: "copytitle", label: "Copy title" },
-                 { kind: "sep" },
-                 { id: "chatremove", label: "Remove" }], row, x, y, { chat: c });
+                 { id: "copytitle", label: "Copy title" }]
+                .concat(moves.length ? [{ kind: "sep" }].concat(moves) : [])
+                .concat([{ kind: "sep" }, { id: "chatremove", label: "Remove" }]), row, x, y, { chat: c });
+    }
+    // the chat goes to another project; the open one follows it there
+    function moveChat(c, to) {
+        const from = projectId, open = c.id === chat.chatId;
+        if (open) chat.stopProc();
+        Claude.run(["chat-move", from, c.id, to], o => {
+            if (!o.ok) { if (open) chat.addItem({ k: "note", kind: "error", text: o.err || "Couldn't move the chat." }); return; }
+            if (open) { selectProject(to); showChat(to, c.id); withSysinfo = false; }
+            else loadChats();
+        });
     }
     function menuPicked(id) {
         const c = menuCtx || {};
         menuCtx = null;
         if (id.startsWith("acc:")) { useAccount(id.substring(4)); return; }
+        if (id.startsWith("move:")) { moveChat(c.chat, id.substring(5)); return; }
         switch (id) {
         case "copysel": copy(c.sel); break;
         case "copymsg": copy(c.item.text); break;
