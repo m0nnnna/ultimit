@@ -286,7 +286,13 @@ bool keys_handle(struct ul_server *server, uint32_t mods, xkb_keysym_t sym) {
 		}
 		if (!(b->flags & KB_ALWAYS) && b->act != ACT_LAUNCHER) {
 			/* Any shortcut but the media keys closes the shell's menus and
-			 * flyouts; Super+V and Super+/ keep the panel they toggle. */
+			 * flyouts; Super+V and Super+/ keep the panel they toggle, and the
+			 * screenshot / recording keys leave everything open (to capture it). */
+			if (b->act == ACT_SPAWN && (strncmp(b->action, "screenshot", 10) == 0 ||
+					strncmp(b->action, "record", 6) == 0)) {
+				run(server, b, mods);
+				return true;
+			}
 			bool panel = b->act == ACT_SPAWN && (strcmp(b->action, "clipboard") == 0 ||
 				strcmp(b->action, "shortcuts") == 0);
 			ipc_emit_dismiss(panel ? b->action : "");
