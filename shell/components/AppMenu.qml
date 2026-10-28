@@ -60,6 +60,7 @@ PanelWindow {
         y: Config.barHeight + 6
         width: 232
         height: col.implicitHeight + Theme.space(4)
+        transformOrigin: Item.Top   // grow down from the bar, not up into it
         PopIn { target: menu; shown: win.visible }
         MouseArea { anchors.fill: parent; acceptedButtons: Qt.LeftButton | Qt.RightButton }
 
