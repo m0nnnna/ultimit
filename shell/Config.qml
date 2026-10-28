@@ -181,6 +181,9 @@ Singleton {
     function toggleLauncher(screenName) { if (launcherOpen) closeLauncher(); else openLauncher(screenName); }
     function openMenu(screenName, x, y, frame) { launcherOpen = false; uiScreen = screenName || ""; menuX = x; menuY = y; menuFrame = frame || ""; menuOpen = true; }
     function closeMenu() { menuOpen = false; }
+    // Once nothing is open the screen is forgotten, so the OSD and password prompt go back to the main display.
+    onLauncherOpenChanged: if (!launcherOpen && !menuOpen) uiScreen = ""
+    onMenuOpenChanged: if (!launcherOpen && !menuOpen) uiScreen = ""
     function isUiScreen(name) {
         if (uiScreen !== "") return uiScreen === name;
         return isMainScreen(name);
