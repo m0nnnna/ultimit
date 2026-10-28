@@ -37,6 +37,9 @@ Item {
     property real t: 0
     property real spin: 0   // turning arc, degrees (mockup: rot = t * .00025 rad)
     readonly property real sway: Math.sin(t * .00018) * .02
+    // Width term of the sweep's Gaussian: never narrower than the gap between shards, or the light
+    // hops from one shard to the next (strobing) instead of travelling through them.
+    readonly property real sweepW: { const gap = 2.7 / Math.max(1, Config.shardDensity - 1); return Math.max(.012, 1.6 * gap * gap); }
     readonly property real sweep: -3.1 + ((t * .00012) % 1) * 3.6 + kickV
 
     // ---- reactions ----
@@ -318,7 +321,7 @@ Item {
             property real len: modelData.L * art.bigR
             property real tw: modelData.t * art.sc
             property real al: modelData.al
-            property real boost: art.animate ? Math.exp(-(da * da) / .012) * .4 + art.pulse * .35
+            property real boost: art.animate ? Math.exp(-(da * da) / art.sweepW) * .4 + art.pulse * .35
                                               + (art.pEnergy > 0 ? art.pEnergy * Math.exp(-(dp * dp) / .03) * .55 : 0) : 0
             property real lightSkin: Theme.light ? 1 : 0
             property color shardC: art.rgb(Theme.shard)
