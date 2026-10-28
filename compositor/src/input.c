@@ -602,7 +602,9 @@ static void cursor_button(struct wl_listener *listener, void *data) {
 	/* A menu or flyout holding the keyboard covers only its own screen, so it
 	 * never sees a click on another one: ask the shell to close it. */
 	if (server->focused_layer && server->focused_layer->current.keyboard_interactive ==
-			ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE) {
+			ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE &&
+			server->focused_layer->namespace &&
+			strncmp(server->focused_layer->namespace, "ultimit-", 8) == 0) {
 		struct ul_output *at = output_at(server, server->cursor->x, server->cursor->y);
 		if (at && at->wlr_output != server->focused_layer->output) {
 			ipc_emit_dismiss("");

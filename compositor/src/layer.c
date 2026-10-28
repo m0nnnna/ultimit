@@ -196,6 +196,8 @@ static bool shadow_wanted(struct ul_panel_shadow *s) {
 	struct ul_layer_surface *l = s->l;
 	return l->mapped && s->a_cur > 0.002f && s->rect.width > 0 && s->rect.height > 0 &&
 		!(l->output && l->output->panel_blur_off) &&
+		/* scenefx draws these shadows in the wrong place on a rotated output (a stray blurred box) */
+		!(l->output && l->output->wlr_output->transform != WL_OUTPUT_TRANSFORM_NORMAL) &&
 		!blur_excluded(l->server, l->layer_surface->namespace ? l->layer_surface->namespace : "");
 }
 

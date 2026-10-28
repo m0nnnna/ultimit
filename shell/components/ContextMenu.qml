@@ -42,8 +42,7 @@ PanelWindow {
         { id: "skin",    label: "Skin", sub: true },
         { kind: "sep" },
         { id: "frame",   label: "Add photo frame…" },
-        { id: "motion",  label: "Animate shards", check: true },
-        { id: "boot",    label: "Play boot sequence" }
+        { id: "motion",  label: "Animate shards", check: true }
     ]
     readonly property var frameItems: [
         { id: "flock",   label: "Lock in place", check: true },
@@ -81,7 +80,6 @@ PanelWindow {
         case "files": close(); Data.show(""); return;
         case "launch": Config.openLauncher(win.screenName); return;
         case "acc": close(); Config.openSettings(""); return;
-        case "boot": close(); Config.playBoot(); return;
         case "frame": close(); Frames.pick(win.screenName, Config.menuX, Config.menuY, ""); return;
         case "flock": { const f = Frames.byId(Config.menuFrame); if (f) Frames.setLocked(f.id, !f.locked); break; }
         case "fopen": Frames.openInImage(Config.menuFrame); break;
