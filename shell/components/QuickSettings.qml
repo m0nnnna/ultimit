@@ -319,8 +319,10 @@ PanelWindow {
                         id: bigTime
                         anchors { left: parent.left; right: parent.right; top: parent.top }
                         fontSizeMode: Text.HorizontalFit; minimumPixelSize: Theme.type.head
-                        text: clockHead.p2(clockHead.now.getHours()) + ":" + clockHead.p2(clockHead.now.getMinutes())
+                        // 12-hour, like the bar clock (ClockItem.qml)
+                        text: ((clockHead.now.getHours() % 12) || 12) + ":" + clockHead.p2(clockHead.now.getMinutes())
                             + (Config.desktopPaused ? "" : ":" + clockHead.p2(clockHead.now.getSeconds()))
+                            + (clockHead.now.getHours() < 12 ? " AM" : " PM")
                         color: Theme.fg
                         font.family: Theme.display; font.pixelSize: Theme.type.hero; font.features: Theme.tnum
                     }

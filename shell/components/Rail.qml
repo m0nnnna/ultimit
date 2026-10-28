@@ -11,7 +11,11 @@ PanelWindow {
 
     anchors { left: true; top: true; bottom: true }
     // Under the top bar (main display) the rail starts a little lower, so the two don't run together.
-    margins.top: Config.isMainScreen(screen ? screen.name : "") && !Config.isCovered(screen ? screen.name : "") ? 6 : 0
+    readonly property bool underBar: Config.isMainScreen(screen ? screen.name : "") && !Config.isCovered(screen ? screen.name : "")
+    margins.top: underBar ? 6 : 0
+    // The rail's top edge in screen coordinates: rail popups (full-screen overlays) add it to a
+    // button's y in the rail. Not mapToGlobal: that adds the screen's place in the whole layout.
+    readonly property real topY: (underBar ? Config.barHeight : 0) + margins.top
     implicitWidth: Config.railWidth
     exclusiveZone: Config.railWidth
     color: "transparent"
@@ -139,7 +143,7 @@ PanelWindow {
                             onCountChanged: rectTimer.restart()
                             Connections { target: pinsView; function onContentYChanged() { rectTimer.restart(); } }
                             Connections { target: RailWindows; function onMapTickChanged() { rectTimer.restart(); } }
-                            onRightClicked: gy => { Config.closeLauncher(); Pins.openMenu(modelData.id, gy, win.screen ? win.screen.name : ""); }
+                            onRightClicked: gy => { Config.closeLauncher(); Pins.openMenu(modelData.id, gy + win.topY, win.screen ? win.screen.name : ""); }
                         }
                     }
                 }

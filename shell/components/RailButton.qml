@@ -62,7 +62,7 @@ Item {
             root.clicked();
             event.accepted = true;
         } else if (event.key === Qt.Key_Menu) {
-            root.rightClicked(root.mapToGlobal(0, root.height / 2).y);
+            root.rightClicked(root.mapToItem(null, 0, root.height / 2).y);
             event.accepted = true;
         }
     }
@@ -221,7 +221,7 @@ Item {
         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
         onPressed: { root.focusReason = Qt.MouseFocusReason; root.forceActiveFocus(Qt.MouseFocusReason); }
         onClicked: mouseEvent => {
-            if (mouseEvent.button === Qt.RightButton) root.rightClicked(root.mapToGlobal(0, root.height / 2).y);
+            if (mouseEvent.button === Qt.RightButton) root.rightClicked(root.mapToItem(null, 0, root.height / 2).y);
             else if (mouseEvent.button === Qt.MiddleButton) root.middleClicked();
             else root.clicked();
         }

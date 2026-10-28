@@ -90,7 +90,7 @@ Item {
                 }
             }
             function tip() {
-                const p = ent.mapToGlobal(0, ent.height / 2);
+                const p = ent.mapToItem(null, 0, ent.height / 2); p.y += root.panel ? root.panel.topY : 0;
                 WindowUi.showTip(AppSearch.windowTitle(ent.title, ent.appId) || ent.appId || "Untitled", p.y, root.screenName);
             }
 
@@ -157,7 +157,7 @@ Item {
                     const tl = ent.modelData;
                     if (mouseEvent.button === Qt.MiddleButton) { WindowUi.hideTip(); tl.close(); }
                     else if (mouseEvent.button === Qt.RightButton) {
-                        const p = ent.mapToGlobal(0, ent.height / 2);
+                        const p = ent.mapToItem(null, 0, ent.height / 2); p.y += root.panel ? root.panel.topY : 0;
                         WindowUi.openMenu(tl, p.y, root.screenName);
                     } else if (tl.activated && !tl.minimized) tl.minimized = true;
                     else { tl.minimized = false; tl.activate(); }
