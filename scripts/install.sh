@@ -134,13 +134,17 @@ if built wlroots "$WLROOTS_REF"; then note "already installed"; else
 fi
 
 step "Building SceneFX $SCENEFX_REF"
-if built scenefx "$SCENEFX_REF"; then note "already installed"; else
+# our patch: backdrop blur drew a stray box on rotated outputs (the stencil ignored the rotation)
+SCENEFX_BUILT="$SCENEFX_REF+rotblur"
+if built scenefx "$SCENEFX_BUILT"; then note "already installed"; else
 	d=$(src scenefx "$SCENEFX_URL" "$SCENEFX_REF")
+	git -C "$d" checkout -q -- .
+	patch -d "$d" -p1 < "$ROOT/scripts/patches/scenefx-rotated-blur.patch"
 	setup "$d/build" "$d" --prefix="$PREFIX" --libdir="$LIBDIR" --buildtype=release \
 		-Dexamples=false -Dc_link_args="-Wl,-rpath,$PREFIX/$LIBDIR"
 	ninja -C "$d/build" -j "$JOBS"
 	sudo ninja -C "$d/build" install >/dev/null
-	mark scenefx "$SCENEFX_REF"
+	mark scenefx "$SCENEFX_BUILT"
 fi
 
 step "Building Quickshell $QUICKSHELL_REF (the longest step)"

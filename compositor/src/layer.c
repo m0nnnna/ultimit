@@ -196,8 +196,6 @@ static bool shadow_wanted(struct ul_panel_shadow *s) {
 	struct ul_layer_surface *l = s->l;
 	return l->mapped && s->a_cur > 0.002f && s->rect.width > 0 && s->rect.height > 0 &&
 		!(l->output && l->output->panel_blur_off) &&
-		/* scenefx draws these shadows in the wrong place on a rotated output (a stray blurred box) */
-		!(l->output && l->output->wlr_output->transform != WL_OUTPUT_TRANSFORM_NORMAL) &&
 		!blur_excluded(l->server, l->layer_surface->namespace ? l->layer_surface->namespace : "");
 }
 
@@ -381,8 +379,6 @@ static void layer_update_blur(struct ul_layer_surface *l) {
 	struct layer_blur b = {
 		.enabled = server->config.panel_blur && !under_glass(l) &&
 			!(l->output && l->output->panel_blur_off) &&
-			/* scenefx places the backdrop blur wrongly on a rotated output (a stray grey box) */
-			!(l->output && l->output->wlr_output->transform != WL_OUTPUT_TRANSFORM_NORMAL) &&
 			ns && strncmp(ns, "ultimit-", 8) == 0 && !blur_excluded(server, ns),
 		.optimized = l->layer_surface->current.exclusive_zone > 0,
 	};

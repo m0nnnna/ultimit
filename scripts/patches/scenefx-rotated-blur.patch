@@ -1,0 +1,34 @@
+diff -ru a/include/scenefx/render/pass.h b/include/scenefx/render/pass.h
+--- a/include/scenefx/render/pass.h
++++ b/include/scenefx/render/pass.h
+@@ -102,6 +102,8 @@
+ 	struct blur_data *blur_data;
+ 	bool use_optimized_blur;
+ 	bool ignore_transparent;
++	// transform of the texture when drawn as the ignore_transparent stencil
++	enum wl_output_transform stencil_transform;
+ };
+ 
+ /**
+diff -ru a/render/fx_renderer/fx_pass.c b/render/fx_renderer/fx_pass.c
+--- a/render/fx_renderer/fx_pass.c
++++ b/render/fx_renderer/fx_pass.c
+@@ -951,6 +951,7 @@
+ 
+ 		struct fx_render_texture_options tex_options = fx_options->tex_options;
+ 		tex_options.discard_transparent = true;
++		tex_options.base.transform = fx_options->stencil_transform;
+ 		fx_render_pass_add_texture(pass, &tex_options);
+ 
+ 		stencil_mask_close(true);
+diff -ru a/types/scene/wlr_scene.c b/types/scene/wlr_scene.c
+--- a/types/scene/wlr_scene.c
++++ b/types/scene/wlr_scene.c
+@@ -2021,6 +2021,7 @@
+ 					.use_optimized_blur = scene_buffer->backdrop_blur_optimized,
+ 					.blur_data = &scene->blur_data,
+ 					.ignore_transparent = scene_buffer->backdrop_blur_ignore_transparent,
++					.stencil_transform = transform,
+ 				};
+ 				// Render the actual blur behind the surface
+ 				fx_render_pass_add_blur(data->render_pass, &blur_options);
