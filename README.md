@@ -8,7 +8,7 @@ console line drawing itself.
 Ultimit is built on Ubuntu 26.04 LTS. It is its own Wayland compositor and
 desktop shell, not a theme on top of another desktop.
 
-> Status: 1.0. It runs as a daily desktop on the developer's machines. Send a report
+> Status: 1.1. It runs as a daily desktop on the developer's machines. Send a report
 > (Settings › About › Save a report) when you hit a rough edge.
 
 ![The Ultimit desktop: the icon rail, crystal-shard wallpaper, clock and status tray](docs/screenshots/desktop.jpg)
