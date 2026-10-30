@@ -1,5 +1,8 @@
 #!/bin/bash
 # Publish an Ultimit release on GitHub, where every Ultimit PC's Settings > Updates finds it.
+# Usually GitHub does this: pushing a version tag runs .github/workflows/release.yml, which builds
+# and uploads the release itself. This is the way to do it from a PC instead (that tag push still
+# starts the workflow, which then replaces this upload with its own build an hour later).
 #
 #   scripts/publish-release.sh v0.2.0 [--notes FILE] [--draft]
 #

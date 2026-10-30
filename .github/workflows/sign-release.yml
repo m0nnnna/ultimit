@@ -1,7 +1,7 @@
 # Signs each Ultimit release so PCs only install what this repository's key signed.
 #
-# Runs when a release is published (scripts/publish-release.sh), or by hand from the Actions tab
-# for an existing tag. The private key is the ULTIMIT_SIGNING_KEY secret of the
+# Runs after Release (release.yml) uploads a build, when a release is published from a PC
+# (scripts/publish-release.sh), or by hand from the Actions tab for an existing tag. The private key is the ULTIMIT_SIGNING_KEY secret of the
 # `release-signing` environment, which waits for the owner's approval before each run, so a
 # leaked token or a pushed workflow can't use it. Its public half is distro/release-signers;
 # updates-helper checks the .sig against that before installing. Setup:
@@ -10,6 +10,11 @@ name: Sign release
 on:
   release:
     types: [published]
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
   workflow_dispatch:
     inputs:
       tag:

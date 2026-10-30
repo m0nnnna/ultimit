@@ -59,6 +59,22 @@ older `v0.2.0` release, only the next one.
 
 ## Publishing a release
 
+Push a version tag; GitHub builds and publishes the release:
+
+```bash
+git tag -a v0.2.0 -m "Ultimit 0.2.0" && git push origin v0.2.0
+```
+
+The **Release** workflow (`.github/workflows/release.yml`) checks out the tag, runs
+`scripts/install.sh --no-apps --keep-login-screen` in a clean Ubuntu 26.04 container, packs
+`/opt/ultimit` with `scripts/build-release.sh` and uploads the tarball and its `.sha256` to the
+release, then signs it (below). It takes about an hour. Release notes come from
+`docs/releases/<tag>.md` when it is in the tagged commit, otherwise GitHub writes them from the
+commits. To rebuild a tag that's already pushed: Actions › Release › Run workflow, with the tag
+(it replaces the release's files and signs them again).
+
+### From a PC instead
+
 On a machine with Ultimit built from source (`scripts/install.sh`), with the
 [GitHub CLI](https://cli.github.com) logged in (`gh auth login`):
 
@@ -81,8 +97,8 @@ release (`v0.2.0-3-gabc1234`) is not offered `v0.2.0` again.
 
 ### Signing
 
-Releases are signed on GitHub: publishing one starts the **Sign release** workflow
-(`.github/workflows/sign-release.yml`). It waits for the owner's approval (the `release-signing`
+Releases are signed on GitHub: the Release workflow, or publishing one from a PC, starts the
+**Sign release** workflow (`.github/workflows/sign-release.yml`). It waits for the owner's approval (the `release-signing`
 environment; GitHub sends a mail, or approve it under Actions), checks the tarball against its
 `.sha256` and its VERSION against the tag, then signs it with `ssh-keygen -Y sign` and uploads
 `ultimit-<version>-amd64.tar.gz.sig`. PCs are offered the release once that `.sig` is there. To
