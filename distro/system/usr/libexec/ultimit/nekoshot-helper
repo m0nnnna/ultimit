@@ -1,0 +1,46 @@
+#!/usr/bin/python3 -I
+"""nekoshot-helper - the only part of Ultimit BACKUP (NekoShot) that runs as root, through pkexec.
+
+It forwards a short whitelist of NekoShot subcommands and refuses everything else, so the GUI cannot
+ask root to run an arbitrary program. NekoShot itself is installed in /opt/ultimit/nekoshot.
+
+  nekoshot-helper capture ...          always run headless (in the background); progress: /run/nekoshot
+  nekoshot-helper verify|prune|schedule ...
+  nekoshot-helper restore ...          only a chroot restore (--target DIR): never overwrites the running system
+
+Polkit action org.ultimit.nekoshot (auth_admin_keep). Output is NekoShot's own (JSON when --json is passed).
+"""
+import os
+import sys
+
+CLI = "/opt/ultimit/nekoshot/nekoshot.py"
+ALLOWED = {"capture", "verify", "prune", "schedule", "restore"}
+SCHEDULE_ACTIONS = {"list", "add", "remove"}
+
+
+def die(msg):
+    sys.stderr.write("nekoshot-helper: %s\n" % msg)
+    sys.exit(2)
+
+
+def main(argv):
+    if os.geteuid() != 0:
+        die("must run as root (through pkexec)")
+    if not argv or argv[0] not in ALLOWED:
+        die("unsupported command")
+    cmd, rest = argv[0], argv[1:]
+    if cmd == "restore" and not any(a == "--target" or a.startswith("--target=") for a in rest):
+        die("restore needs --target (the live system is only restored from a rescue USB)")
+    if cmd == "schedule" and (not rest or rest[0] not in SCHEDULE_ACTIONS):
+        die("unsupported schedule action")
+    if cmd == "capture" and "--headless" not in rest:
+        rest = rest + ["--headless"]
+    if cmd == "prune" and "--force" not in rest and "-f" not in rest:
+        rest = rest + ["--force"]
+    if not os.path.isfile(CLI):
+        die("NekoShot is not installed (%s missing)" % CLI)
+    os.execv("/usr/bin/python3", ["python3", "-I", CLI, "--json", cmd] + rest)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

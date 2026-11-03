@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=BACKUP
+GenericName=System backup
+Comment=Back up the whole PC so it can be restored
+Exec=ultimit-nekoshot
+Icon=ultimit-nekoshot
+Terminal=false
+Categories=System;Utility;
+Keywords=backup;restore;nekoshot;snapshot;recovery;

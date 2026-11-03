@@ -1,0 +1,17 @@
+#!/bin/sh
+# ultimit-nekoshot - open BACKUP, the GUI for NekoShot full-system backups. BACKUP is its own quickshell process
+# (nekoshot-shell.qml), started here when not yet running; it exits when its window closes.
+shell="${ULTIMIT_SHELL_DIR:-$(dirname "$(dirname "$(readlink -f "$0")")")}"
+cfg="$shell/nekoshot-shell.qml"
+
+backup() { qs -p "$cfg" ipc call backup "$@" >/dev/null 2>&1; }
+
+if ! backup state; then
+    qs -p "$cfg" -n -d >/dev/null 2>&1
+    i=0
+    until backup state; do
+        i=$((i + 1)); [ $i -gt 50 ] && { echo "ultimit-nekoshot: BACKUP did not start" >&2; exit 1; }
+        sleep 0.2
+    done
+fi
+backup open

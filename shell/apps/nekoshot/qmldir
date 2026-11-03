@@ -1,0 +1,3 @@
+singleton Backup 1.0 Backup.qml
+BackupApp 1.0 BackupApp.qml
+BackupWindow 1.0 BackupWindow.qml

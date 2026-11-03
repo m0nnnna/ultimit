@@ -46,6 +46,11 @@ ffmpegthumbnailer
 # Security
 ufw
 unattended-upgrades
+# Backup (BACKUP / NekoShot)
+rsync
+zstd
+gnupg
+fdisk
 # Apps
 deluge-gtk
 python3-libtorrent
