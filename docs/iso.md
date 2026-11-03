@@ -65,6 +65,12 @@ Putting Ultimit on a **second drive** is the simplest of all: pick that drive an
   touched.
 - Logs: `/var/log/ultimit-installer.log`, `/run/ultimit-installer/ui.log`, and subiquity's in
   `/var/log/installer/`. Ctrl+Alt+F1 shows subiquity's own screen; Ctrl+Alt+F7 goes back.
+- **If an install fails:** the failed screen has **Save report to USB**: it writes
+  `ultimit-install-report-<time>.tar.gz` (installer and curtin logs, journal, dmesg, network,
+  disks, hardware, the failed step; passwords, Wi-Fi keys and hashes blanked out) to any other USB
+  drive (a Ventoy data partition works). The same thing runs from a console with
+  `ultimit-collect-logs` (Ctrl+Alt+F2), which also works after falling back to Ubuntu's text
+  installer. `/var/log/ultimit-installer-net.log` records the network every 5 s.
 - Try the screen without installing anything (in the devbox or any Ultimit session):
   `ULTIMIT_INSTALLER_DRY=1 PROBE_FAKE_DIR=$PWD/greeter/installer/fixtures/windows-gap qs -p greeter/installer.qml`
 

@@ -37,6 +37,16 @@ cp /opt/ultimit/assets/fonts/*.ttf /usr/share/fonts/truetype/ultimit/ 2>/dev/nul
 fc-cache -f >/dev/null 2>&1
 systemctl daemon-reload   # wpa_supplicant's units, for Wi-Fi
 
+# A failed install is diagnosed from a report (collect-logs.py): the failed screen's button runs it, and the
+# command works from a console too (Ctrl+Alt+F2). The watcher records the network every 5 s, because the
+# kernel step needs it and a drop is invisible afterwards.
+install -m 755 /opt/ultimit/greeter/installer/collect-logs.py /usr/local/bin/ultimit-collect-logs 2>/dev/null
+( end=$(( $(date +%s) + 14400 ))
+  while [ "$(date +%s)" -lt "$end" ]; do
+	echo "== $(date +%T) route: $(ip -o route show default 2>/dev/null | head -n1) | dns: $(grep -m1 ^nameserver /etc/resolv.conf 2>/dev/null) | archive: $(curl -s -o /dev/null -m 3 -w '%{http_code}' http://archive.ubuntu.com/ubuntu/ 2>&1)"
+	sleep 5
+  done ) >>/var/log/ultimit-installer-net.log 2>&1 &
+
 # ---- 2. the screen
 chvt 7
 seatd -g root >"$RUN/seatd.log" 2>&1 &

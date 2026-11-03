@@ -348,10 +348,13 @@ PanelWindow {
                     Layout.fillWidth: true
                     spacing: 14
                     Heading { text: "The install stopped" }
-                    Body { text: (ctl.error || "Something went wrong.") + " Nothing was changed on drives you didn't choose. Show the details to see what happened (a photo of that screen helps whoever helps you)."; bad: true }
+                    Body { text: (ctl.error || "Something went wrong.") + " Nothing was changed on drives you didn't choose. Save the report to a USB stick and send it to whoever is helping: it holds the logs, the network and hardware details, and no passwords."; bad: true }
+                    Body { visible: ctl.reportText !== ""; text: ctl.reportText; dim: true }
+                    Body { visible: ctl.reportSummary !== ""; text: ctl.reportSummary; dim: true; font.family: Theme.mono; font.pixelSize: 12 }
                     Buttons {
                         Item { Layout.fillWidth: true }
                         ChamferButton { text: "Show the details"; onClicked: ctl.details() }
+                        ChamferButton { primary: true; text: ctl.reportBusy ? "Collecting…" : "Save report to USB"; onClicked: ctl.saveReport() }
                     }
                 }
             }

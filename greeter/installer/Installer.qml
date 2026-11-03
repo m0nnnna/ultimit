@@ -14,6 +14,7 @@ Scope {
     readonly property string runDir: Quickshell.env("ULTIMIT_INSTALLER_RUN") || "/tmp/ultimit-installer-dry"
     readonly property string base: Quickshell.env("ULTIMIT_INSTALLER_BASE") || Quickshell.shellPath("installer/base-example.json")
     readonly property string probe: Quickshell.shellPath("installer/probe.py")
+    readonly property string collector: Quickshell.shellPath("installer/collect-logs.py")
 
     // ---- where we are
     property string page: "welcome"   // welcome | network | disk | account | confirm | installing | done | failed
@@ -244,6 +245,35 @@ Scope {
         if (dry) Qt.quit();
     }
     function details() { Quickshell.execDetached(["chvt", "1"]); }
+
+    // The install report (collect-logs.py): a file for whoever helps, copied to any USB drive that can take it
+    property bool reportBusy: false
+    property string reportText: ""
+    property string reportSummary: ""
+    function saveReport() {
+        if (reportBusy) return;
+        reportBusy = true;
+        reportText = "Collecting the report…";
+        if (dry) { reportBusy = false; reportText = "Dry run: nothing collected."; return; }
+        reportProc.running = true;
+    }
+    Process {
+        id: reportProc
+        command: ["python3", "-I", root.collector, "--json"]
+        environment: ({ INSTALLER_RUN: root.runDir })
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.reportBusy = false;
+                let o = {};
+                try { o = JSON.parse(text); } catch (e) {}
+                if (!o.ok) { root.reportText = "Couldn't collect the report."; return; }
+                root.reportSummary = o.summary || "";
+                root.reportText = o.saved && o.saved.length
+                    ? "Saved to " + o.saved.join(", ") + " as " + o.file.split("/").pop() + ". Send that file to whoever is helping."
+                    : "Not saved to a USB drive: plug in a USB stick (not the install stick) and press the button again. The report is also at " + o.file + ".";
+            }
+        }
+    }
 
     Component.onCompleted: {
         Quickshell.execDetached(["sh", "-c", 'mkdir -p "$1" && touch "$1/ui-up"', "sh", runDir]);
