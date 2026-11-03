@@ -172,50 +172,121 @@ static const char *edge_cursor(uint32_t edges) {
 
 /* ---- pointer constraints ------------------------------------------------- */
 
+/* Layout position of the active constraint's surface, taken while the pointer is on it. */
+static double constraint_ox, constraint_oy;
+
+static void track_constraint_origin(struct ul_server *server) {
+	struct wlr_pointer_constraint_v1 *constraint = server->active_constraint;
+	struct wlr_seat *seat = server->seat;
+	if (constraint && seat->pointer_state.focused_surface == constraint->surface) {
+		constraint_ox = server->cursor->x - seat->pointer_state.sx;
+		constraint_oy = server->cursor->y - seat->pointer_state.sy;
+	}
+}
+
+/* Like sway: when a lock ends, put the cursor where the client says its pointer
+ * is (Xwayland keeps the hint at its X pointer), so the cursor doesn't reappear
+ * where the lock began. */
+static void warp_to_cursor_hint(struct ul_server *server,
+		struct wlr_pointer_constraint_v1 *constraint) {
+	if (constraint->type != WLR_POINTER_CONSTRAINT_V1_LOCKED ||
+			!constraint->current.cursor_hint.enabled) {
+		return;
+	}
+	wlr_cursor_warp_closest(server->cursor, NULL,
+		constraint_ox + constraint->current.cursor_hint.x,
+		constraint_oy + constraint->current.cursor_hint.y);
+	wlr_scene_node_set_position(&server->drag_icons->node,
+		(int)server->cursor->x, (int)server->cursor->y);
+	if (server->seat->pointer_state.focused_surface == constraint->surface) {
+		/* No event; the next motion carries the new position. */
+		wlr_seat_pointer_warp(server->seat, server->cursor->x - constraint_ox,
+			server->cursor->y - constraint_oy);
+	}
+}
+
 static void constraint_destroy(struct wl_listener *listener, void *data) {
 	struct ul_server *server = wl_container_of(listener, server, constraint_destroy);
 	struct wlr_pointer_constraint_v1 *constraint = data;
 	if (server->active_constraint == constraint) {
+		warp_to_cursor_hint(server, constraint);
 		wl_list_remove(&server->constraint_destroy.link);
 		wl_list_init(&server->constraint_destroy.link);
 		server->active_constraint = NULL;
+		wlr_log(WLR_INFO, "pointer released");
 	}
 }
 
 static void activate_constraint(struct ul_server *server,
 		struct wlr_pointer_constraint_v1 *constraint) {
-	if (server->active_constraint == constraint) {
+	struct wlr_pointer_constraint_v1 *old = server->active_constraint;
+	if (old == constraint) {
 		return;
 	}
-	if (server->active_constraint) {
-		wlr_pointer_constraint_v1_send_deactivated(server->active_constraint);
+	if (old) {
+		if (!constraint) {
+			warp_to_cursor_hint(server, old);
+		}
 		wl_list_remove(&server->constraint_destroy.link);
 		wl_list_init(&server->constraint_destroy.link);
+		server->active_constraint = NULL;
+		/* May destroy a oneshot constraint; we no longer listen to it. */
+		wlr_pointer_constraint_v1_send_deactivated(old);
 	}
-	server->active_constraint = constraint;
+	wlr_log(WLR_INFO, "pointer %s", !constraint ? "released" :
+		constraint->type == WLR_POINTER_CONSTRAINT_V1_LOCKED ? "locked" : "confined");
 	if (constraint) {
-		wlr_pointer_constraint_v1_send_activated(constraint);
+		server->active_constraint = constraint;
+		track_constraint_origin(server);
 		server->constraint_destroy.notify = constraint_destroy;
 		wl_signal_add(&constraint->events.destroy, &server->constraint_destroy);
+		wlr_pointer_constraint_v1_send_activated(constraint);
 	}
 }
 
-static void check_constraint(struct ul_server *server, struct wlr_surface *focused) {
-	struct wlr_pointer_constraint_v1 *constraint = focused ?
-		wlr_pointer_constraints_v1_constraint_for_surface(
-			server->pointer_constraints, focused, server->seat) : NULL;
+/* Activates the constraint of the surface under the pointer at (sx, sy). Never
+ * deactivates: as in sway, a constraint follows keyboard focus (see
+ * release_unfocused_constraint), not the hit test, so a panel or overlay above
+ * the game doesn't let the pointer go. */
+static void check_constraint(struct ul_server *server, struct wlr_surface *surface,
+		double sx, double sy) {
+	struct wlr_pointer_constraint_v1 *c = wlr_pointer_constraints_v1_constraint_for_surface(
+		server->pointer_constraints, surface, server->seat);
 	/* Only the window with keyboard focus may grab the pointer. */
-	if (constraint && server->seat->keyboard_state.focused_surface != focused) {
-		constraint = NULL;
+	if (!c || c == server->active_constraint ||
+			server->seat->keyboard_state.focused_surface != surface) {
+		return;
 	}
-	activate_constraint(server, constraint);
+	/* As sway does: wlroots computes the region only on the next commit, and
+	 * Xwayland passes none, so an empty region would let the cursor out. */
+	if (pixman_region32_not_empty(&c->current.region)) {
+		pixman_region32_intersect(&c->region, &surface->input_region, &c->current.region);
+	} else {
+		pixman_region32_copy(&c->region, &surface->input_region);
+	}
+	double cx, cy;
+	if (c->type == WLR_POINTER_CONSTRAINT_V1_CONFINED &&
+			!wlr_region_confine(&c->region, sx, sy, sx, sy, &cx, &cy)) {
+		return; /* outside the region: confine once the pointer enters it */
+	}
+	activate_constraint(server, c);
+}
+
+/* Like sway, a constraint follows keyboard focus: alt-tab lets go of the pointer. */
+static void release_unfocused_constraint(struct ul_server *server) {
+	struct wlr_pointer_constraint_v1 *c = server->active_constraint;
+	if (c && server->seat->keyboard_state.focused_surface != c->surface) {
+		activate_constraint(server, NULL);
+	}
 }
 
 static void new_constraint(struct wl_listener *listener, void *data) {
 	struct ul_server *server = wl_container_of(listener, server, new_constraint);
 	struct wlr_pointer_constraint_v1 *constraint = data;
-	if (server->seat->pointer_state.focused_surface == constraint->surface) {
-		check_constraint(server, constraint->surface);
+	struct wlr_seat *seat = server->seat;
+	if (seat->pointer_state.focused_surface == constraint->surface) {
+		check_constraint(server, constraint->surface,
+			seat->pointer_state.sx, seat->pointer_state.sy);
 	}
 }
 
@@ -255,6 +326,16 @@ void input_update_pointer_focus(struct ul_server *server, uint32_t time_msec) {
 		time_msec = now.tv_sec * 1000 + now.tv_nsec / 1000000;
 	}
 	struct wlr_seat *seat = server->seat;
+	release_unfocused_constraint(server);
+	struct wlr_pointer_constraint_v1 *lock = server->active_constraint;
+	if (lock && lock->type == WLR_POINTER_CONSTRAINT_V1_LOCKED && !server->locked &&
+			seat->pointer_state.focused_surface == lock->surface) {
+		/* A locked pointer stays on the game, which only gets relative motion: the
+		 * cursor is frozen, a panel showing under it must not take the pointer, and
+		 * Xwayland moves its X pointer to the spot of every enter and of any motion
+		 * that comes without relative motion, which a mouse-look game reads as a turn. */
+		return;
+	}
 	if (server->press_surface && !seat->drag && seat->pointer_state.button_count > 0 &&
 			seat->pointer_state.focused_surface == server->press_surface &&
 			server->press_surface->mapped) {
@@ -275,12 +356,13 @@ void input_update_pointer_focus(struct ul_server *server, uint32_t time_msec) {
 	if (surface && !edges) {
 		wlr_seat_pointer_notify_enter(server->seat, surface, sx, sy);
 		wlr_seat_pointer_notify_motion(server->seat, time_msec, sx, sy);
+		check_constraint(server, surface, sx, sy);
 	} else {
 		wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr, edge_cursor(edges));
 		/* notify_: a drag in progress also leaves the surface it was over. */
 		wlr_seat_pointer_notify_clear_focus(server->seat);
 	}
-	check_constraint(server, surface);
+	track_constraint_origin(server);
 }
 
 /* ---- drag-to-snap ----------------------------------------------------------- */
@@ -503,22 +585,45 @@ static void handle_motion(struct ul_server *server, struct wlr_input_device *dev
 	wlr_relative_pointer_manager_v1_send_relative_motion(server->relative_pointer,
 		server->seat, (uint64_t)time_msec * 1000, dx, dy, udx, udy);
 
+	release_unfocused_constraint(server);
 	struct wlr_pointer_constraint_v1 *constraint = server->active_constraint;
 	if (constraint && server->cursor_mode == UL_CURSOR_PASSTHROUGH) {
-		if (constraint->type == WLR_POINTER_CONSTRAINT_V1_LOCKED) {
+		bool x11 = wlr_xwayland_surface_try_from_wlr_surface(constraint->surface) != NULL;
+		if (constraint->type == WLR_POINTER_CONSTRAINT_V1_LOCKED && !x11) {
 			/* Locked: the game only gets relative motion. */
 			return;
 		}
+		/* Confined: clamp in the surface's own coordinates, also where a panel
+		 * covers it; a hit test that misses the game must not let the cursor out. */
 		double sx, sy;
 		struct ul_view *view;
-		struct wlr_surface *surface = surface_at(server, server->cursor->x,
-			server->cursor->y, &sx, &sy, &view, NULL);
-		if (surface == constraint->surface) {
-			double cx, cy;
-			if (wlr_region_confine(&constraint->region, sx, sy, sx + dx, sy + dy, &cx, &cy)) {
-				dx = cx - sx;
-				dy = cy - sy;
+		if (surface_at(server, server->cursor->x, server->cursor->y,
+				&sx, &sy, &view, NULL) == constraint->surface) {
+			constraint_ox = server->cursor->x - sx;
+			constraint_oy = server->cursor->y - sy;
+		}
+		sx = server->cursor->x - constraint_ox;
+		sy = server->cursor->y - constraint_oy;
+		double cx, cy;
+		if (!wlr_region_confine(&constraint->region, sx, sy, sx + dx, sy + dy, &cx, &cy)) {
+			return;
+		}
+		dx = cx - sx;
+		dy = cy - sy;
+		if (constraint->type == WLR_POINTER_CONSTRAINT_V1_LOCKED) {
+			/* Xwayland's lock: it ignores locked/unlocked and steers its X pointer
+			 * from relative motion. Freezing the cursor makes mouse-look stutter
+			 * (Proton games); move it inside the game instead, sending motion with
+			 * the relative motion as before locks were enforced. Straight to the
+			 * game, no hit test: a panel under the cursor must not take it. */
+			wlr_cursor_move(server->cursor, device, dx, dy);
+			wlr_scene_node_set_position(&server->drag_icons->node,
+				(int)server->cursor->x, (int)server->cursor->y);
+			if (server->seat->pointer_state.focused_surface == constraint->surface) {
+				wlr_seat_pointer_notify_motion(server->seat, time_msec,
+					server->cursor->x - constraint_ox, server->cursor->y - constraint_oy);
 			}
+			return;
 		}
 	}
 	wlr_cursor_move(server->cursor, device, dx, dy);

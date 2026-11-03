@@ -191,7 +191,18 @@ void view_update_size(struct ul_view *view, int width, int height) {
 		/* Clients with invisible shadow margins (Chromium, GTK) can move
 		 * their geometry offset without resizing; the chrome must follow. */
 		struct wlr_box geo = view_geometry_offset(view);
-		view_set_position(view, view->x, view->y);
+		struct wlr_xwayland_surface *xs = view->type == UL_VIEW_XWAYLAND ?
+			view->xwayland_surface : NULL;
+		if (xs && xs->x == view->x && xs->y == view->y &&
+				xs->width == view->width && xs->height == view->height) {
+			/* X already has this geometry, and so does the client. Configuring it
+			 * again sends a synthetic ConfigureNotify anyway, and Xwayland commits
+			 * on every mouse event while it locks the pointer for a game: a
+			 * configure per mouse event. sway doesn't configure on such commits. */
+			wlr_scene_node_set_position(&view->tree->node, view->x, view->y);
+		} else {
+			view_set_position(view, view->x, view->y);
+		}
 		if (geo.x != view->geo_x || geo.y != view->geo_y) {
 			view->geo_x = geo.x;
 			view->geo_y = geo.y;

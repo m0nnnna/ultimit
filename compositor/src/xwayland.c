@@ -241,7 +241,15 @@ static void x_map(struct wl_listener *listener, void *data) {
 	view->height = xsurface->height;
 	view->ssd = wants_ssd(xsurface);
 	view_map(view);
-	if (xsurface->fullscreen) {
+	/* Borderless fullscreen (Wine/Proton games): a window that maps covering a
+	 * whole output is made real fullscreen, as in x_request_configure. */
+	struct ul_output *output = output_at(view->server,
+		xsurface->x + xsurface->width / 2.0, xsurface->y + xsurface->height / 2.0);
+	bool covers = output && !xsurface->override_redirect &&
+		xsurface->x <= output->full_area.x && xsurface->y <= output->full_area.y &&
+		xsurface->width >= output->full_area.width &&
+		xsurface->height >= output->full_area.height;
+	if (xsurface->fullscreen || covers) {
 		view_set_fullscreen(view, true);
 	} else if (xsurface->maximized_horz && xsurface->maximized_vert) {
 		view_set_maximized(view, true);
