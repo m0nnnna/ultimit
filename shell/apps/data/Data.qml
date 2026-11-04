@@ -364,7 +364,12 @@ Singleton {
     function load() {
         if (path === "") return;
         if (isArc) { loadArc(); return; }
-        if (lister.running) { loadQueued = true; return; }
+        if (lister.running) {
+            loadQueued = true;
+            // a listing for another folder (or a hung one) must not block navigation: kill it
+            if (lister.listPath !== path) lister.running = false;
+            return;
+        }
         loading = true;
         lister.listPath = path;
         lister.command = ["python3", helper, "ls", path];
@@ -375,10 +380,10 @@ Singleton {
         property string listPath: ""
         stdout: StdioCollector {
             onStreamFinished: {
-                if (lister.listPath !== root.path) return;
+                if (lister.listPath !== root.path) { root.listTimedOut = false; return; }
                 if (root.listTimedOut) {
                     root.listTimedOut = false; root.loading = false; root.entries = [];
-                    root.error = "Phone not responding. Is it unlocked?"; root.rebuild(); return;
+                    root.error = root.onMtp ? "Phone not responding. Is it unlocked?" : "Folder not responding (unreachable mount?)"; root.rebuild(); return;
                 }
                 try {
                     const d = JSON.parse(text);
@@ -397,12 +402,15 @@ Singleton {
                 }
             }
         }
-        onExited: if (root.loadQueued) { root.loadQueued = false; root.load(); }
+        onExited: {
+            if (root.loadQueued) { root.loadQueued = false; root.load(); }
+            else if (root.loading && lister.listPath === root.path && !root.isArc) root.loading = false;
+        }
     }
     property bool listTimedOut: false
-    Timer {   // a stalled phone must not leave the window "READING…" forever
-        interval: 20000
-        running: lister.running && root.onMtp
+    Timer {   // a stalled phone / dead network mount must not leave the window "READING…" forever
+        interval: root.onMtp ? 20000 : 15000
+        running: lister.running
         onTriggered: { root.listTimedOut = true; lister.running = false; }
     }
     // Directory changes made elsewhere: poll the directory's mtime (cheap) while DATA is open.
@@ -622,12 +630,92 @@ Singleton {
     // ---------------------------------------------------------------- clipboard
     property var clipPaths: []
     property bool clipCut: false
-    function copySel() { const t = targets(); if (isTrash || isArc || !t.length) return; clipPaths = t.map(e => e.p); clipCut = false; }
-    function cutSel() { const t = targets(); if (isTrash || isArc || !t.length) return; clipPaths = t.map(e => e.p); clipCut = true; }
-    function paste() {
-        if (isTrash || isArc || !clipPaths.length) return;
-        transfer(clipPaths, path, clipCut ? "move" : "copy");
+    function uriOf(p) { return "file://" + p.split("/").map(encodeURIComponent).join("/"); }
+    function fromUri(u) {
+        if (!u.startsWith("file://")) return "";
+        let p = u.slice(7);
+        if (!p.startsWith("/")) p = p.slice(p.indexOf("/"));   // file://host/path
+        try { return decodeURIComponent(p); } catch (e) { return ""; }
+    }
+    // Also publish the selection on the system clipboard (the format file managers and
+    // browsers/chat apps understand), so it can be pasted into other apps.
+    function publishClip(paths, cut) {
+        const body = (cut ? "cut" : "copy") + "\n" + paths.map(uriOf).join("\n");
+        Quickshell.execDetached(["sh", "-c", "printf '%s' \"$1\" | wl-copy --type x-special/gnome-copied-files", "sh", body]);
+    }
+    function copySel() { const t = targets(); if (isTrash || isArc || !t.length) return; clipPaths = t.map(e => e.p); clipCut = false; publishClip(clipPaths, false); }
+    function cutSel() { const t = targets(); if (isTrash || isArc || !t.length) return; clipPaths = t.map(e => e.p); clipCut = true; publishClip(clipPaths, true); }
+    function paste(into) {
+        if (isTrash || isArc) return;
+        pasteDir = into || path;
+        pasteTypes.running = false;
+        pasteTypes.running = true;
+    }
+    property string pasteDir: ""
+    // paste = read what is on the system clipboard: files (from DATA or any other app), an image, else DATA's own list
+    Process {
+        id: pasteTypes
+        command: ["wl-paste", "--list-types"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const types = text.split("\n").map(x => x.trim());
+                if (types.indexOf("x-special/gnome-copied-files") >= 0) { pasteFiles.kind = "gnome"; pasteFiles.command = ["wl-paste", "-t", "x-special/gnome-copied-files"]; pasteFiles.running = true; return; }
+                if (types.indexOf("text/uri-list") >= 0) { pasteFiles.kind = "uri"; pasteFiles.command = ["wl-paste", "-t", "text/uri-list"]; pasteFiles.running = true; return; }
+                const img = types.find(x => x.startsWith("image/"));
+                if (img) {
+                    const ext = img.split("/")[1].replace("jpeg", "jpg").replace(/[^a-z0-9]/g, "");
+                    pasteImage.dir = root.pasteDir;
+                    pasteImage.command = ["sh", "-c",
+                        'd="$1"; n="Pasted image"; e="$2"; f="$d/$n.$e"; i=2; while [ -e "$f" ]; do f="$d/$n $i.$e"; i=$((i+1)); done; wl-paste -t "$3" > "$f" && printf "%s" "$f"',
+                        "sh", root.pasteDir, ext, img];
+                    pasteImage.running = true; return;
+                }
+                root.pasteInternal();
+            }
+        }
+        onExited: code => { if (code !== 0) root.pasteInternal(); }
+    }
+    function pasteInternal() {
+        if (!clipPaths.length) return;
+        transfer(clipPaths, pasteDir, clipCut ? "move" : "copy");
         if (clipCut) clipPaths = [];
+    }
+    Process {
+        id: pasteFiles
+        property string kind: "uri"
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let cut = false, paths = [];
+                for (let l of text.split("\n")) {
+                    l = l.trim();
+                    if (l === "cut") cut = true;
+                    else if (l.startsWith("file://")) { const p = root.fromUri(l); if (p) paths.push(p); }
+                }
+                if (!paths.length) { root.pasteInternal(); return; }
+                if (cut && paths.every(p => root.dirname(p) === root.pasteDir)) return;
+                root.transfer(paths, root.pasteDir, cut ? "move" : "copy");
+                if (cut && root.clipCut) root.clipPaths = [];
+            }
+        }
+    }
+    Process {
+        id: pasteImage
+        property string dir: ""
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const f = text.trim();
+                if (f === "") { root.toast("Paste", "Could not read the image from the clipboard."); return; }
+                root.pendingSelect = f;
+                root.refresh(true);
+            }
+        }
+    }
+    // files dropped from another app
+    function dropUrls(urls, dir) {
+        if (isTrash || isArc) return;
+        const paths = urls.map(u => fromUri(String(u))).filter(p => p !== "");
+        if (!paths.length) return;
+        transfer(paths, dir || path, "copy");
     }
 
     // ---------------------------------------------------------------- transfers (copy / move) with conflicts

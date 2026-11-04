@@ -118,7 +118,7 @@ FloatingWindow {
             items.push({ kind: "sep" });
             items.push({ id: "cut", label: "Cut", hint: "Ctrl+X" });
             items.push({ id: "copy", label: "Copy", hint: "Ctrl+C" });
-            if (one && one.d && Data.clipPaths.length) items.push({ id: "pasteinto", label: "Paste into folder" });
+            if (one && one.d) items.push({ id: "pasteinto", label: "Paste into folder" });
             items.push({ kind: "sep" });
             if (t.length) {
                 items.push({ id: "compressquick", label: "Compress to “" + shorten(Data.compressBase(t) + ".zip") + "”" });
@@ -158,7 +158,7 @@ FloatingWindow {
                      { id: "props", label: "Archive properties" }]);
         } else {
             items = [{ id: "newfolder", label: "New folder", hint: "Ctrl+Shift+N" }, { id: "newfile", label: "New file" },
-                     { id: "paste", label: "Paste", hint: "Ctrl+V", disabled: Data.clipPaths.length === 0 },
+                     { id: "paste", label: "Paste", hint: "Ctrl+V" },
                      { kind: "sep" }, { id: "openterm", label: "Open terminal here" },
                      { kind: "sep" }, { id: "hidden", label: "Show hidden files", hint: "Ctrl+H", check: Data.showHidden },
                      { id: "viewlist", label: "List view", check: !win.grid }, { id: "viewgrid", label: "Grid view", check: win.grid },
@@ -250,7 +250,7 @@ FloatingWindow {
         case "cut": Data.cutSel(); break;
         case "copy": Data.copySel(); break;
         case "paste": Data.paste(); break;
-        case "pasteinto": { const t = Data.targets(); if (t.length === 1 && t[0].d) Data.transfer(Data.clipPaths, t[0].p, Data.clipCut ? "move" : "copy"); if (Data.clipCut) Data.clipPaths = []; break; }
+        case "pasteinto": { const t = Data.targets(); if (t.length === 1 && t[0].d) Data.paste(t[0].p); break; }
         case "rename": Data.startRename(); break;
         case "trash": Data.trashSel(); break;
         case "delete": Data.deleteSel(); break;
@@ -1361,6 +1361,14 @@ FloatingWindow {
             }
         }
 
+        // files dragged in from other apps (text/uri-list): copied into the current folder
+        DropArea {
+            anchors.fill: parent
+            z: -1
+            enabled: !Data.isTrash && !Data.isArc
+            onEntered: drag => { if (!drag.hasUrls || drag.source === ghost) drag.accepted = false; else drag.accept(Qt.CopyAction); }
+            onDropped: drop => { if (drop.hasUrls) { drop.accept(Qt.CopyAction); Data.dropUrls(drop.urls, Data.path); } }
+        }
         // drag ghost
         Item {
             id: ghost
