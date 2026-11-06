@@ -54,6 +54,17 @@ static void view_set_activated(struct ul_view *view, bool activated) {
 		wlr_xwayland_surface_activate(view->xwayland_surface, activated);
 		if (activated) {
 			wlr_xwayland_surface_restack(view->xwayland_surface, NULL, XCB_STACK_MODE_ABOVE);
+			/* wlroots refuses X clients the clipboard while no X window is focused.
+			 * Wine reads it the moment it changes (copying in a browser) and keeps
+			 * that failed, empty read, so pasting into Battle.net did nothing.
+			 * Re-announce the selection now that an X window has focus. */
+			struct wlr_seat *seat = view->server->seat;
+			if (seat->selection_source) {
+				wl_signal_emit_mutable(&seat->events.set_selection, seat);
+			}
+			if (seat->primary_selection_source) {
+				wl_signal_emit_mutable(&seat->events.set_primary_selection, seat);
+			}
 		}
 	}
 	if (view->foreign) {
