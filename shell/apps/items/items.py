@@ -58,7 +58,7 @@ def cmd_get(dev_id):
     cfg, saved = load_config(d)
     return {"ok": True, "device": {"id": d.ID, "name": d.NAME, "kind": d.KIND, "present": FAKE or d.is_present()},
             "schema": d.schema(), "config": cfg, "saved": saved,
-            "keys": sorted(hid.KEYS), "modifiers": list(hid.MODS)}
+            "keys": sorted(hid.KEYS) + list(hid.SYMBOLS), "modifiers": list(hid.MODS)}
 
 
 def cmd_set(dev_id, text):

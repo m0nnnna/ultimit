@@ -17,6 +17,9 @@ KEYS.update({
 })
 KEYS.update({f"kp_{(i + 1) % 10}": 0x59 + i for i in range(10)})
 KEYNAMES = {v: k for k, v in KEYS.items()}
+# the characters themselves, typed instead of their names ("-" for minus); "+" is the separator, so no alias
+SYMBOLS = {"-": "minus", "=": "equal", "[": "lbracket", "]": "rbracket", "\\": "backslash", ";": "semicolon",
+           "'": "quote", "`": "grave", ",": "comma", ".": "period", "/": "slash"}
 
 MODS = {"ctrl": 0x01, "shift": 0x02, "alt": 0x04, "super": 0x08,
         "rctrl": 0x10, "rshift": 0x20, "ralt": 0x40, "rsuper": 0x80}
@@ -32,6 +35,7 @@ def parse_key(text):
         if p not in MODS:
             raise ValueError(f"'{p}' is not a modifier (use {', '.join(MODS)})")
         mod |= MODS[p]
+    parts[-1] = SYMBOLS.get(parts[-1], parts[-1])
     if parts[-1] not in KEYS:
         raise ValueError(f"'{parts[-1]}' is not a key name")
     return mod, KEYS[parts[-1]]

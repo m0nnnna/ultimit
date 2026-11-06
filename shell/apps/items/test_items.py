@@ -35,6 +35,8 @@ class Keys(unittest.TestCase):
         self.assertEqual(hid.parse_key("Ctrl + Shift + A"), (0x03, 0x04))
         self.assertEqual(hid.parse_key("kp_plus"), (0, 0x57))
         self.assertEqual(hid.parse_key("f13"), (0, 0x68))
+        self.assertEqual(hid.parse_key("-"), (0, 0x2D))
+        self.assertEqual(hid.parse_key("ctrl+="), (0x01, 0x2E))
         for bad in ("", "ctrl+", "hyper+a", "nosuchkey"):
             with self.assertRaises(ValueError):
                 hid.parse_key(bad)
