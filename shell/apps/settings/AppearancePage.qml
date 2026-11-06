@@ -230,7 +230,7 @@ Page {
     SectionLabel { text: "Mouse cursor" }
     Chips {
         Layout.fillWidth: true
-        options: [{ id: "izy", label: "Izy" }, { id: "shard", label: "Shard" }]
+        options: [{ id: "izy", label: "Izy" }, { id: "shard", label: "Shard" }, { id: "classic", label: "Classic" }]
         current: Config.cursorStyle
         onPicked: id => Config.cursorStyle = id
     }

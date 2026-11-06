@@ -27,6 +27,10 @@ SKIP = {
     "ubuntu-advantage-notification.desktop",
     "ubuntu-report-on-upgrade.desktop",
     "spice-vdagent.desktop",
+    # gnome-keyring rides in as a Recommends of the Claude desktop app; starting it would take
+    # org.freedesktop.secrets from oo7, the Ultimit keyring. The package may stay, the daemon may not.
+    "gnome-keyring-pkcs11.desktop",
+    "gnome-keyring-secrets.desktop",
 }
 
 seen = set(SKIP)

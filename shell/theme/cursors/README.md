@@ -1,4 +1,4 @@
-# Ultimit cursors (Izy and Shard)
+# Ultimit cursors (Izy, Shard and Classic)
 
 Xcursor themes for the Ultimit desktop, one per skin in `shell/Theme.qml`:
 `UltimitCursor-Mine`, `UltimitCursor-Amber`, `UltimitCursor-Silver`, `UltimitCursor-Verdant`
@@ -18,11 +18,21 @@ white and grey. Drawn as vector paths with pycairo at 24 (nominal), 32, 36, 48 a
 rings (60 ms/frame) with one bright segment running round.
 
 Default style, **Izy** (Settings > Appearance > Mouse cursor, `"cursorStyle": "izy"` in
-shell.json, or `--style izy`; `"shard"` picks the Shard set above). A white dart with a thin rim and a
-wedge in the notch in the skin's accent, plain accent badges beside it (link chain, ?, +, ⊘,
-square, ...) instead of chips, and dashed round rings for wait/progress. The other cursors keep
-their shapes, drawn white with an accent rim. Everything has the dark outline, on every skin;
-where the accent is too dark to read on a dark window (Silver) the hairlines are white.
+shell.json, or `--style izy`; `"shard"` picks the Shard set above; `"classic"` the Classic set
+below). A white dart with a thin rim and a wedge in the notch in the skin's accent, plain accent
+badges beside it (link chain, ?, +, ⊘, square, ...) instead of chips, and dashed round rings for
+wait/progress. The other cursors keep their shapes, drawn white with an accent rim. Everything has
+the dark outline, on every skin; where the accent is too dark to read on a dark window (Silver) the
+hairlines are white.
+
+**Classic** (`"cursorStyle": "classic"`) is the familiar set every other OS ships, with a neko
+twist befitting NekoMail and friends: a notched arrow, a **cat's paw** pointing over links
+(open paw for grab, a clenched one for grabbing), a white I-beam, plain double-headed resize
+arrows, a circle-and-slash for not-allowed and a ring spinner for wait — all white with a dark
+outline. The accent survives in the spinner head, the badge glyphs (help, copy, alias, context
+menu, no-drop) on a white disc, a small wedge in the arrow's notch, and **toe beans**: small
+accent pads on the paw (a pink dot at 24 px, beans you can make out from 32 px up), so the
+cursor still follows Settings > Appearance.
 
 Coverage: all CSS cursor-shape-v1 names (files) plus X11 and hash-named aliases (symlinks).
 

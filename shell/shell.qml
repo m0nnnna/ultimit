@@ -85,6 +85,16 @@ ShellRoot {
         function get(): string { return Theme.accentOverride === "" ? "skin" : Theme.accentOverride; }
     }
 
+    IpcHandler {   // mouse cursor style: qs ipc call cursor set izy|shard|classic | get
+        target: "cursor"
+        function set(style: string): string {
+            if (["izy", "shard", "classic"].indexOf(style) < 0) return "error: izy, shard or classic";
+            Config.cursorStyle = style;   // Persist saves it; install-cursors.sh applies at next login
+            return "ok";
+        }
+        function get(): string { return Config.cursorStyle; }
+    }
+
     IpcHandler {   // skin: qs ipc call skin set <name> | get | list | auto on|off|get
         target: "skin"
         function set(name: string): string {

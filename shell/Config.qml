@@ -307,8 +307,7 @@ Singleton {
     // Desktop entries the launcher never lists (by id): helpers and duplicates
     // that installed packages ship. Foot stays; its client/server variants go.
     readonly property var launcherHidden: [
-        "footclient", "foot-server", "debian-xterm", "debian-uxterm", "xterm", "uxterm",
-        "com.anthropic.Claude"   // the Claude desktop app: Ultimit's own CLAUDE (ultimit-claude) is the one listed
+        "footclient", "foot-server", "debian-xterm", "debian-uxterm", "xterm", "uxterm"
     ]
 
     // Terminal candidates for the desktop menu.

@@ -32,7 +32,7 @@ NOMINAL = 24
 U = 52.0            # drawing canvas in design units
 C = 26.0            # centre
 OUTLINE = "#050607"
-STYLES = ("izy", "shard")
+STYLES = ("izy", "shard", "classic")
 STYLE = "izy"
 LIGHT = "#f4f6f9"   # izy: lit face of the white shapes
 MID = "#b3bac4"     # izy: their shadow face
@@ -156,10 +156,17 @@ LW = 3.0             # line weight (design units; ~1.4 px at 24 px)
 
 def shard(pts, lit):
     """Two-tone shard: silhouette `pts`, `lit` is the lit face (rest is shadow).
-    Izy: white faces with an accent rim."""
+    Izy: white faces with an accent rim. Classic: white faces, dark outline, no rim."""
     if STYLE == "izy":
         return P(pts, fill="mid", shade=lit, edge=True, lit=True, litc="light")
+    if STYLE == "classic":
+        return P(pts, fill="light", shade=lit, edge=False, lit=True, litc="mid")
     return P(pts, fill="shade", shade=lit, edge=False, lit=True)
+
+
+def LC():
+    """Line colour for hairline cursors: the accent in the Ultimit styles, white for classic."""
+    return "light" if STYLE == "classic" else "accent"
 
 
 # Izy dart: tip, left wing, notch, right wing. The accent wedge sits in the
@@ -430,6 +437,112 @@ def izy_forbidden():
             L([(C - d, C + d), (C + d, C - d)], w=LW + 0.6, outline=True)]
 
 
+# ---------------------------------------------------------------- classic
+# The familiar shapes every other OS ships: a notched arrow, a pointing hand,
+# an I-beam, plain double arrows, a circle-and-slash and a ring spinner. White
+# with a dark outline; the accent survives only in the spinner head, the badge
+# glyphs and a small wedge in the arrow's notch.
+CARROW = [(8, 5), (8, 40), (17.5, 31), (24.5, 44.5), (28.5, 42.5), (21.5, 28.5), (37.5, 28.5)]
+CARROW_HS = (8, 5)
+
+
+def classic_arrow():
+    wedge = [(15, 25.5), (20, 25.5), (17.5, 31)]
+    return [P(CARROW, fill="light", shade=[(8, 34), (8, 40), (17.5, 31), (24.5, 44.5), (28.5, 42.5), (21.5, 34)],
+              edge=False, lit=True, litc="mid"),
+            P(wedge, fill="accent", edge=False, outline=False)]
+
+
+def ellipse(cx, cy, rx, ry, n=18, a0=0, a1=360):
+    return [(cx + rx * math.cos(math.radians(a0 + (a1 - a0) * i / n)),
+             cy + ry * math.sin(math.radians(a0 + (a1 - a0) * i / n))) for i in range(n + 1)]
+
+
+def paw_pts(bumps, r, wrist_lx, wrist_rx, wrist_y=48, bow=1.8, step=1.3):
+    """Ventral-paw silhouette: the union of circles (cx, cy, r) across the top gives a
+    smooth scalloped edge (like the paw-print outline); sides bow slightly and taper
+    to the wrist."""
+    def upper(x):
+        return min(cy - math.sqrt(max(0.0, r * r - (x - cx) ** 2)) for cx, cy in bumps)
+    top = []
+    x = bumps[0][0] - r
+    while x <= bumps[-1][0] + r + 1e-9:
+        top.append((x, upper(x)))
+        x += step
+    lx, cx0 = wrist_lx, bumps[0]
+    rx = wrist_rx
+    return [(lx, wrist_y), (lx - bow, (wrist_y + cx0[1]) / 2 + 5), (lx, cx0[1])] \
+        + top + [(rx, bumps[-1][1]), (rx + bow, (wrist_y + bumps[-1][1]) / 2 + 5), (rx, wrist_y)]
+
+
+# A cat's paw (ventral side, pads showing), pointing up — the "neko" personality of the
+# classic set. Three toe globes + the big pad for the pointer (four + pad for the open
+# paw); the silhouette is a smooth scalloped outline, the beans do the toe work.
+# Coordinates are pre-scale: classic_hand shrinks them 0.9 about (26, 28).
+CHS_PT = paw_pts([(17.5, 15), (26, 12.5), (34.5, 15)], 7, 10.5, 41.5)
+BEANS_PT = [ellipse(17.5, 14.2, 2.7, 3.0), ellipse(26, 11.7, 2.7, 3.0), ellipse(34.5, 14.2, 2.7, 3.0),
+            ellipse(26, 34, 6.4, 5.2)]
+POINTER_HS_C = (26, 7.75)   # top of the middle globe, scaled like classic_hand scales the paw
+CHS_OPEN = paw_pts([(16, 14.5), (22.5, 12.5), (29.5, 12.5), (35.5, 14.5)], 6.5, 9.5, 42.5)
+BEANS_OPEN = [ellipse(16, 13.7, 2.4, 2.7), ellipse(22.5, 11.7, 2.4, 2.7),
+              ellipse(29.5, 11.7, 2.4, 2.7), ellipse(35.5, 13.7, 2.4, 2.7),
+              ellipse(26, 33.5, 6.2, 5.2)]
+CHS_FIST = [(15, 48), (14, 30), (5, 33), (3, 29), (13, 24),
+            (13, 18), (15, 13), (19, 13), (21, 18), (22, 20),
+            (24, 15), (28, 15), (30, 19), (31, 21),
+            (33, 17), (37, 17), (39, 21), (39, 26),
+            (41, 23), (44, 25), (43, 31),
+            (42, 48)]
+BEANS_FIST = [ellipse(27, 38, 6.2, 5.4)]   # one pad bean, clenched
+
+
+def classic_hand(which):
+    pts = {"point": CHS_PT, "open": CHS_OPEN, "closed": CHS_FIST}[which]
+    beans = {"point": BEANS_PT, "open": BEANS_OPEN, "closed": BEANS_FIST}[which]
+    # 0.9 about (26,28): a pointing paw is a tall shape; this keeps the outline
+    # inside the nominal canvas at every size.
+    a = (26.0, 28.0)
+    pts = [(a[0] + (x - a[0]) * 0.9, a[1] + (y - a[1]) * 0.9) for x, y in pts]
+    beans = [[(a[0] + (x - a[0]) * 0.9, a[1] + (y - a[1]) * 0.9) for x, y in b] for b in beans]
+    shade = [(14, 42), (14, 50), (43, 50), (43, 42)]
+    return [P(pts, fill="light", shade=shade, edge=False, lit=True, litc="mid")] \
+        + [P(b, fill="accent", edge=False, outline=False) for b in beans]
+
+
+def classic_forbidden():
+    d = 15 * math.sqrt(.5)
+    return [L(arc(C, C, 16, 0, 360, 36), w=4.8, color="light", outline=True),
+            L([(C - d, C + d), (C + d, C - d)], w=6.0, color="light", outline=True)]
+
+
+def classic_zoom(plus):
+    lc = (21.0, 21.0)
+    sh = [L([(30.5, 30.5), (44, 44)], w=5.2, color="light", outline=True),
+          L(arc(lc[0], lc[1], 13, 0, 360, 32), w=4.6, color="light", outline=True),
+          L([(lc[0] - 5, lc[1]), (lc[0] + 5, lc[1])], w=3.0, color="light", outline=True)]
+    if plus:
+        sh.append(L([(lc[0], lc[1] - 5), (lc[0], lc[1] + 5)], w=3.0, color="light", outline=True))
+    return sh
+
+
+def classic_badge_cursor(kind):
+    # White disc, accent glyph: the OS-classic badge.
+    return classic_arrow() + [P(at(arc(0, 0, 8.8, 0, 360, 24), BC), fill="light", edge=False)] + izy_badge(kind)
+
+
+def classic_wait_frames(n=12):
+    return [[L(arc(C, C, 15, 0, 360, 36), w=4.6, color="light", outline=True),
+             L(arc(C, C, 15, -90 + f * 30, -90 + f * 30 + 100, 14), w=4.6, color="accent", outline=True)]
+            for f in range(n)]
+
+
+def classic_progress_frames(n=12):
+    return [classic_arrow()
+            + [L(arc(BC[0], BC[1], 6.5, 0, 360, 20), w=3.2, color="light", outline=True),
+               L(arc(BC[0], BC[1], 6.5, -90 + f * 30, -90 + f * 30 + 120, 10), w=3.2, color="accent", outline=True)]
+            for f in range(n)]
+
+
 # ---------------------------------------------------------------- registry
 # name -> dict(frames=[shapes,...], hs=(ux,uy), delay=ms)
 def build_registry():
@@ -441,25 +554,31 @@ def build_registry():
 
     ctr = (C, C)
     izy = STYLE == "izy"
-    arrow_hs = DART[0] if izy else ARROW_HS
-    badge = izy_badge_cursor if izy else badge_cursor
-    add("default", arrow_shapes(), arrow_hs, ["left_ptr", "arrow", "top_left_arrow", "right_ptr", "center_ptr"])
+    classic = STYLE == "classic"
+    arrow_hs = CARROW_HS if classic else (DART[0] if izy else ARROW_HS)
+    badge = classic_badge_cursor if classic else (izy_badge_cursor if izy else badge_cursor)
+    add("default", classic_arrow() if classic else arrow_shapes(), arrow_hs,
+        ["left_ptr", "arrow", "top_left_arrow", "right_ptr", "center_ptr"])
     add("text", ibeam(), ctr, ["xterm", "ibeam"])
     add("vertical-text", ibeam(90), ctr, ["vertical_text"])
-    add("pointer", izy_badge_cursor("link") if izy else pointer(), arrow_hs if izy else POINTER_HS,
+    add("pointer", (classic_hand("point") if classic else (izy_badge_cursor("link") if izy else pointer())),
+        POINTER_HS_C if classic else (arrow_hs if izy else POINTER_HS),
         ["hand1", "hand2", "pointing_hand", "hand",
          "9d800788f1b08800ae810202380a0822", "e29285e634086352946a0e7090d73106"])
-    add("wait", izy_wait_frames() if izy else wait_frames(), ctr, ["watch"], anim=True)
-    add("progress", izy_progress_frames() if izy else progress_frames(), arrow_hs,
-        ["left_ptr_watch", "half-busy", "08e8e1c95fe2fc01f976f1e063a24ccd",
-         "3ecb610c1bf2410f44200f48c40d3599"], anim=True)
+    add("wait", (classic_wait_frames() if classic else (izy_wait_frames() if izy else wait_frames())),
+        ctr, ["watch"], anim=True)
+    add("progress", (classic_progress_frames() if classic else (izy_progress_frames() if izy else progress_frames())),
+        arrow_hs, ["left_ptr_watch", "half-busy", "08e8e1c95fe2fc01f976f1e063a24ccd",
+                   "3ecb610c1bf2410f44200f48c40d3599"], anim=True)
     add("crosshair", crosshair(), ctr, ["cross", "tcross"])
-    add("move", fleur(tip=20 if izy else 22), ctr, ["fleur", "size_all", "4498f0e0c1937ffe01fd06f973665830",
+    add("move", fleur(tip=20 if (izy or classic) else 22), ctr, ["fleur", "size_all", "4498f0e0c1937ffe01fd06f973665830",
                                "9081237383d90e509aa00f00170e968f"])
     add("all-scroll", fleur(tip=19, diamond_=True), ctr, ["all_scroll"])
-    add("grab", brackets(14, 7) + [diamond(2.4)], ctr, ["openhand", "9141b49c8149039304290b508d208c40"])
-    add("grabbing", brackets(9, 5) + [diamond(4.2)], ctr, ["closedhand", "08ffe1cb5fe6fc01f906f1c063814ccf"])
-    add("not-allowed", izy_forbidden() if izy else forbidden(), ctr,
+    add("grab", (classic_hand("open") if classic else brackets(14, 7) + [diamond(2.4)]), ctr,
+        ["openhand", "9141b49c8149039304290b508d208c40"])
+    add("grabbing", (classic_hand("closed") if classic else brackets(9, 5) + [diamond(4.2)]), ctr,
+        ["closedhand", "08ffe1cb5fe6fc01f906f1c063814ccf"])
+    add("not-allowed", (classic_forbidden() if classic else (izy_forbidden() if izy else forbidden())), ctr,
         ["crossed_circle", "forbidden", "circle", "03b6e0fcb3499374a867c041f52298f0"])
     add("no-drop", badge("nodrop"), arrow_hs, ["dnd-none", "dnd_none", "dnd_no_drop"])
     add("help", badge("help"), arrow_hs,
@@ -473,9 +592,9 @@ def build_registry():
          "640fb0e74195791501fd1ed57b41487f", "a2a266d0498c3104214a47bd64ab0fc8"])
     add("dnd-move", badge("dndmove"), arrow_hs, [])
     add("cell", plus_big(), ctr, ["plus"])
-    add("zoom-in", zoom(True), (21, 21), ["zoom_in"])
-    add("zoom-out", zoom(False), (21, 21), ["zoom_out"])
-    add("pencil", pencil(), (6, 46) if izy else (5, 47), ["draft", "draft_large", "draft_small"])
+    add("zoom-in", (classic_zoom(True) if classic else zoom(True)), (21, 21), ["zoom_in"])
+    add("zoom-out", (classic_zoom(False) if classic else zoom(False)), (21, 21), ["zoom_out"])
+    add("pencil", pencil(), (6, 46) if (izy or classic) else (5, 47), ["draft", "draft_large", "draft_small"])
     # resize family
     for name, ang in (("e-resize", 0), ("se-resize", 45), ("s-resize", 90), ("sw-resize", 135),
                       ("w-resize", 180), ("nw-resize", 225), ("n-resize", 270), ("ne-resize", 315)):
@@ -507,14 +626,15 @@ class Skin:
         self.accent = rgb(s["accent"])
         self.fill = rgb(s["fill"])
         light = sum(self.fill) / 3 > 0.5
-        # Contrast outline: near-black on dark skins, white on light ones. The
-        # izy shapes are white, so they always get the dark one.
-        self.outline = (1.0, 1.0, 1.0) if light and STYLE != "izy" else rgb(OUTLINE)
+        # Contrast outline: near-black on dark skins, white on light ones (the shard
+        # style's accent shards need it). Izy and classic draw white shapes: dark always.
+        self.outline = rgb(OUTLINE) if STYLE in ("izy", "classic") \
+            else ((1.0, 1.0, 1.0) if light else rgb(OUTLINE))
         self.light, self.mid = rgb(LIGHT), rgb(MID)
-        # Izy hairlines: the accent, or white when the accent is too dark to
-        # read on a dark window (Silver); the rims keep the accent.
+        # Izy/classic hairlines: the accent, or white when the accent is too dark to
+        # read on a dark window (Silver); the rims keep the accent. Classic is always white.
         lum = 0.2126 * self.accent[0] + 0.7152 * self.accent[1] + 0.0722 * self.accent[2]
-        self.line = self.light if STYLE == "izy" and lum < 0.4 else self.accent
+        self.line = self.light if STYLE == "classic" or (STYLE == "izy" and lum < 0.4) else self.accent
         # Shadow face of a shard: the accent sunk toward the panel colour.
         self.shade = mix(self.accent, self.fill, 0.42)
 
@@ -690,7 +810,9 @@ def build_theme(skin_name, outdir, registry, keep=None, warn=None):
                 os.unlink(dst)
             os.symlink(name, dst)
     with open(os.path.join(tdir, "index.theme"), "w") as f:
-        desc = ("Ultimit Izy cursors (%s skin): white darts with an accent rim" if STYLE == "izy"
+        desc = ("Ultimit Classic cursors (%s skin): the familiar arrow, a neko paw pointer and an I-beam, "
+                "white on a dark outline" if STYLE == "classic"
+                else "Ultimit Izy cursors (%s skin): white darts with an accent rim" if STYLE == "izy"
                 else "Ultimit Shard cursors (%s skin): two-tone crystal shards and accent hairlines")
         f.write("[Icon Theme]\nName=%s\nComment=%s\nInherits=Adwaita\n" % (tname, desc % skin_name))
     if keep is not None:

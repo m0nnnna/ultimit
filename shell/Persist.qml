@@ -39,7 +39,7 @@ Scope {
         if (!root.envMotion) Config.motion = a.motion;
         Config.railSpin = a.railSpin;
         Config.appIcons = a.appIcons === "original" ? "original" : "letters";
-        Config.cursorStyle = a.cursorStyle === "shard" ? "shard" : "izy";
+        Config.cursorStyle = ["izy", "shard", "classic"].indexOf(a.cursorStyle) >= 0 ? a.cursorStyle : "izy";
         Config.wallpaperMotion = a.wallpaperMotion;
         if (!root.envBoot) Config.bootOnStart = a.bootOnStart;
         Config.shardDensity = clampDensity(a.shardDensity);
@@ -211,10 +211,13 @@ Scope {
         function onSkinChanged() {
             root.push();
             root.pushChrome();
-            // Re-colour the mouse cursor with the skin (theme/cursors).
+            // Re-colour the mouse cursor with the skin (theme/cursors): rebuild first (cheap
+            // when nothing changed) so this skin's theme carries the current accent and style,
+            // then load it.
             const name = "UltimitCursor-" + Theme.skin.charAt(0).toUpperCase() + Theme.skin.slice(1);
-            Quickshell.execDetached(["sh", "-c", "[ -e \"$HOME/.local/share/icons/" + name + "/cursors/default\" ] && ultimitctl cursor-theme " + name + " && gsettings set org.gnome.desktop.interface cursor-theme " + name
-                + " && { ! command -v flatpak >/dev/null || flatpak override --user --env=XCURSOR_THEME=" + name + "; }"]);
+            Quickshell.execDetached(["sh", "-c", "\"$1\" && [ -e \"$HOME/.local/share/icons/" + name + "/cursors/default\" ] && ultimitctl cursor-theme " + name + " && gsettings set org.gnome.desktop.interface cursor-theme " + name
+                + " && { ! command -v flatpak >/dev/null || flatpak override --user --env=XCURSOR_THEME=" + name + "; }", "sh",
+                Quickshell.shellPath("theme/cursors/install-cursors.sh")]);
             // GTK apps started from now on, and Flatpak apps, take the skin's GTK theme and colour
             // scheme; already open ones keep theirs until restarted, except the Flatpak browsers,
             // which follow gsettings through the portal (ultimit-flatpak-theme) and switch live.

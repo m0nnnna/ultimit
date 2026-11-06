@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
-Name=CLAUDE
-GenericName=AI Assistant
-Comment=Claude for troubleshooting this PC and working on your projects, with several accounts
+Name=Claude Code
+GenericName=AI coding assistant
+Comment=Claude Code for troubleshooting this PC and working on your projects, with several accounts
 Exec=ultimit-claude %f
 Icon=ultimit-claude
 Terminal=false
