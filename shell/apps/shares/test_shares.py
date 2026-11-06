@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Unit tests for shares.py. Run: python3 apps/shares/test_shares.py
 Every external program goes through a fake runner; HOME is a temp dir; nothing touches Samba or the system."""
-import importlib.util, json, os, subprocess, sys, tempfile, unittest
+import importlib.util, json, os, pwd, subprocess, sys, tempfile, unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TMP = tempfile.mkdtemp(prefix="shares-test-")
@@ -10,6 +10,7 @@ os.makedirs(HOME)
 os.environ.update({"HOME": HOME, "XDG_STATE_HOME": HOME + "/.local/state"})
 for k in ("SHARES_FAKE", "SHARES_BIN_DIR"):
     os.environ.pop(k, None)
+ME = pwd.getpwuid(os.getuid()).pw_name   # the fake system uses this account
 os.environ["SHARES_ETC_GROUP"] = TMP + "/etc_group"
 os.environ["SHARES_UFW_APPS"] = TMP + "/ufw-apps"
 spec = importlib.util.spec_from_file_location("shares", os.path.join(HERE, "shares.py"))
@@ -56,7 +57,7 @@ class Fake:
             ("testparm", "-s", "--parameter-name=usershare path"): (0, TMP + "/usershares\n", ""),
             ("testparm", "-s", "--parameter-name=usershare max shares"): (0, "100\n", ""),
             ("testparm", "-s", "--parameter-name=usershare allow guests"): (0, "yes\n", ""),
-            ("id", "-nG"): (0, "mino adm sambashare\n", ""),
+            ("id", "-nG"): (0, ME + " adm sambashare\n", ""),
             ("hostname",): (0, "ultimit-box\n", ""),
             ("ip", "-j", "addr"): (0, json.dumps(IP_ADDR), ""),
             ("ip", "-j", "route"): (0, json.dumps([{"dst": "default", "dev": "wlan0"}]), ""),
@@ -222,15 +223,15 @@ class Status(Base):
         self.assertTrue(a[0]["primary"] and not a[1]["primary"])
 
     def test_relogin_needed(self):
-        write(TMP + "/etc_group", "adm:x:4:mino\nsambashare:x:123:mino,other\n")
-        use(Fake({("id", "-nG"): (0, "mino adm\n", "")}))
+        write(TMP + "/etc_group", "adm:x:4:%s\nsambashare:x:123:%s,other\n" % (ME, ME))
+        use(Fake({("id", "-nG"): (0, ME + " adm\n", "")}))
         g = shares.status()["group"]
         self.assertTrue(g["reloginNeeded"] and not g["member"] and g["inFile"])
         self.assertFalse(shares.status()["ready"])
 
     def test_not_in_group_at_all(self):
         write(TMP + "/etc_group", "sambashare:x:123:\n")
-        use(Fake({("id", "-nG"): (0, "mino adm\n", "")}))
+        use(Fake({("id", "-nG"): (0, ME + " adm\n", "")}))
         g = shares.status()["group"]
         self.assertEqual((g["exists"], g["inFile"], g["reloginNeeded"], g["member"]), (True, False, False, False))
 
