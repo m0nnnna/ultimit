@@ -123,7 +123,7 @@ if [ ! -d "$SRC/.git" ]; then
 else
 	git -C "$SRC" remote set-url origin "$url"
 	git -C "$SRC" fetch -q --tags --force --prune origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
-	git -C "$SRC" checkout -q -B "$BRANCH" "origin/$BRANCH"
+	git -C "$SRC" checkout -q -f -B "$BRANCH" "origin/$BRANCH"
 	git -C "$SRC" reset -q --hard "origin/$BRANCH"
 	git -C "$SRC" clean -q -fd
 fi
