@@ -33,6 +33,7 @@ import sqlite3
 import stat as statmod
 import sys
 import time
+from collections import deque
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 UD = "org.freedesktop.UDisks2"
@@ -1400,59 +1401,57 @@ def scan(root, write=None, interval=0.2):
     unreadable = []
     other_fs = nfiles = nbytes = tick = 0
     last = t0
-    stack = [(1, root)]
+    # Breadth-first, entries sorted per folder: deterministic results on any
+    # filesystem, and a hardlink counts toward the path that sorts first.
+    stack = deque([(1, root)])
     batch = []
     while stack:
-        did, path = stack.pop()
+        did, path = stack.popleft()
         try:
-            it = os.scandir(path)
+            with os.scandir(path) as it:
+                entries = list(it)
         except OSError:
             errs[did] += 1
             if len(unreadable) < 200:
                 unreadable.append(path)
             continue
+        # Sorted order: deterministic results (and hardlinks count toward the
+        # path that sorts first) on any filesystem's directory order.
+        entries.sort(key=lambda e: e.name)
         files = []
-        with it:
-            while True:
-                try:
-                    e = next(it)
-                except StopIteration:
-                    break
-                except OSError:
-                    errs[did] += 1
-                    break
-                try:
-                    st = e.stat(follow_symlinks=False)
-                except OSError:
-                    errs[did] += 1
+        for e in entries:
+            try:
+                st = e.stat(follow_symlinks=False)
+            except OSError:
+                errs[did] += 1
+                continue
+            if statmod.S_ISDIR(st.st_mode):
+                if st.st_dev != dev:
+                    other_fs += 1
                     continue
-                if statmod.S_ISDIR(st.st_mode):
-                    if st.st_dev != dev:
-                        other_fs += 1
-                        continue
-                    sub = path.rstrip("/") + "/" + e.name
-                    if skip_tree(root, sub):
-                        continue
-                    names.append(e.name); parent.append(did)
-                    own_size.append(st.st_blocks * 512); own_items.append(0); errs.append(0); fo_n.append(0); fo_b.append(0)
-                    stack.append((len(names) - 1, sub))
+                sub = path.rstrip("/") + "/" + e.name
+                if skip_tree(root, sub):
                     continue
-                size = st.st_blocks * 512
-                if st.st_nlink > 1:
-                    key = (st.st_dev, st.st_ino)
-                    if key in seen:
-                        size = 0
-                    else:
-                        seen.add(key)
-                files.append((size, e.name))
-                nfiles += 1
-                nbytes += size
-                tick += 1
-                if tick & 255 == 0:
-                    now = time.monotonic()
-                    if now - last >= interval:
-                        last = now
-                        write({"progress": nfiles, "bytes": nbytes, "path": path})
+                names.append(e.name); parent.append(did)
+                own_size.append(st.st_blocks * 512); own_items.append(0); errs.append(0); fo_n.append(0); fo_b.append(0)
+                stack.append((len(names) - 1, sub))
+                continue
+            size = st.st_blocks * 512
+            if st.st_nlink > 1:
+                key = (st.st_dev, st.st_ino)
+                if key in seen:
+                    size = 0
+                else:
+                    seen.add(key)
+            files.append((size, e.name))
+            nfiles += 1
+            nbytes += size
+            tick += 1
+            if tick & 255 == 0:
+                now = time.monotonic()
+                if now - last >= interval:
+                    last = now
+                    write({"progress": nfiles, "bytes": nbytes, "path": path})
         own_items[did] = len(files)
         own_size[did] += sum(f[0] for f in files)
         kept, fo_n[did], fo_b[did] = keep_files(files)
