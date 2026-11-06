@@ -7,7 +7,7 @@
 # (rsync, zstd, gpg, sfdisk) are installed by system-install.sh.
 set -euo pipefail
 NEKOSHOT_URL=https://github.com/m0nnnna/NekoShot
-NEKOSHOT_REF=1ff217fdf27182eaba51c598163ba8179d360864   # branch ultimit
+NEKOSHOT_REF=bc491e3288fcee36d6a39818aee65db6a0b91fd7   # branch ultimit
 WORK=${1:?usage: build-nekoshot.sh WORK_DIR [PREFIX]}
 PREFIX=${2:-/opt/ultimit}
 N=$PREFIX/nekoshot

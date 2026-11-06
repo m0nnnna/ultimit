@@ -1,0 +1,18 @@
+# Runs every shell app test suite (shell/apps/*/test_*.py: stdlib-only, with fakes and fixtures)
+# on each push and pull request, so a red suite shows up before a release tag ships it.
+name: Tests
+on:
+  push:
+  pull_request:
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run the app test suites
+        run: |
+          set -e
+          for t in $(find shell -name "test_*.py" | sort); do
+            echo "== $t"
+            python3 "$t"
+          done

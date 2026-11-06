@@ -71,8 +71,11 @@ def save_settings(s):
 def validate(key, value):
     """Return (ok, normalized value or error text)."""
     if key == "output_dir":
-        if not value.startswith("/") or ".." in value.split("/") or re.search(r"[\s'\"\;|&$`]", value):
-            return False, "Pick an absolute folder path without spaces or special characters."
+        # Only what would actually break: a relative path or a parent traversal. Everything is
+        # passed as argv (no shell) and scheduled commands are quoted, so spaces are fine:
+        # USB drives mount at "/media/you/My Passport" all the time.
+        if not value.startswith("/") or ".." in value.split("/"):
+            return False, "Pick an absolute folder path."
         return True, value.rstrip("/") or "/"
     if key == "profile":
         return (value in ("desktop", "server"), value) if value in ("desktop", "server") else (False, "Unknown profile.")
@@ -130,6 +133,29 @@ def same_disk_as_root(path):
         return True
 
 
+def scheduled_drift(command, s):
+    """Ways the scheduled command (baked in when the schedule was created) differs from the
+    current settings: ["backup folder /old", "encryption off"]. Empty when they agree."""
+    try:
+        args = shlex.split(command or "")
+    except ValueError:
+        args = (command or "").split()
+    out_dir, encrypt = "", False
+    for i, a in enumerate(args):
+        if a == "--output" and i + 1 < len(args):
+            out_dir = args[i + 1]
+        elif a.startswith("--output="):
+            out_dir = a.split("=", 1)[1]
+        elif a == "--encrypt":
+            encrypt = True
+    diffs = []
+    if out_dir and out_dir.rstrip("/") != s["output_dir"]:
+        diffs.append("backup folder " + out_dir)
+    if encrypt != bool(s["encrypt"]):
+        diffs.append("encryption on" if encrypt else "encryption off")
+    return diffs
+
+
 def cmd_state():
     s = load_settings()
     installed = os.path.isfile(CLI)
@@ -151,6 +177,13 @@ def cmd_state():
     sched = cli_json(["schedule", "list"])
     if isinstance(sched, dict):
         st["schedule"] = [j for j in sched.get("jobs", []) if j.get("name") == JOB_NAME]
+        if sched.get("cron_running") is False:
+            st["warnings"].append("The backup scheduler isn't running, so scheduled backups won't fire.")
+        for j in st["schedule"]:
+            drift = scheduled_drift(j.get("command", ""), s)
+            if drift:
+                st["warnings"].append("The schedule was set with " + " and ".join(drift)
+                                      + "; remove it and add it again to use the current settings.")
     if same_disk_as_root(s["output_dir"]):
         st["warnings"].append("Backups are stored on the same disk as the system. Keep a copy on an external drive, or a failed disk takes both.")
     if s["encrypt"] and not st["passphrase"]:

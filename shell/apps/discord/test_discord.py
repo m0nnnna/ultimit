@@ -85,7 +85,9 @@ class Discord(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.apps, "ultimit-discord-2.desktop")))
         r = self.run_("setup", installed=False)
         self.assertFalse(r["installed"])
-        self.assertEqual(os.listdir(self.apps), [])   # no entries that would not start
+        # no launcher entries that would not start (update-desktop-database's cache is fine)
+        entries = [f for f in os.listdir(self.apps) if f.endswith(".desktop")]
+        self.assertEqual(entries, [])
         r = self.run_("open", "2", installed=False)
         self.assertFalse(r["ok"])
 

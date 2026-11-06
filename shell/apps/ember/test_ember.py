@@ -56,10 +56,18 @@ class Shapes(unittest.TestCase):
         self.assertIn("no tool", ember.validate("nope", {}))
 
     def test_ask_rules(self):
-        self.assertTrue(ember.needs_ask("run_command", {}))
-        self.assertTrue(ember.needs_ask("window", {"action": "close"}))
-        self.assertFalse(ember.needs_ask("window", {"action": "focus"}))
-        self.assertFalse(ember.needs_ask("read_file", {}))
+        # ask_reason(name, args, trust, tainted): why a call needs the user's OK, or None.
+        self.assertIsNotNone(ember.ask_reason("run_command", {}, False, False))
+        self.assertIsNotNone(ember.ask_reason("window", {"action": "close"}, False, False))
+        self.assertIsNone(ember.ask_reason("window", {"action": "focus"}, False, False))
+        self.assertIsNone(ember.ask_reason("read_file", {"path": "~/Documents"}, False, False))
+        # trust ("act without asking") skips the ordinary asks, never the secret-file one
+        self.assertIsNone(ember.ask_reason("run_command", {}, True, False))
+        self.assertIsNone(ember.ask_reason("window", {"action": "close"}, True, False))
+        self.assertIsNotNone(ember.ask_reason("read_file", {"path": "~/.ssh/id_ed25519"}, True, False))
+        # a chat that read web pages, files or command output asks before sending data off the PC
+        self.assertIsNone(ember.ask_reason("web_search", {}, False, False))
+        self.assertIsNotNone(ember.ask_reason("web_search", {}, False, True))
 
     def test_effort_models(self):
         self.assertTrue(ember.effort_ok("claude-opus-5-5"))

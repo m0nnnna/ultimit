@@ -21,6 +21,9 @@ udisks2
 ldmtool
 power-profiles-daemon
 switcheroo-control
+# VPN (Settings > Network > VPN imports WireGuard .conf and OpenVPN .ovpn files; WireGuard is
+# built into NetworkManager, OpenVPN needs this plugin)
+network-manager-openvpn
 gamemode
 gcr
 grim

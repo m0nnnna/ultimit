@@ -20,15 +20,35 @@ class T(unittest.TestCase):
             if os.path.exists(p): os.remove(p)
         self.calls = []
         n.runner = lambda argv, timeout=60: (self.calls.append(argv) or (0, "{}", ""))
+        # cmd_state checks the installed CLI path: pretend NekoShot is installed
+        self._cli, n.CLI = n.CLI, os.path.join(tempfile.mkdtemp(), "nekoshot.py")
+        open(n.CLI, "w").close()
+
+    def tearDown(self):
+        n.CLI = self._cli
 
     def test_set_validates(self):
         self.assertTrue(call("set", "keep", "5")["ok"])
         self.assertFalse(call("set", "keep", "0")["ok"])
         self.assertFalse(call("set", "output_dir", "relative")["ok"])
         self.assertFalse(call("set", "output_dir", "/a/../b")["ok"])
-        self.assertFalse(call("set", "output_dir", "/a b")["ok"])
+        self.assertTrue(call("set", "output_dir", "/media/me/My Passport")["ok"])  # quoted end to end
         self.assertFalse(call("set", "bogus", "1")["ok"])
         self.assertEqual(n.load_settings()["keep"], 5)
+
+    def test_state_warns_when_schedule_differs(self):
+        call("set", "output_dir", "/new")
+        n.cli_json = lambda a: {"jobs": [{"name": "ultimit-backup", "schedule": "0 2 * * *",
+                                          "command": "/opt/nekoshot/nekoshot.py capture --output /old "
+                                                     "--profile desktop --compression zstd"}],
+                                "cron_running": True} if a[:2] == ["schedule", "list"] else []
+        o = call("state")
+        self.assertTrue(any("backup folder /old" in w for w in o["warnings"]))
+
+    def test_state_warns_when_scheduler_not_running(self):
+        n.cli_json = lambda a: {"jobs": [], "cron_running": False} if a[:2] == ["schedule", "list"] else []
+        o = call("state")
+        self.assertTrue(any("scheduler" in w for w in o["warnings"]))
 
     def test_passphrase_private(self):
         o = call("passphrase", "--generate")
