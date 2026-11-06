@@ -550,6 +550,13 @@ Singleton {
         if (isArc) { if (e.d) goTo(e.p); else openArcFile(e); return; }
         if (e.d) { goTo(e.p); return; }
         if (isArchive(e)) { goTo(arcLoc(e.p, "")); return; }   // archives open like folders
+        // AppImages have no xdg-open handler; run them directly.
+        if (e.t === "application/vnd.appimage" || /\.appimage$/i.test(e.n)) {
+            if (!e.x) { toast("AppImage", "Mark “" + e.n + "” executable to run it (Properties → Permissions)."); return; }
+            if (dryRun) { console.log("DATA dry-run: run " + e.p); return; }
+            Quickshell.execDetached({ command: [e.p], workingDirectory: fsPath });
+            return;
+        }
         run(["xdg-open", e.p], "xdg-open " + e.p);
     }
     function openSelected() {
