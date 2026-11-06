@@ -1,4 +1,4 @@
-# Runs every shell app test suite (shell/apps/*/test_*.py: stdlib-only, with fakes and fixtures)
+# Runs every shell app test suite (shell/apps/*/test_*.py, with fakes and fixtures)
 # on each push and pull request, so a red suite shows up before a release tag ships it.
 name: Tests
 on:
@@ -9,6 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Test dependencies
+        # BROADCAST's fake OBS speaks the OBS websocket protocol (python3-websockets,
+        # as on a shipped Ultimit system)
+        run: sudo apt-get update -q && sudo apt-get install -y -q python3-websockets
       - name: Run the app test suites
         run: |
           set -e
