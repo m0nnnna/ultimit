@@ -123,14 +123,21 @@ setup() { # meson setup that also works on a fresh build folder: setup BUILD SRC
 mark() { echo "$2" | sudo tee "$PREFIX/.built-$1" >/dev/null; }
 sudo mkdir -p "$PREFIX"
 
-step "Building wlroots $WLROOTS_REF"
-if built wlroots "$WLROOTS_REF"; then note "already installed"; else
+# Ultimit's patches on top of the wlroots tag (distro/patches/wlroots-*.patch). The suffix changes
+# whenever the patch set does, so an install built without them is rebuilt.
+WLROOTS_BUILD="$WLROOTS_REF+p1"
+step "Building wlroots $WLROOTS_BUILD"
+if built wlroots "$WLROOTS_BUILD"; then note "already installed"; else
 	d=$(src wlroots "$WLROOTS_URL" "$WLROOTS_REF")
+	git -C "$d" checkout -q -- . 2>/dev/null || true
+	for patch in "$ROOT"/distro/patches/wlroots-*.patch; do
+		git -C "$d" apply "$patch"
+	done
 	setup "$d/build" "$d" --prefix="$PREFIX" --libdir="$LIBDIR" --buildtype=release \
 		-Dexamples=false -Dwerror=false -Dxwayland=enabled -Dbackends=drm,libinput,x11 -Drenderers=gles2,vulkan
 	ninja -C "$d/build" -j "$JOBS"
 	sudo ninja -C "$d/build" install >/dev/null
-	mark wlroots "$WLROOTS_REF"
+	mark wlroots "$WLROOTS_BUILD"
 fi
 
 step "Building SceneFX $SCENEFX_REF"

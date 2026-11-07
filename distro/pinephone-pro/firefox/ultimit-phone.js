@@ -13,6 +13,10 @@ pref("browser.sessionstore.interval", 60000);
 // sites drop their animations; no blur behind elements (a full-screen GPU pass per frame)
 pref("ui.prefersReducedMotion", 1);
 pref("layout.css.backdrop-filter.enabled", false);
+// the GPU sits at its top clock on busy sites and still drops frames at 60: a steady 30 halves
+// the work; animated GIFs play once instead of redrawing forever (feeds are full of them)
+pref("layout.frame_rate", 30);
+pref("image.animation_mode", "once");
 
 // no autoplay; H.264 over VP9/AV1, the cheapest to decode on the CPU (YouTube follows this)
 pref("media.autoplay.default", 5);

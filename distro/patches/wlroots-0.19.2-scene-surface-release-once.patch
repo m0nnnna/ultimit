@@ -1,0 +1,53 @@
+diff --git a/types/scene/surface.c b/types/scene/surface.c
+index f0651bc..2293e49 100644
+--- a/types/scene/surface.c
++++ b/types/scene/surface.c
+@@ -107,7 +107,13 @@ static int min(int a, int b) {
+ 	return a < b ? a : b;
+ }
+ 
+-static void surface_reconfigure(struct wlr_scene_surface *scene_surface) {
++// new_buffer is true when called because the surface has a freshly committed
++// buffer (commit, or first attach). Reconfiguring for any other reason (clip
++// changes) must not signal the explicit-sync release point again: the
++// committed flags stay set until the next commit, and by then the client
++// buffer may already be uploaded and unlocked, which trips the
++// buffer->n_locks assertion in wlroots.
++static void surface_reconfigure(struct wlr_scene_surface *scene_surface, bool new_buffer) {
+ 	struct wlr_scene_buffer *scene_buffer = scene_surface->buffer;
+ 	struct wlr_surface *surface = scene_surface->surface;
+ 	struct wlr_surface_state *state = &surface->current;
+@@ -202,7 +208,7 @@ static void surface_reconfigure(struct wlr_scene_surface *scene_surface) {
+ 		wlr_scene_buffer_set_buffer_with_options(scene_buffer,
+ 			&surface->buffer->base, &options);
+ 
+-		if (syncobj_surface_state != NULL &&
++		if (new_buffer && syncobj_surface_state != NULL &&
+ 				(surface->current.committed & WLR_SURFACE_STATE_BUFFER) &&
+ 				surface->buffer->source != NULL) {
+ 			wlr_linux_drm_syncobj_v1_state_signal_release_with_buffer(syncobj_surface_state,
+@@ -221,7 +227,7 @@ static void handle_scene_surface_surface_commit(
+ 		wl_container_of(listener, surface, surface_commit);
+ 	struct wlr_scene_buffer *scene_buffer = surface->buffer;
+ 
+-	surface_reconfigure(surface);
++	surface_reconfigure(surface, true);
+ 
+ 	// If the surface has requested a frame done event, honour that. The
+ 	// frame_callback_list will be populated in this case. We should only
+@@ -324,7 +330,7 @@ struct wlr_scene_surface *wlr_scene_surface_create(struct wlr_scene_tree *parent
+ 	wlr_addon_init(&surface->addon, &scene_buffer->node.addons,
+ 		scene_buffer, &surface_addon_impl);
+ 
+-	surface_reconfigure(surface);
++	surface_reconfigure(surface, true);
+ 
+ 	return surface;
+ }
+@@ -340,5 +346,5 @@ void scene_surface_set_clip(struct wlr_scene_surface *surface, struct wlr_box *c
+ 		surface->clip = (struct wlr_box){0};
+ 	}
+ 
+-	surface_reconfigure(surface);
++	surface_reconfigure(surface, false);
+ }
