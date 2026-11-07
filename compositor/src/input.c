@@ -89,7 +89,13 @@ static struct wlr_surface *surface_at(struct ul_server *server, double lx, doubl
 #define UL_RESIZE_CORNER  20 /* corner grab length along each side */
 static uint32_t resize_edges_at(struct ul_view *view, double lx, double ly, bool *inside) {
 	*inside = false;
-	if (!view || !view->mapped || view->fullscreen) {
+	if (!view || !view->mapped) {
+		return 0;
+	}
+	/* A fullscreen view has no edges, but it still hides those under it. */
+	if (view->fullscreen) {
+		*inside = lx >= view->x && lx < view->x + view->width &&
+			ly >= view->y && ly < view->y + view->height;
 		return 0;
 	}
 	int bar = view->ssd ? UL_TITLEBAR_H : 0;
