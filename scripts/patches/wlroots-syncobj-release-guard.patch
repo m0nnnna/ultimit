@@ -1,0 +1,14 @@
+diff --git a/types/scene/surface.c b/types/scene/surface.c
+index f0651bc..7bb6652 100644
+--- a/types/scene/surface.c
++++ b/types/scene/surface.c
+@@ -204,7 +204,8 @@ static void surface_reconfigure(struct wlr_scene_surface *scene_surface) {
+ 
+ 		if (syncobj_surface_state != NULL &&
+ 				(surface->current.committed & WLR_SURFACE_STATE_BUFFER) &&
+-				surface->buffer->source != NULL) {
++				surface->buffer->source != NULL &&
++				surface->buffer->source->n_locks > 0) {
+ 			wlr_linux_drm_syncobj_v1_state_signal_release_with_buffer(syncobj_surface_state,
+ 				surface->buffer->source);
+ 		}

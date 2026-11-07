@@ -295,6 +295,7 @@ Singleton {
         { id: "data",      label: "DATA", own: true, ownTitles: ["DATA"], appIds: [] },   // apps/data
         { id: "term",      label: "CONSOLE",
           tryCmds: [
+              { bin: "gtk-launch", cmd: "gtk-launch \"$(grep -v '^#' \"$HOME/.config/xdg-terminals.list\" | head -n1)\"", check: termPrefCheck },
               { bin: "foot", cmd: "foot" }, { bin: "kitty", cmd: "kitty" }, { bin: "ptyxis", cmd: "ptyxis" },
               { bin: "gnome-terminal", cmd: "gnome-terminal" }, { bin: "xterm", cmd: "xterm" }
           ],
@@ -304,6 +305,9 @@ Singleton {
           appIds: ["gnome-control-center", "org.gnome.settings"] }
     ]
 
+    // The terminal picked in SETTINGS (~/.config/xdg-terminals.list) wins when its desktop entry exists.
+    readonly property string termPrefCheck: "command -v gtk-launch >/dev/null 2>&1 && t=$(grep -v '^#' \"$HOME/.config/xdg-terminals.list\" 2>/dev/null | head -n1) && [ -n \"$t\" ] && { [ -e \"/usr/share/applications/$t\" ] || [ -e \"$HOME/.local/share/applications/$t\" ]; }"
+
     // Desktop entries the launcher never lists (by id): helpers and duplicates
     // that installed packages ship. Foot stays; its client/server variants go.
     readonly property var launcherHidden: [
@@ -312,6 +316,7 @@ Singleton {
 
     // Terminal candidates for the desktop menu.
     readonly property var terminals: [
+        { bin: "gtk-launch", cmd: "gtk-launch \"$(grep -v '^#' \"$HOME/.config/xdg-terminals.list\" | head -n1)\"", check: termPrefCheck },
         { bin: "foot", cmd: "foot" }, { bin: "kitty", cmd: "kitty" },
         { bin: "ptyxis", cmd: "ptyxis" }, { bin: "xterm", cmd: "xterm" }
     ]
@@ -399,7 +404,7 @@ Singleton {
                 s += "if " + chk + "; then echo '" + a.id + " " + i + "'; fi\n";
             });
         }
-        terminals.forEach((c, i) => { s += "if command -v " + c.bin + " >/dev/null 2>&1; then echo '_term " + i + "'; fi\n"; });
+        terminals.forEach((c, i) => { s += "if " + (c.check || ("command -v " + c.bin + " >/dev/null 2>&1")) + "; then echo '_term " + i + "'; fi\n"; });
         return s;
     }
 

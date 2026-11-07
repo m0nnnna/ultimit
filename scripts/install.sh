@@ -124,13 +124,18 @@ mark() { echo "$2" | sudo tee "$PREFIX/.built-$1" >/dev/null; }
 sudo mkdir -p "$PREFIX"
 
 step "Building wlroots $WLROOTS_REF"
-if built wlroots "$WLROOTS_REF"; then note "already installed"; else
+# our patch: surface_reconfigure re-signalled syncobj release on an already-released buffer
+# (n_locks == 0), tripping an assert that crashed the compositor with explicit-sync clients (Kitty)
+WLROOTS_BUILT="$WLROOTS_REF+syncobjfix"
+if built wlroots "$WLROOTS_BUILT"; then note "already installed"; else
 	d=$(src wlroots "$WLROOTS_URL" "$WLROOTS_REF")
+	git -C "$d" checkout -q -- .
+	patch -d "$d" -p1 < "$ROOT/scripts/patches/wlroots-syncobj-release-guard.patch"
 	setup "$d/build" "$d" --prefix="$PREFIX" --libdir="$LIBDIR" --buildtype=release \
 		-Dexamples=false -Dwerror=false -Dxwayland=enabled -Dbackends=drm,libinput,x11 -Drenderers=gles2,vulkan
 	ninja -C "$d/build" -j "$JOBS"
 	sudo ninja -C "$d/build" install >/dev/null
-	mark wlroots "$WLROOTS_REF"
+	mark wlroots "$WLROOTS_BUILT"
 fi
 
 step "Building SceneFX $SCENEFX_REF"
