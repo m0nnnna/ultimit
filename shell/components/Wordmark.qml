@@ -16,12 +16,19 @@ Column {
     // clamp(28px, 4.2vw, 54px) in the mockup
     readonly property real wordSize: Math.max(28, Math.min(54, (Window.width || 1280) * 0.042))
 
+    // Brackets use the UI face, the word uses Michroma: line their baselines up.
+    FontMetrics { id: wordFm; font.family: "Michroma"; font.pixelSize: root.wordSize }
+    FontMetrics { id: brFm; font.family: Theme.ui; font.pixelSize: root.wordSize }
+    readonly property real brShift: wordFm.ascent - brFm.ascent
+
     Row {
         anchors.right: parent.right
         spacing: wordSize * 0.14 * 0.6
         Text {
             text: "["
             color: Theme.dim
+            topPadding: Math.max(0, root.brShift)
+            bottomPadding: Math.max(0, -root.brShift)
             font.family: Theme.ui; font.pixelSize: root.wordSize
             font.letterSpacing: root.wordSize * 0.14
         }
@@ -34,6 +41,8 @@ Column {
         Text {
             text: "]"
             color: Theme.dim
+            topPadding: Math.max(0, root.brShift)
+            bottomPadding: Math.max(0, -root.brShift)
             font.family: Theme.ui; font.pixelSize: root.wordSize
             font.letterSpacing: root.wordSize * 0.14
         }
