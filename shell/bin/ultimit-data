@@ -15,4 +15,6 @@ done
 if [ -n "$reveal" ]; then
 	exec "${QS:-qs}" -p "$SHELL_DIR" ipc call data reveal "$p"
 fi
+# A file (an archive from a browser's download list, "Open with DATA"): DATA decides how to show it.
+[ -f "$p" ] && exec "${QS:-qs}" -p "$SHELL_DIR" ipc call data file "$p"
 exec "${QS:-qs}" -p "$SHELL_DIR" ipc call data open "$p"

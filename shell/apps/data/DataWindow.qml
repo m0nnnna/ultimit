@@ -26,6 +26,7 @@ FloatingWindow {
         target: "data"
         function open(path: string): void { Data.show(path); }
         function reveal(path: string): void { Data.reveal(path); }
+        function file(path: string): void { Data.showFile(path); }
         function newtab(path: string): void { Data.show(""); Data.newTab(path, false); }
         function toggle(): void { Data.toggle(); }
         function close(): void { Data.hide(); }

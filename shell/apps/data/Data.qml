@@ -43,6 +43,11 @@ Singleton {
         else if (path === "") goTo(Quickshell.env("ULTIMIT_DATA_START") || home);
         raise++;
     }
+    // A file handed to DATA (Open with / xdg-open): an archive opens in the archive view, anything else in its folder.
+    function showFile(p) {
+        if (archiveExtRe.test(p)) show(arcLoc(p, ""));
+        else reveal(p);
+    }
     // "Show in folder" (ultimit-data --reveal, FileManager1.ShowItems): p's folder with p selected.
     function reveal(p) {
         const dir = dirname(p);
