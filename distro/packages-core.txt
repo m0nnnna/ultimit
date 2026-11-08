@@ -50,6 +50,15 @@ pciutils
 os-prober
 # Network, sound, Bluetooth, power, drives
 network-manager
+# Network troubleshooting tools Ubuntu's desktop ships and the server base leaves out:
+# ping/tracepath, ifconfig/netstat/route, traceroute, mtr, dig/nslookup/host, whois
+iputils-ping
+iputils-tracepath
+net-tools
+traceroute
+mtr-tiny
+bind9-dnsutils
+whois
 pipewire
 pipewire-audio
 pipewire-pulse
