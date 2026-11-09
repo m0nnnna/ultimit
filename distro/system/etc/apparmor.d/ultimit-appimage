@@ -1,0 +1,23 @@
+# Ultimit: let AppImages build their own sandbox.
+#
+# Ubuntu (24.04 on) sets kernel.apparmor_restrict_unprivileged_userns=1: a program may only create
+# a user namespace if an AppArmor profile grants "userns". Ubuntu ships such profiles for programs
+# installed in fixed paths (/etc/apparmor.d/chrome, code, Discord...), but an AppImage runs from a
+# random mount point, so Electron and Chromium AppImages (WowUp, Heroic, Bitwarden, Obsidian...)
+# can't start their sandbox and abort with "The SUID sandbox helper binary was found, but is not
+# configured correctly". This profile attaches to whatever runs from inside an AppImage (its FUSE
+# mount, its APPIMAGE_EXTRACT_AND_RUN copy, or an --appimage-extract folder) and allows exactly
+# that: user namespaces, as on any distribution without the restriction. Everything else stays as
+# unconfined as before, and the apps keep their own sandbox instead of needing --no-sandbox.
+#
+# Remove it (sudo rm /etc/apparmor.d/ultimit-appimage && sudo systemctl reload apparmor) to go back
+# to Ubuntu's default.
+
+abi <abi/4.0>,
+include <tunables/global>
+
+profile ultimit-appimage /{**/,}{.mount_*,appimage_extracted_*,squashfs-root}/** flags=(unconfined) {
+  userns,
+
+  include if exists <local/ultimit-appimage>
+}

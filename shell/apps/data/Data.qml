@@ -555,11 +555,11 @@ Singleton {
         if (isArc) { if (e.d) goTo(e.p); else openArcFile(e); return; }
         if (e.d) { goTo(e.p); return; }
         if (isArchive(e)) { goTo(arcLoc(e.p, "")); return; }   // archives open like folders
-        // AppImages have no xdg-open handler; run them directly.
+        // AppImages: ultimit-appimage marks them executable and runs them (FUSE or unpacked).
         if (e.t === "application/vnd.appimage" || /\.appimage$/i.test(e.n)) {
-            if (!e.x) { toast("AppImage", "Mark “" + e.n + "” executable to run it (Properties → Permissions)."); return; }
             if (dryRun) { console.log("DATA dry-run: run " + e.p); return; }
-            Quickshell.execDetached({ command: [e.p], workingDirectory: fsPath });
+            Quickshell.execDetached({ command: [Quickshell.shellDir + "/bin/ultimit-appimage", e.p], workingDirectory: fsPath });
+            if (!e.x) toast("AppImage", "Marked “" + e.n + "” executable and started it.");
             return;
         }
         run(["xdg-open", e.p], "xdg-open " + e.p);

@@ -80,6 +80,8 @@ libglib2.0-bin
 dconf-gsettings-backend
 zenity
 wlr-randr
+# AppImages: most mount themselves with FUSE 2 (ultimit-appimage unpacks the rest)
+libfuse2t64
 # Spell-check dictionaries for native apps (GTK/Qt apps via Enchant/Sonnet, LibreOffice...);
 # Ubuntu's desktop pulls them in, the server base Ultimit starts from does not
 hunspell-en-us

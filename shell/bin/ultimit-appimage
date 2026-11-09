@@ -1,0 +1,17 @@
+#!/bin/sh
+# ultimit-appimage <file.AppImage> [args...] - run an AppImage, the way DATA, a browser's download
+# list or "Open with" do: marks it executable if it isn't yet, and when FUSE can't mount it (no
+# /dev/fuse, e.g. in a container, or no libfuse.so.2 for an older runtime) unpacks and runs it
+# instead. The sandbox Electron AppImages need comes from /etc/apparmor.d/ultimit-appimage.
+f=$1
+case "$f" in file://*) f=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.unquote(sys.argv[1]))' "${f#file://}");; esac
+[ -f "$f" ] || { echo "ultimit-appimage: no such file: $f" >&2; exit 1; }
+shift
+if [ ! -x "$f" ]; then
+	chmod u+x -- "$f" 2>/dev/null || { echo "ultimit-appimage: can't make $f executable" >&2; exit 1; }
+fi
+if [ ! -e /dev/fuse ] || ! /usr/sbin/ldconfig -p 2>/dev/null | grep -q 'libfuse\.so\.2 '; then
+	export APPIMAGE_EXTRACT_AND_RUN=1
+fi
+case "$f" in /*) ;; *) f="./$f";; esac
+exec "$f" "$@"

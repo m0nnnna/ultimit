@@ -146,6 +146,8 @@ if [ ! -e /usr/share/apparmor/extra-profiles/bwrap-userns-restrict ] && ! dpkg-d
 		systemctl reset-failed apparmor.service; systemctl restart apparmor.service || warn "AppArmor still fails to load a profile (journalctl -u apparmor)"
 	fi
 fi
+# AppImages may build their own sandbox (distro/system/etc/apparmor.d/ultimit-appimage)
+apparmor_parser -r -W /etc/apparmor.d/ultimit-appimage 2>/dev/null || warn "AppArmor didn't load the AppImage profile (journalctl -u apparmor)"
 # controllers plugged in now get the new udev rules too (72-ultimit-gamepads.rules)
 udevadm control --reload 2>/dev/null && udevadm trigger --subsystem-match=hidraw 2>/dev/null || true
 # Ultimit commands on everyone's PATH (other apps open folders with ultimit-data, ...)
