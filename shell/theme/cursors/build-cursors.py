@@ -18,6 +18,7 @@ chips) and round busy rings. The other cursors (text, resize, move, ...) keep
 the Shard shapes, drawn white with an accent rim. "shard" is the original set.
 """
 import json
+import colorsys
 import math
 import os
 import re
@@ -36,6 +37,7 @@ STYLES = ("izy", "shard", "classic")
 STYLE = "izy"
 LIGHT = "#f4f6f9"   # izy: lit face of the white shapes
 MID = "#b3bac4"     # izy: their shadow face
+BEAN = "#ef6f9a"    # classic: the paw's toe beans
 
 THEME_QML = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "Theme.qml")
 
@@ -107,6 +109,20 @@ def user_style():
 def rgb(h):
     h = h.lstrip("#")
     return tuple(int(h[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
+
+
+def luminance(c):
+    f = lambda v: v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+    return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2])
+
+
+def on_white(c, ratio=3.0):
+    """`c` with its HLS lightness lowered until it has `ratio` contrast with white."""
+    h, l, s = colorsys.rgb_to_hls(*c)
+    while l > 0.05 and 1.05 / (luminance(c) + 0.05) < ratio:
+        l -= 0.01
+        c = colorsys.hls_to_rgb(h, l, s)
+    return c
 
 
 def mix(a, b, t):
@@ -440,7 +456,7 @@ def izy_forbidden():
 # ---------------------------------------------------------------- classic
 # The familiar shapes every other OS ships: a notched arrow, a pointing hand,
 # an I-beam, plain double arrows, a circle-and-slash and a ring spinner. White
-# with a dark outline; the accent survives only in the spinner head, the badge
+# with a dark outline (pink beans on the paw); the accent survives only in the spinner head, the badge
 # glyphs and a small wedge in the arrow's notch.
 CARROW = [(8, 5), (8, 40), (17.5, 31), (24.5, 44.5), (28.5, 42.5), (21.5, 28.5), (37.5, 28.5)]
 CARROW_HS = (8, 5)
@@ -458,55 +474,49 @@ def ellipse(cx, cy, rx, ry, n=18, a0=0, a1=360):
              cy + ry * math.sin(math.radians(a0 + (a1 - a0) * i / n))) for i in range(n + 1)]
 
 
-def paw_pts(bumps, r, wrist_lx, wrist_rx, wrist_y=48, bow=1.8, step=1.3):
-    """Ventral-paw silhouette: the union of circles (cx, cy, r) across the top gives a
-    smooth scalloped edge (like the paw-print outline); sides bow slightly and taper
-    to the wrist."""
-    def upper(x):
-        return min(cy - math.sqrt(max(0.0, r * r - (x - cx) ** 2)) for cx, cy in bumps)
-    top = []
-    x = bumps[0][0] - r
-    while x <= bumps[-1][0] + r + 1e-9:
-        top.append((x, upper(x)))
-        x += step
-    lx, cx0 = wrist_lx, bumps[0]
-    rx = wrist_rx
-    return [(lx, wrist_y), (lx - bow, (wrist_y + cx0[1]) / 2 + 5), (lx, cx0[1])] \
-        + top + [(rx, bumps[-1][1]), (rx + bow, (wrist_y + bumps[-1][1]) / 2 + 5), (rx, wrist_y)]
+# A cat's paw (ventral side, pads showing) — the "neko" personality of the classic set.
+# Built from separate parts: the outline pass strokes every part before any is filled, so
+# the parts merge into one silhouette while a dark crease stays between the toes (that gap
+# is what makes it read as a paw rather than a mitten at 24 px). Pink toe beans and a big
+# pad; the beans stay pink on every skin (they would vanish in a pale accent).
+def _paw(toes, palm, arm, beans):
+    shade = [(arm[0], 43), (arm[0], 52), (arm[2], 52), (arm[2], 43)]
+    parts = [P([(arm[0], arm[1]), (arm[0], 47), (arm[2], 47), (arm[2], arm[1])], fill="light",
+               shade=shade, edge=False, lit=True, litc="mid"),
+             P(ellipse(*palm, n=28), fill="light", edge=False)]
+    parts += [P(rot(ellipse(cx, cy, rx, ry, n=20), ang, (cx, cy)), fill="light", edge=False)
+              for cx, cy, rx, ry, ang in toes]
+    return parts + [P(b, fill="bean", edge=False, outline=False) for b in beans]
 
 
-# A cat's paw (ventral side, pads showing), pointing up — the "neko" personality of the
-# classic set. Three toe globes + the big pad for the pointer (four + pad for the open
-# paw); the silhouette is a smooth scalloped outline, the beans do the toe work.
-# Coordinates are pre-scale: classic_hand shrinks them 0.9 about (26, 28).
-CHS_PT = paw_pts([(17.5, 15), (26, 12.5), (34.5, 15)], 7, 10.5, 41.5)
-BEANS_PT = [ellipse(17.5, 14.2, 2.7, 3.0), ellipse(26, 11.7, 2.7, 3.0), ellipse(34.5, 14.2, 2.7, 3.0),
-            ellipse(26, 34, 6.4, 5.2)]
-POINTER_HS_C = (26, 7.75)   # top of the middle globe, scaled like classic_hand scales the paw
-CHS_OPEN = paw_pts([(16, 14.5), (22.5, 12.5), (29.5, 12.5), (35.5, 14.5)], 6.5, 9.5, 42.5)
-BEANS_OPEN = [ellipse(16, 13.7, 2.4, 2.7), ellipse(22.5, 11.7, 2.4, 2.7),
-              ellipse(29.5, 11.7, 2.4, 2.7), ellipse(35.5, 13.7, 2.4, 2.7),
-              ellipse(26, 33.5, 6.2, 5.2)]
-CHS_FIST = [(15, 48), (14, 30), (5, 33), (3, 29), (13, 24),
-            (13, 18), (15, 13), (19, 13), (21, 18), (22, 20),
-            (24, 15), (28, 15), (30, 19), (31, 21),
-            (33, 17), (37, 17), (39, 21), (39, 26),
-            (41, 23), (44, 25), (43, 31),
-            (42, 48)]
-BEANS_FIST = [ellipse(27, 38, 6.2, 5.4)]   # one pad bean, clenched
+# Pointer: three toes, the middle one raised so the paw has a clear tip (the hotspot).
+PAW_POINT = dict(
+    toes=[(15.5, 21, 4.6, 5.6, -22), (26, 12.5, 5.0, 6.4, 0), (36.5, 21, 4.6, 5.6, 22)],
+    palm=(26, 31, 11.5, 9.5), arm=(17.5, 34, 34.5),
+    beans=[rot(ellipse(15.5, 21.6, 2.2, 2.9), -22, (15.5, 21.6)), ellipse(26, 13.3, 2.5, 3.3),
+           rot(ellipse(36.5, 21.6, 2.2, 2.9), 22, (36.5, 21.6)),
+           ellipse(26, 32, 6.6, 5.0)])
+POINTER_HS_C = (26, 6.1)    # top of the raised middle toe
+# Open paw (grab): four toes spread wide.
+PAW_OPEN = dict(
+    toes=[(12, 21.5, 4.2, 5.2, -35), (20.5, 13.5, 4.4, 5.6, -12), (31.5, 13.5, 4.4, 5.6, 12),
+          (40, 21.5, 4.2, 5.2, 35)],
+    palm=(26, 31, 12, 9.5), arm=(17.5, 34, 34.5),
+    beans=[rot(ellipse(12.3, 22.2, 2.0, 2.6), -35, (12.3, 22.2)),
+           rot(ellipse(20.7, 14.3, 2.1, 2.8), -12, (20.7, 14.3)),
+           rot(ellipse(31.3, 14.3, 2.1, 2.8), 12, (31.3, 14.3)),
+           rot(ellipse(39.7, 22.2, 2.0, 2.6), 35, (39.7, 22.2)),
+           ellipse(26, 32, 6.8, 5.0)])
+# Closed paw (grabbing): toes curled down onto the pad, beans hidden but for the pad's edge.
+PAW_FIST = dict(
+    toes=[(15, 24, 4.4, 4.2, 0), (22, 20.5, 4.4, 4.4, 0), (30, 20.5, 4.4, 4.4, 0),
+          (37, 24, 4.4, 4.2, 0)],
+    palm=(26, 31, 12, 9), arm=(17.5, 34, 34.5),
+    beans=[ellipse(26, 36, 5.6, 3.2)])
 
 
 def classic_hand(which):
-    pts = {"point": CHS_PT, "open": CHS_OPEN, "closed": CHS_FIST}[which]
-    beans = {"point": BEANS_PT, "open": BEANS_OPEN, "closed": BEANS_FIST}[which]
-    # 0.9 about (26,28): a pointing paw is a tall shape; this keeps the outline
-    # inside the nominal canvas at every size.
-    a = (26.0, 28.0)
-    pts = [(a[0] + (x - a[0]) * 0.9, a[1] + (y - a[1]) * 0.9) for x, y in pts]
-    beans = [[(a[0] + (x - a[0]) * 0.9, a[1] + (y - a[1]) * 0.9) for x, y in b] for b in beans]
-    shade = [(14, 42), (14, 50), (43, 50), (43, 42)]
-    return [P(pts, fill="light", shade=shade, edge=False, lit=True, litc="mid")] \
-        + [P(b, fill="accent", edge=False, outline=False) for b in beans]
+    return _paw(**{"point": PAW_POINT, "open": PAW_OPEN, "closed": PAW_FIST}[which])
 
 
 def classic_forbidden():
@@ -634,7 +644,13 @@ class Skin:
         # Izy/classic hairlines: the accent, or white when the accent is too dark to
         # read on a dark window (Silver); the rims keep the accent. Classic is always white.
         lum = 0.2126 * self.accent[0] + 0.7152 * self.accent[1] + 0.0722 * self.accent[2]
-        self.line = self.light if STYLE == "classic" or (STYLE == "izy" and lum < 0.4) else self.accent
+        self.line = self.light if (STYLE == "izy" and lum < 0.4) else self.accent
+        if STYLE == "classic":
+            # Classic draws its accent (notch wedge, spinner head, badge glyphs) on white, so a
+            # pale accent (Mine's ice blue, Verdant's lime) would vanish: darken it, keeping
+            # the hue, until it has 3:1 contrast with the white.
+            self.accent = self.line = on_white(self.accent)
+        self.bean = rgb(BEAN)
         # Shadow face of a shard: the accent sunk toward the panel colour.
         self.shade = mix(self.accent, self.fill, 0.42)
 
@@ -642,7 +658,7 @@ class Skin:
         if isinstance(key, tuple):
             return mix(self.fill, self.accent, key[1])
         return {"fill": self.fill, "accent": self.accent, "shade": self.shade,
-                "light": self.light, "mid": self.mid}[key]
+                "light": self.light, "mid": self.mid, "bean": self.bean}[key]
 
 
 def trace(c, shape):

@@ -181,7 +181,10 @@ Scope {
         interval: 1500
         onTriggered: {
             const name = "UltimitCursor-" + Theme.skin.charAt(0).toUpperCase() + Theme.skin.slice(1);
-            Quickshell.execDetached(["sh", "-c", "\"$1\" && ultimitctl cursor-theme " + name + " >/dev/null", "sh",
+            // Same theme name, new files: GTK only reloads cursors when the name changes, so flip it.
+            Quickshell.execDetached(["sh", "-c", "\"$1\" && ultimitctl cursor-theme " + name + " >/dev/null && "
+                + "gsettings set org.gnome.desktop.interface cursor-theme Adwaita && sleep 0.5 && "
+                + "gsettings set org.gnome.desktop.interface cursor-theme " + name, "sh",
                 Quickshell.shellPath("theme/cursors/install-cursors.sh")]);
         }
     }

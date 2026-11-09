@@ -27,12 +27,13 @@ hairlines are white.
 
 **Classic** (`"cursorStyle": "classic"`) is the familiar set every other OS ships, with a neko
 twist befitting NekoMail and friends: a notched arrow, a **cat's paw** pointing over links
-(open paw for grab, a clenched one for grabbing), a white I-beam, plain double-headed resize
-arrows, a circle-and-slash for not-allowed and a ring spinner for wait — all white with a dark
-outline. The accent survives in the spinner head, the badge glyphs (help, copy, alias, context
-menu, no-drop) on a white disc, a small wedge in the arrow's notch, and **toe beans**: small
-accent pads on the paw (a pink dot at 24 px, beans you can make out from 32 px up), so the
-cursor still follows Settings > Appearance.
+(three toes, the middle one raised as the tip; four spread toes for grab, toes curled for
+grabbing), a white I-beam, plain double-headed resize arrows, a circle-and-slash for not-allowed
+and a ring spinner for wait — all white with a dark outline. The toes are separate parts merged
+by the outline, so a dark crease between them keeps the paw readable at 24 px, and the **toe
+beans** are pink on every skin. The accent survives in the spinner head, the badge glyphs (help,
+copy, alias, context menu, no-drop) on a white disc and a small wedge in the arrow's notch;
+since these sit on white, a pale accent (Mine, Verdant) is darkened, same hue, to 3:1 contrast.
 
 Coverage: all CSS cursor-shape-v1 names (files) plus X11 and hash-named aliases (symlinks).
 
