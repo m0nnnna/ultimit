@@ -5,6 +5,8 @@ com.vysp3r.ProtonPlus
 # Streaming; the plugin replaces NVIDIA Broadcast's background blur/replace
 com.obsproject.Studio
 com.obsproject.Studio.Plugin.BackgroundRemoval
+# Per-app audio capture (Application Audio Capture source): stream one program, not the whole desktop
+com.obsproject.Studio.Plugin.PipeWireAudioCapture
 # Clean mic (RNNoise, Deep Noise Remover)
 com.github.wwmm.easyeffects
 # Discord with Vencord built in; ultimit-discord runs one per account, side by side

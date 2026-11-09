@@ -28,6 +28,8 @@ gamemode
 gcr
 grim
 slurp
+# Screen-share picker: lets OBS/Discord capture a single window (session/portals/xdpw.config)
+fuzzel
 wl-clipboard
 wtype
 # Screen recording (ultimit-screenshot record-*) with H.264 on the Intel GPU; the VA-API driver
