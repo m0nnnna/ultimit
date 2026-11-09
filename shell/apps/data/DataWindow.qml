@@ -6,6 +6,7 @@ import QtQuick
 import QtQuick.Controls
 import Quickshell
 import Quickshell.Io
+import Quickshell.Wayland
 import "../.."
 import "../../components"
 import "../games"
@@ -69,7 +70,13 @@ FloatingWindow {
 
     Connections {
         target: Data
-        function onRaiseChanged() { ui.forceActiveFocus(); }
+        // Already mapped (ultimit-data / "Show in folder" from a browser): bring it to the front too,
+        // not just focus the view inside it.
+        function onRaiseChanged() {
+            ui.forceActiveFocus();
+            for (const t of ToplevelManager.toplevels.values)
+                if (t.appId === "org.quickshell" && t.title === win.title) { t.minimized = false; t.activate(); break; }
+        }
         function onCurChanged() {
             if (Data.cur < 0) return;
             if (win.grid) gridView.positionViewAtIndex(Data.cur, GridView.Contain);
