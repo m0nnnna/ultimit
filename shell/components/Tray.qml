@@ -12,22 +12,30 @@ import ".."
 Row {
     id: root
     property string screenName: ""
-    readonly property int shown: {
+    // Count of non-passive icons, recounted from the delegates whenever one is added, removed or
+    // changes status. (A single binding over SystemTray.items.values could go stale when apps
+    // re-registered their icons, leaving the whole tray hidden with icons still registered.)
+    property int shown: 0
+    Component.onCompleted: Qt.callLater(recount)   // icons already registered at load emit no change signal
+    function recount() {
         let n = 0;
-        const v = SystemTray.items.values;
-        for (let i = 0; i < v.length; i++) if (v[i].status !== Status.Passive) n++;
-        return n;
+        for (let i = 0; i < rep.count; i++) { const it = rep.itemAt(i); if (it && it.vis) n++; }
+        shown = n;
     }
     visible: shown > 0
     height: parent ? parent.height : Config.barHeight
     spacing: 0
 
     Repeater {
+        id: rep
         model: SystemTray.items
+        onItemAdded: Qt.callLater(root.recount)
+        onItemRemoved: Qt.callLater(root.recount)
         delegate: Item {
             id: ent
             required property var modelData
-            readonly property bool vis: modelData.status !== Status.Passive
+            readonly property bool vis: !!modelData && modelData.status !== Status.Passive
+            onVisChanged: Qt.callLater(root.recount)
             visible: vis
             width: vis ? 28 : 0; height: root.height
             readonly property string tip: modelData.tooltipTitle || modelData.title || modelData.id

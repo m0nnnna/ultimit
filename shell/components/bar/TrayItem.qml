@@ -7,7 +7,7 @@ Row {
     id: root
     property string screenName: ""
     height: Config.barHeight
-    visible: appTray.visible
+    visible: appTray.shown > 0   // not appTray.visible: that is false while this Row is hidden, so it would never reappear
     Item {
         width: 9; height: root.height
         Rectangle { anchors.centerIn: parent; width: 1; height: 16; color: Theme.divider }
