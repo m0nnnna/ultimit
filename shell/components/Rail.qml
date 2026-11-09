@@ -11,7 +11,7 @@ PanelWindow {
 
     anchors { left: true; top: true; bottom: true }
     // Under the top bar (main display) the rail starts a little lower, so the two don't run together.
-    readonly property bool underBar: Config.isMainScreen(screen ? screen.name : "") && !Config.isCovered(screen ? screen.name : "")
+    readonly property bool underBar: Config.isMainScreen(screen ? screen.name : "") && !Config.isRaisedOver(screen ? screen.name : "")
     margins.top: underBar ? 6 : 0
     // The rail's top edge in screen coordinates: rail popups (full-screen overlays) add it to a
     // button's y in the rail. Not mapToGlobal: that adds the screen's place in the whole layout.

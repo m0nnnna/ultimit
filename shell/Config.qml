@@ -113,6 +113,20 @@ Singleton {
         return out;
     }
     function isCovered(name) { return name !== "" && coveredScreens.indexOf(name) >= 0; }
+    // Output names where a fullscreen window is also on top of the panels. The compositor keeps a
+    // fullscreen window above the bar and rail only while it is focused; once focus moves on (Alt+Tab
+    // to another window) it drops into the normal window layer and the rail shows, so the top bar
+    // must come back with it. The wallpaper and animations still go by coveredScreens.
+    readonly property var raisedScreens: {
+        const out = [];
+        for (const t of ToplevelManager.toplevels.values) {
+            if (!t.fullscreen || t.minimized || !t.activated) continue;
+            for (const s of t.screens)
+                if (s && out.indexOf(s.name) < 0) out.push(s.name);
+        }
+        return out;
+    }
+    function isRaisedOver(name) { return name !== "" && raisedScreens.indexOf(name) >= 0; }
     // A fullscreen window on any screen (a game, mostly): every screen's desktop animations stop
     // (wallpaper shards and hex flicker, news ticker, rail spin, the clock's seconds), so they
     // take nothing from the GPU while it plays. Window animations are not affected.

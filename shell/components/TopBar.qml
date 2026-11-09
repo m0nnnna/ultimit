@@ -20,7 +20,7 @@ PanelWindow {
     id: win
 
     readonly property string screenName: screen ? screen.name : ""
-    readonly property bool covered: Config.isCovered(screenName)
+    readonly property bool covered: Config.isRaisedOver(screenName)
 
     // ---- fullscreen reveal ----
     property bool revealed: false        // the user pushed the pointer to the top edge
