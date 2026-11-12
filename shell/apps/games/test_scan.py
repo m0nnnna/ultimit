@@ -63,7 +63,8 @@ class Scan(unittest.TestCase):
         d = scan.scan()
         g = next(g for g in d["games"] if g["id"] == "manual:abc")
         self.assertEqual((g["kind"], g["source"]), ("wine", "app"))
-        self.assertEqual(d["settings"]["games"]["manual:abc"], {"prefix": "/tmp/pfx", "dxvk": False})
+        self.assertEqual(d["settings"]["games"]["manual:abc"],
+                         {"prefix": "/tmp/pfx", "dxvk": False, "runner": "", "proton": "", "gameid": ""})
         scan.main(["x", "touch", "manual:abc"])
         self.assertGreater(scan.scan()["settings"]["games"]["manual:abc"]["lastLaunched"], 0)
         with self.assertRaises(SystemExit):
@@ -245,6 +246,154 @@ class Plan(unittest.TestCase):
         self.assertGreater(scan.load_settings()["games"]["desktop:nekocore-launcher.desktop"]["lastLaunched"], 0)
         r = subprocess.run([w, "--", "/bin/echo", "never-run"], capture_output=True, text=True)
         self.assertNotIn("never-run", r.stdout)
+
+
+class Installer(unittest.TestCase):
+    def setUp(self):
+        self.saved_root = os.environ["ULTIMIT_STEAM_ROOT"]
+        os.environ["ULTIMIT_STEAM_ROOT"] = ""                    # no Proton builds installed
+        self.which = scan.which
+        scan.which = lambda n, _w=scan.which: {"umu-run": "/usr/bin/umu-run", "wine": "/usr/bin/wine"}.get(n, _w(n))
+        self.inst = os.path.join(TMP, "dl", "setup_the_witcher_2_1.0.2_(12345).exe")
+        os.makedirs(os.path.dirname(self.inst), exist_ok=True)
+        open(self.inst, "w").close()
+
+    def tearDown(self):
+        os.environ["ULTIMIT_STEAM_ROOT"] = self.saved_root
+        scan.which = self.which
+        shutil.rmtree(os.path.dirname(scan.PROTON_PREFIX), ignore_errors=True)
+
+    def test_name_slug_and_uniqueness(self):
+        self.assertEqual(scan.installer_name(self.inst), "the witcher 2")
+        p = scan.install_plan(self.inst)
+        self.assertEqual((p["name"], p["slug"]), ("the witcher 2", "the-witcher-2"))
+        self.assertTrue(p["prefix"].startswith(os.path.dirname(scan.PROTON_PREFIX)))
+        self.assertEqual(p["gameid"], "umu-the-witcher-2")
+        self.assertEqual(p["env"]["GAMEID"], "umu-the-witcher-2")
+        os.makedirs(p["prefix"])                                 # taken -> -2
+        self.assertEqual(scan.install_plan(self.inst)["slug"], "the-witcher-2-2")
+
+    def test_plan_proton_and_wine(self):
+        p = scan.install_plan(self.inst, runner="proton")
+        self.assertEqual(p["argv"], ["/usr/bin/umu-run", self.inst])
+        self.assertNotIn("PROTONPATH", p["env"])
+        self.assertTrue(any("UMU-Proton" in n for n in p["notes"]))
+        w = scan.install_plan(self.inst, runner="wine")
+        self.assertEqual(w["argv"], ["/usr/bin/wine", self.inst])
+        self.assertEqual(w["env"]["WINEDEBUG"], "-all")
+        with self.assertRaises(ValueError):
+            scan.install_plan(TMP + "/missing.exe")
+        r = subprocess.run([sys.executable, os.path.join(HERE, "scan.py"), "install-plan",
+                            json.dumps({"installer": self.inst, "name": "X"})],
+                           capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout)["name"], "X")
+
+    def test_scan_prefix_filters_debris(self):
+        pfx = os.path.join(TMP, "pp")
+        g = os.path.join(pfx, "drive_c/Program Files/TW2/bin/witcher2.exe")
+        others = (os.path.join(pfx, "drive_c/Program Files/TW2/unins000.exe"),
+                  os.path.join(pfx, "drive_c/windows/system32/kernel32.exe"),
+                  os.path.join(pfx, "drive_c/users/witcher/AppData/Local/updater.exe"),
+                  os.path.join(pfx, "drive_c/Program Files/Common Files/system/advpack.exe"))
+        for f in (g,) + others:
+            os.makedirs(os.path.dirname(f), exist_ok=True)
+            open(f, "w").write("x" * 10)
+        open(g, "w").write("x" * 100)
+        cands = scan.scan_prefix(pfx)
+        self.assertEqual([c["path"] for c in cands], [g])
+        r = subprocess.run([sys.executable, os.path.join(HERE, "scan.py"), "install-scan", pfx],
+                           capture_output=True, text=True)
+        self.assertEqual(json.loads(r.stdout)["candidates"][0]["size"], 100)
+
+    def test_install_run_makes_prefix(self):
+        pfx = os.path.join(TMP, "pr")
+        plan = {"prefix": pfx, "installer": self.inst,
+                "argv": ["/bin/sh", "-c", "echo ok > \"$WINEPREFIX/marker\""], "env": {"WINEPREFIX": pfx}}
+        self.assertEqual(scan.install_run(plan)["rc"], 0)
+        self.assertEqual(open(os.path.join(pfx, "marker")).read().strip(), "ok")
+
+    def test_installer_mode_env(self):
+        p = scan.install_plan(self.inst, runner="proton", installer_mode=True, log=True)
+        self.assertEqual(p["env"]["PROTON_USE_WINED3D"], "1")
+        self.assertEqual(p["env"]["PROTON_LOG"], "1")
+        self.assertEqual((p["installer_mode"], p["winver"], p["log"]), (True, "win10", True))
+        plain = scan.install_plan(self.inst, runner="proton", installer_mode=False)
+        self.assertNotIn("PROTON_USE_WINED3D", plain["env"])
+        self.assertFalse(plain["installer_mode"])
+        self.assertEqual(scan.install_plan(self.inst, winver="bogus")["winver"], "win10")
+
+    def test_winver_implies_32bit_prefix_for_wine(self):
+        p = scan.install_plan(self.inst, runner="wine", winver="winxp")
+        self.assertEqual(p["env"]["WINEARCH"], "win32")
+        self.assertEqual(p["winver"], "winxp")
+        pr = scan.install_plan(self.inst, runner="proton", winver="winxp")
+        self.assertNotIn("WINEARCH", pr["env"])                  # Proton prefixes are 64-bit only
+
+    def test_install_run_winver_steps(self):
+        calls, real = [], scan.subprocess.call
+        scan.subprocess.call = lambda a, **k: calls.append(list(a)) or 0
+        try:
+            plan = {"prefix": TMP + "/wv", "installer": self.inst, "runner": "wine",
+                    "argv": ["wine", self.inst], "env": {"WINEPREFIX": TMP + "/wv"}, "winver": "win7"}
+            self.assertEqual(scan.install_run(plan)["rc"], 0)
+            self.assertTrue(calls[0][0].endswith("wineboot"))
+            self.assertEqual(calls[1][:2], ["wine", "reg"])
+            self.assertEqual(calls[1][calls[1].index("/d") + 1], "win7")
+            self.assertEqual(calls[2], ["wine", self.inst])
+            calls.clear()
+            plan["winver"] = "win10"                             # default: no setup steps
+            scan.install_run(plan)
+            self.assertEqual(calls, [["wine", self.inst]])
+            calls.clear()
+            plan["runner"] = "proton"                            # proton: setup via umu-run
+            plan["argv"] = ["/usr/bin/umu-run", self.inst]
+            plan["winver"] = "win7"
+            scan.install_run(plan)
+            self.assertEqual(calls[0], ["/usr/bin/umu-run", "wineboot", "-u"])
+            self.assertEqual(calls[1][:2], ["/usr/bin/umu-run", "reg"])
+            calls.clear()
+            scan.subprocess.call = lambda a, **k: calls.append(list(a)) or (_ for _ in ()).throw(OSError("no umu"))
+            r = scan.install_run(plan)
+            self.assertEqual((r["rc"], r["error"]), (127, "no umu"))
+        finally:
+            scan.subprocess.call = real
+
+
+class Manage(unittest.TestCase):
+    def setUp(self):
+        scan.write_settings(scan.normalize({}))
+
+    def test_edit_replaces_managed_keys(self):
+        scan.main(["x", "add-manual", json.dumps({"id": "manual:e1", "name": "E", "kind": "wine", "target": "/g/e.exe",
+                                                   "prefix": "/pfx", "runner": "proton", "proton": "/p", "gameid": "umu-e"})])
+        scan.main(["x", "add-manual", json.dumps({"id": "manual:e1", "name": "E2", "kind": "wine", "target": "/g/e2.exe"})])
+        g = scan.load_settings()["games"]["manual:e1"]
+        self.assertEqual((g["prefix"], g["runner"], g["proton"], g["gameid"]), ("", "", "", ""))
+        e = scan.effective(g)
+        self.assertEqual((e["prefix"], e["runner"], e["proton"], e["gameid"]),
+                         ("default", "wine", "", "umu-default"))
+        self.assertEqual(next(x for x in scan.scan()["games"] if x["id"] == "manual:e1")["name"], "E2")
+
+    def test_remove_manual_deletes_prefix_inside_ultimit_only(self):
+        scan.main(["x", "add-manual", json.dumps({"id": "manual:r1", "name": "R", "kind": "wine", "target": "/g/r.exe"})])
+        pfx = os.path.join(scan.DATA_HOME, "ultimit", "proton", "r1")
+        os.makedirs(pfx)
+        open(os.path.join(pfx, "f"), "w").close()
+        scan.main(["x", "remove-manual", "manual:r1", pfx])
+        self.assertFalse(os.path.exists(pfx))
+        self.assertNotIn("manual:r1", scan.load_settings()["games"])
+        outside = os.path.join(TMP, "outside")
+        os.makedirs(outside, exist_ok=True)
+        with self.assertRaises(SystemExit):
+            scan.main(["x", "remove-manual", "manual:r1", outside])
+        self.assertTrue(os.path.isdir(outside))                     # untouched
+
+    def test_hidden_desktop_games(self):
+        scan.main(["x", "top", "hidden", json.dumps(["desktop:supertux.desktop"])])
+        self.assertNotIn("desktop:supertux.desktop", {g["id"] for g in scan.scan()["games"]})
+        scan.main(["x", "top", "hidden", json.dumps([])])
+        self.assertIn("desktop:supertux.desktop", {g["id"] for g in scan.scan()["games"]})
 
 
 if __name__ == "__main__":
