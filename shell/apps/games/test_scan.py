@@ -3,6 +3,8 @@
 Everything happens in a temp HOME; nothing launches."""
 import importlib.util, json, os, shutil, subprocess, sys, tempfile, unittest
 
+os.environ["ULTIMIT_NO_DRIVE_MAP"] = "1"      # install_run must not warm up prefixes or read /proc/mounts here
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 FIX = os.path.join(HERE, "fixtures")
 TMP = tempfile.mkdtemp(prefix="games-test-")
@@ -394,6 +396,17 @@ class Manage(unittest.TestCase):
         self.assertNotIn("desktop:supertux.desktop", {g["id"] for g in scan.scan()["games"]})
         scan.main(["x", "top", "hidden", json.dumps([])])
         self.assertIn("desktop:supertux.desktop", {g["id"] for g in scan.scan()["games"]})
+
+    def test_map_drives(self):
+        pfx = os.path.join(TMP, "mdpfx")
+        self.assertEqual(scan.map_drives(pfx, mounts=[TMP]), [])        # no prefix yet: nothing to do
+        os.makedirs(os.path.join(pfx, "dosdevices"))
+        os.symlink("../drive_c", os.path.join(pfx, "dosdevices", "c:"))
+        m1, m2 = os.path.join(TMP, "m1"), os.path.join(TMP, "m2")
+        os.makedirs(m1), os.makedirs(m2)
+        self.assertEqual(scan.map_drives(pfx, mounts=[m1, m2]), [("g", m1), ("h", m2)])
+        self.assertEqual(scan.map_drives(pfx, mounts=[m1, m2]), [])      # idempotent
+        self.assertEqual(os.readlink(os.path.join(pfx, "dosdevices", "h:")), m2)
 
 
 if __name__ == "__main__":

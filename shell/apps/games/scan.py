@@ -489,6 +489,32 @@ def find_game(gid):
     return None
 
 
+def map_drives(prefix, mounts=None):
+    """Give each mounted external drive (under /run/media, /media, /mnt) a free Windows drive
+    letter, G: onward, in an existing prefix, so installers can see and target it. Mappings that
+    already point at a mount are kept. Returns the [(letter, mountpoint)] added."""
+    dd = os.path.join(prefix, "dosdevices")
+    if not os.path.isdir(dd):
+        return []
+    if mounts is None:
+        mounts = []
+        with open("/proc/mounts") as f:
+            for line in f:
+                mp = line.split()[1].replace("\\040", " ")
+                if mp.startswith(("/run/media/", "/media/", "/mnt/")) and os.path.isdir(mp) and mp not in mounts:
+                    mounts.append(mp)
+    have = {os.path.realpath(os.path.join(dd, n)) for n in os.listdir(dd) if len(n) == 2 and n[1] == ":"}
+    free = [c for c in "ghijklmnopqrstuvwxy" if not os.path.lexists(os.path.join(dd, c + ":"))]
+    added = []
+    for mp in mounts:
+        if os.path.realpath(mp) in have or not free:
+            continue
+        letter = free.pop(0)
+        os.symlink(mp, os.path.join(dd, letter + ":"))
+        added.append((letter, mp))
+    return added
+
+
 def plan(gid, argv=None, game=None):
     """Everything needed to launch <gid>: {id, argv, env (delta), cwd, pre[], notes[]}.
     argv given  -> wrap that command (Steam `ultimit-game-run %command%`, or an explicit command).
@@ -716,8 +742,20 @@ def install_run(plan):
                       "/d", winver, "/f"])
         steps = setup + steps
     rc = 0
+    map_ok = os.environ.get("ULTIMIT_NO_DRIVE_MAP") != "1"       # test hook
+    if map_ok and not os.path.isdir(os.path.join(plan["prefix"], "dosdevices")) and steps[0] is plan["argv"]:
+        # fresh prefix: create it first so the drives can be mapped before the installer starts
+        if plan.get("runner") == "proton":
+            steps = [[runner, "wineboot", "-u"]] + steps
+        else:
+            steps = [[which("wineboot") or "wineboot", "-u"]] + steps
     try:
         for cmd in steps:
+            if map_ok and cmd is plan["argv"]:
+                try:
+                    map_drives(plan["prefix"])
+                except OSError as e:
+                    print("ultimit: drive mapping failed: %s" % e, file=sys.stderr)
             rc = subprocess.call(cmd, env=env,
                                  cwd=os.path.dirname(plan["installer"]) or None)
             if cmd is not plan["argv"] and rc != 0:

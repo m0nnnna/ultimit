@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+"""ultimit-exe-open <file.exe|file.msi> - double-click handler: run a Windows program like Windows would.
+Uses umu-run (Proton, best compatibility) with the shared Ultimit prefix, mapping every mounted
+drive to a drive letter so installers can target them. Falls back to plain Wine.
+ULTIMIT_EXE_RUNNER=wine forces Wine; ULTIMIT_DRY_RUN=1 prints the plan only."""
+import importlib.util, json, os, shutil, subprocess, sys, time
+
+HOME = os.path.expanduser("~")
+LOG = os.path.join(HOME, ".cache", "ultimit", "exe-open.log")
+SCAN = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "apps", "games", "scan.py")
+DATA = os.environ.get("XDG_DATA_HOME") or os.path.join(HOME, ".local", "share")
+
+
+def log(msg):
+    os.makedirs(os.path.dirname(LOG), exist_ok=True)
+    with open(LOG, "a") as f:
+        f.write("%s %s\n" % (time.strftime("%F %T"), msg))
+
+
+def notify(msg):
+    log(msg)
+    if shutil.which("notify-send"):
+        subprocess.run(["notify-send", "-a", "Ultimit", "Windows program", msg], check=False)
+
+
+def main(argv):
+    if not argv:
+        print(__doc__)
+        return 2
+    target = os.path.abspath(argv[0])
+    if not os.path.isfile(target):
+        notify("File not found: " + target)
+        return 1
+    is_msi = target.lower().endswith(".msi")
+    env = dict(os.environ)
+    env["PATH"] = env.get("PATH", "") + ":/usr/games:/usr/local/games"
+    use_umu = shutil.which("umu-run") and os.environ.get("ULTIMIT_EXE_RUNNER") != "wine"
+    try:
+        spec = importlib.util.spec_from_file_location("ultimit_scan", SCAN)
+        scan = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(scan)
+    except Exception as e:
+        scan = None
+        log("could not load scan.py: %s" % e)
+    if use_umu:
+        pfx = scan.PROTON_PREFIX if scan else os.path.join(DATA, "ultimit", "proton", "default")
+        env.update(WINEPREFIX=pfx, GAMEID="umu-default", STORE="none")
+        pp = scan.auto_proton(scan.find_protons()) if scan else ""
+        if pp:
+            env["PROTONPATH"] = pp
+        cmd = ["umu-run"] + (["msiexec", "/i", target] if is_msi else [target])
+    elif shutil.which("wine"):
+        pfx = scan.DEFAULT_PREFIX if scan else os.path.join(DATA, "ultimit", "wine", "default")
+        env.update(WINEPREFIX=pfx, WINEDEBUG="-all")
+        cmd = ["wine"] + (["msiexec", "/i", target] if is_msi else [target])
+    else:
+        notify("Neither umu-run nor wine is installed")
+        return 127
+    os.makedirs(pfx, exist_ok=True)
+    try:
+        if scan:
+            scan.map_drives(pfx)
+    except Exception as e:
+        log("drive mapping failed: %s" % e)
+    plan = {"cmd": cmd, "prefix": pfx, "cwd": os.path.dirname(target), "proton": env.get("PROTONPATH", "")}
+    if os.environ.get("ULTIMIT_DRY_RUN") == "1":
+        print(json.dumps(plan, indent=2))
+        return 0
+    log("run " + json.dumps(plan))
+    with open(LOG, "a") as lf:
+        rc = subprocess.call(cmd, env=env, cwd=plan["cwd"], stdout=lf, stderr=lf)
+    if rc != 0:
+        notify("%s exited with code %d (see ~/.cache/ultimit/exe-open.log)" % (os.path.basename(target), rc))
+    return rc
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

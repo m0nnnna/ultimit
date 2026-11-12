@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Windows Program
+Comment=Run Windows .exe/.msi files with Proton, like double-clicking on Windows
+Exec=ultimit-exe-open %f
+Icon=wine
+Terminal=false
+NoDisplay=true
+MimeType=application/vnd.microsoft.portable-executable;application/x-ms-dos-executable;application/x-msdownload;application/x-msi;application/x-ms-installer;

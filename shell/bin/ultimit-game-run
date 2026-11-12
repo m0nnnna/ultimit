@@ -94,6 +94,11 @@ def main(argv):
                     say("DXVK: installed " + f)
         except Exception as e:
             say("%s step failed: %s" % (st["step"], e))
+    if helper and env.get("WINEPREFIX"):
+        try:    # installers and games can then see external drives as G:, H:, ...
+            helper.map_drives(env["WINEPREFIX"])
+        except Exception as e:
+            say("drive mapping failed: %s" % e)
     try:   # Game Mode: this pid (kept by exec) is a running game until it exits
         spec = importlib.util.spec_from_file_location("ultimit_gamemode", os.path.join(HERE, "..", "apps", "gamemode", "gamemode.py"))
         gm = importlib.util.module_from_spec(spec)

@@ -142,6 +142,17 @@ if [ -e /usr/share/applications/nekomail.desktop ] || [ -e "$HOME/.local/share/a
 	) &
 fi
 
+# Windows programs (.exe/.msi) open through ultimit-exe-open (Proton), once per user, for types
+# with no handler set; after that Settings > Default apps stands.
+exe_mark="$HOME/.local/state/ultimit/exe-default"
+if [ ! -e "$exe_mark" ]; then
+	(
+		for t in $(sed -n 's/^MimeType=//p' "$ROOT/shell/apps/games/ultimit-exe-open.desktop" | tr ';' ' '); do
+			[ -n "$(xdg-mime query default "$t" 2>/dev/null)" ] || xdg-mime default ultimit-exe-open.desktop "$t" 2>/dev/null
+		done
+		mkdir -p "$(dirname "$exe_mark")" && touch "$exe_mark"
+	) &
+fi
 # Music opens in NekoPlayer, once per user (in the background: xdg-mime is slow): every audio
 # type whose player is unset, uninstalled or mpv (Ultimit's player before NekoPlayer; it stays
 # the video player). After that the choices in Settings > Default apps stand.
