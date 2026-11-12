@@ -172,7 +172,7 @@ Singleton {
     // ---- hidden desktop games ----
     property bool showHidden: false
     function isHidden(id) { return (settings.hidden || []).indexOf(id) >= 0; }
-    function hide(id) {
+    function hideGame(id) {
         const next = _clone();
         next.hidden = (next.hidden || []).concat([id]);
         settings = next;

@@ -103,7 +103,7 @@ Item {
                 GButton {
                     primary: true
                     text: root.isManual ? "Remove" : "Hide"
-                    onClicked: root.isManual ? root.remove(false) : { Games.hide(root.game.id); root.close(); }
+                    onClicked: root.isManual ? root.remove(false) : (Games.hideGame(root.game.id), root.close())
                 }
             }
         }
