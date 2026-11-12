@@ -46,8 +46,8 @@ ShellRoot {
                     Repeater {
                         model: [
                             { label: "Try again", run: () => Qt.quit() },
-                            { label: "Open terminal", run: () => Quickshell.execDetached(["foot"]) },
-                            { label: "Show log", run: () => Quickshell.execDetached(["foot", "-e", "less", "+G", root.log]) },
+                            { label: "Open terminal", run: () => Quickshell.execDetached(["kitty"]) },
+                            { label: "Show log", run: () => Quickshell.execDetached(["kitty", "less", "+G", root.log]) },
                             { label: "Log out", run: () => Quickshell.execDetached(["sh", "-c", "loginctl terminate-session \"$XDG_SESSION_ID\""]) }
                         ]
                         delegate: Rectangle {

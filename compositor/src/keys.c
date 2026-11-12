@@ -194,9 +194,9 @@ static void run(struct ul_server *server, const struct binding *b, uint32_t mods
 		break;
 	case ACT_TERMINAL: {
 		const char *term = getenv("ULTIMIT_TERMINAL");
-		/* The first one installed. Not `foot || kitty || ...`: closing foot's window ends it with
-		 * SIGHUP, a non-zero exit, and the next terminal on the list opened right after. */
-		server_spawn(term ? term : "for t in foot kitty 'ptyxis --new-window' xterm; do "
+		/* The first one installed. Not `kitty || foot || ...`: closing a terminal window ends it
+		 * with SIGHUP, a non-zero exit, and the next terminal on the list opened right after. */
+		server_spawn(term ? term : "for t in kitty foot 'ptyxis --new-window' xterm; do "
 			"command -v \"${t%% *}\" >/dev/null && exec $t; done");
 		break;
 	}

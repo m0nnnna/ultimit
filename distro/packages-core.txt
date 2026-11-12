@@ -94,7 +94,7 @@ fonts-liberation
 adwaita-icon-theme
 librsvg2-common
 # Everyday tools the shell calls
-foot
+kitty
 grim
 slurp
 wl-clipboard

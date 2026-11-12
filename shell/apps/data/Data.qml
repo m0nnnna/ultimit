@@ -575,7 +575,7 @@ Singleton {
     }
     function openTerminalHere() {
         const dir = fsPath;
-        if (!Config.terminalCmd) { toast("Terminal", "No terminal installed. Try: sudo apt install foot"); return; }
+        if (!Config.terminalCmd) { toast("Terminal", "No terminal installed. Try: sudo apt install kitty"); return; }
         if (dryRun) { console.log("DATA dry-run: terminal in " + dir + " via " + Config.terminalCmd); return; }
         Quickshell.execDetached({ command: ["sh", "-c", Config.terminalCmd], workingDirectory: dir });
     }

@@ -310,7 +310,7 @@ Singleton {
         { id: "term",      label: "CONSOLE",
           tryCmds: [
               { bin: "gtk-launch", cmd: "gtk-launch \"$(grep -v '^#' \"$HOME/.config/xdg-terminals.list\" | head -n1)\"", check: termPrefCheck },
-              { bin: "foot", cmd: "foot" }, { bin: "kitty", cmd: "kitty" }, { bin: "ptyxis", cmd: "ptyxis" },
+              { bin: "kitty", cmd: "kitty" }, { bin: "foot", cmd: "foot" }, { bin: "ptyxis", cmd: "ptyxis" },
               { bin: "gnome-terminal", cmd: "gnome-terminal" }, { bin: "xterm", cmd: "xterm" }
           ],
           hint: { what: "No terminal installed", store: "terminal" },
@@ -331,7 +331,7 @@ Singleton {
     // Terminal candidates for the desktop menu.
     readonly property var terminals: [
         { bin: "gtk-launch", cmd: "gtk-launch \"$(grep -v '^#' \"$HOME/.config/xdg-terminals.list\" | head -n1)\"", check: termPrefCheck },
-        { bin: "foot", cmd: "foot" }, { bin: "kitty", cmd: "kitty" },
+        { bin: "kitty", cmd: "kitty" }, { bin: "foot", cmd: "foot" },
         { bin: "ptyxis", cmd: "ptyxis" }, { bin: "xterm", cmd: "xterm" }
     ]
 
@@ -380,7 +380,7 @@ Singleton {
     Timer { interval: 60000; repeat: true; running: true; onTriggered: root.redetect() }
     function openTerminal() {
         if (terminalCmd) Quickshell.execDetached(["sh", "-c", terminalCmd]);
-        else Toasts.show("Terminal", "No terminal installed — try:", "sudo apt install foot");
+        else Toasts.show("Terminal", "No terminal installed — try:", "sudo apt install kitty");
     }
 
     // One shell run probes every candidate; output lines are "<id> <index>" / "_term <index>" (the

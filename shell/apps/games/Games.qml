@@ -214,15 +214,15 @@ Singleton {
         }
     }
     function setupSteam() { _run(["steam"]); }
-    // Steam's package asks you to accept Valve's licence, so it installs in a terminal (Foot ships
+    // Steam's package asks you to accept Valve's licence, so it installs in a terminal (kitty ships
     // with Ultimit); the library is rescanned when that window closes.
     function installSteam() {
-        if (dryRun) { _run(["foot", "sudo", "apt", "install", "steam-installer"]); return; }
+        if (dryRun) { _run(["kitty", "sudo", "apt", "install", "steam-installer"]); return; }
         if (!steamInstaller.running) steamInstaller.running = true;
     }
     Process {
         id: steamInstaller
-        command: ["foot", "--title", "Install Steam", "sh", "-c",
+        command: ["kitty", "--title", "Install Steam", "sh", "-c",
             'echo "Installing Steam. Your password, then Valve\'s licence (Tab to the answer, Enter)."; echo; ' +
             'sudo apt-get install -y steam-installer && echo && echo "Steam is installed: close this window. Games lists it now." ' +
             '|| { echo; echo "Steam was not installed."; }; read -r _']

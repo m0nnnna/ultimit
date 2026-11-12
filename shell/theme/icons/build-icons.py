@@ -54,6 +54,7 @@ ALIASES = {
     ("apps", "utilities-terminal"): ("apps", "ultimit-terminal"),
     ("apps", "foot"): ("apps", "ultimit-terminal"),
     ("apps", "org.codeberg.dnkl.foot"): ("apps", "ultimit-terminal"),
+    ("apps", "kitty"): ("apps", "ultimit-terminal"),
     ("apps", "system-file-manager"): ("apps", "ultimit-data"),
     ("apps", "accessories-text-editor"): ("apps", "ultimit-memo"),
     ("apps", "accessories-calculator"): ("apps", "ultimit-calc"),

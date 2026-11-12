@@ -1,7 +1,7 @@
 # Login and session
 greetd
 # Apps and tools the desktop uses
-foot
+kitty
 zathura
 zathura-pdf-poppler
 # IMAGE (the image viewer): Qt readers for WebP/TIFF, and AVIF/HEIF/JPEG XL/PSD/RAW...
