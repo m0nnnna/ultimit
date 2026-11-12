@@ -6,8 +6,18 @@
   scan.py set <id> '<json>'         merge keys into games[<id>]
   scan.py top <key> '<json>'        set a top-level key (sort, hintDismissed, ...)
   scan.py touch <id>                record last-launched = now
-  scan.py add-manual '<json>'       add a manual game {id,name,kind,target[,prefix,runner,proton,gameid]}
-  scan.py remove-manual <id>        remove a manual game (and its settings)
+  scan.py add-manual '<json>'       add a manual game {id,name,kind,target[,prefix,runner,proton,gameid]};
+                                    same id replaces the record, and prefix/runner/proton/gameid
+                                    are set authoritatively ("" clears)
+  scan.py remove-manual <id> [dir]  remove a manual game (and its settings); dir also deletes that
+                                    prefix, and only if it is inside Ultimit's data dir
+  scan.py install-plan '<json>'     plan an installer run: {installer[,name,runner,proton,
+                                    installerMode,winver,log]} -> {name, slug, prefix, runner,
+                                    argv, env, notes, ...}  installerMode=1 sets PROTON_USE_WINED3D;
+                                    winver win7/winxp lowers the Windows version (winxp = 32-bit
+                                    prefix with the Wine runner); log=1 enables PROTON_LOG
+  scan.py install-run '<json>'      run the installer from an install-plan (blocks, stdio)
+  scan.py install-scan <prefix>     game executables in a prefix: {candidates: [{path, size}]}
   scan.py plan <id> [cmd ...]       print the launch plan (JSON) without running anything
   scan.py dry-log '<json argv>'     append a "would run" line to the dry-run log
 
@@ -17,7 +27,7 @@ appid, "desktop:<desktop-file-id>" or "manual:<token>".
 Environment: ULTIMIT_STEAM_ROOT (Steam root containing steamapps/), ULTIMIT_STEAM_BIN (test hook:
 path of the steam binary, empty = none), ULTIMIT_DRY_RUN=1, ULTIMIT_DRY_RUN_LOG.
 """
-import contextlib, fcntl, glob, json, os, re, shlex, shutil, sys, time
+import contextlib, fcntl, glob, json, os, re, shlex, shutil, subprocess, sys, time
 
 HOME = os.path.expanduser("~")
 DATA_HOME = os.environ.get("XDG_DATA_HOME") or os.path.join(HOME, ".local", "share")
@@ -240,7 +250,7 @@ def exec_argv(exec_line, name=""):
     return out
 
 
-def scan_desktop(steam_ids=()):
+def scan_desktop(steam_ids=(), hidden=()):
     out, seen = [], set()
     for adir in app_dirs():
         for path in sorted(glob.glob(os.path.join(adir, "**", "*.desktop"), recursive=True)):
@@ -248,8 +258,8 @@ def scan_desktop(steam_ids=()):
             if did in seen:
                 continue
             seen.add(did)      # first (highest precedence) wins, even if it is then skipped
-            if did.startswith("ultimit-"):
-                continue       # Ultimit's own apps (GAMES itself is Categories=Game)
+            if did.startswith("ultimit-") or "desktop:" + did in hidden:
+                continue       # Ultimit's own apps (GAMES itself is Categories=Game), user-hidden entries
             ent = parse_desktop(path)
             if not ent or ent.get("Type", "Application") != "Application":
                 continue
@@ -305,6 +315,8 @@ def normalize(d):
         d["games"] = {}
     if not isinstance(d.get("manual"), list):
         d["manual"] = []
+    if not isinstance(d.get("hidden"), list):
+        d["hidden"] = []       # game ids ("desktop:<file>") hidden from the library
     return d
 
 
@@ -599,6 +611,144 @@ def dry_log(obj):
     print(line, file=sys.stderr)
 
 
+# ---------------------------------------------------------------- installer flow
+# "Add game" with an installer .exe: the dialog asks install-plan for a fresh per-game
+# prefix and the argv/env to run the installer, runs it via install-run, then offers the
+# executables install-scan found. The chosen one is registered with add-manual (kind wine),
+# so launching reuses the normal plan() path (umu/Proton, GameMode, GPU, ...).
+
+# Directory fragments are matched against the path below drive_c (so a prefix living in
+# /tmp or a folder named "windows-games" is not filtered out); name fragments against the
+# basename only (so "Crashlands.exe" is not caught by "crash"-style debris names).
+INSTALLER_SKIP_DIRS = ("/windows/", "/appdata/", "/$", "/tmp/", "/temp/",
+                       "/users/public/", "/program files/common files/",
+                       "/program files (x86)/common files/")
+INSTALLER_SKIP_NAMES = ("unins", "uninstall", "setup.exe", "setup_", "installer", "updater",
+                        "update.exe", "redist", "directx", "dotnet", "vcred", "vcruntime",
+                        "dxsetup", "__installer")
+
+
+def installer_name(path):
+    """Display name from an installer filename: setup_the_witcher_2_1.0.2_(12345).exe ->
+    'the witcher 2'."""
+    stem = os.path.splitext(os.path.basename(path))[0]
+    for pfx in ("setup_", "setup-", "install_", "install-"):
+        if stem.lower().startswith(pfx):
+            stem = stem[len(pfx):]
+    stem = re.sub(r"[\s._-]*\(\d+\)$", "", stem)                 # GOG build number
+    stem = re.sub(r"[_-]?v?\d+(\.\d+)+[a-z]*$", "", stem, flags=re.I)
+    stem = re.sub(r"[._-]+", " ", stem).strip(" -_")
+    return " ".join(stem.split()) or os.path.basename(path)
+
+
+def slugify(name):
+    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    return slug or "game"
+
+
+def install_plan(installer, name="", runner="proton", proton="", installer_mode=True,
+                 winver="win10", log=False):
+    """Where and how to run an installer .exe. JSON-safe dict; raises ValueError.
+
+    installer_mode maximizes the chance the installer completes: WineD3D instead of
+    DXVK (Proton), an older Windows version when asked (XP implies a 32-bit prefix
+    with the Wine runner), and an optional Proton log for failed installs."""
+    installer = os.path.abspath(os.path.expanduser(installer))
+    if not os.path.isfile(installer):
+        raise ValueError("installer not found: " + installer)
+    name = (name or "").strip() or installer_name(installer)
+    base = os.path.dirname(PROTON_PREFIX)                        # ~/.local/share/ultimit/proton
+    slug, n = slugify(name), 2
+    prefix = os.path.join(base, slug)
+    while os.path.exists(prefix):
+        slug, n = "%s-%d" % (slugify(name), n), n + 1
+        prefix = os.path.join(base, slug)
+    notes, env = [], {"WINEPREFIX": prefix, "GAMEID": "umu-" + slug}
+    pp = ""
+    if runner == "proton":
+        if not which("umu-run"):
+            notes.append("umu-run is not installed; install umu-launcher")
+        argv = [which("umu-run") or "umu-run", installer]
+        if installer_mode:
+            env["PROTON_USE_WINED3D"] = "1"      # DXVK is for games; some installers crash on it
+        if proton and os.path.isfile(os.path.join(proton, "proton")):
+            pp = proton
+        elif proton:
+            notes.append("Proton not found: " + proton + "; choosing automatically")
+        pp = pp or auto_proton(find_protons())
+        if pp:
+            env["PROTONPATH"] = pp
+        else:
+            notes.append("no Proton installed; umu-run will download UMU-Proton itself")
+        if log:
+            env["PROTON_LOG"] = "1"
+    else:
+        runner = "wine"
+        if not which("wine"):
+            notes.append("wine is not installed")
+        argv = [which("wine") or "wine", installer]
+        env["WINEDEBUG"] = "-all"
+    winver = winver if winver in ("win10", "win11", "win7", "winxp") else "win10"
+    if winver == "winxp" and runner == "wine":
+        env["WINEARCH"] = "win32"                # fresh prefix, so the arch can still be chosen
+    return {"name": name, "slug": slug, "prefix": prefix, "runner": runner, "proton": pp,
+            "gameid": env["GAMEID"], "installer": installer, "installer_mode": installer_mode,
+            "winver": winver, "log": bool(log), "argv": argv, "env": env, "notes": notes}
+
+
+def install_run(plan):
+    """Run the installer from a plan (blocking, inherits stdio).
+
+    Applies the plan's Windows version first when it is older than 10 (the prefix is
+    fresh, so the registry write is cheap). Returns {rc[, error]}."""
+    env = dict(os.environ)
+    env.update(plan["env"])
+    os.makedirs(plan["prefix"], exist_ok=True)
+    runner = plan["argv"][0]
+    winver = plan.get("winver", "win10")
+    steps = [plan["argv"]]
+    if winver not in ("", "win10", "win11"):
+        if plan.get("runner") == "proton":
+            setup = [[runner, "wineboot", "-u"]]
+        else:
+            setup = [[which("wineboot") or "wineboot", "-u"]]
+        setup.append([runner, "reg", "add", r"HKCU\Software\Wine", "/v", "Version",
+                      "/d", winver, "/f"])
+        steps = setup + steps
+    rc = 0
+    try:
+        for cmd in steps:
+            rc = subprocess.call(cmd, env=env,
+                                 cwd=os.path.dirname(plan["installer"]) or None)
+            if cmd is not plan["argv"] and rc != 0:
+                print("ultimit: setup step failed (%d): %s" % (rc, " ".join(cmd)),
+                      file=sys.stderr)
+        return {"rc": rc}
+    except OSError as e:
+        return {"rc": 127, "error": str(e)}
+
+
+def scan_prefix(prefix):
+    """Game executables under a prefix's drive_c (installer debris filtered out),
+    largest first: [{path, size}]."""
+    drive = os.path.join(prefix, "drive_c")
+    out = []
+    if os.path.isdir(drive):
+        for dirpath, dirnames, filenames in os.walk(drive):
+            dirnames[:] = sorted(dirnames)
+            for fn in sorted(filenames):
+                if not fn.lower().endswith(".exe"):
+                    continue
+                full = os.path.join(dirpath, fn)
+                rel = full.lower().split("drive_c", 1)[-1]
+                if any(tok in rel for tok in INSTALLER_SKIP_DIRS) \
+                        or any(tok in fn.lower() for tok in INSTALLER_SKIP_NAMES):
+                    continue
+                out.append({"path": full, "size": os.path.getsize(full)})
+    out.sort(key=lambda c: -c["size"])
+    return out
+
+
 # ---------------------------------------------------------------- scan / CLI
 
 def scan():
@@ -606,7 +756,7 @@ def scan():
     conf = load_settings()
     binary = steam_binary()
     steam = scan_steam(root) if root else []
-    apps = scan_desktop() + manual_games(conf)
+    apps = scan_desktop(hidden=set(conf.get("hidden", []))) + manual_games(conf)
     for g in apps:
         g["lastPlayed"] = effective(conf["games"].get(g["id"]))["lastLaunched"]
     games = steam + apps
@@ -646,17 +796,32 @@ def main(argv):
         rec = {k: str(m[k]).strip() for k in ("id", "name", "kind", "target")}
         def add(d):
             d["manual"] = [x for x in d["manual"] if x.get("id") != rec["id"]] + [rec]
-            if m.get("prefix"):
-                d["games"].setdefault(rec["id"], {})["prefix"] = str(m["prefix"])
-            for k in ("runner", "proton", "gameid"):
-                if m.get(k):
-                    d["games"].setdefault(rec["id"], {})[k] = str(m[k])
+            g = d["games"].setdefault(rec["id"], {})
+            for k in ("prefix", "runner", "proton", "gameid"):
+                g[k] = str(m.get(k, "") or "")     # authoritative: "" clears a stale value
         update(add)
     elif cmd == "remove-manual":
         def rm(d):
             d["manual"] = [x for x in d["manual"] if x.get("id") != argv[2]]
             d["games"].pop(argv[2], None)
         update(rm)
+        if len(argv) > 3 and argv[3]:
+            root = os.path.realpath(os.path.join(DATA_HOME, "ultimit")) + os.sep
+            target = os.path.realpath(os.path.expanduser(argv[3]))
+            if not target.startswith(root) or not os.path.isdir(target):
+                sys.exit("refusing to delete: " + target)
+            shutil.rmtree(target)
+            print("deleted " + target)
+    elif cmd == "install-plan":
+        opts = json.loads(argv[2])
+        print(json.dumps(install_plan(opts.get("installer", ""), opts.get("name", ""),
+                                      opts.get("runner", "proton"), opts.get("proton", ""),
+                                      opts.get("installerMode", True), opts.get("winver", "win10"),
+                                      opts.get("log", False)), indent=2))
+    elif cmd == "install-run":
+        print(json.dumps(install_run(json.loads(argv[2]))))
+    elif cmd == "install-scan":
+        print(json.dumps({"candidates": scan_prefix(argv[2])}))
     elif cmd == "plan":
         print(json.dumps(plan(argv[2], argv[3:] or None), indent=2))
     elif cmd == "dry-log":

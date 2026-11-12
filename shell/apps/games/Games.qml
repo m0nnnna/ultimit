@@ -51,7 +51,8 @@ Singleton {
     // filtered + sorted list shown in the grid
     readonly property var games: {
         const q = query.trim().toLowerCase();
-        const out = allGames.filter(g => q === "" || g.name.toLowerCase().indexOf(q) >= 0);
+        let out = allGames.filter(g => q === "" || g.name.toLowerCase().indexOf(q) >= 0);
+        if (!showHidden) out = out.filter(g => !isHidden(g.id));
         const nm = (a, b) => a.name.toLowerCase() < b.name.toLowerCase() ? -1 : (a.name.toLowerCase() > b.name.toLowerCase() ? 1 : 0);
         if (sortMode === "name") out.sort(nm);
         else out.sort((a, b) => (lastTs(b) - lastTs(a)) || nm(a, b));
@@ -143,20 +144,45 @@ Singleton {
 
     // ---- manual games ----
     function newManualId() { return "manual:" + Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36); }
-    function addManual(name, kind, target, prefix, runner, proton) {
+    function addManual(name, kind, target, prefix, runner, proton, gameid) {
         const id = newManualId();
         const rec = { id: id, name: name, kind: kind, target: target };
         if (prefix) rec.prefix = prefix;
         if (runner === "proton") rec.runner = "proton";
         if (proton) rec.proton = proton;
+        if (gameid) rec.gameid = gameid;
         _py(["add-manual", JSON.stringify(rec)]);
         selectedId = id;
         query = "";
         addTimer.start();      // rescan once the helper has written the file
     }
-    function removeManual(id) {
-        _py(["remove-manual", id]);
+    function updateManual(id, name, kind, target, prefix, runner, proton, gameid) {
+        const rec = { id: id, name: name, kind: kind, target: target };
+        if (prefix) rec.prefix = prefix;
+        if (runner === "proton") rec.runner = "proton";
+        if (proton) rec.proton = proton;
+        rec.gameid = gameid || "";
+        _py(["add-manual", JSON.stringify(rec)]);
         addTimer.start();
+    }
+    function removeManual(id, files) {
+        _py(["remove-manual", id].concat(files ? [files] : []));
+        addTimer.start();
+    }
+    // ---- hidden desktop games ----
+    property bool showHidden: false
+    function isHidden(id) { return (settings.hidden || []).indexOf(id) >= 0; }
+    function hide(id) {
+        const next = _clone();
+        next.hidden = (next.hidden || []).concat([id]);
+        settings = next;
+        _py(["top", "hidden", JSON.stringify(next.hidden)]);
+    }
+    function unhide(id) {
+        const next = _clone();
+        next.hidden = (next.hidden || []).filter(h => h !== id);
+        settings = next;
+        _py(["top", "hidden", JSON.stringify(next.hidden)]);
     }
     Timer { id: addTimer; interval: 400; onTriggered: root.rescan() }
 

@@ -13,3 +13,4 @@ Brackets 1.0 Brackets.qml
 GameArt 1.0 GameArt.qml
 AddGameDialog 1.0 AddGameDialog.qml
 ProtonPicker 1.0 ProtonPicker.qml
+RemoveGameDialog 1.0 RemoveGameDialog.qml

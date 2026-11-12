@@ -85,12 +85,27 @@ FloatingWindow {
             }
             GLabel {
                 id: count
-                anchors.right: rescan.left; anchors.rightMargin: 14
+                anchors.right: hiddenChip.left; anchors.rightMargin: 14
                 anchors.verticalCenter: parent.verticalCenter
                 text: win.anyGames
                     ? (Games.games.length === Games.allGames.length ? Games.allGames.length + (Games.allGames.length === 1 ? " title" : " titles")
                                                                     : Games.games.length + " of " + Games.allGames.length)
                     : ""
+            }
+            GLabel {
+                id: hiddenChip
+                anchors.right: rescan.left; anchors.rightMargin: 14
+                anchors.verticalCenter: parent.verticalCenter
+                visible: (Games.settings.hidden || []).length > 0
+                color: hiddenMouse.containsMouse || Games.showHidden ? Theme.accent : Theme.dim
+                text: "Hidden: " + (Games.settings.hidden || []).length + (Games.showHidden ? " · showing" : "")
+                MouseArea {
+                    id: hiddenMouse
+                    anchors.fill: parent; anchors.margins: Config.mobile ? -10 : -4
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: Games.showHidden = !Games.showHidden
+                }
             }
             GLabel {
                 id: rescan
@@ -428,10 +443,29 @@ FloatingWindow {
                                 }
                             }
                         }
-                        GButton {
-                            visible: win.sel && win.sel.manual === true
-                            text: "Remove from library"
-                            onClicked: Games.removeManual(win.sel.id)
+                        Row {
+                            spacing: 10
+                            visible: win.sel && win.sel.source !== "steam"
+                            GButton {
+                                visible: win.sel && win.sel.manual === true
+                                text: "Edit…"
+                                onClicked: addDlg.openEdit(win.sel)
+                            }
+                            GButton {
+                                visible: win.sel && win.sel.manual === true
+                                text: "Remove…"
+                                onClicked: removeDlg.openFor(win.sel)
+                            }
+                            GButton {
+                                visible: win.sel && win.sel.manual !== true
+                                text: "Hide…"
+                                onClicked: removeDlg.openFor(win.sel)
+                            }
+                            GButton {
+                                visible: win.sel && Games.isHidden(win.sel.id)
+                                text: "Unhide"
+                                onClicked: Games.unhide(win.sel.id)
+                            }
                         }
                         SteamCard { visible: win.isSteam; width: parent.width; mode: "tip" }
                     }
@@ -665,5 +699,6 @@ FloatingWindow {
         }
 
         AddGameDialog { id: addDlg }
+        RemoveGameDialog { id: removeDlg }
     }
 }
