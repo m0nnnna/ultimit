@@ -103,3 +103,4 @@ flatpak
 fwupd
 ufw
 7zip
+7zip-rar

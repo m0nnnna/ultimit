@@ -198,6 +198,9 @@ def analyze(rc, lines, prompted, had_pw):
     msg = re.sub(r"^ERROR:\s*", "", msg)
     if "Can not open the file as" in msg or "Is not archive" in msg or "Cannot open the file as" in msg:
         msg = "Not a valid or supported archive"
+    elif "Unsupported Method" in text and re.search(r"Type = Rar", text):
+        # Ubuntu's 7zip leaves the RAR decoder out for licence reasons; it lives in 7zip-rar (multiverse)
+        msg = "RAR support is missing: sudo apt install 7zip-rar"
     raise ArcError(msg, "failed")
 
 # ---------------------------------------------------------------- names

@@ -48,6 +48,7 @@ mpv
 ffmpeg
 ffmpegthumbnailer
 7zip
+7zip-rar
 # Security
 ufw
 unattended-upgrades
