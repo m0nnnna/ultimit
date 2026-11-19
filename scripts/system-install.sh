@@ -106,9 +106,10 @@ apt-get install -y -q "${pkgs[@]}"
 # installer installs the compute-only driver (--gpgpu: the kernel module, no graphics), and then
 # nothing can draw. Swap it for the desktop driver ubuntu-drivers recommends.
 if lspci -n 2>/dev/null | grep -qE ' 03(00|02): 10de:'; then
-	if ! dpkg-query -W -f='${Status}' libnvidia-egl-gbm1 2>/dev/null | grep -q "install ok installed"; then
+	# (look for the library itself: Ubuntu's own NVIDIA drivers ship it in libnvidia-gl-NNN, not libnvidia-egl-gbm1)
+	if ! ldconfig -p | grep -q 'libnvidia-egl-gbm\.so\.1 '; then
 		step "Installing NVIDIA's desktop driver (graphics libraries)"
-		if ubuntu-drivers install; then
+		if ubuntu-drivers install </dev/null; then   # (no terminal: apt was left stopped on one)
 			note "$(dpkg-query -W -f='${Package} ' 'nvidia-driver-*' 2>/dev/null | head -c 200)"
 		else
 			warn "ubuntu-drivers couldn't install the NVIDIA desktop driver; run 'sudo ubuntu-drivers install' later"
