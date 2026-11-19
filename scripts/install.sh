@@ -116,6 +116,12 @@ src() { # name url ref -> $WORK/src/name at that ref
 	echo "$d"
 }
 built() { [ "$(cat "$PREFIX/.built-$1" 2>/dev/null)" = "$2" ]; }   # name version
+# Meson wraps the compiler in whatever ccache is on PATH; a broken one (missing library, bad wrapper) makes
+# every build fail with "cannot compile programs". Name the compilers so Meson skips ccache then.
+if command -v ccache >/dev/null && ! ccache --version >/dev/null 2>&1; then
+	warn "the ccache on PATH ($(command -v ccache)) doesn't run; building without it"
+	export CC="${CC:-cc}" CXX="${CXX:-c++}"
+fi
 setup() { # meson setup that also works on a fresh build folder: setup BUILD SRC ARGS...
 	local b=$1; shift
 	if [ -f "$b/build.ninja" ]; then meson setup --wipe "$b" "$@"; else rm -rf "$b"; meson setup "$b" "$@"; fi
@@ -183,7 +189,7 @@ if built oo7 "$OO7_REF"; then note "already installed"; else
 fi
 
 step "Building the Ultimit compositor"
-setup "$WORK/compositor" "$ROOT/compositor" --buildtype=release >/dev/null
+out=$(setup "$WORK/compositor" "$ROOT/compositor" --buildtype=release 2>&1) || { echo "$out" | tail -25; die "the compositor build couldn't be set up (see above)"; }
 ninja -C "$WORK/compositor" -j "$JOBS"
 sudo install -D -m755 "$WORK/compositor/ultimit" "$PREFIX/bin/ultimit"
 [ "$(ldd "$PREFIX/bin/ultimit" | grep -c "not found")" = 0 ] || die "the compositor can't find a library: $(ldd "$PREFIX/bin/ultimit" | grep 'not found')"
